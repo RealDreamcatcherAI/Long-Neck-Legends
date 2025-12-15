@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="icon" type="image/png" sizes="32x32" href="https://i.imgur.com/jpGdtHJ.jpeg">
+  <link rel="icon" type="image/png" sizes="192x192" href="https://i.imgur.com/jpGdtHJ.jpeg">
+  <link rel="apple-touch-icon" href="https://i.imgur.com/jpGdtHJ.jpeg">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Playlist | Long Neck Legends</title>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* === MAIN SITE (kept) === */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #0a0a1a;
+      color: #e0e0ff;
+      overflow-x: hidden;
+      opacity: 0;
+      transition: opacity 1s ease;
+    }
+    body.loaded { opacity: 1; }
+
+    header {
+      min-height: 70vh;
+      background:
+        linear-gradient(rgba(10,10,26,0.85), rgba(10,10,26,0.95)),
+        url('https://pbs.twimg.com/media/G1_OkwfbMAAGjML.jpg') center/cover no-repeat;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      padding: 6rem 1rem 3rem;
+    }
+
+    header::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: radial-gradient(circle at 50% 50%, rgba(0,212,255,0.2), transparent 70%);
+      animation: glow 8s infinite alternate;
+      pointer-events: none;
+    }
+
+    @keyframes glow {
+      0% { transform: scale(1); }
+      100% { transform: scale(1.3); }
+    }
+
+    h1 {
+      font-family: "Trebuchet MS", Helvetica, sans-serif;
+      font-weight: bold;
+      font-size: 3.6rem;
+      margin: 0.75rem 0;
+      background: linear-gradient(90deg, #00d4ff, #ff6bff, #7b68ee);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 30px rgba(0,212,255,0.6);
+    }
+
+    .tagline {
+      font-size: 1.15rem;
+      max-width: 820px;
+      margin: 0.75rem auto 0;
+      opacity: 0.92;
+    }
+
+    nav {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      padding: 1rem 0;
+      background: rgba(10,10,26,0.9);
+      backdrop-filter: blur(10px);
+      z-index: 1000;
+      text-align: center;
+      transition: 0.3s;
+    }
+
+    nav a {
+      color: #e0e0ff;
+      margin: 0 1.5rem;
+      text-decoration: none;
+      font-weight: 600;
+      position: relative;
+    }
+
+    nav a::after {
+      content: '';
+      position: absolute;
+      bottom: -5px;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background: #00d4ff;
+      transition: 0.3s;
+    }
+
+    nav a:hover::after { width: 100%; }
+
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 3.5rem 1rem 4rem;
+    }
+
+    section {
+      margin: 3.5rem 0;
+      opacity: 0;
+      transform: translateY(50px);
+      transition: all 1s ease;
+    }
+    section.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    h2 {
+      font-family: "Trebuchet MS", Helvetica, sans-serif;
+      font-weight: bold;
+      font-size: 2.6rem;
+      text-align: center;
+      margin-bottom: 1.25rem;
+      background: linear-gradient(45deg, #00d4ff, #ff6bff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .boxstyle {
+      margin: 2.5rem auto;
+      padding: 2.2rem 1.6rem;
+      max-width: 980px;
+      background: rgba(20,20,40,0.6);
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0,212,255,0.25);
+      text-align: center;
+    }
+
+    .btn-glow {
+      display: inline-block;
+      padding: 0.9rem 1.4rem;
+      margin: 0.35rem;
+      font-family: "Trebuchet MS", Helvetica, sans-serif;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      border-radius: 50px;
+      text-decoration: none;
+      position: relative;
+      overflow: hidden;
+      z-index: 1;
+      transition: all 0.4s ease;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      background: linear-gradient(45deg, #00d4ff, #0099cc);
+      color: white;
+      box-shadow: 0 0 20px rgba(0,212,255,0.6);
+    }
+
+    .btn-secondary {
+      background: linear-gradient(45deg, #7b68ee, #5a4fc3);
+      color: white;
+      box-shadow: 0 0 20px rgba(123,104,238,0.6);
+    }
+
+    .btn-glow::before {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 100%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+      transition: 0.7s;
+    }
+
+    .btn-glow:hover::before { left: 100%; }
+    .btn-glow:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 0 30px rgba(0,212,255,0.8);
+    }
+
+    footer {
+      text-align: center;
+      padding: 2rem;
+      background: rgba(10,10,26,0.95);
+      color: #888;
+      border-top: 1px solid #00d4ff;
+    }
+
+    /* === PLAYLIST UI (new) === */
+    .player-top {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      margin: 0.5rem 0 1.25rem;
+    }
+
+    .nowplaying {
+      width: 100%;
+      max-width: 860px;
+      margin: 0 auto 1.25rem;
+      padding: 1rem 1rem;
+      border-radius: 16px;
+      background: rgba(10,10,26,0.55);
+      border: 1px solid rgba(0,212,255,0.25);
+      box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+      text-align: left;
+    }
+
+    .np-title {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      font-weight: 800;
+      letter-spacing: 0.2px;
+      margin-bottom: 0.25rem;
+    }
+
+    .np-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: rgba(0,212,255,0.12);
+      border: 1px solid rgba(0,212,255,0.28);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 18px rgba(0,212,255,0.18);
+      user-select: none;
+    }
+
+    .np-sub {
+      opacity: 0.9;
+      font-size: 0.98rem;
+    }
+
+    .np-sub a {
+      color: #00d4ff;
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    .np-sub a:hover { text-decoration: underline; }
+
+    .bar-wrap {
+      margin-top: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: #00d4ff;
+    }
+
+    .playlist {
+      width: 100%;
+      max-width: 860px;
+      margin: 0 auto;
+      text-align: left;
+      display: grid;
+      gap: 0.6rem;
+    }
+
+    .track {
+      display: grid;
+      grid-template-columns: 44px 1fr auto;
+      gap: 0.85rem;
+      align-items: center;
+      padding: 0.85rem 0.9rem;
+      border-radius: 16px;
+      background: rgba(10,10,26,0.55);
+      border: 1px solid rgba(0,212,255,0.18);
+      transition: transform 0.18s ease, border-color 0.18s ease;
+      cursor: pointer;
+    }
+
+    .track:hover {
+      transform: translateY(-2px);
+      border-color: rgba(0,212,255,0.4);
+    }
+
+    .track.active {
+      border-color: rgba(255,107,255,0.55);
+      box-shadow: 0 0 24px rgba(255,107,255,0.14);
+    }
+
+    .t-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      background: rgba(0,212,255,0.12);
+      border: 1px solid rgba(0,212,255,0.28);
+    }
+
+    .t-icon img {
+      width: 22px;
+      height: 22px;
+      opacity: 0.95;
+    }
+
+    .t-main {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      min-width: 0;
+    }
+
+    .t-title {
+      font-weight: 900;
+      letter-spacing: 0.2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .t-title a {
+      color: #e0e0ff;
+      text-decoration: none;
+    }
+
+    .t-title a:hover { color: #00d4ff; }
+
+    .t-artist {
+      font-size: 0.92rem;
+      opacity: 0.9;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .t-artist a {
+      color: #00d4ff;
+      text-decoration: none;
+      font-weight: 700;
+    }
+    .t-artist a:hover { text-decoration: underline; }
+
+    .t-meta {
+      opacity: 0.9;
+      font-size: 0.9rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .mode-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.35rem 0.7rem;
+      border-radius: 999px;
+      background: rgba(0,212,255,0.12);
+      border: 1px solid rgba(0,212,255,0.25);
+      font-weight: 800;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+    }
+
+    @media (max-width: 640px) {
+      h1 { font-size: 2.75rem; }
+      .track { grid-template-columns: 44px 1fr; }
+      .t-meta { display: none; }
+      nav a { margin: 0 0.9rem; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- NAVIGATION (kept, tweak links however you want) -->
+  <nav>
+    <a href="#home">Home</a>
+    <a href="#about">About</a>
+    <a href="#team">Team</a>
+    <a href="/hotsauce.html">Hot Sauce</a>
+    <a href="/starternecks.html">Starter Necks</a>
+    <a href="#join">Join</a>
+  </nav>
+
+  <main>
+    <section id="playlist" class="boxstyle">
+      <h2>LNL Playlist</h2>
+
+      <!-- Hidden native audio (we control it with buttons) -->
+      <audio id="audio" preload="metadata"></audio>
+
+      <div class="nowplaying" aria-live="polite">
+        <div class="np-title">
+          <div class="np-icon" id="npIcon" title="Track">
+            🎵
+          </div>
+          <div>
+            <div id="npSong" style="font-size:1.05rem; font-weight:900;">Select a track</div>
+            <div class="np-sub">
+              <span id="npArtist">—</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="bar-wrap">
+          <span id="tCur">0:00</span>
+          <input id="seek" type="range" min="0" max="1000" value="0" />
+          <span id="tDur">0:00</span>
+        </div>
+
+        <div class="player-top" style="margin-top:1rem;">
+          <button class="btn-glow btn-secondary" id="btnPrev">⏮ Skip Back</button>
+          <button class="btn-glow btn-primary" id="btnPlay">▶ Play</button>
+          <button class="btn-glow btn-secondary" id="btnPause">⏸ Pause</button>
+          <button class="btn-glow btn-secondary" id="btnNext">⏭ Skip Forward</button>
+
+          <button class="btn-glow btn-primary" id="btnMode" title="Loop All → Shuffle → Play 1">
+            🔀 Shuffle
+          </button>
+
+          <span class="mode-pill" id="modePill">MODE: LOOP</span>
+        </div>
+
+        <p style="opacity:0.85; margin:0.4rem 0 0; font-size:0.95rem;">
+          Shuffle button cycles: <strong style="color:#00d4ff;">Loop All</strong> → <strong style="color:#00d4ff;">Shuffle</strong> → <strong style="color:#00d4ff;">Play 1</strong>
+        </p>
+      </div>
+
+      <div class="playlist" id="list"></div>
+    </section>
+
+    <section id="join" style="margin: 4rem 0;
+      padding: .75rem 1rem;
+      background: rgba(20,20,40,0.6);
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0,212,255,0.1);">
+      <h2>Join the Flock</h2>
+      <p style="text-align:center;">
+        Follow the chaos. Trade the legends. Be part of the longest neck in Web3.
+      </p>
+      <div style="text-align:center; margin:2rem 0;">
+        <a href="https://x.com/longnecklegends" target="_blank" class="btn-glow btn-primary">X @longnecklegends</a>
+        <a href="https://magiceden.us/marketplace/long_neck_legends" target="_blank" class="btn-glow btn-secondary">Buy on Magic Eden</a>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>© 2025 Long Neck Legends • Built with Solana Speed & Legendary Vibes</p>
+  </footer>
+
+  <script>
+    // === LOADER FADE-IN (kept behavior) ===
+    window.addEventListener('load', () => {
+      setTimeout(() => document.body.classList.add('loaded'), 250);
+    });
+
+    // === ANIMATE SECTIONS ON SCROLL (kept) ===
+    const sections = document.querySelectorAll('section');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) entry.target.classList.add('visible');
+      });
+    }, { threshold: 0.08 });
+    sections.forEach(sec => observer.observe(sec));
+
+    // === PLAYLIST CONFIG (EDIT THESE 8 ITEMS) ===
+    // songLink = "main location site"
+    // artistX  = X link
+    const TRACKS = [
+      {
+        title: "Never Back Down",
+        artist: "Stacey",
+        src: "https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/never-back-down.mp3",
+        songLink: "https://longnecklegends.xyz/song1",
+        artistX: "https://x.com/Real_CFUCK"
+      },
+      {
+        title: "Extra Mile",
+        artist: "Stacey",
+        src: "https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/extra-mile.mp3",
+        songLink: "https://longnecklegends.xyz/song2",
+        artistX: "https://x.com/Real_CFUCK"
+      },
+      {
+        title: "Stick Your Neck Out",
+        artist: "Stacey",
+        src: "https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/stick-your-neck-out.mp3",
+        songLink: "https://longnecklegends.xyz/song3",
+        artistX: "https://x.com/Real_CFUCK"
+      },
+      {
+        title: "See Further",
+        artist: "Stacey",
+        src: "https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/see-further.mp3",
+        songLink: "https://longnecklegends.xyz/song4",
+        artistX: "https://x.com/Real_CFUCK"
+      },
+      {
+        title: "Living Right",
+        artist: "Stacey",
+        src: "https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/living-right.mp3",
+        songLink: "https://longnecklegends.xyz/song5",
+        artistX: "https://x.com/Real_CFUCK"
+      },
+      {
+        title: "Im Standing Tall",
+        artist: "Stacey",
+        src: "https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/im-standing-tall.mp3",
+        songLink: "https://longnecklegends.xyz/song6",
+        artistX: "https://x.com/Real_CFUCK"
+      },
+      {
+        title: "LNLs On The Rise",
+        artist: "Stacey",
+        src: "https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/lnls-on-the-rise.mp3",
+        songLink: "https://longnecklegends.xyz/song7",
+        artistX: "https://x.com/Real_CFUCK"
+      }
+    ];
+
+    // === ICON (tiny song image) ===
+    // swap this to your own small icon (png/svg)
+    const SONG_ICON_URL = "https://i.imgur.com/DP1dHEP.png";
+
+    // === PLAYER STATE ===
+    const audio = document.getElementById('audio');
+    const listEl = document.getElementById('list');
+
+    const npSong = document.getElementById('npSong');
+    const npArtist = document.getElementById('npArtist');
+    const modePill = document.getElementById('modePill');
+
+    const btnPrev = document.getElementById('btnPrev');
+    const btnPlay = document.getElementById('btnPlay');
+    const btnPause = document.getElementById('btnPause');
+    const btnNext = document.getElementById('btnNext');
+    const btnMode = document.getElementById('btnMode');
+
+    const seek = document.getElementById('seek');
+    const tCur = document.getElementById('tCur');
+    const tDur = document.getElementById('tDur');
+
+    // 0 = LOOP ALL, 1 = SHUFFLE, 2 = PLAY ONE (stop after current track ends)
+    let mode = 0;
+
+    let currentIndex = 0;
+    let userSeeking = false;
+
+    function fmtTime(sec) {
+      if (!isFinite(sec)) return "0:00";
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      return `${m}:${String(s).padStart(2,'0')}`;
+    }
+
+    function setModePill() {
+      const label = mode === 0 ? "LOOP" : mode === 1 ? "SHUFFLE" : "PLAY 1";
+      modePill.textContent = `MODE: ${label}`;
+      // little visual hint
+      if (mode === 1) modePill.style.borderColor = "rgba(255,107,255,0.55)";
+      else if (mode === 2) modePill.style.borderColor = "rgba(123,104,238,0.65)";
+      else modePill.style.borderColor = "rgba(0,212,255,0.25)";
+    }
+
+    function renderList() {
+      listEl.innerHTML = "";
+      TRACKS.forEach((t, i) => {
+        const row = document.createElement('div');
+        row.className = `track ${i === currentIndex ? 'active' : ''}`;
+        row.dataset.index = String(i);
+
+        row.innerHTML = `
+          <div class="t-icon" aria-hidden="true">
+            <img src="${SONG_ICON_URL}" alt="">
+          </div>
+          <div class="t-main">
+            <div class="t-title">
+              <a href="${t.songLink}" target="_blank" rel="noopener">${t.title}</a>
+            </div>
+            <div class="t-artist">
+              <a href="${t.artistX}" target="_blank" rel="noopener">${t.artist}</a>
+            </div>
+          </div>
+          <div class="t-meta" id="dur-${i}">--:--</div>
+        `;
+
+        row.addEventListener('click', (e) => {
+          // allow clicking links without hijacking
+          if (e.target && e.target.tagName === "A") return;
+          loadTrack(i, true);
+        });
+
+        listEl.appendChild(row);
+
+        // fetch duration without blocking playback
+        const temp = new Audio();
+        temp.src = t.src;
+        temp.preload = "metadata";
+        temp.addEventListener('loadedmetadata', () => {
+          const durEl = document.getElementById(`dur-${i}`);
+          if (durEl) durEl.textContent = fmtTime(temp.duration);
+        });
+      });
+    }
+
+    function setActiveRow() {
+      document.querySelectorAll('.track').forEach(el => el.classList.remove('active'));
+      const active = document.querySelector(`.track[data-index="${currentIndex}"]`);
+      if (active) active.classList.add('active');
+    }
+
+    function loadTrack(index, autoplay=false) {
+      currentIndex = Math.max(0, Math.min(TRACKS.length - 1, index));
+      const t = TRACKS[currentIndex];
+
+      audio.src = t.src;
+
+      // Now Playing display (song name + artist with links)
+      npSong.innerHTML = `<a href="${t.songLink}" target="_blank" rel="noopener" style="color:#e0e0ff; text-decoration:none;">${t.title}</a>`;
+      npArtist.innerHTML = `by <a href="${t.artistX}" target="_blank" rel="noopener">${t.artist}</a>`;
+
+      setActiveRow();
+
+      // reset seek until metadata loads
+      seek.value = 0;
+      tCur.textContent = "0:00";
+      tDur.textContent = "--:--";
+
+      if (autoplay) {
+        audio.play().catch(() => {});
+      }
+    }
+
+    function nextTrack() {
+      if (mode === 1) {
+        // shuffle
+        if (TRACKS.length <= 1) return;
+        let n = currentIndex;
+        while (n === currentIndex) n = Math.floor(Math.random() * TRACKS.length);
+        loadTrack(n, true);
+        return;
+      }
+      // loop/normal next
+      const n = (currentIndex + 1) % TRACKS.length;
+      loadTrack(n, true);
+    }
+
+    function prevTrack() {
+      // if user is > 3 seconds in, restart the current track
+      if (audio.currentTime > 3) {
+        audio.currentTime = 0;
+        return;
+      }
+      const p = (currentIndex - 1 + TRACKS.length) % TRACKS.length;
+      loadTrack(p, true);
+    }
+
+    // === CONTROLS ===
+    btnPlay.addEventListener('click', () => {
+      if (!audio.src) loadTrack(currentIndex, true);
+      else audio.play().catch(() => {});
+    });
+
+    btnPause.addEventListener('click', () => audio.pause());
+
+    btnNext.addEventListener('click', nextTrack);
+    btnPrev.addEventListener('click', prevTrack);
+
+    // Shuffle button cycles: LOOP ALL -> SHUFFLE -> PLAY 1
+    btnMode.addEventListener('click', () => {
+      mode = (mode + 1) % 3;
+      setModePill();
+      // in LOOP mode, we keep looping the playlist (handled on ended)
+      // in PLAY 1 mode, we stop when the current track ends
+    });
+
+    // === SEEK BAR ===
+    seek.addEventListener('input', () => { userSeeking = true; });
+    seek.addEventListener('change', () => {
+      const pct = Number(seek.value) / 1000;
+      if (isFinite(audio.duration)) audio.currentTime = pct * audio.duration;
+      userSeeking = false;
+    });
+
+    audio.addEventListener('loadedmetadata', () => {
+      tDur.textContent = fmtTime(audio.duration);
+    });
+
+    audio.addEventListener('timeupdate', () => {
+      if (!userSeeking && isFinite(audio.duration) && audio.duration > 0) {
+        const pct = audio.currentTime / audio.duration;
+        seek.value = String(Math.round(pct * 1000));
+      }
+      tCur.textContent = fmtTime(audio.currentTime);
+    });
+
+    // === END OF TRACK BEHAVIOR ===
+    audio.addEventListener('ended', () => {
+      if (mode === 2) {
+        // PLAY 1: stop after one track
+        audio.pause();
+        audio.currentTime = 0;
+        return;
+      }
+      // LOOP or SHUFFLE
+      nextTrack();
+    });
+
+    // === INIT ===
+    setModePill();
+    renderList();
+    loadTrack(0, false);
+  </script>
+</body>
+</html>
