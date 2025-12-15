@@ -494,15 +494,6 @@
       setTimeout(() => document.body.classList.add('loaded'), 250);
     });
 
-    // === ANIMATE SECTIONS ON SCROLL (kept) ===
-    const sections = document.querySelectorAll('section');
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) entry.target.classList.add('visible');
-      });
-    }, { threshold: 0.08 });
-    sections.forEach(sec => observer.observe(sec));
-
     // === PLAYLIST CONFIG (EDIT THESE 8 ITEMS) ===
     // songLink = "main location site"
     // artistX  = X link
@@ -754,3 +745,4 @@
 </body>
 
 </html>
+
