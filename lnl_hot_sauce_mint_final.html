@@ -50,7 +50,7 @@
       background: rgba(20,20,40,0.6);
       border-radius: 20px;
       box-shadow: 0 10px 30px rgba(0,212,255,0.25);
-      overflow: hidden; /* ✅ prevents spill */
+      overflow: hidden;
     }
 
     .mint-grid { display:grid; grid-template-columns:1fr; gap:1.25rem; }
@@ -80,6 +80,7 @@
       transform: translateY(-1px);
       box-shadow: 0 0 26px rgba(0,212,255,.5);
     }
+
     .btn-secondary{
       background:linear-gradient(45deg,#7b68ee,#5a4fc3);
       box-shadow: 0 0 18px rgba(123,104,238,.35);
@@ -96,7 +97,6 @@
       text-align:center;
     }
 
-    /* ✅ Center text ONLY for this section */
     #bottle-info{ text-align:center; }
     #bottle-info p{
       max-width: 720px;
@@ -104,7 +104,6 @@
       line-height: 1.6;
     }
 
-    /* ✅ GIF sizing */
     .sauce-art{
       width:100%;
       display:flex;
@@ -121,7 +120,6 @@
       box-shadow:0 0 25px rgba(0,212,255,0.35);
     }
 
-    /* Wallet Modal */
     .modal{
       display:none;
       position:fixed;
@@ -131,7 +129,7 @@
       background:rgba(0,0,0,.85);
       z-index:9999;
       align-items:center;
-      justify-content:center
+      justify-content:center;
     }
     .modal.active{display:flex}
     .modal-content{
@@ -150,6 +148,7 @@
       cursor:pointer;
       text-align:center;
       font-weight:700;
+      user-select:none;
     }
     .wallet-option:hover{background:rgba(0,212,255,.15)}
   </style>
@@ -165,15 +164,12 @@
     <a href="/starternecks.html">Starter Necks</a>
   </nav>
 
-  <!-- HEADER IMAGE -->
   <section id="sauce-header" class="hotsauce-banner">
     <img src="https://i.imgur.com/MpqfjdX.png" alt="Long Neck Hot Sauce">
   </section>
 
-  <!-- ABOUT -->
   <section id="sauce-info" style="max-width:900px; margin:0 auto; text-align:center; font-size:1.15rem; max-width:800px;">
     <h2>Mango Habanero Ascension</h2>
-
     <p>Turn up the heat! Forged in the volcanic kitchens of the flock, our first divine creation rises.</p>
 
     <p>
@@ -189,7 +185,6 @@
     </p>
   </section>
 
-  <!-- LIMITED EDITION BOTTLES -->
   <section id="bottle-info" class="boxstyle">
     <h2>⭐ Limited Edition Bottles</h2>
 
@@ -220,7 +215,6 @@
     </p>
   </section>
 
-  <!-- MINT SECTION -->
   <section id="mint" class="boxstyle">
     <h2>⭐ Mint to Claim</h2>
 
@@ -269,17 +263,17 @@
 
 <script>
 /* ===========================
-   HOTSAUCE MINT SCRIPT (WORKING)
-   ✅ Wallet connect (Phantom/Solflare/MagicEden)
-   ✅ WL check via Helius DAS
-   ✅ WL/public pricing & limits
-   ✅ Dynamic imports (no dead buttons)
+   HOTSAUCE MINT SCRIPT (UPDATED)
+   ✅ Phantom + Solflare + Magic Eden connect
+   ✅ One wallet active at a time
+   ✅ WL check via Helius DAS (strong + pagination)
+   ✅ WL/Public price + limits
 =========================== */
 
-// ✅ Change ONLY this line:
+// ✅ STEP 1: PUT YOUR KEY HERE:
 const HELIUS_API_KEY = "74d200fb-3e78-490a-a1e9-70236f3c17cc";
 
-// ✅ Browser-friendly RPC (won't 403 like api.mainnet-beta.solana.com sometimes)
+// ✅ safer public RPC (browser-friendly)
 const RPC = "https://rpc.ankr.com/solana";
 const HELIUS = `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`;
 
@@ -295,10 +289,10 @@ const PUBLIC_PRICE = 0.30;
 const WL_LIMIT = 2;
 const PUBLIC_LIMIT = 1;
 
-// LNL collection id for holder WL
+// ✅ LNL verified collection address (must be correct)
 const LNL_COLLECTION = "2WvxCvgFUiqUSBx32c5Z5Zsbcu4ZJCE1GEaaWpbD685P";
 
-// UI refs
+// UI
 const walletLabel = document.getElementById("walletLabel");
 const wlStatus = document.getElementById("wlStatus");
 const userMints = document.getElementById("userMints");
@@ -309,12 +303,14 @@ const statusBox = document.getElementById("statusBox");
 const walletModal = document.getElementById("walletModal");
 
 let wallet = null;
+let activeWalletName = null;
+
 let umi = null;
 let connection = null;
 let isWL = false;
 let mintPrice = PUBLIC_PRICE;
 
-// modules cache
+// module caches
 let web3 = null;
 let umiMods = null;
 
@@ -337,7 +333,7 @@ walletModal.addEventListener("click", (e) => {
 
 priceLabel.textContent = PUBLIC_PRICE + " SOL";
 
-// ------------------ Dynamic Imports ------------------
+// ---------------- Dynamic Imports ----------------
 async function loadWeb3(){
   if(web3) return web3;
   setStatus("Loading Solana libraries…");
@@ -366,13 +362,37 @@ async function loadUmi(){
   return umiMods;
 }
 
-// ------------------ Wallet Connect ------------------
+// ---------------- One Wallet Active ----------------
+async function disconnectActiveWallet(){
+  try{
+    if(wallet?.disconnect){
+      await wallet.disconnect();
+    }
+  }catch(e){
+    // ignore disconnect errors
+  }finally{
+    wallet = null;
+    activeWalletName = null;
+    walletLabel.textContent = "Not connected";
+    wlStatus.textContent = "—";
+    userMints.textContent = "—";
+    priceLabel.textContent = PUBLIC_PRICE + " SOL";
+    isWL = false;
+    mintPrice = PUBLIC_PRICE;
+  }
+}
+
+// ---------------- Wallet Connect ----------------
 window.connectWallet = async function(type){
   try{
-    // ✅ Detect providers properly
+    // ✅ best detection for each wallet
     const providers = {
       phantom: (window.solana?.isPhantom ? window.solana : null),
-      solflare: (window.solflare?.solana || (window.solana?.isSolflare ? window.solana : null)),
+
+      // ✅ Solflare inject varies
+      solflare: (window.solflare?.isSolflare ? window.solflare : (window.solflare?.solana || (window.solana?.isSolflare ? window.solana : null))),
+
+      // ✅ Magic Eden inject
       magiceden: (window.magicEden?.solana || (window.solana?.isMagicEden ? window.solana : null)),
     };
 
@@ -383,13 +403,22 @@ window.connectWallet = async function(type){
       return;
     }
 
+    // ✅ force only 1 wallet at a time
+    if(wallet && activeWalletName && activeWalletName !== type){
+      await disconnectActiveWallet();
+    }
+
     walletModal.classList.remove("active");
     setStatus("Connecting wallet…");
 
     const resp = await provider.connect();
     wallet = provider;
+    activeWalletName = type;
 
-    const pub = resp?.publicKey?.toBase58?.() || wallet?.publicKey?.toBase58?.();
+    const pub =
+      resp?.publicKey?.toBase58?.() ||
+      wallet?.publicKey?.toBase58?.();
+
     if(!pub){
       setStatus("Wallet connected but no pubkey found (refresh + retry)");
       return;
@@ -397,7 +426,7 @@ window.connectWallet = async function(type){
 
     walletLabel.textContent = pub.slice(0,4) + "..." + pub.slice(-4);
 
-    // Build UMI only after wallet connects
+    // build umi after wallet connect
     const { umiBundle, bubblegum, walletId } = await loadUmi();
     umi = umiBundle.createUmi(RPC)
       .use(bubblegum.mplBubblegum())
@@ -409,14 +438,14 @@ window.connectWallet = async function(type){
 
     setStatus("Wallet connected 🔥");
 
-  } catch(e){
+  }catch(e){
     console.error(e);
     if(String(e).toLowerCase().includes("reject")) setStatus("User rejected wallet connect");
     else setStatus("Wallet connect failed (check console)");
   }
 };
 
-// ------------------ WL Check (Helius DAS) ------------------
+// ---------------- WL CHECK (STRONG + PAGINATION) ----------------
 async function checkWhitelist(pubkey){
   try{
     if(!HELIUS_API_KEY || HELIUS_API_KEY.includes("PUT_YOUR_HELIUS_KEY_HERE")){
@@ -427,46 +456,73 @@ async function checkWhitelist(pubkey){
       return;
     }
 
-    const res = await fetch(HELIUS,{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({
-        jsonrpc:"2.0",
-        id:"wl",
-        method:"getAssetsByOwner",
-        params:{
-          ownerAddress: pubkey,
-          page: 1,
-          limit: 1000
-        }
-      })
-    });
+    setStatus("Checking LNL holder status…");
 
-    const json = await res.json();
-    const assets = json?.result?.items || [];
+    let found = false;
+    let page = 1;
 
-    isWL = assets.some(a =>
-      a.grouping?.some(g => g.group_value === LNL_COLLECTION)
-    );
+    while(page <= 5 && !found){
+      const res = await fetch(HELIUS,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          jsonrpc:"2.0",
+          id:"wl",
+          method:"getAssetsByOwner",
+          params:{
+            ownerAddress: pubkey,
+            page,
+            limit: 1000
+          }
+        })
+      });
+
+      const json = await res.json();
+      const items = json?.result?.items || [];
+      if(items.length === 0) break;
+
+      found = items.some(a => {
+        const groupingHit = a.grouping?.some(g =>
+          (g.group_key === "collection" || g.group_key === "verified_collection") &&
+          g.group_value === LNL_COLLECTION
+        );
+
+        const collectionAddr =
+          a.collection?.address ||
+          a.collection?.key ||
+          a.collection?.collection;
+
+        const collectionHit = collectionAddr === LNL_COLLECTION;
+
+        return groupingHit || collectionHit;
+      });
+
+      page++;
+    }
+
+    isWL = found;
 
     wlStatus.textContent = isWL ? "Whitelist (LNL Holder)" : "Public";
     mintPrice = isWL ? WL_PRICE : PUBLIC_PRICE;
     priceLabel.textContent = mintPrice + " SOL";
 
-  } catch(e){
+    setStatus(isWL ? "WL detected ✅" : "Public mint ✅");
+  }catch(e){
     console.error(e);
     isWL = false;
     wlStatus.textContent = "Public";
     mintPrice = PUBLIC_PRICE;
     priceLabel.textContent = PUBLIC_PRICE + " SOL";
+    setStatus("WL check failed (see console)");
   }
 }
 
-// ------------------ Local Mint Tracking ------------------
+// ---------------- Local Mint Tracking ----------------
 function refreshUserMints(walletStr){
   const key = "mints_" + walletStr;
   const used = parseInt(localStorage.getItem(key) || "0");
   const limit = isWL ? WL_LIMIT : PUBLIC_LIMIT;
+
   userMints.textContent = `${used} / ${limit}`;
 }
 
@@ -476,7 +532,7 @@ function incrementUserMints(walletStr){
   localStorage.setItem(key, String(used));
 }
 
-// ------------------ Supply (basic tree check) ------------------
+// ---------------- Supply ----------------
 async function refreshSupply(){
   try{
     await loadWeb3();
@@ -489,7 +545,7 @@ async function refreshSupply(){
       return;
     }
 
-    // NOTE: basic display only (not perfect minted count)
+    // simple display (not perfect, but stable)
     const minted = Math.min((acct.data.length % TOTAL_SUPPLY), TOTAL_SUPPLY);
 
     mintedLabel.textContent = minted;
@@ -501,7 +557,7 @@ async function refreshSupply(){
   }
 }
 
-// ------------------ Mint ------------------
+// ---------------- Mint ----------------
 async function mint(){
   if(!wallet){
     setStatus("Connect wallet first");
@@ -521,7 +577,7 @@ async function mint(){
   const index = Number(mintedLabel.textContent);
 
   if(Number.isNaN(index)){
-    setStatus("Cannot read supply yet. Try again.");
+    setStatus("Supply not ready yet. Try again.");
     return;
   }
 
@@ -551,18 +607,10 @@ async function mint(){
     const sig = await connection.sendRawTransaction(signed.serialize());
     await connection.confirmTransaction(sig);
 
-    // Mint cNFT
     setStatus("Minting cNFT… 🔥");
 
     const { bubblegum, umiCore } = await loadUmi();
     const uri = METADATA_BASE + index + ".json";
-
-    // ✅ Safe mint call
-    const mintFn = bubblegum.mintV1 || bubblegum.mintV1;
-    if(!mintFn){
-      setStatus("Mint engine load failed (bubblegum.mintV1 missing)");
-      return;
-    }
 
     await bubblegum.mintV1(umi, {
       leafOwner: umiCore.publicKey(pub),
@@ -581,14 +629,13 @@ async function mint(){
     await refreshSupply();
 
     setStatus("Mint successful 🔥 Check your wallet");
-
-  } catch(e){
+  }catch(e){
     console.error(e);
     setStatus("Mint failed – check console");
   }
 }
 
-// initial supply fetch
+// boot
 refreshSupply();
 </script>
 
