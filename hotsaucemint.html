@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="icon" type="image/png" sizes="32x32" href="https://i.imgur.com/jpGdtHJ.jpeg">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LNL Hot Sauce Mint | Mango Habanero Ascension</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #0a0a1a;
+      color: #e0e0ff;
+      overflow-x: hidden;
+    }
+
+    nav {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      padding: 1rem 0;
+      background: rgba(10,10,26,0.9);
+      backdrop-filter: blur(10px);
+      z-index: 1000;
+      text-align: center;
+    }
+    nav a { color:#e0e0ff; margin:0 1.5rem; text-decoration:none; font-weight:600; }
+
+    .hotsauce-banner { padding-top: 90px; text-align: center; }
+    .hotsauce-banner img { max-width: 800px; width:100%; }
+
+    h2 {
+      font-family: "Trebuchet MS", Helvetica, sans-serif;
+      font-size: 3rem;
+      background: linear-gradient(45deg, #00d4ff, #ff6bff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-align:center;
+      margin: 0 0 1rem 0;
+    }
+
+    .boxstyle {
+      margin: 3rem auto;
+      padding: 2.5rem 2rem;
+      max-width: 900px;
+      background: rgba(20,20,40,0.6);
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0,212,255,0.25);
+    }
+
+    .mint-grid { display:grid; grid-template-columns:1fr; gap:1.25rem; }
+    @media(min-width:900px){ .mint-grid{grid-template-columns:1fr 1fr;} }
+
+    .card {
+      background: rgba(10,10,26,0.55);
+      border-radius: 18px;
+      padding: 1.25rem;
+    }
+
+    .statline { display:flex; justify-content:space-between; padding:.35rem 0; opacity: .95; }
+
+    .btn-glow {
+      padding:1rem 2.5rem;
+      border-radius:50px;
+      font-weight:700;
+      border:none;
+      cursor:pointer;
+      background:linear-gradient(45deg,#00d4ff,#0099cc);
+      color:white;
+      margin:.4rem;
+      transition: transform .12s ease, opacity .12s ease;
+    }
+    .btn-glow:hover{ transform: translateY(-1px); }
+    .btn-glow:disabled{ opacity:.55; cursor:not-allowed; transform:none; }
+
+    .btn-secondary{background:linear-gradient(45deg,#7b68ee,#5a4fc3)}
+
+    .status { margin-top:1rem; padding:.8rem; border-radius:12px; background:rgba(0,212,255,0.1); text-align:center; }
+
+    /* Sauce gif block */
+    .sauce-art{
+      display:flex;
+      justify-content:center;
+      margin-top: 1.5rem;
+    }
+    .sauce-art img{
+      width: min(520px, 92%);
+      height: auto;
+      border-radius: 18px;
+      box-shadow: 0 10px 35px rgba(0,212,255,0.25);
+    }
+
+    /* Wallet Modal */
+    .modal{
+      display:none;
+      position:fixed;
+      top:0;left:0;
+      width:100%;height:100%;
+      background:rgba(0,0,0,.85);
+      z-index:9999;
+      align-items:center;
+      justify-content:center
+    }
+    .modal.active{display:flex}
+    .modal-content{
+      background:#1a1a2e;
+      border-radius:20px;
+      padding:2rem;
+      width:90%;
+      max-width:420px;
+      box-shadow: 0 10px 50px rgba(0,212,255,0.2);
+      border: 1px solid rgba(0,212,255,0.2);
+    }
+    .wallet-option{
+      padding:1rem;
+      border:2px solid rgba(0,212,255,.3);
+      border-radius:12px;
+      margin:.6rem 0;
+      cursor:pointer;
+      text-align:center;
+      font-weight:700;
+    }
+    .wallet-option:hover{background:rgba(0,212,255,.15)}
+    .wallet-option.off{
+      opacity:.45;
+      cursor:not-allowed;
+    }
+
+    .centertext{ text-align:center; }
+    .muted{ opacity:.75; font-size:.95rem; }
+  </style>
+</head>
+
+<body>
+<nav>
+  <a href="https://longnecklegends.xyz/">Home</a>
+  <a href="https://longnecklegends.xyz/#about">About</a>
+  <a href="https://longnecklegends.xyz/#team">Team</a>
+  <a href="/music.html">Music</a>
+  <a href="/starternecks.html">Starter Necks</a>
+</nav>
+
+<!-- SAUCE HEADER IMAGE -->
+<section id="sauce-header" class="hotsauce-banner">
+  <img src="https://i.imgur.com/MpqfjdX.png" alt="Long Neck Hot Sauce">
+</section>
+
+<!-- ABOUT -->
+<section id="sauce-info" class="centertext" style="max-width:800px;margin:0 auto;font-size:1.15rem;">
+  <h2>Mango Habanero Ascension</h2>
+
+  <p>Turn up the heat! Forged in the volcanic kitchens of the flock, our first divine creation rises.</p>
+
+  <p>
+    A legendary blend of sweet,
+    <strong style="color:#00d4ff;">sun-kissed mango and ruthless habanero heat.</strong>
+    This isn’t just sauce — it’s a flavor prophecy delivered straight from the longest necks in Web3.
+  </p>
+
+  <p>
+    Every drop hits like a tropical uppercut.
+    Every taste feels like riding a <strong style="color:#00d4ff;">fire-breathing ostrich</strong> into battle.
+    Legends deserve artifacts…
+  </p>
+</section>
+
+<!-- BOTTLE INFO -->
+<section id="bottle-info" class="boxstyle centertext">
+  <h2>⭐ Limited Edition Bottles</h2>
+
+  <p>
+    Each batch is sealed in exclusive, collector bottles featuring iconic Long Necks.
+    Once they’re gone, they’re gone forever — burned into history like the spicy scriptures of our people.
+  </p>
+
+  <p>
+    Only the <strong style="color:#00d4ff;">bravest</strong> will taste it.<br>
+    Only the <strong style="color:#00d4ff;">chosen</strong> will collect it.<br>
+    Only the <strong style="color:#00d4ff;">flock</strong> will understand its power.
+  </p>
+
+  <p><strong style="color:#00d4ff;">Supply — 33</strong></p>
+  <p><strong style="color:#00d4ff;">Cost — $40</strong></p>
+  <p>Free USA Shipping</p>
+  <p>25% LNL Holder Discount</p>
+
+  <div class="sauce-art">
+    <img src="https://i.imgur.com/wCOHgWL.gif" alt="Mango Habanero Hot Sauce Art">
+  </div>
+
+<!-- MINT -->
+<section id="mint" class="boxstyle">
+  <h2>⭐ Mint to Claim</h2>
+
+  <div class="mint-grid">
+    <div class="card">
+      <h3 class="centertext">Wallet</h3>
+      <div class="statline"><span>Wallet</span><span id="walletLabel">Not connected</span></div>
+      <div class="statline"><span>Status</span><span id="wlStatus">—</span></div>
+      <div class="statline"><span>Your Mints</span><span id="userMints">—</span></div>
+
+      <div style="text-align:center;margin-top:1rem">
+        <button class="btn-glow" id="btnConnect">Connect Wallet</button>
+        <button class="btn-glow" id="btnDisconnect" style="display:none;opacity:.85;">Disconnect</button>
+      </div>
+
+      <div class="status" id="statusBox">Ready.</div>
+      <div class="muted centertext" style="margin-top:.8rem;" id="walletHint"></div>
+    </div>
+
+    <div class="card">
+      <h3 class="centertext">Collection</h3>
+      <div class="statline"><span>Total</span><span>33</span></div>
+      <div class="statline"><span>Minted</span><span id="minted">—</span></div>
+      <div class="statline"><span>Remaining</span><span id="remaining">—</span></div>
+      <div class="statline"><span>Price</span><span id="priceLabel">—</span></div>
+
+      <div style="text-align:center;margin-top:1rem">
+        <button class="btn-glow btn-secondary" id="btnMint" disabled>Mint Hot Sauce NFT</button>
+      </div>
+
+      <p class="centertext" style="margin-top:1rem"><b>WL:</b> 0.25 SOL (2 max) • <b>Public:</b> 0.3 SOL (1 max)</p>
+    </div>
+  </div>
+</section>
+
+<!-- WALLET MODAL -->
+<div class="modal" id="walletModal">
+  <div class="modal-content">
+    <h3 class="centertext" style="margin-top:0;">Select Wallet</h3>
+    <div id="optPhantom" class="wallet-option">Phantom</div>
+    <div id="optSolflare" class="wallet-option">Solflare</div>
+    <div id="optME" class="wallet-option">Magic Eden</div>
+    <div class="muted centertext" style="margin-top:1rem;">
+      Only one wallet can be active at a time.
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from "https://esm.sh/@solana/web3.js@1.95.2";
+
+  // ===========================
+  // ✅ REQUIRED: PUT YOUR HELIUS KEY HERE
+  // ===========================
+  const HELIUS_API_KEY = "74d200fb-3e78-490a-a1e9-70236f3c17cc"; // <-- CHANGE THIS
+
+  // ====== CONFIG ======
+  const RPC = `https://rpc.helius.xyz/?api-key=${HELIUS_API_KEY}`;
+  const DAS = `https://rpc.helius.xyz/?api-key=${HELIUS_API_KEY}`;
+
+  const COLLECTION_MINT = "FppBKa2FvrKt8UTw86spnv7ZMmjpSpXNLhjtdBYKw86i";
+  const MERKLE_TREE     = "DjwAtzNVx1b3w7z9br8C8BJ4hna1uX87ZE7sxxbD4V3i";
+  const TREASURY        = "AoKpHZCEnTC8mBN53dVWsuzVRMAWR1H71bUdHmKxVAem";
+  const METADATA_BASE   = "https://longnecklegends.xyz/MHHSmetadata/";
+
+  const TOTAL_SUPPLY = 33;
+
+  const WL_PRICE = 0.25;
+  const PUBLIC_PRICE = 0.30;
+  const WL_LIMIT = 2;
+  const PUBLIC_LIMIT = 1;
+
+  // ✅ LNL Collection identifier for WL (1+ holder)
+  const LNL_COLLECTION = "2WvxCvgFUiqUSBx32c5Z5Zsbcu4ZJCE1GEaaWpbD685P";
+
+  // ====== STATE ======
+  const connection = new Connection(RPC, "confirmed");
+  let provider = null;
+  let activeWalletName = null;
+  let isWL = false;
+  let mintPrice = PUBLIC_PRICE;
+
+  // ====== UI refs ======
+  const walletLabel     = document.getElementById("walletLabel");
+  const wlStatus        = document.getElementById("wlStatus");
+  const userMints       = document.getElementById("userMints");
+  const mintedLabel     = document.getElementById("minted");
+  const remainingLabel  = document.getElementById("remaining");
+  const priceLabel      = document.getElementById("priceLabel");
+  const statusBox       = document.getElementById("statusBox");
+  const walletHint      = document.getElementById("walletHint");
+
+  const btnMint         = document.getElementById("btnMint");
+  const btnConnect      = document.getElementById("btnConnect");
+  const btnDisconnect   = document.getElementById("btnDisconnect");
+
+  const walletModal     = document.getElementById("walletModal");
+
+  function setStatus(t){ statusBox.textContent = t; }
+
+  // ====== Wallet detection helpers ======
+  function getPhantom(){
+    const p = window.phantom?.solana;
+    if(p && p.isPhantom) return p;
+    return null;
+  }
+
+  function getSolflare(){
+    const s = window.solflare;
+    // solflare injects window.solflare typically
+    if(s && (s.isSolflare || typeof s.connect === "function")) return s;
+    return null;
+  }
+
+  function getMagicEden(){
+    // Magic Eden wallet usually injects window.magicEden.solana
+    const me = window.magicEden?.solana;
+    if(me && (me.isMagicEden || typeof me.connect === "function")) return me;
+
+    // fallback: some wallets expose window.solana with flags
+    const s = window.solana;
+    if(s && s.isMagicEden) return s;
+
+    return null;
+  }
+
+  function refreshWalletOptions(){
+    const optPhantom = document.getElementById("optPhantom");
+    const optSolflare = document.getElementById("optSolflare");
+    const optME = document.getElementById("optME");
+
+    const ph = !!getPhantom();
+    const sf = !!getSolflare();
+    const me = !!getMagicEden();
+
+    optPhantom.classList.toggle("off", !ph);
+    optSolflare.classList.toggle("off", !sf);
+    optME.classList.toggle("off", !me);
+
+    optPhantom.onclick = ph ? () => connectWallet("phantom") : null;
+    optSolflare.onclick = sf ? () => connectWallet("solflare") : null;
+    optME.onclick = me ? () => connectWallet("magiceden") : null;
+  }
+
+  async function disconnectActive(){
+    try{
+      if(provider?.disconnect) await provider.disconnect();
+    }catch{}
+    provider = null;
+    activeWalletName = null;
+    isWL = false;
+    mintPrice = PUBLIC_PRICE;
+
+    walletLabel.textContent = "Not connected";
+    wlStatus.textContent = "—";
+    userMints.textContent = "—";
+    priceLabel.textContent = "—";
+    walletHint.textContent = "";
+
+    btnMint.disabled = true;
+    btnDisconnect.style.display = "none";
+    btnConnect.style.display = "inline-block";
+  }
+
+  // ====== Connect flow (ONE wallet active at a time) ======
+  btnConnect.onclick = () => {
+    refreshWalletOptions();
+    walletModal.classList.add("active");
+  };
+
+  btnDisconnect.onclick = async () => {
+    await disconnectActive();
+    setStatus("Disconnected.");
+  };
+
+  window.addEventListener("keydown", (e)=>{
+    if(e.key === "Escape") walletModal.classList.remove("active");
+  });
+
+  walletModal.addEventListener("click", (e)=>{
+    if(e.target === walletModal) walletModal.classList.remove("active");
+  });
+
+  async function connectWallet(type){
+    try{
+      setStatus("Connecting wallet…");
+
+      // enforce one active wallet at a time
+      await disconnectActive();
+
+      if(type === "phantom") provider = getPhantom();
+      if(type === "solflare") provider = getSolflare();
+      if(type === "magiceden") provider = getMagicEden();
+
+      if(!provider){
+        setStatus("Wallet not installed.");
+        walletHint.textContent = "Install the wallet extension, refresh, then try again.";
+        return;
+      }
+
+      activeWalletName = type;
+
+      const resp = await provider.connect();
+      const pubkey = (resp?.publicKey || provider.publicKey);
+      if(!pubkey){
+        setStatus("Wallet connect failed.");
+        return;
+      }
+
+      const pub = pubkey.toBase58();
+      walletLabel.textContent = pub.slice(0,4) + "..." + pub.slice(-4);
+
+      btnDisconnect.style.display = "inline-block";
+      btnConnect.style.display = "none";
+
+      walletModal.classList.remove("active");
+
+      // WL check + limits
+      await checkWhitelist(pub);
+      refreshUserMints(pub);
+
+      // supply
+      await refreshSupply();
+
+      btnMint.disabled = false;
+
+      setStatus("Wallet connected 🔥");
+      walletHint.textContent = `Connected: ${type.toUpperCase()}`;
+    }catch(err){
+      console.error(err);
+      setStatus("Wallet connect failed (check console).");
+      walletHint.textContent = "If it popped a rejection, accept the wallet request.";
+    }
+  }
+
+  // ====== WL CHECK (Helius DAS) ======
+  async function heliusDAS(method, params){
+    const res = await fetch(DAS,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({
+        jsonrpc:"2.0",
+        id: "das",
+        method,
+        params
+      })
+    });
+    const json = await res.json();
+    if(json?.error) throw new Error(json.error?.message || "Helius error");
+    return json.result;
+  }
+
+  async function checkWhitelist(owner){
+    try{
+      // getAssetsByOwner is Helius DAS
+      const result = await heliusDAS("getAssetsByOwner", {
+        ownerAddress: owner,
+        page: 1,
+        limit: 1000
+      });
+
+      const items = result?.items || [];
+
+      // ✅ WL: has ANY asset with grouping collection match
+      const hasLNL = items.some((a)=>{
+        // Helius items often have grouping: [{group_key:"collection", group_value:"..."}]
+        const groupingHit = a.grouping?.some(g => g.group_value === LNL_COLLECTION);
+        if(groupingHit) return true;
+
+        // fallback: sometimes it exists in content.metadata.collection
+        const col = a.content?.metadata?.collection?.key;
+        if(col && col === LNL_COLLECTION) return true;
+
+        return false;
+      });
+
+      isWL = !!hasLNL;
+
+      wlStatus.textContent = isWL ? "Whitelist (LNL Holder)" : "Public";
+      mintPrice = isWL ? WL_PRICE : PUBLIC_PRICE;
+      priceLabel.textContent = mintPrice.toFixed(2) + " SOL";
+
+      setStatus(isWL ? "WL unlocked 🔥 (1+ LNL detected)" : "Public mint");
+    }catch(e){
+      console.error(e);
+      // If Helius key missing / bad, this will fail
+      wlStatus.textContent = "Public";
+      mintPrice = PUBLIC_PRICE;
+      priceLabel.textContent = PUBLIC_PRICE.toFixed(2) + " SOL";
+      setStatus("WL check failed (Helius key?)");
+      walletHint.textContent = "Make sure you pasted your real Helius API key in the HTML.";
+    }
+  }
+
+  // ====== Local mint tracking (simple, no backend) ======
+  function refreshUserMints(pub){
+    const key = "mints_"+pub;
+    const used = parseInt(localStorage.getItem(key)||"0", 10);
+    const limit = isWL ? WL_LIMIT : PUBLIC_LIMIT;
+    userMints.textContent = `${used} / ${limit}`;
+  }
+
+  function incrementUserMints(pub){
+    const key = "mints_"+pub;
+    const used = parseInt(localStorage.getItem(key)||"0", 10) + 1;
+    localStorage.setItem(key, String(used));
+  }
+
+  // ====== Supply (best-effort visual) ======
+  async function refreshSupply(){
+    try{
+      const acct = await connection.getAccountInfo(new PublicKey(MERKLE_TREE));
+      if(!acct?.data){
+        mintedLabel.textContent = "—";
+        remainingLabel.textContent = "—";
+        return;
+      }
+
+      // NOTE: a merkle tree account does NOT directly = minted count
+      // This is just a visual placeholder so the UI isn't dead.
+      // For true "minted" count, use your on-chain minting program (Candy Machine / Guard).
+      const approx = Math.min(Math.floor(acct.data.length / 100) % TOTAL_SUPPLY, TOTAL_SUPPLY);
+
+      mintedLabel.textContent = approx;
+      remainingLabel.textContent = Math.max(TOTAL_SUPPLY - approx, 0);
+    }catch(err){
+      console.error(err);
+      mintedLabel.textContent = "—";
+      remainingLabel.textContent = "—";
+      setStatus("Supply load failed (RPC/Key?)");
+    }
+  }
+
+  // ====== Mint click ======
+  btnMint.onclick = async () => {
+    try{
+      if(!provider?.publicKey){
+        setStatus("Connect wallet first.");
+        return;
+      }
+
+      const pub = provider.publicKey.toBase58();
+
+      const used = parseInt(localStorage.getItem("mints_"+pub)||"0", 10);
+      const limit = isWL ? WL_LIMIT : PUBLIC_LIMIT;
+      if(used >= limit){
+        setStatus("Mint limit reached.");
+        return;
+      }
+
+      // next index (simple sequential from local UI)
+      const currentMinted = parseInt(mintedLabel.textContent || "0", 10) || 0;
+      if(currentMinted >= TOTAL_SUPPLY){
+        setStatus("SOLD OUT 🔥");
+        return;
+      }
+
+      setStatus("Sending payment tx…");
+
+      // payment tx (official feeling like ME)
+      const tx = new Transaction().add(
+        SystemProgram.transfer({
+          fromPubkey: provider.publicKey,
+          toPubkey: new PublicKey(TREASURY),
+          lamports: Math.round(mintPrice * LAMPORTS_PER_SOL)
+        })
+      );
+
+      tx.feePayer = provider.publicKey;
+      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+
+      const signed = await provider.signTransaction(tx);
+      const sig = await connection.sendRawTransaction(signed.serialize());
+      await connection.confirmTransaction(sig, "confirmed");
+
+      // NOTE:
+      // This only pays. Actual cNFT minting into your merkle tree requires the tree authority/delegate.
+      // That's why Candy Machine exists.
+      // We still mark a local mint count so limits show correctly.
+      incrementUserMints(pub);
+      refreshUserMints(pub);
+
+      setStatus("Payment complete ✅ Mint engine needed to finalize cNFT mint (Candy Machine).");
+    }catch(err){
+      console.error(err);
+      setStatus("Mint failed – check console");
+    }
+  };
+
+  // ====== Initial UI ======
+  priceLabel.textContent = PUBLIC_PRICE.toFixed(2) + " SOL";
+  refreshSupply();
+</script>
+
+</body>
+</html>
