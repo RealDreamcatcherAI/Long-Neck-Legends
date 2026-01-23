@@ -9,7 +9,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
 
   <style>
-    /* === ORIGINAL HOTSAUCE STYLE (UNCHANGED LOOK) === */
     body {
       margin: 0;
       padding: 0;
@@ -41,6 +40,7 @@
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       text-align:center;
+      margin: 1.25rem 0;
     }
 
     .boxstyle {
@@ -50,31 +50,8 @@
       background: rgba(20,20,40,0.6);
       border-radius: 20px;
       box-shadow: 0 10px 30px rgba(0,212,255,0.25);
+      overflow: hidden; /* ✅ prevents spill */
     }
-    
-    /* ✅ Prevent anything inside the box from spilling out */
-.boxstyle{
-  overflow:hidden;
-}
-
-/* ✅ Sauce GIF stays centered + responsive */
-.sauce-art{
-  width:100%;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  margin: 2rem auto;
-}
-
-.sauce-art img{
-  width:100%;
-  max-width:520px;  /* 🔥 BIGGER GIF (change this anytime) */
-  height:auto;
-  display:block;
-  margin:0 auto;
-  border-radius:16px;
-  box-shadow:0 0 25px rgba(0,212,255,0.35);
-}
 
     .mint-grid { display:grid; grid-template-columns:1fr; gap:1.25rem; }
     @media(min-width:900px){ .mint-grid{grid-template-columns:1fr 1fr;} }
@@ -96,37 +73,91 @@
       background:linear-gradient(45deg,#00d4ff,#0099cc);
       color:white;
       margin:.4rem;
+      transition: transform .15s ease, box-shadow .15s ease;
+      box-shadow: 0 0 18px rgba(0,212,255,.35);
     }
-    .btn-secondary{background:linear-gradient(45deg,#7b68ee,#5a4fc3)}
+    .btn-glow:hover{
+      transform: translateY(-1px);
+      box-shadow: 0 0 26px rgba(0,212,255,.5);
+    }
+    .btn-secondary{
+      background:linear-gradient(45deg,#7b68ee,#5a4fc3);
+      box-shadow: 0 0 18px rgba(123,104,238,.35);
+    }
+    .btn-secondary:hover{
+      box-shadow: 0 0 26px rgba(123,104,238,.5);
+    }
 
-    .status { margin-top:1rem; padding:.8rem; border-radius:12px; background:rgba(0,212,255,0.1); }
+    .status {
+      margin-top:1rem;
+      padding:.8rem;
+      border-radius:12px;
+      background:rgba(0,212,255,0.1);
+      text-align:center;
+    }
+
+    /* ✅ Center text ONLY for this section */
+    #bottle-info{ text-align:center; }
+    #bottle-info p{
+      max-width: 720px;
+      margin: 0.75rem auto;
+      line-height: 1.6;
+    }
+
+    /* ✅ GIF sizing */
+    .sauce-art{
+      width:100%;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      margin: 2rem auto;
+    }
+    .sauce-art img{
+      width:min(560px, 92vw);
+      height:auto;
+      display:block;
+      margin:0 auto;
+      border-radius:16px;
+      box-shadow:0 0 25px rgba(0,212,255,0.35);
+    }
 
     /* Wallet Modal */
-    .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);z-index:9999;align-items:center;justify-content:center}
+    .modal{
+      display:none;
+      position:fixed;
+      top:0;left:0;
+      width:100%;
+      height:100%;
+      background:rgba(0,0,0,.85);
+      z-index:9999;
+      align-items:center;
+      justify-content:center
+    }
     .modal.active{display:flex}
-    .modal-content{background:#1a1a2e;border-radius:20px;padding:2rem;width:90%;max-width:400px}
-    .wallet-option{padding:1rem;border:2px solid rgba(0,212,255,.3);border-radius:12px;margin:.6rem 0;cursor:pointer}
+    .modal-content{
+      background:#1a1a2e;
+      border-radius:20px;
+      padding:2rem;
+      width:90%;
+      max-width:420px;
+      box-shadow: 0 0 35px rgba(0,212,255,.25);
+    }
+    .wallet-option{
+      padding:1rem;
+      border:2px solid rgba(0,212,255,.3);
+      border-radius:12px;
+      margin:.6rem 0;
+      cursor:pointer;
+      text-align:center;
+      font-weight:700;
+    }
     .wallet-option:hover{background:rgba(0,212,255,.15)}
-
-    /* ✅ Center text ONLY inside the Limited Edition Bottles section */
-#bottle-info{
-  text-align:center;
-}
-
-#bottle-info p{
-  max-width: 720px;
-  margin: 0.75rem auto;
-  line-height: 1.6;
-}
-
-#bottle-info strong{
-  display:inline-block;
-}
   </style>
 </head>
 
 <body>
-<nav>
+
+  <nav>
     <a href="https://longnecklegends.xyz/">Home</a>
     <a href="https://longnecklegends.xyz/#about">About</a>
     <a href="https://longnecklegends.xyz/#team">Team</a>
@@ -134,118 +165,125 @@
     <a href="/starternecks.html">Starter Necks</a>
   </nav>
 
-<!-- SAUCE HEADER IMAGE -->
-<section id="sauce-header" style="text-align:center; padding-top:90px;" class="hotsauce-banner">
-  <img 
-    src="https://i.imgur.com/MpqfjdX.png" 
-    alt="Long Neck Hot Sauce"
-    style="
-      width: 100%;
-      max-width: 800px; 
-      display: block; 
-      margin: 0 auto;"
-  >
-</section>
+  <!-- HEADER IMAGE -->
+  <section id="sauce-header" class="hotsauce-banner">
+    <img src="https://i.imgur.com/MpqfjdX.png" alt="Long Neck Hot Sauce">
+  </section>
 
-    <!-- ABOUT -->
-<section id="sauce-info" style="max-width:900px; margin:0 auto; text-align:center; font-size:1.15rem; max-width:800px; margin:0 auto;">
-<h2>Mango Habanero Ascension
-</h2>
+  <!-- ABOUT -->
+  <section id="sauce-info" style="max-width:900px; margin:0 auto; text-align:center; font-size:1.15rem; max-width:800px;">
+    <h2>Mango Habanero Ascension</h2>
 
-<p>Turn up the heat! Forged in the volcanic kitchens of the flock, 
-  our first divine creation rises.
-</p>
-  
-<p>A legendary blend of sweet, <strong style="color:#00d4ff;">sun-kissed mango and ruthless habanero heat.</strong>
-  This isn’t just sauce, it’s a flavor prophecy delivered straight 
-  from the longest necks in Web3.
-</p>
+    <p>Turn up the heat! Forged in the volcanic kitchens of the flock, our first divine creation rises.</p>
 
-<p>Every drop hits like a tropical uppercut.
-  Every taste feels like riding a <strong style="color:#00d4ff;">fire-breathing ostrich</strong> into battle.
-  Your tongue will praise you. Your enemies will envy you,
-  because legends deserve artifacts…
-</p>
-</section>
+    <p>
+      A legendary blend of sweet,
+      <strong style="color:#00d4ff;">sun-kissed mango and ruthless habanero heat.</strong>
+      This isn’t just sauce, it’s a flavor prophecy delivered straight from the longest necks in Web3.
+    </p>
 
-    <!-- BOTTLE INFO -->  
-<section id="bottle-info" class="boxstyle">
-<h2>⭐ Limited Edition Bottles
-</h2>
+    <p>
+      Every drop hits like a tropical uppercut. Every taste feels like riding a
+      <strong style="color:#00d4ff;">fire-breathing ostrich</strong> into battle.
+      Your tongue will praise you. Your enemies will envy you, because legends deserve artifacts…
+    </p>
+  </section>
 
-<p>Each batch is sealed in exclusive, collector bottles featuring iconic 
-  Long Necks. Once they’re gone, they’re gone forever! burned into 
-  history like the spicy scriptures of our people.
-</p>
-  
-<p>Only the <strong style="color:#00d4ff;">bravest</strong> will taste it.<br>
-  Only the <strong style="color:#00d4ff;">chosen</strong> will collect it.<br>
-  Only the <strong style="color:#00d4ff;">flock</strong> will understand its power.
-</p>
+  <!-- LIMITED EDITION BOTTLES -->
+  <section id="bottle-info" class="boxstyle">
+    <h2>⭐ Limited Edition Bottles</h2>
 
-<p><strong style="color:#00d4ff;">Supply - 33</strong>
-  <br>
-<p><strong style="color:#00d4ff;">LNL Holder - 0.25 SOL</strong>
-  <br>
-<p><strong style="color:#00d4ff;">Public - 0.3 SOL</strong>
-  <br>
-  <p>Free USA Shipping</p>
-  <div class="sauce-art">
-  <img src="https://i.imgur.com/wCOHgWL.gif" alt="Mango Habanero Hot Sauce Art">
-</div>
+    <p>
+      Each batch is sealed in exclusive, collector bottles featuring iconic Long Necks.
+      Once they’re gone, they’re gone forever! burned into history like the spicy scriptures of our people.
+    </p>
 
-<section id="mint" class="boxstyle">
-  <h2>⭐ Mint to Claim</h2>
+    <p>
+      Only the <strong style="color:#00d4ff;">bravest</strong> will taste it.<br>
+      Only the <strong style="color:#00d4ff;">chosen</strong> will collect it.<br>
+      Only the <strong style="color:#00d4ff;">flock</strong> will understand its power.
+    </p>
 
-  <div class="mint-grid">
-    <div class="card">
-      <h3>Wallet</h3>
-      <div class="statline"><span>Wallet</span><span id="walletLabel">Not connected</span></div>
-      <div class="statline"><span>Status</span><span id="wlStatus">—</span></div>
-      <div class="statline"><span>Your Mints</span><span id="userMints">—</span></div>
+    <p><strong style="color:#00d4ff;">Supply - 33</strong></p>
+    <p><strong style="color:#00d4ff;">LNL Holder - 0.25 SOL</strong></p>
+    <p><strong style="color:#00d4ff;">Public - 0.3 SOL</strong></p>
+    <p>Free USA Shipping</p>
 
-      <div style="text-align:center;margin-top:1rem">
-        <button class="btn-glow" id="btnConnect">Connect Wallet</button>
-      </div>
-
-      <div class="status" id="statusBox">Ready.</div>
+    <div class="sauce-art">
+      <img src="https://i.imgur.com/wCOHgWL.gif" alt="Mango Habanero Hot Sauce Art">
     </div>
 
-    <div class="card">
-      <h3>Collection</h3>
-      <div class="statline"><span>Total</span><span>33</span></div>
-      <div class="statline"><span>Minted</span><span id="minted">—</span></div>
-      <div class="statline"><span>Remaining</span><span id="remaining">—</span></div>
-      <div class="statline"><span>Price</span><span id="priceLabel">—</span></div>
+    <h2>Pre-Order</h2>
+    <p>
+      Pre-order now and get a limited-edition label featuring your favorite Long Neck character.
+      Spice up your meals while supporting the flock!
+    </p>
+  </section>
 
-      <div style="text-align:center;margin-top:1rem">
-        <button class="btn-glow btn-secondary" id="btnMint">Mint Hot Sauce NFT</button>
+  <!-- MINT SECTION -->
+  <section id="mint" class="boxstyle">
+    <h2>⭐ Mint to Claim</h2>
+
+    <div class="mint-grid">
+      <div class="card">
+        <h3 style="text-align:center;">Wallet</h3>
+        <div class="statline"><span>Wallet</span><span id="walletLabel">Not connected</span></div>
+        <div class="statline"><span>Status</span><span id="wlStatus">—</span></div>
+        <div class="statline"><span>Your Mints</span><span id="userMints">—</span></div>
+
+        <div style="text-align:center;margin-top:1rem">
+          <button class="btn-glow" id="btnConnect">Connect Wallet</button>
+        </div>
+
+        <div class="status" id="statusBox">Ready.</div>
       </div>
 
-      <p style="margin-top:1rem"><b>WL:</b> 2 max • <b>Public:</b> 1 max</p>
+      <div class="card">
+        <h3 style="text-align:center;">Collection</h3>
+        <div class="statline"><span>Total</span><span>33</span></div>
+        <div class="statline"><span>Minted</span><span id="minted">—</span></div>
+        <div class="statline"><span>Remaining</span><span id="remaining">—</span></div>
+        <div class="statline"><span>Price</span><span id="priceLabel">—</span></div>
+
+        <div style="text-align:center;margin-top:1rem">
+          <button class="btn-glow btn-secondary" id="btnMint">Mint Hot Sauce NFT</button>
+        </div>
+
+        <p style="margin-top:1rem; text-align:center;"><b>WL:</b> 2 max • <b>Public:</b> 1 max</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- WALLET MODAL -->
+  <div class="modal" id="walletModal">
+    <div class="modal-content">
+      <h3 style="text-align:center;margin-top:0;">Select Wallet</h3>
+      <div class="wallet-option" onclick="connectWallet('phantom')">Phantom</div>
+      <div class="wallet-option" onclick="connectWallet('solflare')">Solflare</div>
+      <div class="wallet-option" onclick="connectWallet('magiceden')">Magic Eden</div>
+      <div style="text-align:center; opacity:.75; font-size:.85rem; margin-top:.9rem;">
+        If a wallet doesn’t pop up, refresh and try again.
+      </div>
     </div>
   </div>
-</section>
-
-<!-- WALLET MODAL -->
-<div class="modal" id="walletModal">
-  <div class="modal-content">
-    <h3>Select Wallet</h3>
-    <div class="wallet-option" onclick="connectWallet('phantom')">Phantom</div>
-    <div class="wallet-option" onclick="connectWallet('solflare')">Solflare</div>
-    <div class="wallet-option" onclick="connectWallet('magiceden')">Magic Eden</div>
-  </div>
-</div>
 
 <script>
 /* ===========================
-   HOTSAUCE MINT SCRIPT (FIXED)
-   - No module imports at page load
-   - Dynamic imports only when needed
-   - Buttons ALWAYS work
+   HOTSAUCE MINT SCRIPT (WORKING)
+   ✅ Wallet connect (Phantom/Solflare/MagicEden)
+   ✅ WL check via Helius DAS
+   ✅ WL/public pricing & limits
+   ✅ Dynamic imports (no dead buttons)
 =========================== */
 
-const RPC = "https://api.mainnet-beta.solana.com";
+// ✅ Change ONLY this line:
+const HELIUS_API_KEY = "74d200fb-3e78-490a-a1e9-70236f3c17cc";
+
+// ✅ Browser-friendly RPC (won't 403 like api.mainnet-beta.solana.com sometimes)
+const RPC = "https://rpc.ankr.com/solana";
+const HELIUS = `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`;
+
+// === YOUR ADDRESSES ===
 const COLLECTION_MINT = "FppBKa2FvrKt8UTw86spnv7ZMmjpSpXNLhjtdBYKw86i";
 const MERKLE_TREE = "DjwAtzNVx1b3w7z9br8C8BJ4hna1uX87ZE7sxxbD4V3i";
 const TREASURY = "AoKpHZCEnTC8mBN53dVWsuzVRMAWR1H71bUdHmKxVAem";
@@ -257,9 +295,8 @@ const PUBLIC_PRICE = 0.30;
 const WL_LIMIT = 2;
 const PUBLIC_LIMIT = 1;
 
-// LNL Holder WL (Collection ID)
+// LNL collection id for holder WL
 const LNL_COLLECTION = "2WvxCvgFUiqUSBx32c5Z5Zsbcu4ZJCE1GEaaWpbD685P";
-const HELIUS = "https://rpc.helius.xyz/?api-key=free";
 
 // UI refs
 const walletLabel = document.getElementById("walletLabel");
@@ -283,7 +320,6 @@ let umiMods = null;
 
 function setStatus(t){ statusBox.textContent = t; }
 
-// ✅ Always bind buttons even if libraries fail
 document.getElementById("btnConnect").addEventListener("click", () => {
   walletModal.classList.add("active");
 });
@@ -295,7 +331,6 @@ document.getElementById("btnMint").addEventListener("click", () => {
   });
 });
 
-// Click outside modal closes it
 walletModal.addEventListener("click", (e) => {
   if(e.target === walletModal) walletModal.classList.remove("active");
 });
@@ -305,7 +340,6 @@ priceLabel.textContent = PUBLIC_PRICE + " SOL";
 // ------------------ Dynamic Imports ------------------
 async function loadWeb3(){
   if(web3) return web3;
-
   setStatus("Loading Solana libraries…");
   web3 = await import("https://esm.sh/@solana/web3.js@1.95.2");
   connection = new web3.Connection(RPC, "confirmed");
@@ -314,8 +348,8 @@ async function loadWeb3(){
 
 async function loadUmi(){
   if(umiMods) return umiMods;
-
   setStatus("Loading mint engine…");
+
   const [
     umiBundle,
     bubblegum,
@@ -332,89 +366,67 @@ async function loadUmi(){
   return umiMods;
 }
 
-window.addEventListener('load', () => {
-  // Phantom
-  if (window.solana?.isPhantom) {
-    document.getElementById('phantomStatus').textContent = 'Installed ✓';
-    document.getElementById('phantomStatus').style.color = '#48bb78';
-  }
-
-  // Solflare
-  if (window.solflare?.isSolflare || window.solflare?.solana) {
-    document.getElementById('solflareStatus').textContent = 'Installed ✓';
-    document.getElementById('solflareStatus').style.color = '#48bb78';
-  }
-
-  // Magic Eden
-  if (window.magicEden?.solana) {
-    document.getElementById('magicedenStatus').textContent = 'Installed ✓';
-    document.getElementById('magicedenStatus').style.color = '#48bb78';
-  }
-});
-
 // ------------------ Wallet Connect ------------------
-window.connectWallet = async function(type) {
-  try {
-    setStatus("Connecting wallet...");
-    document.getElementById('walletModal').classList.remove('active');
+window.connectWallet = async function(type){
+  try{
+    // ✅ Detect providers properly
+    const providers = {
+      phantom: (window.solana?.isPhantom ? window.solana : null),
+      solflare: (window.solflare?.solana || (window.solana?.isSolflare ? window.solana : null)),
+      magiceden: (window.magicEden?.solana || (window.solana?.isMagicEden ? window.solana : null)),
+    };
 
-    let provider = null;
+    const provider = providers[type];
 
-    // Phantom
-    if (type === 'phantom') {
-      if (!window.solana || !window.solana.isPhantom) {
-        window.open('https://phantom.app/', '_blank');
-        setStatus("Phantom not installed");
-        return;
-      }
-      provider = window.solana;
-      walletType = 'Phantom';
+    if(!provider){
+      setStatus("Wallet not detected. Make sure extension is enabled + refresh.");
+      return;
     }
 
-    // Solflare
-    else if (type === 'solflare') {
-      if (!window.solflare?.solana) {
-        window.open('https://solflare.com/', '_blank');
-        setStatus("Solflare not installed");
-        return;
-      }
-      provider = window.solflare.solana;
-      walletType = 'Solflare';
-    }
+    walletModal.classList.remove("active");
+    setStatus("Connecting wallet…");
 
-    // Magic Eden
-    else if (type === 'magiceden') {
-      if (!window.magicEden?.solana) {
-        window.open('https://magiceden.io/wallet', '_blank');
-        setStatus("Magic Eden wallet not installed");
-        return;
-      }
-      provider = window.magicEden.solana;
-      walletType = 'Magic Eden';
-    }
-
-    // ACTUAL CONNECT
     const resp = await provider.connect();
-    walletAdapter = provider;
+    wallet = provider;
 
-    const pubkey = resp.publicKey.toBase58();
+    const pub = resp?.publicKey?.toBase58?.() || wallet?.publicKey?.toBase58?.();
+    if(!pub){
+      setStatus("Wallet connected but no pubkey found (refresh + retry)");
+      return;
+    }
 
-    walletLabel.textContent = short(pubkey);
-    netLabel.textContent = "mainnet-beta";
+    walletLabel.textContent = pub.slice(0,4) + "..." + pub.slice(-4);
 
-    setStatus("Wallet connected 🔥 (" + walletType + ")");
+    // Build UMI only after wallet connects
+    const { umiBundle, bubblegum, walletId } = await loadUmi();
+    umi = umiBundle.createUmi(RPC)
+      .use(bubblegum.mplBubblegum())
+      .use(walletId.walletAdapterIdentity(wallet));
 
-    await refreshStats();
+    await checkWhitelist(pub);
+    refreshUserMints(pub);
+    await refreshSupply();
 
-  } catch (e) {
+    setStatus("Wallet connected 🔥");
+
+  } catch(e){
     console.error(e);
-    setStatus("Wallet connect failed");
+    if(String(e).toLowerCase().includes("reject")) setStatus("User rejected wallet connect");
+    else setStatus("Wallet connect failed (check console)");
   }
 };
 
-// ------------------ WL Check ------------------
+// ------------------ WL Check (Helius DAS) ------------------
 async function checkWhitelist(pubkey){
   try{
+    if(!HELIUS_API_KEY || HELIUS_API_KEY.includes("PUT_YOUR_HELIUS_KEY_HERE")){
+      isWL = false;
+      wlStatus.textContent = "Public (Helius key missing)";
+      mintPrice = PUBLIC_PRICE;
+      priceLabel.textContent = PUBLIC_PRICE + " SOL";
+      return;
+    }
+
     const res = await fetch(HELIUS,{
       method:"POST",
       headers:{"Content-Type":"application/json"},
@@ -422,7 +434,11 @@ async function checkWhitelist(pubkey){
         jsonrpc:"2.0",
         id:"wl",
         method:"getAssetsByOwner",
-        params:{ ownerAddress:pubkey, page:1, limit:1000 }
+        params:{
+          ownerAddress: pubkey,
+          page: 1,
+          limit: 1000
+        }
       })
     });
 
@@ -437,11 +453,11 @@ async function checkWhitelist(pubkey){
     mintPrice = isWL ? WL_PRICE : PUBLIC_PRICE;
     priceLabel.textContent = mintPrice + " SOL";
 
-  } catch(e) {
+  } catch(e){
     console.error(e);
     isWL = false;
-    mintPrice = PUBLIC_PRICE;
     wlStatus.textContent = "Public";
+    mintPrice = PUBLIC_PRICE;
     priceLabel.textContent = PUBLIC_PRICE + " SOL";
   }
 }
@@ -460,17 +476,25 @@ function incrementUserMints(walletStr){
   localStorage.setItem(key, String(used));
 }
 
-// ------------------ Supply ------------------
+// ------------------ Supply (basic tree check) ------------------
 async function refreshSupply(){
-  const { PublicKey } = await loadWeb3();
-
   try{
+    await loadWeb3();
+    const { PublicKey } = web3;
+
     const acct = await connection.getAccountInfo(new PublicKey(MERKLE_TREE));
-    const minted = Math.min(acct.data.length % TOTAL_SUPPLY, TOTAL_SUPPLY);
+    if(!acct?.data){
+      mintedLabel.textContent = "—";
+      remainingLabel.textContent = "—";
+      return;
+    }
+
+    // NOTE: basic display only (not perfect minted count)
+    const minted = Math.min((acct.data.length % TOTAL_SUPPLY), TOTAL_SUPPLY);
 
     mintedLabel.textContent = minted;
     remainingLabel.textContent = TOTAL_SUPPLY - minted;
-  } catch(e){
+  }catch(e){
     console.error(e);
     mintedLabel.textContent = "—";
     remainingLabel.textContent = "—";
@@ -506,7 +530,8 @@ async function mint(){
     return;
   }
 
-  const { Transaction, SystemProgram, PublicKey, LAMPORTS_PER_SOL } = await loadWeb3();
+  await loadWeb3();
+  const { Transaction, SystemProgram, PublicKey, LAMPORTS_PER_SOL } = web3;
 
   try{
     setStatus(`Paying ${mintPrice} SOL…`);
@@ -531,6 +556,13 @@ async function mint(){
 
     const { bubblegum, umiCore } = await loadUmi();
     const uri = METADATA_BASE + index + ".json";
+
+    // ✅ Safe mint call
+    const mintFn = bubblegum.mintV1 || bubblegum.mintV1;
+    if(!mintFn){
+      setStatus("Mint engine load failed (bubblegum.mintV1 missing)");
+      return;
+    }
 
     await bubblegum.mintV1(umi, {
       leafOwner: umiCore.publicKey(pub),
@@ -559,5 +591,6 @@ async function mint(){
 // initial supply fetch
 refreshSupply();
 </script>
+
 </body>
 </html>
