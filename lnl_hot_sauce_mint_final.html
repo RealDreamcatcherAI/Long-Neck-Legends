@@ -233,17 +233,18 @@
     <h3>Select Wallet</h3>
     <div class="wallet-option" onclick="connectWallet('phantom')">Phantom</div>
     <div class="wallet-option" onclick="connectWallet('solflare')">Solflare</div>
+    <div class="wallet-option" onclick="connectWallet('magiceden')">Magic Eden</div>
   </div>
 </div>
 
-<script type="module">
-import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from "https://esm.sh/@solana/web3.js@1.95.2";
-import { createUmi } from "https://esm.sh/@metaplex-foundation/umi-bundle-defaults@0.9.2";
-import { mplBubblegum, mintV1 } from "https://esm.sh/@metaplex-foundation/mpl-bubblegum@0.7.0";
-import { walletAdapterIdentity } from "https://esm.sh/@metaplex-foundation/umi-signer-wallet-adapters@0.9.2";
-import { publicKey as umiPublicKey } from "https://esm.sh/@metaplex-foundation/umi@0.9.2";
+<script>
+/* ===========================
+   HOTSAUCE MINT SCRIPT (FIXED)
+   - No module imports at page load
+   - Dynamic imports only when needed
+   - Buttons ALWAYS work
+=========================== */
 
-// === CONFIG (YOUR REAL ADDRESSES) ===
 const RPC = "https://api.mainnet-beta.solana.com";
 const COLLECTION_MINT = "FppBKa2FvrKt8UTw86spnv7ZMmjpSpXNLhjtdBYKw86i";
 const MERKLE_TREE = "DjwAtzNVx1b3w7z9br8C8BJ4hna1uX87ZE7sxxbD4V3i";
@@ -256,17 +257,11 @@ const PUBLIC_PRICE = 0.30;
 const WL_LIMIT = 2;
 const PUBLIC_LIMIT = 1;
 
-// LNL Collection for holder WL
+// LNL Holder WL (Collection ID)
 const LNL_COLLECTION = "2WvxCvgFUiqUSBx32c5Z5Zsbcu4ZJCE1GEaaWpbD685P";
 const HELIUS = "https://rpc.helius.xyz/?api-key=free";
 
-// === STATE ===
-const connection = new Connection(RPC, "confirmed");
-let wallet = null;
-let umi = null;
-let isWL = false;
-let mintPrice = PUBLIC_PRICE;
-
+// UI refs
 const walletLabel = document.getElementById("walletLabel");
 const wlStatus = document.getElementById("wlStatus");
 const userMints = document.getElementById("userMints");
@@ -274,101 +269,221 @@ const mintedLabel = document.getElementById("minted");
 const remainingLabel = document.getElementById("remaining");
 const priceLabel = document.getElementById("priceLabel");
 const statusBox = document.getElementById("statusBox");
+const walletModal = document.getElementById("walletModal");
+
+let wallet = null;
+let umi = null;
+let connection = null;
+let isWL = false;
+let mintPrice = PUBLIC_PRICE;
+
+// modules cache
+let web3 = null;
+let umiMods = null;
 
 function setStatus(t){ statusBox.textContent = t; }
 
-// === WALLET CONNECT ===
-document.getElementById("btnConnect").onclick = () => document.getElementById("walletModal").classList.add("active");
+// ✅ Always bind buttons even if libraries fail
+document.getElementById("btnConnect").addEventListener("click", () => {
+  walletModal.classList.add("active");
+});
 
-window.connectWallet = async function(type){
-  let provider;
-  if(type==='phantom') provider = window.phantom?.solana;
-  if(type==='solflare') provider = window.solflare;
+document.getElementById("btnMint").addEventListener("click", () => {
+  mint().catch(e => {
+    console.error(e);
+    setStatus("Mint failed (see console)");
+  });
+});
 
-  if(!provider){ alert("Wallet not installed"); return; }
+// Click outside modal closes it
+walletModal.addEventListener("click", (e) => {
+  if(e.target === walletModal) walletModal.classList.remove("active");
+});
 
-  const resp = await provider.connect();
-  wallet = provider;
+priceLabel.textContent = PUBLIC_PRICE + " SOL";
 
-  umi = createUmi(RPC).use(mplBubblegum()).use(walletAdapterIdentity(wallet));
+// ------------------ Dynamic Imports ------------------
+async function loadWeb3(){
+  if(web3) return web3;
 
-  const pub = resp.publicKey.toBase58();
-  walletLabel.textContent = pub.slice(0,4)+"..."+pub.slice(-4);
-
-  await checkWhitelist(pub);
-  await refreshSupply();
-  refreshUserMints(pub);
-
-  document.getElementById("walletModal").classList.remove("active");
-  setStatus("Wallet connected 🔥");
+  setStatus("Loading Solana libraries…");
+  web3 = await import("https://esm.sh/@solana/web3.js@1.95.2");
+  connection = new web3.Connection(RPC, "confirmed");
+  return web3;
 }
 
-// === WL CHECK (LIVE HOLDER) ===
+async function loadUmi(){
+  if(umiMods) return umiMods;
+
+  setStatus("Loading mint engine…");
+  const [
+    umiBundle,
+    bubblegum,
+    walletId,
+    umiCore
+  ] = await Promise.all([
+    import("https://esm.sh/@metaplex-foundation/umi-bundle-defaults@0.9.2"),
+    import("https://esm.sh/@metaplex-foundation/mpl-bubblegum@0.7.0"),
+    import("https://esm.sh/@metaplex-foundation/umi-signer-wallet-adapters@0.9.2"),
+    import("https://esm.sh/@metaplex-foundation/umi@0.9.2"),
+  ]);
+
+  umiMods = { umiBundle, bubblegum, walletId, umiCore };
+  return umiMods;
+}
+
+// ------------------ Wallet Connect ------------------
+window.connectWallet = async function(type){
+  try{
+    let provider = null;
+
+    // Phantom
+    if(type === "phantom") provider = window.phantom?.solana;
+    // Solflare
+    if(type === "solflare") provider = window.solflare;
+    // Magic Eden (optional)
+    if(type === "magiceden") provider = window.magicEden?.solana;
+
+    if(!provider){
+      alert("Wallet not installed");
+      return;
+    }
+
+    setStatus("Connecting wallet…");
+
+    const resp = await provider.connect();
+    wallet = provider;
+
+    // UI label
+    const pub = resp.publicKey.toBase58();
+    walletLabel.textContent = pub.slice(0,4) + "..." + pub.slice(-4);
+
+    // WL + supply
+    await checkWhitelist(pub);
+    await refreshSupply();
+    refreshUserMints(pub);
+
+    // Build UMI ONLY after wallet connects
+    const { umiBundle, bubblegum, walletId } = await loadUmi();
+    umi = umiBundle.createUmi(RPC)
+      .use(bubblegum.mplBubblegum())
+      .use(walletId.walletAdapterIdentity(wallet));
+
+    walletModal.classList.remove("active");
+    setStatus("Wallet connected 🔥");
+
+  } catch (e) {
+    console.error(e);
+    setStatus("Wallet connect failed (check console)");
+  }
+};
+
+// ------------------ WL Check ------------------
 async function checkWhitelist(pubkey){
   try{
     const res = await fetch(HELIUS,{
       method:"POST",
       headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({jsonrpc:"2.0",id:"wl",method:"getAssetsByOwner",params:{ownerAddress:pubkey,page:1,limit:1000}})
+      body:JSON.stringify({
+        jsonrpc:"2.0",
+        id:"wl",
+        method:"getAssetsByOwner",
+        params:{ ownerAddress:pubkey, page:1, limit:1000 }
+      })
     });
-    const json = await res.json();
-    const assets = json.result.items || [];
 
-    isWL = assets.some(a=>a.grouping?.some(g=>g.group_value===LNL_COLLECTION));
+    const json = await res.json();
+    const assets = json?.result?.items || [];
+
+    isWL = assets.some(a =>
+      a.grouping?.some(g => g.group_value === LNL_COLLECTION)
+    );
 
     wlStatus.textContent = isWL ? "Whitelist (LNL Holder)" : "Public";
     mintPrice = isWL ? WL_PRICE : PUBLIC_PRICE;
     priceLabel.textContent = mintPrice + " SOL";
-  }catch{
-    wlStatus.textContent = "Public";
+
+  } catch(e) {
+    console.error(e);
+    isWL = false;
     mintPrice = PUBLIC_PRICE;
+    wlStatus.textContent = "Public";
     priceLabel.textContent = PUBLIC_PRICE + " SOL";
   }
 }
 
-// === LOCAL MINT TRACKING (NO BACKEND) ===
-function refreshUserMints(wallet){
-  const key = "mints_"+wallet;
-  const used = parseInt(localStorage.getItem(key)||"0");
+// ------------------ Local Mint Tracking ------------------
+function refreshUserMints(walletStr){
+  const key = "mints_" + walletStr;
+  const used = parseInt(localStorage.getItem(key) || "0");
   const limit = isWL ? WL_LIMIT : PUBLIC_LIMIT;
   userMints.textContent = `${used} / ${limit}`;
 }
 
-function incrementUserMints(wallet){
-  const key = "mints_"+wallet;
-  const used = parseInt(localStorage.getItem(key)||"0")+1;
-  localStorage.setItem(key,String(used));
+function incrementUserMints(walletStr){
+  const key = "mints_" + walletStr;
+  const used = parseInt(localStorage.getItem(key) || "0") + 1;
+  localStorage.setItem(key, String(used));
 }
 
-// === SUPPLY (TREE READ) ===
+// ------------------ Supply ------------------
 async function refreshSupply(){
-  const acct = await connection.getAccountInfo(new PublicKey(MERKLE_TREE));
-  const minted = Math.min(acct.data.length % TOTAL_SUPPLY, TOTAL_SUPPLY);
-  mintedLabel.textContent = minted;
-  remainingLabel.textContent = TOTAL_SUPPLY - minted;
-}
-
-// === MINT ===
-document.getElementById("btnMint").onclick = async function(){
-  if(!wallet){ setStatus("Connect wallet first"); return; }
-
-  const pub = wallet.publicKey.toBase58();
-  const used = parseInt(localStorage.getItem("mints_"+pub)||"0");
-  const limit = isWL ? WL_LIMIT : PUBLIC_LIMIT;
-
-  if(used>=limit){ setStatus("Mint limit reached"); return; }
-
-  const index = Number(mintedLabel.textContent);
-  if(index>=TOTAL_SUPPLY){ setStatus("SOLD OUT 🔥"); return; }
+  const { PublicKey } = await loadWeb3();
 
   try{
-    setStatus("Paying & minting… 🔥");
+    const acct = await connection.getAccountInfo(new PublicKey(MERKLE_TREE));
+    const minted = Math.min(acct.data.length % TOTAL_SUPPLY, TOTAL_SUPPLY);
 
-    const tx = new Transaction().add(SystemProgram.transfer({
-      fromPubkey: wallet.publicKey,
-      toPubkey: new PublicKey(TREASURY),
-      lamports: mintPrice * LAMPORTS_PER_SOL
-    }));
+    mintedLabel.textContent = minted;
+    remainingLabel.textContent = TOTAL_SUPPLY - minted;
+  } catch(e){
+    console.error(e);
+    mintedLabel.textContent = "—";
+    remainingLabel.textContent = "—";
+  }
+}
+
+// ------------------ Mint ------------------
+async function mint(){
+  if(!wallet){
+    setStatus("Connect wallet first");
+    return;
+  }
+
+  const pub = wallet.publicKey.toBase58();
+  const used = parseInt(localStorage.getItem("mints_" + pub) || "0");
+  const limit = isWL ? WL_LIMIT : PUBLIC_LIMIT;
+
+  if(used >= limit){
+    setStatus("Mint limit reached");
+    return;
+  }
+
+  await refreshSupply();
+  const index = Number(mintedLabel.textContent);
+
+  if(Number.isNaN(index)){
+    setStatus("Cannot read supply yet. Try again.");
+    return;
+  }
+
+  if(index >= TOTAL_SUPPLY){
+    setStatus("SOLD OUT 🔥");
+    return;
+  }
+
+  const { Transaction, SystemProgram, PublicKey, LAMPORTS_PER_SOL } = await loadWeb3();
+
+  try{
+    setStatus(`Paying ${mintPrice} SOL…`);
+
+    const tx = new Transaction().add(
+      SystemProgram.transfer({
+        fromPubkey: wallet.publicKey,
+        toPubkey: new PublicKey(TREASURY),
+        lamports: Math.floor(mintPrice * LAMPORTS_PER_SOL)
+      })
+    );
 
     tx.feePayer = wallet.publicKey;
     tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
@@ -377,17 +492,21 @@ document.getElementById("btnMint").onclick = async function(){
     const sig = await connection.sendRawTransaction(signed.serialize());
     await connection.confirmTransaction(sig);
 
+    // Mint cNFT
+    setStatus("Minting cNFT… 🔥");
+
+    const { bubblegum, umiCore } = await loadUmi();
     const uri = METADATA_BASE + index + ".json";
 
-    await mintV1(umi,{
-      leafOwner: umiPublicKey(pub),
-      merkleTree: umiPublicKey(MERKLE_TREE),
-      metadata:{
-        name:`Mango Habanero Ascension #${index}`,
+    await bubblegum.mintV1(umi, {
+      leafOwner: umiCore.publicKey(pub),
+      merkleTree: umiCore.publicKey(MERKLE_TREE),
+      metadata: {
+        name: `Mango Habanero Ascension #${index}`,
         uri,
-        sellerFeeBasisPoints:1000,
-        collection:{key:umiPublicKey(COLLECTION_MINT),verified:false},
-        creators:[{address:umiPublicKey(TREASURY),verified:true,share:100}]
+        sellerFeeBasisPoints: 1000,
+        collection: { key: umiCore.publicKey(COLLECTION_MINT), verified: false },
+        creators: [{ address: umiCore.publicKey(TREASURY), verified: true, share: 100 }]
       }
     }).sendAndConfirm(umi);
 
@@ -395,16 +514,16 @@ document.getElementById("btnMint").onclick = async function(){
     refreshUserMints(pub);
     await refreshSupply();
 
-    setStatus("Mint successful 🔥");
-  }catch(e){
+    setStatus("Mint successful 🔥 Check your wallet");
+
+  } catch(e){
     console.error(e);
     setStatus("Mint failed – check console");
   }
 }
 
+// initial supply fetch
 refreshSupply();
-priceLabel.textContent = PUBLIC_PRICE + " SOL";
-
 </script>
 </body>
 </html>
