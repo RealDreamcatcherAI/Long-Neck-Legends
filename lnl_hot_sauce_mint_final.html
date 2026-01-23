@@ -51,6 +51,30 @@
       border-radius: 20px;
       box-shadow: 0 10px 30px rgba(0,212,255,0.25);
     }
+    
+    /* ✅ Prevent anything inside the box from spilling out */
+.boxstyle{
+  overflow:hidden;
+}
+
+/* ✅ Sauce GIF stays centered + responsive */
+.sauce-art{
+  width:100%;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  margin: 2rem auto;
+}
+
+.sauce-art img{
+  width:100%;
+  max-width:320px;  /* adjust bigger if you want */
+  height:auto;
+  display:block;
+  margin:0 auto;
+  border-radius:16px;
+  box-shadow:0 0 25px rgba(0,212,255,0.35);
+}
 
     .mint-grid { display:grid; grid-template-columns:1fr; gap:1.25rem; }
     @media(min-width:900px){ .mint-grid{grid-template-columns:1fr 1fr;} }
@@ -96,7 +120,7 @@
   </nav>
 
 <!-- SAUCE HEADER IMAGE -->
-<section id="sauce-header" style="text-align:center; padding-top:10px;" class="hotsauce-banner">
+<section id="sauce-header" style="text-align:center; padding-top:90px;" class="hotsauce-banner">
   <img 
     src="https://i.imgur.com/MpqfjdX.png" 
     alt="Long Neck Hot Sauce"
@@ -153,14 +177,6 @@
   <div class="sauce-art">
   <img src="https://i.imgur.com/wCOHgWL.gif" alt="Mango Habanero Hot Sauce Art">
 </div>
-
-<h2>Pre-Order
-</h2>
-
-<p>
-  Pre-order now and get a limited-edition label featuring your favorite 
-  Long Neck character. Spice up your meals while supporting the flock!
-</p>
 
 <section id="mint" class="boxstyle">
   <h2>⭐ Mint to Claim</h2>
