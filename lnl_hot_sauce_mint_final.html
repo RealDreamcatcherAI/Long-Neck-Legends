@@ -332,49 +332,83 @@ async function loadUmi(){
   return umiMods;
 }
 
+window.addEventListener('load', () => {
+  // Phantom
+  if (window.solana?.isPhantom) {
+    document.getElementById('phantomStatus').textContent = 'Installed ✓';
+    document.getElementById('phantomStatus').style.color = '#48bb78';
+  }
+
+  // Solflare
+  if (window.solflare?.isSolflare || window.solflare?.solana) {
+    document.getElementById('solflareStatus').textContent = 'Installed ✓';
+    document.getElementById('solflareStatus').style.color = '#48bb78';
+  }
+
+  // Magic Eden
+  if (window.magicEden?.solana) {
+    document.getElementById('magicedenStatus').textContent = 'Installed ✓';
+    document.getElementById('magicedenStatus').style.color = '#48bb78';
+  }
+});
+
 // ------------------ Wallet Connect ------------------
-window.connectWallet = async function(type){
-  try{
+window.connectWallet = async function(type) {
+  try {
+    setStatus("Connecting wallet...");
+    document.getElementById('walletModal').classList.remove('active');
+
     let provider = null;
 
     // Phantom
-    if(type === "phantom") provider = window.phantom?.solana;
-    // Solflare
-    if(type === "solflare") provider = window.solflare;
-    // Magic Eden (optional)
-    if(type === "magiceden") provider = window.magicEden?.solana;
-
-    if(!provider){
-      alert("Wallet not installed");
-      return;
+    if (type === 'phantom') {
+      if (!window.solana || !window.solana.isPhantom) {
+        window.open('https://phantom.app/', '_blank');
+        setStatus("Phantom not installed");
+        return;
+      }
+      provider = window.solana;
+      walletType = 'Phantom';
     }
 
-    setStatus("Connecting wallet…");
+    // Solflare
+    else if (type === 'solflare') {
+      if (!window.solflare?.solana) {
+        window.open('https://solflare.com/', '_blank');
+        setStatus("Solflare not installed");
+        return;
+      }
+      provider = window.solflare.solana;
+      walletType = 'Solflare';
+    }
 
+    // Magic Eden
+    else if (type === 'magiceden') {
+      if (!window.magicEden?.solana) {
+        window.open('https://magiceden.io/wallet', '_blank');
+        setStatus("Magic Eden wallet not installed");
+        return;
+      }
+      provider = window.magicEden.solana;
+      walletType = 'Magic Eden';
+    }
+
+    // ACTUAL CONNECT
     const resp = await provider.connect();
-    wallet = provider;
+    walletAdapter = provider;
 
-    // UI label
-    const pub = resp.publicKey.toBase58();
-    walletLabel.textContent = pub.slice(0,4) + "..." + pub.slice(-4);
+    const pubkey = resp.publicKey.toBase58();
 
-    // WL + supply
-    await checkWhitelist(pub);
-    await refreshSupply();
-    refreshUserMints(pub);
+    walletLabel.textContent = short(pubkey);
+    netLabel.textContent = "mainnet-beta";
 
-    // Build UMI ONLY after wallet connects
-    const { umiBundle, bubblegum, walletId } = await loadUmi();
-    umi = umiBundle.createUmi(RPC)
-      .use(bubblegum.mplBubblegum())
-      .use(walletId.walletAdapterIdentity(wallet));
+    setStatus("Wallet connected 🔥 (" + walletType + ")");
 
-    walletModal.classList.remove("active");
-    setStatus("Wallet connected 🔥");
+    await refreshStats();
 
   } catch (e) {
     console.error(e);
-    setStatus("Wallet connect failed (check console)");
+    setStatus("Wallet connect failed");
   }
 };
 
