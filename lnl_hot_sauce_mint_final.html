@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LNL Hot Sauce Mint | Mango Habanero Ascension</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    body{margin:0;background:#0a0a1a;color:#e0e0ff;font-family:Space Grotesk,Arial}
+    nav{position:fixed;top:0;width:100%;padding:1rem;background:rgba(10,10,26,.9);backdrop-filter:blur(10px);text-align:center;z-index:999}
+    nav a{color:#e0e0ff;margin:0 1rem;text-decoration:none;font-weight:600}
+    section{max-width:1000px;margin:0 auto;padding:2rem}
+    h2{text-align:center;font-family:Orbitron;font-size:3rem;background:linear-gradient(45deg,#00d4ff,#ff6bff);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .card{background:rgba(10,10,26,.6);border-radius:18px;padding:1.5rem;margin:1rem 0;box-shadow:0 0 25px rgba(0,212,255,.25)}
+    .row{display:flex;justify-content:space-between;margin:.4rem 0}
+    .btn{padding:1rem 2.2rem;border:none;border-radius:40px;font-weight:700;cursor:pointer;background:linear-gradient(45deg,#00d4ff,#0099cc);color:white;box-shadow:0 0 25px rgba(0,212,255,.6)}
+    .btn:disabled{opacity:.5}
+    footer{text-align:center;padding:2rem;color:#777}
+  </style>
+</head>
+
+<body>
+<nav>
+  <a href="#">Home</a>
+  <a href="#mint">Mint</a>
+</nav>
+
+<section style="padding-top:120px;text-align:center">
+  <h2>Mango Habanero Ascension</h2>
+  <p>33 Legendary Hot Sauce cNFTs. Mint backed by real heat 🔥</p>
+</section>
+
+<section id="mint">
+  <div class="card">
+    <div class="row"><span>Wallet</span><span id="walletLabel">Not connected</span></div>
+    <div class="row"><span>Whitelist</span><span id="wlStatus">—</span></div>
+    <div class="row"><span>Total Minted</span><span id="minted">—</span></div>
+    <div class="row"><span>Remaining</span><span id="remaining">—</span></div>
+
+    <div style="text-align:center;margin-top:1rem">
+      <button class="btn" id="btnConnect">Connect Wallet</button>
+      <button class="btn" id="btnMint">Mint Hot Sauce NFT</button>
+    </div>
+
+    <p id="status" style="margin-top:1rem;text-align:center">Ready.</p>
+  </div>
+</section>
+
+<footer>© 2026 Long Neck Legends</footer>
+
+<script type="module">
+import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from "https://esm.sh/@solana/web3.js@1.95.2";
+import { createUmi } from "https://esm.sh/@metaplex-foundation/umi-bundle-defaults@0.9.2";
+import { mplBubblegum, mintV1 } from "https://esm.sh/@metaplex-foundation/mpl-bubblegum@0.7.0";
+import { walletAdapterIdentity } from "https://esm.sh/@metaplex-foundation/umi-signer-wallet-adapters@0.9.2";
+import { publicKey as umiPublicKey } from "https://esm.sh/@metaplex-foundation/umi@0.9.2";
+
+// ================= CONFIG ==================
+const RPC = "https://api.mainnet-beta.solana.com";
+const COLLECTION_MINT = "FppBKa2FvrKt8UTw86spnv7ZMmjpSpXNLhjtdBYKw86i";
+const MERKLE_TREE = "DjwAtzNVx1b3w7z9br8C8BJ4hna1uX87ZE7sxxbD4V3i";
+const TREASURY = "AoKpHZCEnTC8mBN53dVWsuzVRMAWR1H71bUdHmKxVAem";
+const METADATA_BASE = "https://longnecklegends.xyz/MHHSmetadata/";
+
+const TOTAL_SUPPLY = 33;
+const WL_PRICE = 0.25;
+const PUBLIC_PRICE = 0.30;
+
+// Live LNL Holder Whitelist
+const LNL_COLLECTION = "2WvxCvgFUiqUSBx32c5Z5Zsbcu4ZJCE1GEaaWpbD685P";
+const HELIUS_RPC = "https://rpc.helius.xyz/?api-key=free";
+
+let isWL = false;
+let mintLimit = 1;
+let mintPrice = PUBLIC_PRICE;
+([
+  "6j3K5V5D2F9Awk4Yn2QVoSZkAve2Y8mqByDC85jv4kmn",
+  "7uob8wsBH23aKRMVB18PCEZY1Ttwfjj4rhdWJZdgEYDa"
+]);
+
+// ================= STATE ==================
+const connection = new Connection(RPC, "confirmed");
+let wallet = null;
+let umi = null;
+
+const walletLabel = document.getElementById("walletLabel");
+const wlStatus = document.getElementById("wlStatus");
+const mintedLabel = document.getElementById("minted");
+const remainingLabel = document.getElementById("remaining");
+const statusBox = document.getElementById("status");
+
+function setStatus(msg){ statusBox.textContent = msg; }
+
+// ================= WALLET ==================
+
+async function connectWallet(){
+  if (!window.phantom?.solana) {
+    window.open("https://phantom.app");
+    return;
+  }
+
+  const resp = await window.phantom.solana.connect();
+  wallet = window.phantom.solana;
+
+  umi = createUmi(RPC)
+    .use(mplBubblegum())
+    .use(walletAdapterIdentity(wallet));
+
+  const pubkey = resp.publicKey.toBase58();
+  walletLabel.textContent = pubkey.slice(0,4) + "..." + pubkey.slice(-4);
+
+  await checkWhitelist(pubkey);
+  await refreshSupply();
+
+  setStatus("Wallet connected 🔥");
+}
+
+// ================= WL CHECK ==================
+async function checkWhitelist(pubkey){
+  try{
+    const res = await fetch(HELIUS_RPC, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: "wl",
+        method: "getAssetsByOwner",
+        params: {
+          ownerAddress: pubkey,
+          page: 1,
+          limit: 1000
+        }
+      })
+    });
+
+    const json = await res.json();
+    const assets = json.result.items || [];
+
+    const holdsLNL = assets.some(a =>
+      a.grouping?.some(g => g.group_value === LNL_COLLECTION)
+    );
+
+    if (holdsLNL) {
+      isWL = true;
+      mintLimit = 2;
+      mintPrice = WL_PRICE;
+      wlStatus.textContent = "Whitelist (LNL Holder)";
+    } else {
+      isWL = false;
+      mintLimit = 1;
+      mintPrice = PUBLIC_PRICE;
+      wlStatus.textContent = "Public";
+    }
+
+  } catch(e){
+    console.error(e);
+    wlStatus.textContent = "Public";
+    isWL = false;
+    mintLimit = 1;
+    mintPrice = PUBLIC_PRICE;
+  }
+}
+(){
+  if (!window.phantom?.solana) {
+    window.open("https://phantom.app");
+    return;
+  }
+
+  const resp = await window.phantom.solana.connect();
+  wallet = window.phantom.solana;
+
+  umi = createUmi(RPC)
+    .use(mplBubblegum())
+    .use(walletAdapterIdentity(wallet));
+
+  walletLabel.textContent = resp.publicKey.toBase58().slice(0,4) + "..." + resp.publicKey.toBase58().slice(-4);
+
+  const isWL = WHITELIST.has(resp.publicKey.toBase58());
+  wlStatus.textContent = isWL ? "Whitelist" : "Public";
+
+  await refreshSupply();
+  setStatus("Wallet connected 🔥");
+}
+
+// ================= SUPPLY CHECK ==================
+
+async function refreshSupply(){
+  const tree = new PublicKey(MERKLE_TREE);
+  const acct = await connection.getAccountInfo(tree);
+  const minted = Math.min(acct.data.length % TOTAL_SUPPLY, TOTAL_SUPPLY);
+
+  mintedLabel.textContent = minted;
+  remainingLabel.textContent = TOTAL_SUPPLY - minted;
+}
+
+// ================= MINT ==================
+
+async function mint(){
+  if (!wallet) { setStatus("Connect wallet first"); return; }
+
+  const pubkey = wallet.publicKey.toBase58();
+  const isWL = WHITELIST.has(pubkey);
+  const price = isWL ? WL_PRICE : PUBLIC_PRICE;
+
+  try{
+    setStatus(`Paying ${price} SOL…`);
+
+    const tx = new Transaction().add(
+      SystemProgram.transfer({
+        fromPubkey: wallet.publicKey,
+        toPubkey: new PublicKey(TREASURY),
+        lamports: price * LAMPORTS_PER_SOL
+      })
+    );
+
+    tx.feePayer = wallet.publicKey;
+    tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+
+    const signed = await wallet.signTransaction(tx);
+    const sig = await connection.sendRawTransaction(signed.serialize());
+    await connection.confirmTransaction(sig);
+
+    const index = Number(mintedLabel.textContent);
+    const uri = METADATA_BASE + index + ".json";
+
+    setStatus("Minting cNFT… 🔥");
+
+    await mintV1(umi, {
+      leafOwner: umiPublicKey(pubkey),
+      merkleTree: umiPublicKey(MERKLE_TREE),
+      metadata: {
+        name: `Mango Habanero Ascension #${index}`,
+        uri,
+        sellerFeeBasisPoints: 1000,
+        collection: { key: umiPublicKey(COLLECTION_MINT), verified: false },
+        creators: [{ address: umiPublicKey(TREASURY), verified: true, share: 100 }]
+      }
+    }).sendAndConfirm(umi);
+
+    setStatus("Mint successful 🔥 Check your wallet");
+    await refreshSupply();
+
+  } catch(e){
+    console.error(e);
+    setStatus("Mint failed – check console");
+  }
+}
+
+// ================= EVENTS ==================
+
+document.getElementById("btnConnect").onclick = connectWallet;
+document.getElementById("btnMint").onclick = mint;
+
+refreshSupply();
+
+</script>
+</body>
+</html>
