@@ -1,0 +1,40 @@
+{
+  "collection": {
+    "family": "Long Neck Legends",
+    "name": "LNL Mango Habanero"
+  },
+  "name": "LNL Mango Habanero #14",
+  "description": "Physical Claim Token for an exclusive Curved Long Neck Mango Habanero Hot Sauce Bottle.",
+  "symbol": "MHHS",
+  "image": "https://longnecklegends.xyz/MHhotsauce/14.jpeg",
+  "external_url": "https://longnecklegends.xyz",
+  "attributes": [
+    {
+      "trait_type": "Label Color",
+      "value": "Dreamtime Violet"
+    },
+    {
+      "trait_type": "Sauce Flavor",
+      "value": "Mango Habanero"
+    },
+    {
+      "trait_type": "Status",
+      "value": "Not Claimed"
+    }
+  ],
+  "properties": {
+    "creators": [
+      {
+        "address": "7uob8wsBH23aKRMVB18PCEZY1Ttwfjj4rhdWJZdgEYDa",
+        "share": 100
+      }
+    ],
+    "files": [
+      {
+        "type": "image/png",
+        "url": "https://longnecklegends.xyz/MHhotsauce/14.jpeg"
+      }
+    ]
+  },
+  "seller_fee_basis_points": 1000
+}
