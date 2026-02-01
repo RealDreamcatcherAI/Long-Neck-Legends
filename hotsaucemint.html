@@ -260,6 +260,65 @@
       border-top: 1px solid #00d4ff;
       margin-top: 4rem;
     }
+  
+    /* Mint display panel (Live + My Mints) */
+    .mint-panel {
+      margin-top: 1.5rem;
+      padding: 1.25rem;
+      border-radius: 18px;
+      background: rgba(10,10,26,0.45);
+      border: 1px solid rgba(0,212,255,0.14);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.22);
+      text-align: left;
+    }
+    .mint-panel h3 {
+      margin: 0 0 0.75rem 0;
+      color: #00d4ff;
+      text-align: center;
+    }
+    .mint-display-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.6rem;
+    }
+    @media (min-width: 900px) {
+      .mint-display-grid { grid-template-columns: repeat(9, 1fr); }
+    }
+    .mint-tile {
+      border-radius: 14px;
+      padding: 0.65rem 0.55rem;
+      background: rgba(0,212,255,0.06);
+      border: 1px solid rgba(0,212,255,0.14);
+      min-height: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      user-select: none;
+    }
+    .mint-tile.filled {
+      background: rgba(123,104,238,0.14);
+      border-color: rgba(123,104,238,0.35);
+      box-shadow: 0 0 18px rgba(123,104,238,0.22);
+    }
+    .mint-tile.empty { opacity: 0.35; }
+
+    /* Glass button vibe for My Mints (reuses btn-glow sizing) */
+    #btnMyMints {
+      background: rgba(0,212,255,0.10);
+      border: 1px solid rgba(0,212,255,0.22);
+      box-shadow: 0 0 18px rgba(0,212,255,0.18);
+      color: #e0e0ff;
+      backdrop-filter: blur(10px);
+    }
+    #btnMyMints:hover:not(:disabled) {
+      background: rgba(0,212,255,0.16);
+      border-color: rgba(0,212,255,0.35);
+      transform: translateY(-3px);
+    }
+
   </style>
 </head>
 
@@ -299,6 +358,21 @@
     </div>
   </div>
 
+  <!-- My Mints Modal -->
+  <div class="modal" id="myMintsModal" aria-hidden="true">
+    <div class="modal-content" style="position: relative; max-width: 820px;">
+      <button class="close-modal" onclick="closeMyMints()">×</button>
+      <h3 style="margin-bottom:0.75rem;">My Mints</h3>
+      <div style="opacity:0.8; font-size:0.95rem; text-align:center; margin-bottom: 1rem;">
+        Your minted Hot Sauce Relics for this browser/profile.
+      </div>
+      <div id="myMintsGrid" class="mint-display-grid"></div>
+      <div id="myMintsEmpty" style="display:none; text-align:center; opacity:0.7; padding: 1.25rem 0;">
+        No mints yet. Hit <strong>Mint Hot Sauce NFT</strong> when you're ready. 🔥
+      </div>
+    </div>
+  </div>
+
   <section class="hotsauce-banner">
     <img src="https://i.imgur.com/MpqfjdX.png" alt="Long Neck Hot Sauce">
   </section>
@@ -314,8 +388,6 @@
 
     <div class="sauce-art">
       <img src="https://i.imgur.com/wCOHgWL.gif" alt="Mango Habanero Sauce Art">
-    </div>
-  </section>
 
   <section id="mint" class="boxstyle">
     <h2>⭐ Mint to Claim</h2>
@@ -342,7 +414,8 @@
         <div style="margin-top:1rem; text-align:center;">
           <button class="btn-glow btn-primary" id="btnConnect">Connect Wallet</button>
           <button class="btn-glow btn-secondary" id="btnRefresh">Refresh</button>
-          <button class="btn-glow btn-danger" id="btnDisconnect">Disconnect</button>
+          <button class="btn-glow btn-secondary" id="btnMyMints" disabled>My Mints</button>
+          <button class="btn-glow btn-danger" id="btnDisconnect" style="display:none;">Disconnect</button>
         </div>
 
         <div class="status" id="statusBox">Status: Ready.</div>
@@ -368,6 +441,17 @@
     </div>
   </section>
 
+  <div class="mint-panel" id="liveMintPanel">
+      <h3>LIVE MINTS</h3>
+      <div style="display:flex; justify-content:space-between; gap:1rem; align-items:center; margin-bottom:0.75rem; flex-wrap:wrap;">
+        <div style="opacity:0.85;"></div>
+        <div style="font-weight:800;"><span id="liveMintCount">0</span> / 33</div>
+      </div>
+      <div id="liveMintGrid" class="mint-display-grid"></div>
+    </div>
+
+    </div>
+  </section>
   <footer>
     <p>© 2026 Long Neck Legends • Mango Habanero Ascension</p>
   </footer>
@@ -377,6 +461,15 @@
 
     function closeWalletModal() {
       document.getElementById('walletModal').classList.remove('active');
+    }
+
+    function openMyMints() {
+      const m = document.getElementById('myMintsModal');
+      if (m) m.classList.add('active');
+    }
+    function closeMyMints() {
+      const m = document.getElementById('myMintsModal');
+      if (m) m.classList.remove('active');
     }
 
     // Ensure Connect Wallet always opens the wallet selector
@@ -461,6 +554,7 @@
     const btnDisconnect = document.getElementById("btnDisconnect");
     const btnRefresh = document.getElementById("btnRefresh");
     const btnMint = document.getElementById("btnMint");
+    const btnMyMints = document.getElementById("btnMyMints");
 
     const connection = new Connection(RPC_URL, "confirmed");
     let walletAdapter = null;
@@ -480,6 +574,8 @@
     // ========================================
     const LS_TOTAL = "lnl_hotsauce_total_minted_v1";
     const LS_PREFIX = "lnl_hotsauce_mintcount_v1:";
+    const LS_LIST_PREFIX = "lnl_hotsauce_mintlist_v1:";
+    const LS_GLOBAL_LIST = "lnl_hotsauce_mintlist_global_v1";
 
     function lsGetInt(key, fallback = 0) {
       const v = localStorage.getItem(key);
@@ -499,12 +595,103 @@
       localStorage.setItem(LS_TOTAL, String(total + 1));
     }
 
+    function getJsonArray(key) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) return [];
+        const arr = JSON.parse(raw);
+        return Array.isArray(arr) ? arr : [];
+      } catch {
+        return [];
+      }
+    }
+    function setJsonArray(key, arr) {
+      localStorage.setItem(key, JSON.stringify(arr));
+    }
+    function getWalletMintList(wallet) {
+      return getJsonArray(LS_LIST_PREFIX + wallet);
+    }
+    function addWalletMint(wallet, mintIndex) {
+      const list = getWalletMintList(wallet);
+      list.push(mintIndex);
+      setJsonArray(LS_LIST_PREFIX + wallet, list);
+    }
+    function getGlobalMintList() {
+      return getJsonArray(LS_GLOBAL_LIST);
+    }
+    function addGlobalMint(mintIndex) {
+      const list = getGlobalMintList();
+      list.push(mintIndex);
+      setJsonArray(LS_GLOBAL_LIST, list);
+    }
+
+    function renderMintGrid(el, list, totalSlots = TOTAL_SUPPLY) {
+      if (!el) return;
+      el.innerHTML = "";
+
+      const sorted = [...list].sort((a,b) => Number(a) - Number(b));
+      const used = new Set(sorted.map(n => Number(n)));
+
+      for (let i = 0; i < totalSlots; i++) {
+        const tile = document.createElement("div");
+        tile.className = "mint-tile " + (used.has(i) ? "filled" : "empty");
+        tile.textContent = used.has(i) ? `#${i+1}` : "—";
+        el.appendChild(tile);
+      }
+    }
+
+    function renderLiveMinted() {
+      const grid = document.getElementById("liveMintGrid");
+      const count = document.getElementById("liveMintCount");
+      const global = getGlobalMintList();
+      if (count) count.textContent = String(global.length);
+      renderMintGrid(grid, global, TOTAL_SUPPLY);
+    }
+
+    function renderMyMints() {
+      const grid = document.getElementById("myMintsGrid");
+      const empty = document.getElementById("myMintsEmpty");
+
+      if (!walletAdapter?.publicKey) {
+        if (grid) grid.innerHTML = "";
+        if (empty) {
+          empty.style.display = "block";
+          empty.textContent = "Connect your wallet to view your mints.";
+        }
+        return;
+      }
+
+      const wallet = walletAdapter.publicKey.toBase58();
+      const mine = getWalletMintList(wallet);
+
+      if (mine.length === 0) {
+        if (grid) grid.innerHTML = "";
+        if (empty) {
+          empty.style.display = "block";
+          empty.textContent = "No mints yet. Hit Mint when you're ready. 🔥";
+        }
+        return;
+      }
+
+      if (empty) empty.style.display = "none";
+      grid.innerHTML = "";
+      const sorted = [...mine].sort((a,b) => Number(a) - Number(b));
+      for (const idx of sorted) {
+        const tile = document.createElement("div");
+        tile.className = "mint-tile filled";
+        tile.textContent = `#${Number(idx)+1}`;
+        grid.appendChild(tile);
+      }
+    }
+
     async function refreshStats() {
       const totalMinted = getTotalMinted();
       cmMinted.textContent = totalMinted;
       cmRemaining.textContent = Math.max(0, TOTAL_SUPPLY - totalMinted);
 
-      if (!walletAdapter?.publicKey) return;
+      renderLiveMinted();
+
+      if (!walletAdapter?.publicKey) { renderMyMints(); return; }
 
       const wallet = walletAdapter.publicKey.toBase58();
       const isWL = WHITELIST.has(wallet);
@@ -512,6 +699,8 @@
 
       wlStatus.innerHTML = isWL ? 'Whitelist <span class="wl-badge">WL</span>' : 'Public';
       userMints.textContent = `${mints} / ${isWL ? WL_LIMIT : PUBLIC_LIMIT}`;
+
+      renderMyMints();
     }
 
     // initial public stats
@@ -574,12 +763,15 @@
         const pk58 = (typeof pkObj === "string") ? pkObj : (pkObj.toBase58 ? pkObj.toBase58() : String(pkObj));
 
         walletAdapter = provider;
-
+      
         walletLabel.textContent = `${walletType}: ${short(pk58)}`;
         setStatus(`${walletType} connected!`);
+        btnDisconnect.style.display = "inline-block";
+        if (btnMyMints) btnMyMints.disabled = false;
         await refreshStats();
       } catch (e) {
         console.error(e);
+        await refreshStats();
         setStatus(`Failed to connect wallet: ${e?.message || "Unknown error"}`);
       }
     };
@@ -591,6 +783,9 @@
       walletLabel.textContent = "Not connected";
       wlStatus.textContent = "—";
       userMints.textContent = "—";
+      btnDisconnect.style.display = "none";
+      if (btnMyMints) btnMyMints.disabled = true;
+      try { closeMyMints(); } catch {}
       setStatus("Disconnected.");
       await refreshStats();
     }
@@ -637,6 +832,10 @@
         const sig = await walletAdapter.sendTransaction(paymentTx, connection);
         await connection.confirmTransaction(sig, "confirmed");
 
+        // After confirmed, store local mint lists + increment counters
+        addGlobalMint(purchaseIndex);
+        addWalletMint(wallet, purchaseIndex);
+
         // After confirmed, increment local counters
         incrementMintCount(wallet);
         await refreshStats();
@@ -653,6 +852,7 @@
     btnDisconnect.addEventListener('click', disconnectWallet);
     btnRefresh.addEventListener('click', refreshStats);
     btnMint.addEventListener('click', mintPurchase);
+    if (btnMyMints) btnMyMints.addEventListener('click', () => { renderMyMints(); openMyMints(); });
   </script>
 </body>
 </html>
