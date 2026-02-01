@@ -326,7 +326,6 @@
     <div class="mint-grid">
       <div class="card">
         <h3 style="margin-top:0;">Wallet</h3>
-        <div class="statline"><span class="k">Network</span><span class="v" id="netLabel">—</span></div>
         <div class="statline">
           <span class="k">Wallet</span>
           <span class="v" id="walletLabel">Not connected</span>
@@ -453,7 +452,6 @@
     // ========================================
     // STATE + UI refs
     // ========================================
-    const netLabel = document.getElementById("netLabel");
     const walletLabel = document.getElementById("walletLabel");
     const wlStatus = document.getElementById("wlStatus");
     const userMints = document.getElementById("userMints");
@@ -463,8 +461,6 @@
     const btnDisconnect = document.getElementById("btnDisconnect");
     const btnRefresh = document.getElementById("btnRefresh");
     const btnMint = document.getElementById("btnMint");
-
-    netLabel.textContent = NETWORK;
 
     const connection = new Connection(RPC_URL, "confirmed");
     let walletAdapter = null;
