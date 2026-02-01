@@ -205,7 +205,9 @@
     }
     .modal.active { display: flex; }
     .modal-content {
-      background: #1a1a2e;
+      background: rgba(26,26,46,0.55);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(0,212,255,0.22);
       border-radius: 20px;
       padding: 2rem;
       max-width: 400px;
@@ -485,6 +487,16 @@
       document.getElementById('walletModal').classList.remove('active');
     }
 
+    // Close modal when clicking the dark backdrop
+    document.getElementById('walletModal').addEventListener('click', (e) => {
+      if (e.target && e.target.id === 'walletModal') closeWalletModal();
+    });
+
+    // Close modal with ESC
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeWalletModal();
+    });
+
     // Check for wallets on page load
     window.addEventListener('load', () => {
       if (window.phantom?.solana?.isPhantom) {
@@ -577,21 +589,31 @@
     // STORAGE (Cloudflare KV via window.storage if present, else localStorage fallback)
     // ========================================
     const _storage = (() => {
-      const hasKV = typeof window !== "undefined" && window.storage && typeof _storage.get === "function";
+      // If you wired a Cloudflare Worker/KV bridge that injects window.storage, we use it.
+      const hasKV =
+        typeof window !== "undefined" &&
+        window.storage &&
+        typeof window.storage.get === "function" &&
+        typeof window.storage.set === "function";
+
       return {
         async get(key) {
           try {
-            if (hasKV) return await _storage.get(key);
+            if (hasKV) return await window.storage.get(key);
             const v = localStorage.getItem(key);
             return v == null ? null : { value: v };
-          } catch { return null; }
+          } catch {
+            return null;
+          }
         },
         async set(key, value) {
           try {
-            if (hasKV) return await _storage.set(key, value);
+            if (hasKV) return await window.storage.set(key, value);
             localStorage.setItem(key, value);
             return true;
-          } catch { return false; }
+          } catch {
+            return false;
+          }
         }
       };
     })();
@@ -670,7 +692,7 @@
     }
 
     // Open wallet selection modal
-    btnConnect.addEventListener('click', () => {
+    if (btnConnect) btnConnect.addEventListener('click', () => {
       document.getElementById('walletModal').classList.add('active');
     });
 
