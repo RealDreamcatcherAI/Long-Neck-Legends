@@ -309,7 +309,7 @@
     <p>Turn up the heat! Forged in the volcanic kitchens of the flock, our first divine creation rises.</p>
     <p>
       A legendary blend of sweet, <strong style="color:#00d4ff;">sun-kissed mango and ruthless habanero heat.</strong>
-      This isn't just sauce — it's a flavor prophecy delivered straight from the longest necks in Web3.
+      This isn't just sauce, it's a flavor prophecy delivered straight from the longest necks in Web3.
     </p>
 
     <div class="sauce-art">
@@ -320,7 +320,7 @@
   <section id="mint" class="boxstyle">
     <h2>⭐ Mint to Claim</h2>
     <p>
-      33 Mango Habanero NFTs. (Bubblegum / Merkle tree code removed.)
+      33 Solana NFT Relics redeemable for a bottle of our exclusive Mango Habanero Hot Sauce.
     </p>
 
     <div class="mint-grid">
@@ -365,9 +365,6 @@
           <strong>Whitelist:</strong> 2 max | <strong>Public:</strong> 1 max
         </p>
 
-        <p style="opacity:0.65; font-size:0.85rem; margin-top:0.75rem;">
-          Note: Mint counters are stored locally in the browser (for now).
-        </p>
       </div>
     </div>
   </section>
@@ -541,35 +538,53 @@
           provider = window.phantom.solana;
           walletType = 'Phantom';
         } else if (type === 'solflare') {
-          if (!window.solflare) {
+          // Solflare injects `window.solflare` in most cases. Some builds expose `window.solflare.solana`.
+          provider = window.solflare?.solana ?? window.solflare ?? null;
+          if (!provider) {
             window.open('https://solflare.com/', '_blank');
             setStatus("Please install Solflare wallet!");
             return;
           }
-          provider = window.solflare;
           walletType = 'Solflare';
         } else if (type === 'magiceden') {
-          if (!window.magicEden?.solana) {
+          provider = window.magicEden?.solana ?? null;
+          if (!provider) {
             window.open('https://magiceden.io/wallet', '_blank');
             setStatus("Please install Magic Eden wallet!");
             return;
           }
-          provider = window.magicEden.solana;
           walletType = 'Magic Eden';
         } else {
           setStatus("Unknown wallet type.");
           return;
         }
 
-        const resp = await provider.connect();
+        // Connect (different wallets return different shapes)
+        let resp = null;
+        try {
+          resp = await provider.connect();
+        } catch (err) {
+          // Some wallet adapters require `provider.connect({ onlyIfTrusted: false })` or throw on already-connected
+          // Try a second, plain connect if the wallet expects params.
+          try { resp = await provider.connect({ onlyIfTrusted: false }); }
+          catch { throw err; }
+        }
+
+        // Robustly extract publicKey
+        const pkObj = (resp && resp.publicKey) ? resp.publicKey : provider.publicKey;
+        if (!pkObj) {
+          throw new Error("No publicKey returned by wallet provider");
+        }
+        const pk58 = (typeof pkObj === "string") ? pkObj : (pkObj.toBase58 ? pkObj.toBase58() : String(pkObj));
+
         walletAdapter = provider;
 
-        walletLabel.textContent = `${walletType}: ${short(resp.publicKey.toBase58())}`;
+        walletLabel.textContent = `${walletType}: ${short(pk58)}`;
         setStatus(`${walletType} connected!`);
         await refreshStats();
       } catch (e) {
         console.error(e);
-        setStatus("Failed to connect wallet.");
+        setStatus(`Failed to connect wallet: ${e?.message || "Unknown error"}`);
       }
     };
 
