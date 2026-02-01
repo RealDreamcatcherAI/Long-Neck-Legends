@@ -235,17 +235,9 @@
       border-color: #00d4ff;
       transform: translateX(5px);
     }
-    .wallet-option div {
-      flex: 1;
-    }
-    .wallet-name {
-      font-weight: 700;
-      font-size: 1.1rem;
-    }
-    .wallet-status {
-      font-size: 0.85rem;
-      opacity: 0.7;
-    }
+    .wallet-option div { flex: 1; }
+    .wallet-name { font-weight: 700; font-size: 1.1rem; }
+    .wallet-status { font-size: 0.85rem; opacity: 0.7; }
     .close-modal {
       background: none;
       border: none;
@@ -328,7 +320,7 @@
   <section id="mint" class="boxstyle">
     <h2>⭐ Mint to Claim</h2>
     <p>
-      33 Mango Habanero Compressed NFTs. Real on-chain NFTs backed by physical hot sauce bottles.
+      33 Mango Habanero NFTs. (Bubblegum / Merkle tree code removed.)
     </p>
 
     <div class="mint-grid">
@@ -372,6 +364,10 @@
         <p style="opacity:0.85; font-size:0.95rem; margin-top:1rem;">
           <strong>Whitelist:</strong> 2 max | <strong>Public:</strong> 1 max
         </p>
+
+        <p style="opacity:0.65; font-size:0.85rem; margin-top:0.75rem;">
+          Note: Mint counters are stored locally in the browser (for now).
+        </p>
       </div>
     </div>
   </section>
@@ -387,8 +383,7 @@
       document.getElementById('walletModal').classList.remove('active');
     }
 
-
-    // Ensure Connect Wallet always opens the wallet selector (even if the module script fails)
+    // Ensure Connect Wallet always opens the wallet selector
     window.addEventListener('DOMContentLoaded', () => {
       const c = document.getElementById('btnConnect');
       if (c) c.addEventListener('click', () => {
@@ -397,7 +392,7 @@
       });
     });
 
-    // Check for wallets on page load
+    // Check for wallets on page load (UI only)
     window.addEventListener('load', () => {
       if (window.phantom?.solana?.isPhantom) {
         document.getElementById('phantomStatus').textContent = 'Installed ✓';
@@ -412,44 +407,22 @@
         document.getElementById('magicedenStatus').style.color = '#48bb78';
       }
     });
-    window.addEventListener('error', (e) => {
-      const box = document.getElementById('statusBox');
-      if (box && (e?.message || '').includes('Failed to fetch dynamically imported module')) {
-        box.textContent = "Status: Script load failed (ESM import). Check network/CSP and try again.";
-      }
-    });
   </script>
 
   <script type="module">
-    import { 
-      Connection, 
-      PublicKey, 
+    import {
+      Connection,
+      PublicKey,
       Transaction,
       SystemProgram,
       LAMPORTS_PER_SOL
     } from "https://esm.sh/@solana/web3.js@1.95.2";
-    
-    import { createUmi } from "https://esm.sh/@metaplex-foundation/umi-bundle-defaults@0.9.2?bundle";
-    import { 
-      mplBubblegum,
-      mintV1
-    } from "https://esm.sh/@metaplex-foundation/mpl-bubblegum@0.7.0?bundle";
-    import {
-      walletAdapterIdentity
-    } from "https://esm.sh/@metaplex-foundation/umi-signer-wallet-adapters@0.9.2?bundle";
-    import { 
-      publicKey as umiPublicKey
-    } from "https://esm.sh/@metaplex-foundation/umi@0.9.2?bundle";
 
     // ========================================
-    // CONFIGURATION - YOUR ADDRESSES
+    // CONFIGURATION
     // ========================================
-    
     const NETWORK = "mainnet-beta";
     const RPC_URL = "https://api.mainnet-beta.solana.com";
-    
-    const COLLECTION_MINT = "FppBKa2FvrKt8UTw86spnv7ZMmjpSpXNLhjtdBYKw86i";
-    const MERKLE_TREE = "DjwAtzNVx1b3w7z9br8C8BJ4hna1uX87ZE7sxxbD4V3i";
     const TREASURY = "AoKpHZCEnTC8mBN53dVWsuzVRMAWR1H71bUdHmKxVAem";
 
     // WHITELIST (Add ALL addresses from your CSV)
@@ -479,12 +452,10 @@
     const WL_LIMIT = 2;
     const PUBLIC_LIMIT = 1;
     const TOTAL_SUPPLY = 33;
-    const METADATA_BASE = "https://longnecklegends.xyz/MHHSmetadata/";
 
     // ========================================
-    // STATE
+    // STATE + UI refs
     // ========================================
-
     const netLabel = document.getElementById("netLabel");
     const walletLabel = document.getElementById("walletLabel");
     const wlStatus = document.getElementById("wlStatus");
@@ -492,7 +463,6 @@
     const statusBox = document.getElementById("statusBox");
     const cmMinted = document.getElementById("cmMinted");
     const cmRemaining = document.getElementById("cmRemaining");
-    const btnConnect = document.getElementById("btnConnect");
     const btnDisconnect = document.getElementById("btnDisconnect");
     const btnRefresh = document.getElementById("btnRefresh");
     const btnMint = document.getElementById("btnMint");
@@ -501,76 +471,67 @@
 
     const connection = new Connection(RPC_URL, "confirmed");
     let walletAdapter = null;
-    let umi = null;
     let walletType = null;
 
     function setStatus(msg) {
       statusBox.textContent = "Status: " + msg;
     }
-
-    function short(pk) {
-      const s = String(pk || "");
+    function short(str) {
+      const s = String(str || "");
       if (s.length <= 10) return s;
       return s.slice(0, 4) + "..." + s.slice(-4);
     }
 
-    async function getMintCount(wallet) {
-      try {
-        const key = `mint-count:${wallet}`;
-        const result = await window.storage.get(key);
-        return result ? parseInt(result.value) : 0;
-      } catch {
-        return 0;
-      }
-    }
+    // ========================================
+    // Simple local counters (browser-only)
+    // ========================================
+    const LS_TOTAL = "lnl_hotsauce_total_minted_v1";
+    const LS_PREFIX = "lnl_hotsauce_mintcount_v1:";
 
-    async function getTotalMinted() {
-      try {
-        const result = await window.storage.get('total-minted');
-        return result ? parseInt(result.value) : 0;
-      } catch {
-        return 0;
-      }
+    function lsGetInt(key, fallback = 0) {
+      const v = localStorage.getItem(key);
+      const n = parseInt(v ?? "", 10);
+      return Number.isFinite(n) ? n : fallback;
     }
-
-    async function incrementMintCount(wallet) {
-      const key = `mint-count:${wallet}`;
-      const current = await getMintCount(wallet);
-      await window.storage.set(key, String(current + 1));
-      
-      const total = await getTotalMinted();
-      await window.storage.set('total-minted', String(total + 1));
+    function getMintCount(wallet) {
+      return lsGetInt(LS_PREFIX + wallet, 0);
+    }
+    function getTotalMinted() {
+      return lsGetInt(LS_TOTAL, 0);
+    }
+    function incrementMintCount(wallet) {
+      const current = getMintCount(wallet);
+      localStorage.setItem(LS_PREFIX + wallet, String(current + 1));
+      const total = getTotalMinted();
+      localStorage.setItem(LS_TOTAL, String(total + 1));
     }
 
     async function refreshStats() {
-      if (!walletAdapter) return;
-      
+      const totalMinted = getTotalMinted();
+      cmMinted.textContent = totalMinted;
+      cmRemaining.textContent = Math.max(0, TOTAL_SUPPLY - totalMinted);
+
+      if (!walletAdapter?.publicKey) return;
+
       const wallet = walletAdapter.publicKey.toBase58();
       const isWL = WHITELIST.has(wallet);
-      const mints = await getMintCount(wallet);
-      const totalMinted = await getTotalMinted();
-      
-      wlStatus.innerHTML = isWL ? 
-        'Whitelist <span class="wl-badge">WL</span>' : 
-        'Public';
+      const mints = getMintCount(wallet);
+
+      wlStatus.innerHTML = isWL ? 'Whitelist <span class="wl-badge">WL</span>' : 'Public';
       userMints.textContent = `${mints} / ${isWL ? WL_LIMIT : PUBLIC_LIMIT}`;
-      cmMinted.textContent = totalMinted;
-      cmRemaining.textContent = TOTAL_SUPPLY - totalMinted;
     }
 
-    // Open wallet selection modal
-    btnConnect.addEventListener('click', () => {
-      document.getElementById('walletModal').classList.add('active');
-    });
+    // initial public stats
+    refreshStats();
 
-    // Global connect function
+    // Global connect function (called by modal buttons)
     window.connectWallet = async function(type) {
       try {
         setStatus("Connecting wallet...");
         document.getElementById('walletModal').classList.remove('active');
 
         let provider = null;
-        
+
         if (type === 'phantom') {
           if (!window.phantom?.solana) {
             window.open('https://phantom.app/', '_blank');
@@ -595,19 +556,17 @@
           }
           provider = window.magicEden.solana;
           walletType = 'Magic Eden';
+        } else {
+          setStatus("Unknown wallet type.");
+          return;
         }
 
         const resp = await provider.connect();
         walletAdapter = provider;
-        
-        umi = createUmi(RPC_URL)
-          .use(mplBubblegum())
-          .use(walletAdapterIdentity(walletAdapter));
-        
+
         walletLabel.textContent = `${walletType}: ${short(resp.publicKey.toBase58())}`;
         setStatus(`${walletType} connected!`);
         await refreshStats();
-        
       } catch (e) {
         console.error(e);
         setStatus("Failed to connect wallet.");
@@ -615,32 +574,29 @@
     };
 
     async function disconnectWallet() {
-      try {
-        if (walletAdapter) {
-          await walletAdapter.disconnect();
-        }
-      } catch {}
+      try { if (walletAdapter) await walletAdapter.disconnect(); } catch {}
       walletAdapter = null;
-      umi = null;
       walletType = null;
       walletLabel.textContent = "Not connected";
       wlStatus.textContent = "—";
       userMints.textContent = "—";
       setStatus("Disconnected.");
+      await refreshStats();
     }
 
-    async function mintCompressedNFT() {
-      if (!walletAdapter?.publicKey || !umi) {
+    async function mintPurchase() {
+      if (!walletAdapter?.publicKey) {
         setStatus("Connect your wallet first!");
         return;
       }
 
       try {
         btnMint.disabled = true;
+
         const wallet = walletAdapter.publicKey.toBase58();
         const isWL = WHITELIST.has(wallet);
-        const mints = await getMintCount(wallet);
-        const totalMinted = await getTotalMinted();
+        const mints = getMintCount(wallet);
+        const totalMinted = getTotalMinted();
 
         if (totalMinted >= TOTAL_SUPPLY) {
           setStatus("SOLD OUT! 🔥");
@@ -655,11 +611,10 @@
 
         const price = isWL ? WL_PRICE : PUBLIC_PRICE;
         const priceSOL = price / LAMPORTS_PER_SOL;
-        const nftIndex = totalMinted;
-        
-        setStatus(`Minting cNFT #${nftIndex} for ${priceSOL} SOL... 🔥`);
+        const purchaseIndex = totalMinted;
 
-        // Payment
+        setStatus(`Processing purchase #${purchaseIndex} for ${priceSOL} SOL... 🔥`);
+
         const paymentTx = new Transaction().add(
           SystemProgram.transfer({
             fromPubkey: walletAdapter.publicKey,
@@ -670,15 +625,15 @@
 
         const sig = await walletAdapter.sendTransaction(paymentTx, connection);
         await connection.confirmTransaction(sig, "confirmed");
-        
-        await incrementMintCount(wallet);
+
+        // After confirmed, increment local counters
+        incrementMintCount(wallet);
         await refreshStats();
-        
-        setStatus(`✅ Minted cNFT #${nftIndex}! Tx: ${short(sig)}`);
-        
+
+        setStatus(`✅ Purchased #${purchaseIndex}! Tx: ${short(sig)}`);
       } catch (e) {
         console.error(e);
-        setStatus(`Mint failed: ${e.message}`);
+        setStatus(`Purchase failed: ${e?.message || "Unknown error"}`);
       } finally {
         btnMint.disabled = false;
       }
@@ -686,7 +641,7 @@
 
     btnDisconnect.addEventListener('click', disconnectWallet);
     btnRefresh.addEventListener('click', refreshStats);
-    btnMint.addEventListener('click', mintCompressedNFT);
+    btnMint.addEventListener('click', mintPurchase);
   </script>
 </body>
 </html>
