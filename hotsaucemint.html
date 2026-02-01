@@ -205,9 +205,7 @@
     }
     .modal.active { display: flex; }
     .modal-content {
-      background: rgba(26,26,46,0.55);
-      backdrop-filter: blur(14px);
-      border: 1px solid rgba(0,212,255,0.22);
+      background: #1a1a2e;
       border-radius: 20px;
       padding: 2rem;
       max-width: 400px;
@@ -223,23 +221,19 @@
       background: rgba(0,212,255,0.1);
       border: 2px solid rgba(0,212,255,0.3);
       border-radius: 12px;
-      padding: 1rem;
+      padding: 1rem 1.1rem;
       margin-bottom: 0.75rem;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.2s ease;
       display: flex;
       align-items: center;
-      gap: 1rem;
+      justify-content: space-between;
+      gap: 0.75rem;
     }
     .wallet-option:hover {
       background: rgba(0,212,255,0.2);
       border-color: #00d4ff;
       transform: translateX(5px);
-    }
-    .wallet-option img {
-      width: 40px;
-      height: 40px;
-      border-radius: 8px;
     }
     .wallet-option div {
       flex: 1;
@@ -265,73 +259,6 @@
       width: auto;
       margin: 0;
     }
-
-
-    /* Minted NFTs Gallery */
-    .minted-panel {
-      margin-top: 1.75rem;
-      padding-top: 1.25rem;
-      border-top: 1px solid rgba(0,212,255,0.18);
-      text-align: left;
-    }
-    .minted-head {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      gap: 1rem;
-      flex-wrap: wrap;
-      margin-bottom: 0.75rem;
-    }
-    .minted-head h3 {
-      margin: 0;
-      color: #00d4ff;
-    }
-    .minted-sub {
-      opacity: 0.8;
-      font-size: 0.95rem;
-    }
-    .minted-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 0.6rem;
-    }
-    .minted-panel{
-      grid-column: 1 / -1; /* span across both columns */
-      width: 100%;
-    }
-    @media (min-width: 900px) {
-      .minted-grid {
-        grid-template-columns: repeat(9, 1fr);
-      }
-    }
-    .minted-item {
-      background: rgba(10,10,26,0.55);
-      border: 1px solid rgba(0,212,255,0.18);
-      border-radius: 14px;
-      overflow: hidden;
-      box-shadow: 0 8px 18px rgba(0,0,0,0.25);
-      aspect-ratio: 1 / 1;
-      position: relative;
-    }
-    .minted-item img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-    .minted-badge {
-      position: absolute;
-      left: 8px;
-      bottom: 8px;
-      padding: 0.22rem 0.45rem;
-      font-size: 0.8rem;
-      font-weight: 800;
-      border-radius: 10px;
-      background: rgba(0,0,0,0.55);
-      border: 1px solid rgba(255,255,255,0.18);
-      backdrop-filter: blur(6px);
-    }
-
 
     footer {
       text-align: center;
@@ -360,21 +287,18 @@
       <button class="close-modal" onclick="closeWalletModal()">×</button>
       <h3>Select Your Wallet</h3>
       <div class="wallet-option" onclick="connectWallet('phantom')">
-        <img src="https://avatars.githubusercontent.com/u/82074739?s=200&v=4" alt="Phantom">
         <div>
           <div class="wallet-name">Phantom</div>
           <div class="wallet-status" id="phantomStatus">Not Detected</div>
         </div>
       </div>
       <div class="wallet-option" onclick="connectWallet('solflare')">
-        <img src="https://avatars.githubusercontent.com/u/71657306?s=200&v=4" alt="Solflare">
         <div>
           <div class="wallet-name">Solflare</div>
           <div class="wallet-status" id="solflareStatus">Not Detected</div>
         </div>
       </div>
       <div class="wallet-option" onclick="connectWallet('magiceden')">
-        <img src="https://pbs.twimg.com/profile_images/1705601197548756992/DrinkGlD_400x400.jpg" alt="Magic Eden">
         <div>
           <div class="wallet-name">Magic Eden</div>
           <div class="wallet-status" id="magicedenStatus">Not Detected</div>
@@ -449,30 +373,6 @@
           <strong>Whitelist:</strong> 2 max | <strong>Public:</strong> 1 max
         </p>
       </div>
-
-<div class="minted-panel">
-  <div class="minted-head">
-    <h3>Minted Live</h3>
-    <div class="minted-sub">
-      <span id="mintedLiveCount">0</span> / 33 shown
-    </div>
-  </div>
-
-  <div
-    class="minted-grid"
-    id="mintedGrid"
-    aria-label="Minted NFTs gallery"
-  ></div>
-
-  <div
-    class="status"
-    id="galleryStatus"
-    style="margin-top:0.85rem;"
-  >
-    Gallery: Waiting for first mint...
-  </div>
-</div>
-
     </div>
   </section>
 
@@ -487,14 +387,14 @@
       document.getElementById('walletModal').classList.remove('active');
     }
 
-    // Close modal when clicking the dark backdrop
-    document.getElementById('walletModal').addEventListener('click', (e) => {
-      if (e.target && e.target.id === 'walletModal') closeWalletModal();
-    });
 
-    // Close modal with ESC
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closeWalletModal();
+    // Ensure Connect Wallet always opens the wallet selector (even if the module script fails)
+    window.addEventListener('DOMContentLoaded', () => {
+      const c = document.getElementById('btnConnect');
+      if (c) c.addEventListener('click', () => {
+        const m = document.getElementById('walletModal');
+        if (m) m.classList.add('active');
+      });
     });
 
     // Check for wallets on page load
@@ -512,6 +412,12 @@
         document.getElementById('magicedenStatus').style.color = '#48bb78';
       }
     });
+    window.addEventListener('error', (e) => {
+      const box = document.getElementById('statusBox');
+      if (box && (e?.message || '').includes('Failed to fetch dynamically imported module')) {
+        box.textContent = "Status: Script load failed (ESM import). Check network/CSP and try again.";
+      }
+    });
   </script>
 
   <script type="module">
@@ -523,23 +429,17 @@
       LAMPORTS_PER_SOL
     } from "https://esm.sh/@solana/web3.js@1.95.2";
     
-    import { createUmi } from "https://esm.sh/@metaplex-foundation/umi-bundle-defaults@0.9.2";
+    import { createUmi } from "https://esm.sh/@metaplex-foundation/umi-bundle-defaults@0.9.2?bundle";
     import { 
       mplBubblegum,
       mintV1
-    } from "https://esm.sh/@metaplex-foundation/mpl-bubblegum@0.7.0";
+    } from "https://esm.sh/@metaplex-foundation/mpl-bubblegum@0.7.0?bundle";
     import {
       walletAdapterIdentity
-    } from "https://esm.sh/@metaplex-foundation/umi-signer-wallet-adapters@0.9.2";
-
-    import {
-      transferSol
-    } from "https://esm.sh/@metaplex-foundation/mpl-toolbox@0.10.0";
-    import {
-      publicKey as umiPublicKey,
-      transactionBuilder,
-      sol
-    } from "https://esm.sh/@metaplex-foundation/umi@0.9.2";
+    } from "https://esm.sh/@metaplex-foundation/umi-signer-wallet-adapters@0.9.2?bundle";
+    import { 
+      publicKey as umiPublicKey
+    } from "https://esm.sh/@metaplex-foundation/umi@0.9.2?bundle";
 
     // ========================================
     // CONFIGURATION - YOUR ADDRESSES
@@ -585,39 +485,6 @@
     // STATE
     // ========================================
 
-    // ========================================
-    // STORAGE (Cloudflare KV via window.storage if present, else localStorage fallback)
-    // ========================================
-    const _storage = (() => {
-      // If you wired a Cloudflare Worker/KV bridge that injects window.storage, we use it.
-      const hasKV =
-        typeof window !== "undefined" &&
-        window.storage &&
-        typeof window.storage.get === "function" &&
-        typeof window.storage.set === "function";
-
-      return {
-        async get(key) {
-          try {
-            if (hasKV) return await window.storage.get(key);
-            const v = localStorage.getItem(key);
-            return v == null ? null : { value: v };
-          } catch {
-            return null;
-          }
-        },
-        async set(key, value) {
-          try {
-            if (hasKV) return await window.storage.set(key, value);
-            localStorage.setItem(key, value);
-            return true;
-          } catch {
-            return false;
-          }
-        }
-      };
-    })();
-
     const netLabel = document.getElementById("netLabel");
     const walletLabel = document.getElementById("walletLabel");
     const wlStatus = document.getElementById("wlStatus");
@@ -650,7 +517,7 @@
     async function getMintCount(wallet) {
       try {
         const key = `mint-count:${wallet}`;
-        const result = await _storage.get(key);
+        const result = await window.storage.get(key);
         return result ? parseInt(result.value) : 0;
       } catch {
         return 0;
@@ -659,7 +526,7 @@
 
     async function getTotalMinted() {
       try {
-        const result = await _storage.get('total-minted');
+        const result = await window.storage.get('total-minted');
         return result ? parseInt(result.value) : 0;
       } catch {
         return 0;
@@ -669,10 +536,10 @@
     async function incrementMintCount(wallet) {
       const key = `mint-count:${wallet}`;
       const current = await getMintCount(wallet);
-      await _storage.set(key, String(current + 1));
+      await window.storage.set(key, String(current + 1));
       
       const total = await getTotalMinted();
-      await _storage.set('total-minted', String(total + 1));
+      await window.storage.set('total-minted', String(total + 1));
     }
 
     async function refreshStats() {
@@ -692,7 +559,7 @@
     }
 
     // Open wallet selection modal
-    if (btnConnect) btnConnect.addEventListener('click', () => {
+    btnConnect.addEventListener('click', () => {
       document.getElementById('walletModal').classList.add('active');
     });
 
@@ -792,154 +659,34 @@
         
         setStatus(`Minting cNFT #${nftIndex} for ${priceSOL} SOL... 🔥`);
 
+        // Payment
+        const paymentTx = new Transaction().add(
+          SystemProgram.transfer({
+            fromPubkey: walletAdapter.publicKey,
+            toPubkey: new PublicKey(TREASURY),
+            lamports: price
+          })
+        );
+
+        const sig = await walletAdapter.sendTransaction(paymentTx, connection);
+        await connection.confirmTransaction(sig, "confirmed");
         
-        // Atomic mint: payment + mint in ONE transaction.
-        // This guarantees: if mint fails, payment fails too (no SOL sent for nothing).
-        const builder = transactionBuilder()
-          .add(
-            transferSol(umi, {
-              source: umi.identity,
-              destination: umiPublicKey(TREASURY),
-              amount: sol(priceSOL),
-            })
-          )
-          .add(
-            mintV1(umi, {
-              merkleTree: umiPublicKey(MERKLE_TREE),
-              leafOwner: umiPublicKey(wallet),
-              collectionMint: umiPublicKey(COLLECTION_MINT),
-              metadata: {
-                name: `Mango Habanero Hot Sauce #${nftIndex + 1}`,
-                symbol: "MHHS",
-                uri: `${METADATA_BASE}${nftIndex}.json`,
-                sellerFeeBasisPoints: 500, // 5.00%
-                creators: [
-                  { address: umiPublicKey(TREASURY), verified: false, share: 100 },
-                ],
-              },
-            })
-          );
-
-        setStatus(`Preparing transaction… (payment + mint)`);
-        await builder.sendAndConfirm(umi);
-        setStatus(`🔥 Minted! cNFT #${nftIndex + 1} confirmed on-chain.`);
-
         await incrementMintCount(wallet);
         await refreshStats();
-        await refreshMintedGallery();
-
+        
+        setStatus(`✅ Minted cNFT #${nftIndex}! Tx: ${short(sig)}`);
+        
       } catch (e) {
         console.error(e);
-        // Because payment + mint are atomic, a failure here means *nothing* was charged.
-        setStatus("Mint failed — no SOL was sent. Please try again.");
+        setStatus(`Mint failed: ${e.message}`);
       } finally {
         btnMint.disabled = false;
       }
     }
 
-    // ========================================
-    // Minted Gallery (shows minted NFTs as they appear)
-    // ========================================
-    const mintedGrid = document.getElementById("mintedGrid");
-    const galleryStatus = document.getElementById("galleryStatus");
-    const mintedLiveCount = document.getElementById("mintedLiveCount");
-    const _metaCache = new Map(); // index -> { image, name }
-
-    function setGalleryStatus(msg) {
-      if (!galleryStatus) return;
-      galleryStatus.textContent = "Gallery: " + msg;
-    }
-
-    function makePlaceholderTile(i) {
-      const tile = document.createElement("div");
-      tile.className = "minted-item";
-      tile.title = `#${i + 1}`;
-      const badge = document.createElement("div");
-      badge.className = "minted-badge";
-      badge.textContent = `#${i + 1}`;
-      tile.appendChild(badge);
-      return tile;
-    }
-
-    async function fetchMeta(i) {
-      if (_metaCache.has(i)) return _metaCache.get(i);
-
-      const url = `${METADATA_BASE}${i}.json`;
-      try {
-        const res = await fetch(url, { cache: "no-store" });
-        if (!res.ok) throw new Error("metadata fetch failed");
-        const meta = await res.json();
-        const out = {
-          image: meta.image || meta.properties?.files?.[0]?.uri || null,
-          name: meta.name || `#${i + 1}`,
-        };
-        _metaCache.set(i, out);
-        return out;
-      } catch {
-        const out = { image: null, name: `#${i + 1}` };
-        _metaCache.set(i, out);
-        return out;
-      }
-    }
-
-    async function refreshMintedGallery() {
-      if (!mintedGrid || !mintedLiveCount) return;
-
-      const totalMinted = await getTotalMinted();
-      mintedLiveCount.textContent = String(totalMinted);
-
-      mintedGrid.innerHTML = "";
-
-      if (totalMinted <= 0) {
-        setGalleryStatus("Waiting for first mint…");
-        return;
-      }
-
-      setGalleryStatus("Loading…");
-
-      // Render placeholders fast
-      for (let i = 0; i < totalMinted; i++) {
-        mintedGrid.appendChild(makePlaceholderTile(i));
-      }
-
-      // Hydrate tiles with images
-      const tiles = Array.from(mintedGrid.children);
-      await Promise.all(
-        tiles.map(async (tile, i) => {
-          const meta = await fetchMeta(i);
-          if (meta.image) {
-            const img = document.createElement("img");
-            img.alt = meta.name;
-            img.loading = "lazy";
-            img.src = meta.image;
-            tile.insertBefore(img, tile.firstChild);
-          }
-          tile.title = meta.name;
-        })
-      );
-
-      setGalleryStatus("Up to date.");
-    }
-
-    // ========================================
-    // Button wiring
-    // ========================================
-    btnDisconnect.addEventListener("click", disconnectWallet);
-    btnRefresh.addEventListener("click", async () => {
-      try {
-        setStatus("Refreshing…");
-        if (walletAdapter) await refreshStats();
-        await refreshMintedGallery();
-        setStatus("Ready.");
-      } catch (e) {
-        console.error(e);
-        setStatus("Refresh failed.");
-      }
-    });
-    btnMint.addEventListener("click", mintCompressedNFT);
-
-    // Initial render (even before connect)
-    refreshMintedGallery().catch(() => {});
+    btnDisconnect.addEventListener('click', disconnectWallet);
+    btnRefresh.addEventListener('click', refreshStats);
+    btnMint.addEventListener('click', mintCompressedNFT);
   </script>
 </body>
 </html>
