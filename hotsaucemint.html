@@ -1031,20 +1031,59 @@
 
         // Fetch fresh CM data
         const cmPubkey = new PublicKey(CONFIG.CANDY_MACHINE_ID);
+        console.log("Fetching CM at:", cmPubkey.toBase58());
+        
         const cm = await metaplex.candyMachines().findByAddress({ address: cmPubkey });
-
         console.log("Candy Machine loaded:", cm);
+        console.log("CM itemsAvailable:", cm.itemsAvailable?.toString?.());
+        console.log("CM itemsMinted:", cm.itemsMinted?.toString?.());
+        console.log("CM authorityAddress:", cm.authorityAddress?.toBase58?.());
 
         // Use the collection update authority from config
         const collectionUpdateAuthority = new PublicKey(CONFIG.COLLECTION_UPDATE_AUTHORITY);
+        console.log("Using collection update authority:", collectionUpdateAuthority.toBase58());
 
-        // Mint
-        const mintResult = await metaplex.candyMachines().mint({
-          candyMachine: cm,
-          collectionUpdateAuthority: collectionUpdateAuthority,
-          // If you have guard groups (WL vs Public), specify here:
-          // group: isWL ? 'WL' : 'public',
-        });
+        setStatus("Sending mint transaction... approve in wallet 🔥");
+
+        // Mint with explicit parameters
+        let mintResult;
+        try {
+          // Check if CM has guard groups
+          const hasGuards = cm.candyGuard !== null && cm.candyGuard !== undefined;
+          console.log("Has candy guard:", hasGuards);
+          
+          if (hasGuards && cm.candyGuard?.groups?.length > 0) {
+            console.log("Guard groups:", cm.candyGuard.groups.map(g => g.label));
+          }
+
+          // Build mint options
+          const mintOptions = {
+            candyMachine: cm,
+            collectionUpdateAuthority: collectionUpdateAuthority,
+          };
+
+          // If there are guard groups, try to use WL or default
+          if (hasGuards && cm.candyGuard?.groups?.length > 0) {
+            const groupLabels = cm.candyGuard.groups.map(g => g.label);
+            // Try to find WL group first, otherwise use first group
+            if (groupLabels.includes("WL") && isWL) {
+              mintOptions.group = "WL";
+            } else if (groupLabels.includes("wl") && isWL) {
+              mintOptions.group = "wl";
+            } else if (groupLabels.includes("public")) {
+              mintOptions.group = "public";
+            } else if (groupLabels.includes("Public")) {
+              mintOptions.group = "Public";
+            }
+            console.log("Using guard group:", mintOptions.group || "default");
+          }
+
+          mintResult = await metaplex.candyMachines().mint(mintOptions);
+        } catch (mintErr) {
+          console.error("Mint call error:", mintErr);
+          console.error("Error details:", JSON.stringify(mintErr, null, 2));
+          throw mintErr;
+        }
 
         console.log("Mint result:", mintResult);
 
