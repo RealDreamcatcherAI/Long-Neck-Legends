@@ -1035,53 +1035,68 @@
         
         const cm = await metaplex.candyMachines().findByAddress({ address: cmPubkey });
         console.log("Candy Machine loaded:", cm);
-        console.log("CM itemsAvailable:", cm.itemsAvailable?.toString?.());
-        console.log("CM itemsMinted:", cm.itemsMinted?.toString?.());
-        console.log("CM authorityAddress:", cm.authorityAddress?.toBase58?.());
+        console.log("CM authority:", cm.authorityAddress?.toBase58());
 
-        // Use the collection update authority from config
-        const collectionUpdateAuthority = new PublicKey(CONFIG.COLLECTION_UPDATE_AUTHORITY);
-        console.log("Using collection update authority:", collectionUpdateAuthority.toBase58());
+        // Fetch the collection NFT to get the REAL update authority
+        const collectionMintAddress = cm.collectionMintAddress;
+        console.log("Collection mint:", collectionMintAddress.toBase58());
+        
+        const collectionNft = await metaplex.nfts().findByMint({ mintAddress: collectionMintAddress });
+        console.log("Collection NFT update authority:", collectionNft.updateAuthorityAddress.toBase58());
 
-        setStatus("Sending mint transaction... approve in wallet 🔥");
+        // The REAL collection update authority from on-chain
+        const realAuthority = collectionNft.updateAuthorityAddress;
+        console.log("Will use authority:", realAuthority.toBase58());
 
-        // Mint with explicit parameters
+        setStatus("Building transaction... approve in wallet 🔥");
+
+        // Use the BUILDER pattern for full control
         let mintResult;
         try {
-          // Check if CM has guard groups
           const hasGuards = cm.candyGuard !== null && cm.candyGuard !== undefined;
           console.log("Has candy guard:", hasGuards);
-          
-          if (hasGuards && cm.candyGuard?.groups?.length > 0) {
-            console.log("Guard groups:", cm.candyGuard.groups.map(g => g.label));
-          }
 
-          // Build mint options
-          const mintOptions = {
-            candyMachine: cm,
-            collectionUpdateAuthority: collectionUpdateAuthority,
-          };
-
-          // If there are guard groups, try to use WL or default
+          // Determine group if any
+          let group = undefined;
           if (hasGuards && cm.candyGuard?.groups?.length > 0) {
             const groupLabels = cm.candyGuard.groups.map(g => g.label);
-            // Try to find WL group first, otherwise use first group
+            console.log("Available guard groups:", groupLabels);
+            
             if (groupLabels.includes("WL") && isWL) {
-              mintOptions.group = "WL";
+              group = "WL";
             } else if (groupLabels.includes("wl") && isWL) {
-              mintOptions.group = "wl";
+              group = "wl";
             } else if (groupLabels.includes("public")) {
-              mintOptions.group = "public";
+              group = "public";
             } else if (groupLabels.includes("Public")) {
-              mintOptions.group = "Public";
+              group = "Public";
             }
-            console.log("Using guard group:", mintOptions.group || "default");
+            console.log("Using guard group:", group || "default (no group)");
           }
 
-          mintResult = await metaplex.candyMachines().mint(mintOptions);
+          // Build the mint transaction using builders for full control
+          const mintBuilder = metaplex.candyMachines().builders().mint({
+            candyMachine: cm,
+            collectionUpdateAuthority: realAuthority,
+            group: group,
+          });
+
+          console.log("Mint builder created, sending transaction...");
+
+          // Send and confirm
+          const { response, nft } = await mintBuilder.sendAndConfirm(metaplex);
+          
+          mintResult = { nft, response };
+          console.log("Mint successful!", mintResult);
+
         } catch (mintErr) {
           console.error("Mint call error:", mintErr);
-          console.error("Error details:", JSON.stringify(mintErr, null, 2));
+          
+          // Log more details about the error
+          if (mintErr.logs) {
+            console.error("Program logs:", mintErr.logs);
+          }
+          
           throw mintErr;
         }
 
