@@ -501,16 +501,13 @@
 
     // --- MintV2 (UMI) imports (FIX for InvalidAccountVersion) ---
     import { createUmi } from "https://esm.sh/@metaplex-foundation/umi-bundle-defaults@0.9.2";
-    import { publicKey, generateSigner, percentAmount, some, sol, transactionBuilder } from "https://esm.sh/@metaplex-foundation/umi@0.9.2";
     import { walletAdapterIdentity } from "https://esm.sh/@metaplex-foundation/umi-signer-wallet-adapters@0.9.2";
+    import { publicKey } from "https://esm.sh/@metaplex-foundation/umi@0.9.2";
     import {
       mplCandyMachine,
       fetchCandyMachine,
-      fetchCandyGuard,
       mintV2
     } from "https://esm.sh/@metaplex-foundation/mpl-candy-machine@0.9.2";
-    import { setComputeUnitLimit } from "https://esm.sh/@metaplex-foundation/mpl-toolbox@0.9.4";
-    import { mplTokenMetadata } from "https://esm.sh/@metaplex-foundation/mpl-token-metadata@0.9.2";
 
     // ============================================================================
     // CONFIGURATION (Single source of truth)
@@ -742,18 +739,8 @@
         }));
 
         // UMI for MintV2 (FIX)
-        // Create a wallet adapter compatible object
-        const walletAdapter = {
-          publicKey: walletPublicKey,
-          signTransaction: (tx) => provider.signTransaction(tx),
-          signAllTransactions: (txs) => provider.signAllTransactions(txs),
-          signMessage: provider.signMessage ? (msg) => provider.signMessage(msg) : undefined
-        };
-        
-        umi = createUmi(currentRpcUrl)
-          .use(mplCandyMachine())
-          .use(mplTokenMetadata())
-          .use(walletAdapterIdentity(walletAdapter));
+        umi = createUmi(currentRpcUrl).use(mplCandyMachine());
+        umi.use(walletAdapterIdentity(walletProvider));
 
         // Update UI
         walletLabel.textContent = `${walletType}: ${short(walletPublicKey.toBase58())}`;
@@ -1021,45 +1008,29 @@
 
         // Determine guard group label from your existing logic (if you use groups)
         let group = undefined;
-        // No group since config only has "default" guards
-        // if (isWL) group = "WL"; 
+        if (isWL) group = "WL"; // adjust if your group label is "wl"
+        // else group could be "public" if your on-chain guard uses a public group label
 
         // Fetch CM via UMI and mint using MintV2 (fixes InvalidAccountVersion)
         const cmPk = publicKey(CONFIG.CANDY_MACHINE_ID);
         const umiCm = await fetchCandyMachine(umi, cmPk);
-        
-        console.log("UMI Candy Machine:", umiCm);
-        console.log("Collection Mint:", umiCm.collectionMint);
-        console.log("Mint Authority:", umiCm.mintAuthority);
 
-        // Generate a new NFT mint signer
-        const nftMint = generateSigner(umi);
-        console.log("Generated NFT mint:", nftMint.publicKey);
-
-        // Build mintArgs for solPayment guard
-        const mintArgs = {
-          solPayment: some({ destination: publicKey(CONFIG.TREASURY) })
-        };
+        // If your guard requires args (mintLimit id, allowList proof, etc.), set mintArgs here.
+        // Example for mintLimit (ONLY if your guard uses it and your config expects an id):
+        // const mintArgs = { mintLimit: { id: 1 } };
+        const mintArgs = undefined;
 
         setStatus("Sending mint transaction... approve in wallet 🔥");
 
-        // Build the transaction with compute budget for pNFTs
-        const tx = await transactionBuilder()
-          .add(setComputeUnitLimit(umi, { units: 800_000 }))
-          .add(
-            mintV2(umi, {
-              candyMachine: umiCm.publicKey,
-              nftMint,
-              collectionMint: umiCm.collectionMint,
-              collectionUpdateAuthority: umiCm.authority,
-              group,
-              mintArgs
-            })
-          )
-          .sendAndConfirm(umi);
+        const res = await mintV2(umi, {
+          candyMachine: umiCm.publicKey,
+          collectionMint: umiCm.collectionMint,
+          group,
+          mintArgs
+        }).sendAndConfirm(umi);
 
-        console.log("MintV2 signature:", tx.signature);
-        setStatus(`✅ Minted! Tx: ${short(tx.signature)}`, "success");
+        console.log("MintV2 signature:", res.signature);
+        setStatus(`✅ Minted! Tx: ${short(res.signature)}`, "success");
 
         await sleep(2000);
         await refreshAll();
@@ -1151,3 +1122,4 @@
   </script>
 </body>
 </html>
+
