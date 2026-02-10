@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+    <!DOCTYPE html>
 <html lang="en">
 <head>
   <link rel="icon" type="image/png" sizes="32x32" href="https://i.imgur.com/jpGdtHJ.jpeg">
@@ -1002,8 +1002,8 @@
           return;
         }
 
-        // Check balance
-        const price = isWL ? CONFIG.WL_PRICE_SOL : CONFIG.PUBLIC_PRICE_SOL;
+        // Check balance - guard config only has 0.55 price for everyone
+        const price = CONFIG.PUBLIC_PRICE_SOL; // 0.55 - on-chain price for all
         const balance = await connection.getBalance(walletPublicKey);
         const required = (price + 0.02) * LAMPORTS_PER_SOL;
         if (balance < required) {
@@ -1032,17 +1032,21 @@
         const cmPk = umiPublicKey(CONFIG.CANDY_MACHINE_ID);
         const umiCm = await fetchCandyMachine(umi, cmPk);
 
+        // ✅ Get the candy guard from mintAuthority
+        const candyGuardPk = umiCm.mintAuthority;
+
         console.log("UMI Candy Machine:", umiCm);
         console.log("Collection Mint:", umiCm.collectionMint);
         console.log("Authority:", umiCm.authority);
+        console.log("Candy Guard (mintAuthority):", candyGuardPk);
 
         // Generate NFT mint signer
         const nftMint = generateSigner(umi);
         console.log("Generated NFT mint:", nftMint.publicKey);
 
-        // Build mintArgs for solPayment guard
+        // ✅ Build mintArgs for solPayment guard (destination is on-chain, not passed here)
         const mintArgs = {
-          solPayment: some({ destination: umiPublicKey(CONFIG.TREASURY) })
+          solPayment: some({})
         };
 
         setStatus("Approve in wallet 🔥");
@@ -1053,6 +1057,7 @@
           .add(
             mintV2(umi, {
               candyMachine: umiCm.publicKey,
+              candyGuard: candyGuardPk,  // ✅ ADD THIS - required for guarded CM
               nftMint,
               collectionMint: umiCm.collectionMint,
               collectionUpdateAuthority: umiCm.authority,
@@ -1155,3 +1160,4 @@
   </script>
 </body>
 </html>
+    
