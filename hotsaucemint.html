@@ -1036,6 +1036,12 @@
         const cm = await metaplex.candyMachines().findByAddress({ address: cmPubkey });
         console.log("Candy Machine loaded:", cm);
         console.log("CM authority:", cm.authorityAddress?.toBase58());
+        console.log("CM has candy guard:", !!cm.candyGuard);
+        
+        if (cm.candyGuard) {
+          console.log("Candy Guard address:", cm.candyGuard.address?.toBase58());
+          console.log("Candy Guard groups:", cm.candyGuard.groups?.map(g => g.label));
+        }
 
         // Fetch the collection NFT to get the REAL update authority
         const collectionMintAddress = cm.collectionMintAddress;
@@ -1046,11 +1052,11 @@
 
         // The REAL collection update authority from on-chain
         const realAuthority = collectionNft.updateAuthorityAddress;
-        console.log("Will use authority:", realAuthority.toBase58());
+        console.log("Will use collection update authority:", realAuthority.toBase58());
 
         setStatus("Building transaction... approve in wallet 🔥");
 
-        // Use the BUILDER pattern for full control
+        // Mint
         let mintResult;
         try {
           const hasGuards = cm.candyGuard !== null && cm.candyGuard !== undefined;
@@ -1074,19 +1080,18 @@
             console.log("Using guard group:", group || "default (no group)");
           }
 
-          // Build the mint transaction using builders for full control
-          const mintBuilder = metaplex.candyMachines().builders().mint({
+          // Call mint with all parameters explicitly
+          console.log("Calling metaplex.candyMachines().mint() with:");
+          console.log("  - candyMachine:", cm.address.toBase58());
+          console.log("  - collectionUpdateAuthority:", realAuthority.toBase58());
+          console.log("  - group:", group);
+          
+          mintResult = await metaplex.candyMachines().mint({
             candyMachine: cm,
             collectionUpdateAuthority: realAuthority,
             group: group,
           });
-
-          console.log("Mint builder created, sending transaction...");
-
-          // Send and confirm
-          const { response, nft } = await mintBuilder.sendAndConfirm(metaplex);
           
-          mintResult = { nft, response };
           console.log("Mint successful!", mintResult);
 
         } catch (mintErr) {

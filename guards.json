@@ -1,0 +1,12 @@
+{
+  "default": {
+    "solPayment": {
+      "amount": 0.55,
+      "destination": "ChnzFpK4ty2vpzM48HUrtDVY7tWD8StmYaNxQcKSBuyc"
+    },
+    "mintLimit": {
+      "id": 1,
+      "limit": 1
+    }
+  }
+}

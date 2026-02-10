@@ -1,0 +1,282 @@
+{
+  "program": {
+    "candyMachine": "BTbNCX9xXznJ5JP1fBAizCFSDB5eyzytJk4y1Xz5xyRZ",
+    "candyGuard": "",
+    "candyMachineCreator": "HNuy6DPdWEKGpoAModP1TqezqCG5FqvsP5EzyTFU3eQz",
+    "collectionMint": "BzpsHMryoyXobwTPEVVohsy4tuEds8tw3siBfdN1GRQm"
+  },
+  "items": {
+    "-1": {
+      "name": "LNL Mango Habanero",
+      "image_hash": "4f449a82a1909c8c95a49cb97262a2a922481cb38623cdc84518b4ffd87aba38",
+      "image_link": "https://gateway.irys.xyz/hZGoDzimqG9L0KFNvtpF2DLHpWK9TISZejk3UeUm0Tc?ext=jpg",
+      "metadata_hash": "36248a6012ce879570556237412f8c6fa5ca0592c198b7a161f5422045f68b68",
+      "metadata_link": "https://gateway.irys.xyz/2ykg2kV1Lkkv9GLK_qdEUtVIgMrgNQa7RMPSkG_Ebuk",
+      "onChain": true
+    },
+    "0": {
+      "name": "LNL Mango Habanero #0",
+      "image_hash": "4f449a82a1909c8c95a49cb97262a2a922481cb38623cdc84518b4ffd87aba38",
+      "image_link": "https://gateway.irys.xyz/ZsatwrxIgckRcv61mhHGPiOC6TzpVnAfrRhmul6rZf0?ext=jpg",
+      "metadata_hash": "f8dae91fc9b4ce5f443f3a0a12619011fc4e3e333e2a04b93abf26845eb1edc6",
+      "metadata_link": "https://gateway.irys.xyz/zkD1BGKWZF1hT0VN04aSWgT76fctv8DFLg7QA6n8gfc",
+      "onChain": true
+    },
+    "1": {
+      "name": "LNL Mango Habanero #1",
+      "image_hash": "2708479134ec4822e442b6948d9d3ef09298eaf719e3fd89cab42d8b01746c77",
+      "image_link": "https://gateway.irys.xyz/VDCon8dikkzlVZO9vk4b_rk_LgunMYzrRvZsSoldk7w?ext=jpg",
+      "metadata_hash": "7aee3a475b5a584873a40bd2824f94fb4987c5b12aaa82748875736612b6a8e7",
+      "metadata_link": "https://gateway.irys.xyz/f_ZCnX2zURS8K5ppVCwygmwyyZz6l8DRLPdySZy-3Rw",
+      "onChain": true
+    },
+    "2": {
+      "name": "LNL Mango Habanero #2",
+      "image_hash": "98b916064c4c0fae698c0946e8c694c476b59a9345ee894063cec79451feb471",
+      "image_link": "https://gateway.irys.xyz/KBejadX6gFVs8-Twwi-Cav79Rstggu0joiM-WONj5S8?ext=jpg",
+      "metadata_hash": "ba33b579db839ab2f17f8cec04437a1ef23303880360593a4a9100686ac89e20",
+      "metadata_link": "https://gateway.irys.xyz/T9f3_tx8DSGTLNf4ZTsNqr9c6oEtkgCG2OyCQkEeF24",
+      "onChain": true
+    },
+    "3": {
+      "name": "LNL Mango Habanero #3",
+      "image_hash": "fbe56d8360351c26173999973009710e938e6f8ed63aa452d95038d7fd5677f0",
+      "image_link": "https://gateway.irys.xyz/lY5YGMpQ-Ct6rbFeLio4a6L3zH3SBjdBBKs6PpBSauw?ext=jpg",
+      "metadata_hash": "6818891235b3933facc37da677e31c1fc52e43b93e4f04f2484dbcf9b3a30cc7",
+      "metadata_link": "https://gateway.irys.xyz/llHc8bxCM9RExVt4wqGRFA1HwrIt-xw09i-hBidhegs",
+      "onChain": true
+    },
+    "4": {
+      "name": "LNL Mango Habanero #4",
+      "image_hash": "b6dade16323cf89cc2d04bf7326d9516974d113208258d524d8b15987df0e0f8",
+      "image_link": "https://gateway.irys.xyz/gjCEVXHICiFeXuqxbnO1RngqE7VhvTjcKnAMYoQ_gjs?ext=jpg",
+      "metadata_hash": "3126eaa41212d08736da86f02dc4400c2d511ee4303f8901273b9b24d7237003",
+      "metadata_link": "https://gateway.irys.xyz/Qkwdr8QetXlwxrqGY901hXPdxPVFoMwtxSuew2NqoKw",
+      "onChain": true
+    },
+    "5": {
+      "name": "LNL Mango Habanero #5",
+      "image_hash": "75b304cb8628193da9935c5d6827e277e5355814e2a379c1f5836faaf3bee7eb",
+      "image_link": "https://gateway.irys.xyz/_wq5S0cmN6jsxS4Zx66ApfDNPfUiv6NQPYX1CDdjco0?ext=jpg",
+      "metadata_hash": "ff6161589479bd7bd24f31826dd79be4f30a740c50db5664e77172e8300b8b29",
+      "metadata_link": "https://gateway.irys.xyz/_N596RQfryiV_dfetiQamL44t5bYrMqZZxOluC5sGtA",
+      "onChain": true
+    },
+    "6": {
+      "name": "LNL Mango Habanero #6",
+      "image_hash": "8467f32c0cf37685223ffbfacc627276e0543906eb236ce31ec268c6ea086629",
+      "image_link": "https://gateway.irys.xyz/Uoe2Ck3WaV4PepizOc5qeJt7kD530Hn0Mp2HazNNJno?ext=jpg",
+      "metadata_hash": "aa23a832bb4b4d3a105eb42afd99b9a610da3eaaeb7dd9fb42142a3b9e8ffd73",
+      "metadata_link": "https://gateway.irys.xyz/ZoJOjEzeXftkJ6GHoVUQ94kGkpZrHb8K0dUgUDD0kmA",
+      "onChain": true
+    },
+    "7": {
+      "name": "LNL Mango Habanero #7",
+      "image_hash": "2708479134ec4822e442b6948d9d3ef09298eaf719e3fd89cab42d8b01746c77",
+      "image_link": "https://gateway.irys.xyz/yKw6toJ_iEEXu9IYtqTtusVMlhUxCyjczPg-amM7_YI?ext=jpg",
+      "metadata_hash": "b059f7c91a2d3f23d0b4a6f9bc0dccaa9260a1c6f591d649aae92ba2532a77b7",
+      "metadata_link": "https://gateway.irys.xyz/IaxztmOGeMhfuzhDH7-SUEUSTbzwvM4hf71oXlMBb-Y",
+      "onChain": true
+    },
+    "8": {
+      "name": "LNL Mango Habanero #8",
+      "image_hash": "98b916064c4c0fae698c0946e8c694c476b59a9345ee894063cec79451feb471",
+      "image_link": "https://gateway.irys.xyz/4ctpZsZ9FpLd2NAXtAXu4ebe8-pM0olUibYyqdacGsc?ext=jpg",
+      "metadata_hash": "3aa296450e82e75f4e1bebb50d91d6effb42da3fc84721c5745312f3ac0f3530",
+      "metadata_link": "https://gateway.irys.xyz/DSyHHVyJSd92IVAsfa5lAHGfNKX9RzMQuvgxzDQ3yH0",
+      "onChain": true
+    },
+    "9": {
+      "name": "LNL Mango Habanero #9",
+      "image_hash": "fbe56d8360351c26173999973009710e938e6f8ed63aa452d95038d7fd5677f0",
+      "image_link": "https://gateway.irys.xyz/EDlf29hl0kjBs6Uo7Eokxcn04UThw5wIhlvk3LSBFQ0?ext=jpg",
+      "metadata_hash": "98f83e58fd0073ab4bd4ea977618fdb41d77f1ffb661525ff90e9fd69bcbe888",
+      "metadata_link": "https://gateway.irys.xyz/9AeCDOwpncc9Q3IER5uxMb0DntVDufdNH-8x12bR1Zw",
+      "onChain": true
+    },
+    "10": {
+      "name": "LNL Mango Habanero #10",
+      "image_hash": "b6dade16323cf89cc2d04bf7326d9516974d113208258d524d8b15987df0e0f8",
+      "image_link": "https://gateway.irys.xyz/Gcn5SuRh3MJQrHf4jO1wJYOHwaqTJjGX9_JXlGdCHEI?ext=jpg",
+      "metadata_hash": "dde8551cbb15386022b98dc28341815e15b377d0ab16200f28f961e7741baa37",
+      "metadata_link": "https://gateway.irys.xyz/a2NE2fNsnP3hDTDY_N459giWUkAth6PCpJEEer5PH6Y",
+      "onChain": true
+    },
+    "11": {
+      "name": "LNL Mango Habanero #11",
+      "image_hash": "75b304cb8628193da9935c5d6827e277e5355814e2a379c1f5836faaf3bee7eb",
+      "image_link": "https://gateway.irys.xyz/WZwd8eTPE8snGGSDJ0-CRmuplmFnEB3tWXXtK820jkg?ext=jpg",
+      "metadata_hash": "5b99404a9ac324bc620cae53441ef4de3a97a6375448c1d29c92c8bab809312e",
+      "metadata_link": "https://gateway.irys.xyz/bt352Id3A0WpWLaazGSpJsC2VMufya6iLgZEBIzLc1A",
+      "onChain": true
+    },
+    "12": {
+      "name": "LNL Mango Habanero #12",
+      "image_hash": "4f449a82a1909c8c95a49cb97262a2a922481cb38623cdc84518b4ffd87aba38",
+      "image_link": "https://gateway.irys.xyz/lJFcY3QhR2wvf6OBeTZjfBFd24Vz5CTT-NFnOhpmJg8?ext=jpg",
+      "metadata_hash": "0aaaaf6388e1eab6b6ce13d3b8799fc48d820135397d0790f147307ad8f62321",
+      "metadata_link": "https://gateway.irys.xyz/VfoutAWCSNs3le5sn4sQT-lk1-ZL6cqIaWkLbx37XbM",
+      "onChain": true
+    },
+    "13": {
+      "name": "LNL Mango Habanero #13",
+      "image_hash": "8467f32c0cf37685223ffbfacc627276e0543906eb236ce31ec268c6ea086629",
+      "image_link": "https://gateway.irys.xyz/1iYNDA6Gdg0-pUJCDgKp7ZGteamRqa0-F2-edIIEE2M?ext=jpg",
+      "metadata_hash": "12bdccfb0d1471487ea9e98dc22265d4f0d020659d564c8e9d6bdba1afb7af84",
+      "metadata_link": "https://gateway.irys.xyz/FW5NO3jmj-k19vuUBSBeZB9DspyXyVA_Egz6dCYET5w",
+      "onChain": true
+    },
+    "14": {
+      "name": "LNL Mango Habanero #14",
+      "image_hash": "2708479134ec4822e442b6948d9d3ef09298eaf719e3fd89cab42d8b01746c77",
+      "image_link": "https://gateway.irys.xyz/JNxzFbDZjkkv-PwDXlUj-rvmTvyoRsLC94yfLdHXw-k?ext=jpg",
+      "metadata_hash": "3ed39f57a97d3c55437253b09c1ad6ed22d3f4ae9fb7f2107771791ffaa93d26",
+      "metadata_link": "https://gateway.irys.xyz/8SE-pamu5fVeoLwx3a_cAyLVmGoQQCL2K2FGupZ78ss",
+      "onChain": true
+    },
+    "15": {
+      "name": "LNL Mango Habanero #15",
+      "image_hash": "98b916064c4c0fae698c0946e8c694c476b59a9345ee894063cec79451feb471",
+      "image_link": "https://gateway.irys.xyz/wQjXHrGhQugleC6mbDLNSqFPZjTnvFH4jUqu_4LtGmE?ext=jpg",
+      "metadata_hash": "40f3d3c93927a3a31857780107475ae9e686b4773b10f5e25f169583b26b942c",
+      "metadata_link": "https://gateway.irys.xyz/8RUZXTa3XKUj5GwsG9knhvE-lrJCYR0oPrzgw5_t8qg",
+      "onChain": true
+    },
+    "16": {
+      "name": "LNL Mango Habanero #16",
+      "image_hash": "fbe56d8360351c26173999973009710e938e6f8ed63aa452d95038d7fd5677f0",
+      "image_link": "https://gateway.irys.xyz/rjGAKQ8Rl4BgbZl1HP6n_dQPK_8o_49Kdd4F_zGTigM?ext=jpg",
+      "metadata_hash": "7a5eef985e7f0bf73155e97ffceeaf152e9f9da3e57d058409359bebd861e516",
+      "metadata_link": "https://gateway.irys.xyz/BuN8Hjh6p0SHIb6HZtSKlRA0rq5ysHwI_xVlTVzPJuE",
+      "onChain": true
+    },
+    "17": {
+      "name": "LNL Mango Habanero #17",
+      "image_hash": "b6dade16323cf89cc2d04bf7326d9516974d113208258d524d8b15987df0e0f8",
+      "image_link": "https://gateway.irys.xyz/oHDHb1G2W45m-8Xs8ddflPKt6qIpL_9DBijURH9Z4CE?ext=jpg",
+      "metadata_hash": "46b9f43010738548e2532d59d4a366e2a966d4275123521bd6b5ba445dc07cec",
+      "metadata_link": "https://gateway.irys.xyz/nmsUiiFsvPVORJdIdiLmUOHd2ZROD4A9T0uW_A_Yv7U",
+      "onChain": true
+    },
+    "18": {
+      "name": "LNL Mango Habanero #18",
+      "image_hash": "75b304cb8628193da9935c5d6827e277e5355814e2a379c1f5836faaf3bee7eb",
+      "image_link": "https://gateway.irys.xyz/JK7zxA7DSQ_XKDDxqpFzQDD6rg6Ti6q4diLoU8sRe5U?ext=jpg",
+      "metadata_hash": "afe599810994a99874c6ac799ce7e374c6c4c3f687970c322c542ffb971960eb",
+      "metadata_link": "https://gateway.irys.xyz/rn2J78MtH9ri5N_qJBFqhNQAECzSba-68Lnotim-a9Y",
+      "onChain": true
+    },
+    "19": {
+      "name": "LNL Mango Habanero #19",
+      "image_hash": "8467f32c0cf37685223ffbfacc627276e0543906eb236ce31ec268c6ea086629",
+      "image_link": "https://gateway.irys.xyz/URiGBwJue7NAhMj4KN0A8Hvy1TXBx2KbVuQ-SWstuCw?ext=jpg",
+      "metadata_hash": "51d8b345b211a91aa999d3581004dd8b022c15532390f53e38d0af159dfb017c",
+      "metadata_link": "https://gateway.irys.xyz/gUzAs25Yg3bvkz16yuUFRKf1Lgiol04KVk_1hxUfCE4",
+      "onChain": true
+    },
+    "20": {
+      "name": "LNL Mango Habanero #20",
+      "image_hash": "4f449a82a1909c8c95a49cb97262a2a922481cb38623cdc84518b4ffd87aba38",
+      "image_link": "https://gateway.irys.xyz/0SnYimbXRmm_W2yUPWIVWFT5hMu73Q3PEs7q1r1YwVM?ext=jpg",
+      "metadata_hash": "5504598b0bcaf2a730804c8c75f28d21e2ac7eb67296dca27e8d693090dc52a8",
+      "metadata_link": "https://gateway.irys.xyz/ekLwjnuKB3a9NP8AD6ztUzeICGX82bgypHQrAVfyneo",
+      "onChain": true
+    },
+    "21": {
+      "name": "LNL Mango Habanero #21",
+      "image_hash": "2708479134ec4822e442b6948d9d3ef09298eaf719e3fd89cab42d8b01746c77",
+      "image_link": "https://gateway.irys.xyz/WlbW160AN63EJW7Up6NmtEZQ-gXmNZjpxZ6h0jqQAQE?ext=jpg",
+      "metadata_hash": "d8ea3d6d0791b60e0791a1d4af5549a4eb15a4d88d0079e9c9e5e658d5b10133",
+      "metadata_link": "https://gateway.irys.xyz/uKMSYupMcrA7XKZ7iHlDYwy-VJamgMCVl76JLA9yCRs",
+      "onChain": true
+    },
+    "22": {
+      "name": "LNL Mango Habanero #22",
+      "image_hash": "98b916064c4c0fae698c0946e8c694c476b59a9345ee894063cec79451feb471",
+      "image_link": "https://gateway.irys.xyz/w4mKBlhBeksoyIYc5qyQQp495kgSWVRXMdcd0NNE7Fs?ext=jpg",
+      "metadata_hash": "a8000f9b3ac9e5b926d2be2cf170b8465fcdc411af38ecbb62a6bf16b71cfbe0",
+      "metadata_link": "https://gateway.irys.xyz/iDx22G0GGow9NY6W1AgqA2wRuh9ZF2f-tJ8z77RQeQA",
+      "onChain": true
+    },
+    "23": {
+      "name": "LNL Mango Habanero #23",
+      "image_hash": "fbe56d8360351c26173999973009710e938e6f8ed63aa452d95038d7fd5677f0",
+      "image_link": "https://gateway.irys.xyz/QoJ43AYLr-_5cJqaPSAQwSMuSV9UAe0LzAIRTQ3JAdE?ext=jpg",
+      "metadata_hash": "f01d9399577463effe503a641788ac12b647605a89e8593d51e5e7a95902d997",
+      "metadata_link": "https://gateway.irys.xyz/c8DYuF7sStONQGGgMq4U9tD50Cje7zzgeuuHnM-zIuo",
+      "onChain": true
+    },
+    "24": {
+      "name": "LNL Mango Habanero #24",
+      "image_hash": "b6dade16323cf89cc2d04bf7326d9516974d113208258d524d8b15987df0e0f8",
+      "image_link": "https://gateway.irys.xyz/JzbhejvKKMcwhzgiQ6iJC_GjM2zqjdlAsAIYuj0DZZg?ext=jpg",
+      "metadata_hash": "4fba1508c184312e3d4e9ca61fe59d9e08593d1700e0e5fb5d200d60d56c6b93",
+      "metadata_link": "https://gateway.irys.xyz/1NQvgzTvFTznohdYMeWbwwhmxot-yGTm34OEms4GnfU",
+      "onChain": true
+    },
+    "25": {
+      "name": "LNL Mango Habanero #25",
+      "image_hash": "75b304cb8628193da9935c5d6827e277e5355814e2a379c1f5836faaf3bee7eb",
+      "image_link": "https://gateway.irys.xyz/soUsBtdC7r6jb5vXxybfcjZAqvHssjfhxK1bYJoq5YQ?ext=jpg",
+      "metadata_hash": "b64a6a6c43f7c0c4f77c7354fbd0d1e94fec7d7df53742a3851f3613bb0e493f",
+      "metadata_link": "https://gateway.irys.xyz/tsFyeypV-x8GlMP9EwN0nT0RAiVovwM-xANqtua-2fs",
+      "onChain": true
+    },
+    "26": {
+      "name": "LNL Mango Habanero #26",
+      "image_hash": "8467f32c0cf37685223ffbfacc627276e0543906eb236ce31ec268c6ea086629",
+      "image_link": "https://gateway.irys.xyz/1qPvJwPQ72Pc3FhZvqCo68yodid-8v1_OZ1Pms8YFhU?ext=jpg",
+      "metadata_hash": "043b304ee281d2cba8288c60cc94d030eebc103711be15635346acd728356e85",
+      "metadata_link": "https://gateway.irys.xyz/imiUp2mYwFwcy3oTma919wP-HkZtY4uL-xFryepPVec",
+      "onChain": true
+    },
+    "27": {
+      "name": "LNL Mango Habanero #27",
+      "image_hash": "2708479134ec4822e442b6948d9d3ef09298eaf719e3fd89cab42d8b01746c77",
+      "image_link": "https://gateway.irys.xyz/tVE74OK4XLaqIimar80SIwOx5P9_mVYkWOELBc5VnPA?ext=jpg",
+      "metadata_hash": "f3666b689a92d3e601eadda4b82af130e4e4c87e46c601eed5bfea4202556aa0",
+      "metadata_link": "https://gateway.irys.xyz/8_-7Ipg8DxRk1Nad2-8Pu3hJCW2iluikfiKLfUHpaqw",
+      "onChain": true
+    },
+    "28": {
+      "name": "LNL Mango Habanero #28",
+      "image_hash": "98b916064c4c0fae698c0946e8c694c476b59a9345ee894063cec79451feb471",
+      "image_link": "https://gateway.irys.xyz/HpA1mxNCRCflGUh-8DoOIMY22pAT6WjzUgKVUM4DJeA?ext=jpg",
+      "metadata_hash": "e27e4a909e228ec5fbed29f5e59226a1a6a10845d5d1211660d177db63545c9b",
+      "metadata_link": "https://gateway.irys.xyz/QVbbA7cHz1xY4_Xjv2DMBQq9S8RmeUWvCVr7bysX4Ik",
+      "onChain": true
+    },
+    "29": {
+      "name": "LNL Mango Habanero #29",
+      "image_hash": "fbe56d8360351c26173999973009710e938e6f8ed63aa452d95038d7fd5677f0",
+      "image_link": "https://gateway.irys.xyz/hcMszl9mIpO8KTBMmpZLZZHsmHqgvyp9HwDx7ZDEkAo?ext=jpg",
+      "metadata_hash": "e92b6ac169ba28ff4acb27225ea142ef03275f60f384416bee6007a927d22373",
+      "metadata_link": "https://gateway.irys.xyz/Q4pCwozkOY20wdbhVXe9GIRZxPwseSM3PajGMFk7yA0",
+      "onChain": true
+    },
+    "30": {
+      "name": "LNL Mango Habanero #30",
+      "image_hash": "b6dade16323cf89cc2d04bf7326d9516974d113208258d524d8b15987df0e0f8",
+      "image_link": "https://gateway.irys.xyz/4PJrjJL05XnlawTHSRvUtFYhEdeZ2kZ3aXsWDqIgZQA?ext=jpg",
+      "metadata_hash": "237afd66f15587d7e9f9eebf5c7039dfa3d18eb0624b1a8838b4bb3af8bbb0f0",
+      "metadata_link": "https://gateway.irys.xyz/7ac9s6On9NCgDjRlsjIhw9yw2bXJP8_sJeMj5cgSNIE",
+      "onChain": true
+    },
+    "31": {
+      "name": "LNL Mango Habanero #31",
+      "image_hash": "75b304cb8628193da9935c5d6827e277e5355814e2a379c1f5836faaf3bee7eb",
+      "image_link": "https://gateway.irys.xyz/JdCQmB4RjbhKBuJnegyaTIlaGzknHG9RtQeCBy0QsOQ?ext=jpg",
+      "metadata_hash": "cf0ff7208f8ab04517397a750661859abd26484469d699bdf1c527872470dfe1",
+      "metadata_link": "https://gateway.irys.xyz/_TWvRXOdpOHT4p1_QFsl5GOdWhHtaEzTbMOU6941GpM",
+      "onChain": true
+    },
+    "32": {
+      "name": "LNL Mango Habanero #32",
+      "image_hash": "4f449a82a1909c8c95a49cb97262a2a922481cb38623cdc84518b4ffd87aba38",
+      "image_link": "https://gateway.irys.xyz/cFti_qZ4veLwGhQsJzuZvjH2QthS5I2Dj0OgFjUJJFg?ext=jpg",
+      "metadata_hash": "ecfda3d3361f329331c448110966b7549d73d71a1a58206418b0a6809800395b",
+      "metadata_link": "https://gateway.irys.xyz/rvltd1J7dcgbfZq0PrecDi8gTcBE_wFmlUtanDCPh2s",
+      "onChain": true
+    }
+  }
+}
