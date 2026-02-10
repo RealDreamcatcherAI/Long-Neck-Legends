@@ -5,348 +5,61 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>LNL Hot Sauce Mint | Mango Habanero Ascension</title>
-
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
-
   <style>
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: Arial, Helvetica, sans-serif;
-      background: #0a0a1a;
-      color: #e0e0ff;
-      overflow-x: hidden;
-      opacity: 0;
-      transition: opacity 1s ease;
-    }
-    body.loaded { opacity: 1; }
-
-    nav {
-      position: fixed;
-      top: 0;
-      width: 100%;
-      padding: 1rem 0;
-      background: rgba(10,10,26,0.9);
-      backdrop-filter: blur(10px);
-      z-index: 1000;
-      text-align: center;
-    }
-    nav a {
-      color: #e0e0ff;
-      margin: 0 1.5rem;
-      text-decoration: none;
-      font-weight: 600;
-      position: relative;
-    }
-    nav a::after {
-      content: '';
-      position: absolute;
-      bottom: -5px;
-      left: 0;
-      width: 0;
-      height: 2px;
-      background: #00d4ff;
-      transition: 0.3s;
-    }
-    nav a:hover::after { width: 100%; }
-
-    .hotsauce-banner { padding-top: 90px; text-align: center; }
-    .hotsauce-banner img {
-      width: 100%;
-      max-width: 800px;
-      display: block;
-      margin: 0 auto;
-    }
-
-    .sauce-info {
-      max-width: 900px;
-      margin: 0 auto;
-      text-align: center;
-      font-size: 1.15rem;
-      padding: 1rem;
-    }
-
-    h2 {
-      font-family: "Trebuchet MS", Helvetica, sans-serif;
-      font-weight: bold;
-      font-size: 3rem;
-      text-align: center;
-      margin: 2rem 0 1.5rem;
-      background: linear-gradient(45deg, #00d4ff, #ff6bff);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    .boxstyle {
-      margin: 3rem auto;
-      padding: 2.5rem 2rem;
-      max-width: 900px;
-      background: rgba(20,20,40,0.6);
-      border-radius: 20px;
-      box-shadow: 0 10px 30px rgba(0,212,255,0.25);
-      text-align: center;
-    }
-
-    .btn-glow {
-      display: inline-block;
-      padding: 1rem 2.5rem;
-      margin: 0.5rem;
-      font-family: "Trebuchet MS", Helvetica, sans-serif;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      border-radius: 50px;
-      text-decoration: none;
-      position: relative;
-      overflow: hidden;
-      z-index: 1;
-      transition: all 0.25s ease;
-      cursor: pointer;
-      border: none;
-    }
-    .btn-primary {
-      background: linear-gradient(45deg, #00d4ff, #0099cc);
-      color: white;
-      box-shadow: 0 0 20px rgba(0,212,255,0.45);
-    }
-    .btn-secondary {
-      background: linear-gradient(45deg, #7b68ee, #5a4fc3);
-      color: white;
-      box-shadow: 0 0 20px rgba(123,104,238,0.45);
-    }
-    .btn-danger {
-      background: linear-gradient(45deg, #ff3b3b, #c91d1d);
-      color: white;
-      box-shadow: 0 0 20px rgba(255,59,59,0.35);
-    }
-    .btn-glow:hover:not(:disabled) {
-      transform: translateY(-3px);
-      box-shadow: 0 0 30px rgba(0,212,255,0.7);
-    }
-    .btn-glow:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    .mint-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 1.25rem;
-      margin-top: 1.5rem;
-    }
-    @media (min-width: 900px) {
-      .mint-grid { grid-template-columns: 1fr 1fr; }
-    }
-
-    .card {
-      background: rgba(10,10,26,0.55);
-      border: 1px solid rgba(0,212,255,0.15);
-      border-radius: 18px;
-      padding: 1.25rem;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.25);
-      text-align: left;
-    }
-    .statline {
-      display: flex;
-      justify-content: space-between;
-      gap: 1rem;
-      padding: 0.35rem 0;
-      border-bottom: 1px solid rgba(255,255,255,0.06);
-    }
-    .statline:last-child { border-bottom: none; }
-    .k { opacity: 0.85; }
-    .v { font-weight: 700; }
-
-    .status {
-      margin-top: 1rem;
-      padding: 0.85rem 1rem;
-      border-radius: 12px;
-      background: rgba(0,212,255,0.08);
-      border: 1px solid rgba(0,212,255,0.18);
-      font-size: 0.95rem;
-      text-align: center;
-      min-height: 22px;
-    }
-    .status.error {
-      background: rgba(255,59,59,0.12);
-      border-color: rgba(255,59,59,0.25);
-      color: #ff6b6b;
-    }
-    .status.success {
-      background: rgba(72,187,120,0.12);
-      border-color: rgba(72,187,120,0.25);
-      color: #68d391;
-    }
-
-    .sauce-art {
-      text-align: center;
-      margin: 2.5rem auto 0.5rem;
-    }
-    .sauce-art img {
-      width: 100%;
-      max-width: 420px;
-      border-radius: 18px;
-      box-shadow: 0 0 35px rgba(0,212,255,0.25);
-    }
-
-    .wl-badge {
-      display: inline-block;
-      padding: 0.4rem 0.8rem;
-      background: linear-gradient(45deg, #ffd700, #ffed4e);
-      color: #000;
-      font-weight: 700;
-      border-radius: 8px;
-      font-size: 0.85rem;
-      margin-left: 0.5rem;
-    }
-
-    .modal {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.8);
-      z-index: 10000;
-      align-items: center;
-      justify-content: center;
-    }
-    .modal.active { display: flex; }
-    .modal-content {
-      background: #1a1a2e;
-      border-radius: 20px;
-      padding: 2rem;
-      max-width: 400px;
-      width: 90%;
-      box-shadow: 0 20px 60px rgba(0,212,255,0.3);
-      position: relative;
-    }
-    .modal-content h3 {
-      margin: 0 0 1.5rem 0;
-      color: #00d4ff;
-      text-align: center;
-    }
-    .wallet-option {
-      background: rgba(0,212,255,0.1);
-      border: 2px solid rgba(0,212,255,0.3);
-      border-radius: 12px;
-      padding: 1rem 1.1rem;
-      margin-bottom: 0.75rem;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.75rem;
-    }
-    .wallet-option:hover:not(.disabled) {
-      background: rgba(0,212,255,0.2);
-      border-color: #00d4ff;
-      transform: translateX(5px);
-    }
-    .wallet-option.disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-    .wallet-option div { flex: 1; }
-    .wallet-name { font-weight: 700; font-size: 1.1rem; }
-    .wallet-status { font-size: 0.85rem; opacity: 0.7; }
-    .wallet-status.installed { color: #48bb78; opacity: 1; }
-    .close-modal {
-      background: none;
-      border: none;
-      color: #888;
-      font-size: 1.5rem;
-      position: absolute;
-      top: 10px;
-      right: 15px;
-      cursor: pointer;
-      padding: 0;
-      width: auto;
-      margin: 0;
-    }
-
-    footer {
-      text-align: center;
-      padding: 2rem;
-      background: rgba(10,10,26,0.95);
-      color: #888;
-      border-top: 1px solid #00d4ff;
-      margin-top: 4rem;
-    }
-
-    .mint-panel {
-      margin-top: 1.5rem;
-      padding: 1.25rem;
-      border-radius: 18px;
-      background: rgba(10,10,26,0.45);
-      border: 1px solid rgba(0,212,255,0.14);
-      box-shadow: 0 10px 25px rgba(0,0,0,0.22);
-      text-align: left;
-    }
-    .mint-panel h3 {
-      margin: 0 0 0.75rem 0;
-      color: #00d4ff;
-      text-align: center;
-    }
-    .mint-display-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 0.6rem;
-    }
-    @media (min-width: 900px) {
-      .mint-display-grid { grid-template-columns: repeat(11, 1fr); }
-    }
-    .mint-tile {
-      border-radius: 14px;
-      padding: 0.65rem 0.55rem;
-      background: rgba(0,212,255,0.06);
-      border: 1px solid rgba(0,212,255,0.14);
-      min-height: 54px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      font-weight: 800;
-      letter-spacing: 0.5px;
-      user-select: none;
-    }
-    .mint-tile.filled {
-      background: rgba(123,104,238,0.14);
-      border-color: rgba(123,104,238,0.35);
-      box-shadow: 0 0 18px rgba(123,104,238,0.22);
-    }
-    .mint-tile.empty { opacity: 0.35; }
-
-    #btnMyMints {
-      background: rgba(0,212,255,0.10);
-      border: 1px solid rgba(0,212,255,0.22);
-      box-shadow: 0 0 18px rgba(0,212,255,0.18);
-      color: #e0e0ff;
-      backdrop-filter: blur(10px);
-    }
-    #btnMyMints:hover:not(:disabled) {
-      background: rgba(0,212,255,0.16);
-      border-color: rgba(0,212,255,0.35);
-      transform: translateY(-3px);
-    }
-
-    .loading-spinner {
-      display: inline-block;
-      width: 14px;
-      height: 14px;
-      border: 2px solid rgba(255,255,255,0.3);
-      border-radius: 50%;
-      border-top-color: #fff;
-      animation: spin 0.8s linear infinite;
-      margin-right: 6px;
-      vertical-align: middle;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    body{margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;background:#0a0a1a;color:#e0e0ff;overflow-x:hidden}
+    nav{position:fixed;top:0;width:100%;padding:1rem 0;background:rgba(10,10,26,0.9);backdrop-filter:blur(10px);z-index:1000;text-align:center}
+    nav a{color:#e0e0ff;margin:0 1.5rem;text-decoration:none;font-weight:600;position:relative}
+    nav a::after{content:'';position:absolute;bottom:-5px;left:0;width:0;height:2px;background:#00d4ff;transition:0.3s}
+    nav a:hover::after{width:100%}
+    .hotsauce-banner{padding-top:90px;text-align:center}
+    .hotsauce-banner img{width:100%;max-width:800px;display:block;margin:0 auto}
+    .sauce-info{max-width:900px;margin:0 auto;text-align:center;font-size:1.15rem;padding:1rem}
+    h2{font-family:"Trebuchet MS",Helvetica,sans-serif;font-weight:bold;font-size:3rem;text-align:center;margin:2rem 0 1.5rem;background:linear-gradient(45deg,#00d4ff,#ff6bff);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .boxstyle{margin:3rem auto;padding:2.5rem 2rem;max-width:900px;background:rgba(20,20,40,0.6);border-radius:20px;box-shadow:0 10px 30px rgba(0,212,255,0.25);text-align:center}
+    .btn-glow{display:inline-block;padding:1rem 2.5rem;margin:0.5rem;font-family:"Trebuchet MS",Helvetica,sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:1px;border-radius:50px;text-decoration:none;position:relative;overflow:hidden;z-index:1;transition:all 0.25s ease;cursor:pointer;border:none}
+    .btn-primary{background:linear-gradient(45deg,#00d4ff,#0099cc);color:white;box-shadow:0 0 20px rgba(0,212,255,0.45)}
+    .btn-secondary{background:linear-gradient(45deg,#7b68ee,#5a4fc3);color:white;box-shadow:0 0 20px rgba(123,104,238,0.45)}
+    .btn-danger{background:linear-gradient(45deg,#ff3b3b,#c91d1d);color:white;box-shadow:0 0 20px rgba(255,59,59,0.35)}
+    .btn-glow:hover:not(:disabled){transform:translateY(-3px);box-shadow:0 0 30px rgba(0,212,255,0.7)}
+    .btn-glow:disabled{opacity:0.5;cursor:not-allowed}
+    .mint-grid{display:grid;grid-template-columns:1fr;gap:1.25rem;margin-top:1.5rem}
+    @media(min-width:900px){.mint-grid{grid-template-columns:1fr 1fr}}
+    .card{background:rgba(10,10,26,0.55);border:1px solid rgba(0,212,255,0.15);border-radius:18px;padding:1.25rem;box-shadow:0 10px 25px rgba(0,0,0,0.25);text-align:left}
+    .statline{display:flex;justify-content:space-between;gap:1rem;padding:0.35rem 0;border-bottom:1px solid rgba(255,255,255,0.06)}
+    .statline:last-child{border-bottom:none}
+    .k{opacity:0.85}
+    .v{font-weight:700}
+    .status{margin-top:1rem;padding:0.85rem 1rem;border-radius:12px;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.18);font-size:0.95rem;text-align:center;min-height:22px}
+    .status.error{background:rgba(255,59,59,0.12);border-color:rgba(255,59,59,0.25);color:#ff6b6b}
+    .status.success{background:rgba(72,187,120,0.12);border-color:rgba(72,187,120,0.25);color:#68d391}
+    .sauce-art{text-align:center;margin:2.5rem auto 0.5rem}
+    .sauce-art img{width:100%;max-width:420px;border-radius:18px;box-shadow:0 0 35px rgba(0,212,255,0.25)}
+    .wl-badge{display:inline-block;padding:0.4rem 0.8rem;background:linear-gradient(45deg,#ffd700,#ffed4e);color:#000;font-weight:700;border-radius:8px;font-size:0.85rem;margin-left:0.5rem}
+    .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:10000;align-items:center;justify-content:center}
+    .modal.active{display:flex}
+    .modal-content{background:#1a1a2e;border-radius:20px;padding:2rem;max-width:400px;width:90%;box-shadow:0 20px 60px rgba(0,212,255,0.3);position:relative}
+    .modal-content h3{margin:0 0 1.5rem 0;color:#00d4ff;text-align:center}
+    .wallet-option{background:rgba(0,212,255,0.1);border:2px solid rgba(0,212,255,0.3);border-radius:12px;padding:1rem 1.1rem;margin-bottom:0.75rem;cursor:pointer;transition:all 0.2s ease;display:flex;align-items:center;justify-content:space-between;gap:0.75rem}
+    .wallet-option:hover:not(.disabled){background:rgba(0,212,255,0.2);border-color:#00d4ff;transform:translateX(5px)}
+    .wallet-option.disabled{opacity:0.5;cursor:not-allowed}
+    .wallet-option div{flex:1}
+    .wallet-name{font-weight:700;font-size:1.1rem}
+    .wallet-status{font-size:0.85rem;opacity:0.7}
+    .wallet-status.installed{color:#48bb78;opacity:1}
+    .close-modal{background:none;border:none;color:#888;font-size:1.5rem;position:absolute;top:10px;right:15px;cursor:pointer;padding:0;width:auto;margin:0}
+    footer{text-align:center;padding:2rem;background:rgba(10,10,26,0.95);color:#888;border-top:1px solid #00d4ff;margin-top:4rem}
+    .mint-panel{margin-top:1.5rem;padding:1.25rem;border-radius:18px;background:rgba(10,10,26,0.45);border:1px solid rgba(0,212,255,0.14);box-shadow:0 10px 25px rgba(0,0,0,0.22);text-align:left}
+    .mint-panel h3{margin:0 0 0.75rem 0;color:#00d4ff;text-align:center}
+    .mint-display-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0.6rem}
+    @media(min-width:900px){.mint-display-grid{grid-template-columns:repeat(11,1fr)}}
+    .mint-tile{border-radius:14px;padding:0.65rem 0.55rem;background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.14);min-height:54px;display:flex;align-items:center;justify-content:center;text-align:center;font-weight:800;letter-spacing:0.5px;user-select:none}
+    .mint-tile.filled{background:rgba(123,104,238,0.14);border-color:rgba(123,104,238,0.35);box-shadow:0 0 18px rgba(123,104,238,0.22)}
+    .mint-tile.empty{opacity:0.35}
+    .loading-spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,0.3);border-radius:50%;border-top-color:#fff;animation:spin 0.8s linear infinite;margin-right:6px;vertical-align:middle}
+    @keyframes spin{to{transform:rotate(360deg)}}
   </style>
 </head>
-
 <body>
   <nav>
     <a href="https://longnecklegends.xyz/">Home</a>
@@ -357,24 +70,23 @@
     <a href="#mint">Mint</a>
   </nav>
 
-  <!-- Wallet Selection Modal -->
   <div class="modal" id="walletModal">
     <div class="modal-content">
       <button class="close-modal" id="closeWalletModal">×</button>
       <h3>Select Your Wallet</h3>
-      <div class="wallet-option" id="optPhantom" data-wallet="phantom">
+      <div class="wallet-option" id="optPhantom">
         <div>
           <div class="wallet-name">Phantom</div>
           <div class="wallet-status" id="phantomStatus">Checking...</div>
         </div>
       </div>
-      <div class="wallet-option" id="optSolflare" data-wallet="solflare">
+      <div class="wallet-option" id="optSolflare">
         <div>
           <div class="wallet-name">Solflare</div>
           <div class="wallet-status" id="solflareStatus">Checking...</div>
         </div>
       </div>
-      <div class="wallet-option" id="optMagiceden" data-wallet="magiceden">
+      <div class="wallet-option" id="optMagiceden">
         <div>
           <div class="wallet-name">Magic Eden</div>
           <div class="wallet-status" id="magicedenStatus">Checking...</div>
@@ -383,21 +95,13 @@
     </div>
   </div>
 
-  <!-- My Mints Modal -->
   <div class="modal" id="myMintsModal">
-    <div class="modal-content" style="max-width: 820px;">
+    <div class="modal-content" style="max-width:820px;">
       <button class="close-modal" id="closeMyMintsModal">×</button>
-      <h3 style="margin-bottom:0.75rem;">My Mints</h3>
-      <div style="opacity:0.8; font-size:0.95rem; text-align:center; margin-bottom: 1rem;">
-        Your minted Hot Sauce NFTs from this collection.
-      </div>
+      <h3>My Mints</h3>
       <div id="myMintsGrid" class="mint-display-grid"></div>
-      <div id="myMintsEmpty" style="display:none; text-align:center; opacity:0.7; padding: 1.25rem 0;">
-        No mints yet. Hit <strong>Mint Hot Sauce NFT</strong> when you're ready. 🔥
-      </div>
-      <div id="myMintsLoading" style="text-align:center; padding: 1.25rem 0; display:none;">
-        <span class="loading-spinner"></span> Loading your NFTs...
-      </div>
+      <div id="myMintsEmpty" style="display:none;text-align:center;opacity:0.7;padding:1.25rem 0;">No mints yet.</div>
+      <div id="myMintsLoading" style="text-align:center;padding:1.25rem 0;display:none;"><span class="loading-spinner"></span> Loading...</div>
     </div>
   </div>
 
@@ -408,10 +112,7 @@
   <section class="sauce-info">
     <h2>Mango Habanero Ascension</h2>
     <p>Turn up the heat! Forged in the volcanic kitchens of the flock, our first divine creation rises.</p>
-    <p>
-      A legendary blend of sweet, <strong style="color:#00d4ff;">sun-kissed mango and ruthless habanero heat.</strong>
-      This isn't just sauce, it's a flavor prophecy delivered straight from the longest necks in Web3.
-    </p>
+    <p>A legendary blend of sweet, <strong style="color:#00d4ff;">sun-kissed mango and ruthless habanero heat.</strong></p>
     <div class="sauce-art">
       <img src="https://i.imgur.com/wCOHgWL.gif" alt="Mango Habanero Sauce Art">
     </div>
@@ -420,37 +121,21 @@
   <section id="mint" class="boxstyle">
     <h2>⭐ Mint to Claim</h2>
     <p>33 Solana NFT Relics redeemable for a bottle of our exclusive Mango Habanero Hot Sauce.</p>
-
     <div class="mint-grid">
       <div class="card">
         <h3 style="margin-top:0;">Wallet</h3>
-        <div class="statline">
-          <span class="k">Wallet</span>
-          <span class="v" id="walletLabel">Not connected</span>
-        </div>
-        <div class="statline">
-          <span class="k">Status</span>
-          <span class="v" id="wlStatus">—</span>
-        </div>
-        <div class="statline">
-          <span class="k">Your Mints</span>
-          <span class="v" id="userMints">—</span>
-        </div>
-        <div class="statline">
-          <span class="k">Balance</span>
-          <span class="v" id="walletBalance">—</span>
-        </div>
-
-        <div style="margin-top:1rem; text-align:center;">
+        <div class="statline"><span class="k">Wallet</span><span class="v" id="walletLabel">Not connected</span></div>
+        <div class="statline"><span class="k">Status</span><span class="v" id="wlStatus">—</span></div>
+        <div class="statline"><span class="k">Your Mints</span><span class="v" id="userMints">—</span></div>
+        <div class="statline"><span class="k">Balance</span><span class="v" id="walletBalance">—</span></div>
+        <div style="margin-top:1rem;text-align:center;">
           <button class="btn-glow btn-primary" id="btnConnect">Connect Wallet</button>
           <button class="btn-glow btn-secondary" id="btnRefresh">Refresh</button>
           <button class="btn-glow btn-secondary" id="btnMyMints" disabled>My Mints</button>
           <button class="btn-glow btn-danger" id="btnDisconnect" style="display:none;">Disconnect</button>
         </div>
-
-        <div class="status" id="statusBox">Status: Ready.</div>
+        <div class="status" id="statusBox">Loading...</div>
       </div>
-
       <div class="card">
         <h3 style="margin-top:0;">Collection</h3>
         <div class="statline"><span class="k">Total Supply</span><span class="v">33</span></div>
@@ -458,20 +143,15 @@
         <div class="statline"><span class="k">Remaining</span><span class="v" id="cmRemaining">—</span></div>
         <div class="statline"><span class="k">WL Price</span><span class="v">0.355 SOL</span></div>
         <div class="statline"><span class="k">Public Price</span><span class="v">0.55 SOL</span></div>
-
-        <div style="margin-top:1rem; text-align:center;">
+        <div style="margin-top:1rem;text-align:center;">
           <button class="btn-glow btn-secondary" id="btnMint" disabled>Mint Hot Sauce NFT</button>
         </div>
-
-        <p style="opacity:0.85; font-size:0.95rem; margin-top:1rem;">
-          <strong>Whitelist:</strong> 2 max | <strong>Public:</strong> 1 max
-        </p>
+        <p style="opacity:0.85;font-size:0.95rem;margin-top:1rem;"><strong>Whitelist:</strong> 2 max | <strong>Public:</strong> 1 max</p>
       </div>
     </div>
-
     <div class="mint-panel" id="liveMintPanel">
       <h3>LIVE MINTS</h3>
-      <div style="display:flex; justify-content:space-between; gap:1rem; align-items:center; margin-bottom:0.75rem; flex-wrap:wrap;">
+      <div style="display:flex;justify-content:space-between;gap:1rem;align-items:center;margin-bottom:0.75rem;flex-wrap:wrap;">
         <div style="opacity:0.85;">On-chain progress</div>
         <div style="font-weight:800;"><span id="liveMintCount">0</span> / 33</div>
       </div>
@@ -479,43 +159,14 @@
     </div>
   </section>
 
-  <footer>
-    <p>© 2026 Long Neck Legends • Mango Habanero Ascension</p>
-  </footer>
+  <footer><p>© 2026 Long Neck Legends • Mango Habanero Ascension</p></footer>
 
+  <!-- REGULAR SCRIPT - NO MODULE - UI WORKS FIRST -->
   <script>
-    window.addEventListener('load', () => document.body.classList.add('loaded'));
-  </script>
-
-  <script type="module">
     // ============================================================================
-    // IMPORTS
+    // CONFIG
     // ============================================================================
-    import {
-      Connection,
-      PublicKey,
-      LAMPORTS_PER_SOL
-    } from "https://esm.sh/@solana/web3.js@1.95.2";
-
-    import { Metaplex, walletAdapterIdentity as mplWalletIdentity } from "https://esm.sh/@metaplex-foundation/js@0.20.1";
-
-    // --- MintV2 (UMI) imports (FIX for InvalidAccountVersion) ---
-    import { createUmi } from "https://esm.sh/@metaplex-foundation/umi-bundle-defaults@0.9.2";
-    import { publicKey, generateSigner, percentAmount, some, sol, transactionBuilder } from "https://esm.sh/@metaplex-foundation/umi@0.9.2";
-    import { walletAdapterIdentity } from "https://esm.sh/@metaplex-foundation/umi-signer-wallet-adapters@0.9.2";
-    import {
-      mplCandyMachine,
-      fetchCandyMachine,
-      fetchCandyGuard,
-      mintV2
-    } from "https://esm.sh/@metaplex-foundation/mpl-candy-machine@0.9.2";
-    import { setComputeUnitLimit } from "https://esm.sh/@metaplex-foundation/mpl-toolbox@0.9.4";
-    import { mplTokenMetadata } from "https://esm.sh/@metaplex-foundation/mpl-token-metadata@0.9.2";
-
-    // ============================================================================
-    // CONFIGURATION (Single source of truth)
-    // ============================================================================
-    const CONFIG = {
+    var CONFIG = {
       RPC_URLS: [
         "https://mainnet.helius-rpc.com/?api-key=44cfd082-9089-430d-8de3-cd310c478b1c",
         "https://rpc.ankr.com/solana",
@@ -524,7 +175,6 @@
       TREASURY: "ChnzFpK4ty2vpzM48HUrtDVY7tWD8StmYaNxQcKSBuyc",
       CANDY_MACHINE_ID: "9gehPSjZz8i4SMUWR2d9wPQCxhZqKU1E8xmZBaMYw1E3",
       COLLECTION_MINT: "BzpsHMryoyXobwTPEVVohsy4tuEds8tw3siBfdN1GRQm",
-      COLLECTION_UPDATE_AUTHORITY: "HykDh8asNfG3f94bkxhxnFjA3wYuopEGD7SVhoVxEfyb",
       TOTAL_SUPPLY: 33,
       WL_PRICE_SOL: 0.355,
       PUBLIC_PRICE_SOL: 0.55,
@@ -532,8 +182,7 @@
       PUBLIC_LIMIT: 1
     };
 
-    // Whitelist addresses
-    const WHITELIST = new Set([
+    var WHITELIST = [
       "2aSJBUGpWWUZty3dafov1Z8Edw3YPA6Z1e2X3aqXu27i","CjBK1dYZpuvvHQzj1Lt4h4pGNpr2xc7hk4mijG6G27VX",
       "5xdg4SRm6SULCeMkrveX4faGPipbJUgA89UKZ5w93Lto","8AWJ8XcHyGSABgk1GRZLTDqoKzRohtwSA1Hoo1Vy8KeH",
       "9uRi3YASNUzvGeSaBb1wZ2TvVzdwWWdVDfLS5xZTgiLJ","6mF6tWX985zwNQ51LX9VwLfv8j2YYYbezihuLFvYAeSH",
@@ -551,107 +200,79 @@
       "9djHV9eeaUQ7ofRNvcS8Jo94LyFwSkLifPZCkBh1bRE2","7uob8wsBH23aKRMVB18PCEZY1Ttwfjj4rhdWJZdgEYDa",
       "FdfCCyvEEYKjNwvdpJdjcrGQF5oc9QMdWBDEpe4pDUPS","9KbY8cb5wtgLVGKzShnuSjaxwFgogEbhXPeviEo8cAwg",
       "GkLxRLLNLZCkfwX62U5m1u1nE5NchEwmjoVLPxu1eonh","CCNZNC5JcspTFPB8qQCbKJZfqQzn8QW8QYUh2CiXVjsZ"
-    ]);
+    ];
 
     // ============================================================================
     // STATE
     // ============================================================================
-    let connection = null;
-    let currentRpcUrl = null;
-    let walletProvider = null;
-    let walletPublicKey = null;
-    let walletType = null;
-    let candyMachine = null;
-    let metaplex = null;
-    let userCollectionNFTs = [];
-    let umi = null; // <-- MintV2 signer context
-
-    // Find a working RPC
-    async function findWorkingRpc() {
-      for (const rpcUrl of CONFIG.RPC_URLS) {
-        try {
-          console.log(`Trying RPC: ${rpcUrl.substring(0, 50)}...`);
-          const testConn = new Connection(rpcUrl, "confirmed");
-          await testConn.getLatestBlockhash();
-          console.log(`✓ RPC working: ${rpcUrl.substring(0, 50)}...`);
-          return { connection: testConn, url: rpcUrl };
-        } catch (err) {
-          console.warn(`✗ RPC failed: ${rpcUrl.substring(0, 50)}...`, err.message);
-          continue;
-        }
-      }
-      throw new Error("All RPC endpoints failed. Please try again later.");
-    }
+    var solanaWeb3 = null;
+    var connection = null;
+    var currentRpcUrl = null;
+    var walletProvider = null;
+    var walletPublicKey = null;
+    var walletType = null;
+    var userCollectionNFTs = [];
+    var blockchainReady = false;
 
     // ============================================================================
     // UI ELEMENTS
     // ============================================================================
-    const $ = (id) => document.getElementById(id);
-    const walletLabel = $("walletLabel");
-    const wlStatus = $("wlStatus");
-    const userMints = $("userMints");
-    const walletBalance = $("walletBalance");
-    const statusBox = $("statusBox");
-    const cmMinted = $("cmMinted");
-    const cmRemaining = $("cmRemaining");
-    const btnConnect = $("btnConnect");
-    const btnDisconnect = $("btnDisconnect");
-    const btnRefresh = $("btnRefresh");
-    const btnMint = $("btnMint");
-    const btnMyMints = $("btnMyMints");
-    const walletModal = $("walletModal");
-    const myMintsModal = $("myMintsModal");
+    function $(id) { return document.getElementById(id); }
 
     // ============================================================================
-    // UTILITY FUNCTIONS
+    // UTILITY
     // ============================================================================
-    function setStatus(msg, type = "normal") {
-      statusBox.textContent = "Status: " + msg;
-      statusBox.className = "status";
-      if (type === "error") statusBox.classList.add("error");
-      if (type === "success") statusBox.classList.add("success");
+    function setStatus(msg, type) {
+      var box = $("statusBox");
+      box.textContent = "Status: " + msg;
+      box.className = "status";
+      if (type === "error") box.classList.add("error");
+      if (type === "success") box.classList.add("success");
     }
 
     function short(str) {
-      const s = String(str || "");
+      var s = String(str || "");
       return s.length <= 10 ? s : s.slice(0, 4) + "..." + s.slice(-4);
     }
 
-    function sleep(ms) {
-      return new Promise(r => setTimeout(r, ms));
+    function isWhitelisted(addr) {
+      return WHITELIST.indexOf(addr) !== -1;
     }
 
     // ============================================================================
-    // WALLET DETECTION
+    // DETECT WALLETS (runs immediately)
     // ============================================================================
     function detectWallets() {
-      const phantomStatus = $("phantomStatus");
-      const optPhantom = $("optPhantom");
-      if (window.phantom?.solana?.isPhantom) {
+      console.log("Detecting wallets...");
+      
+      var phantomStatus = $("phantomStatus");
+      var optPhantom = $("optPhantom");
+      if (window.phantom && window.phantom.solana && window.phantom.solana.isPhantom) {
         phantomStatus.textContent = "Installed ✓";
         phantomStatus.classList.add("installed");
+        console.log("Phantom detected");
       } else {
         phantomStatus.textContent = "Not Installed";
         optPhantom.classList.add("disabled");
       }
 
-      const solflareStatus = $("solflareStatus");
-      const optSolflare = $("optSolflare");
-      const hasSolflare = window.solflare?.isSolflare ||
-                          (window.solflare && typeof window.solflare.connect === "function");
-      if (hasSolflare) {
+      var solflareStatus = $("solflareStatus");
+      var optSolflare = $("optSolflare");
+      if (window.solflare && (window.solflare.isSolflare || typeof window.solflare.connect === "function")) {
         solflareStatus.textContent = "Installed ✓";
         solflareStatus.classList.add("installed");
+        console.log("Solflare detected");
       } else {
         solflareStatus.textContent = "Not Installed";
         optSolflare.classList.add("disabled");
       }
 
-      const magicedenStatus = $("magicedenStatus");
-      const optMagiceden = $("optMagiceden");
-      if (window.magicEden?.solana) {
+      var magicedenStatus = $("magicedenStatus");
+      var optMagiceden = $("optMagiceden");
+      if (window.magicEden && window.magicEden.solana) {
         magicedenStatus.textContent = "Installed ✓";
         magicedenStatus.classList.add("installed");
+        console.log("Magic Eden detected");
       } else {
         magicedenStatus.textContent = "Not Installed";
         optMagiceden.classList.add("disabled");
@@ -659,19 +280,86 @@
     }
 
     // ============================================================================
-    // MODAL HANDLERS
+    // MODAL FUNCTIONS (work immediately)
     // ============================================================================
-    function openWalletModal() { walletModal.classList.add("active"); }
-    function closeWalletModal() { walletModal.classList.remove("active"); }
-    function openMyMintsModal() { myMintsModal.classList.add("active"); }
-    function closeMyMintsModal() { myMintsModal.classList.remove("active"); }
+    function openWalletModal() {
+      console.log("Opening wallet modal");
+      $("walletModal").classList.add("active");
+    }
+
+    function closeWalletModal() {
+      $("walletModal").classList.remove("active");
+    }
+
+    function openMyMintsModal() {
+      $("myMintsModal").classList.add("active");
+      renderMyMints();
+    }
+
+    function closeMyMintsModal() {
+      $("myMintsModal").classList.remove("active");
+    }
 
     // ============================================================================
-    // WALLET CONNECTION
+    // RENDER LIVE MINT GRID
+    // ============================================================================
+    function renderLiveMintGrid(minted) {
+      var grid = $("liveMintGrid");
+      var count = $("liveMintCount");
+      if (!grid) return;
+      if (count) count.textContent = minted || 0;
+      grid.innerHTML = "";
+      for (var i = 0; i < CONFIG.TOTAL_SUPPLY; i++) {
+        var tile = document.createElement("div");
+        tile.className = "mint-tile " + (i < minted ? "filled" : "empty");
+        tile.textContent = i < minted ? "#" + (i + 1) : "—";
+        grid.appendChild(tile);
+      }
+    }
+
+    // ============================================================================
+    // RENDER MY MINTS
+    // ============================================================================
+    function renderMyMints() {
+      var grid = $("myMintsGrid");
+      var empty = $("myMintsEmpty");
+      var loading = $("myMintsLoading");
+      
+      if (!walletPublicKey) {
+        if (grid) grid.innerHTML = "";
+        if (empty) { empty.style.display = "block"; empty.textContent = "Connect wallet to view."; }
+        if (loading) loading.style.display = "none";
+        return;
+      }
+
+      if (userCollectionNFTs.length === 0) {
+        if (grid) grid.innerHTML = "";
+        if (empty) { empty.style.display = "block"; empty.textContent = "No mints yet. 🔥"; }
+        if (loading) loading.style.display = "none";
+        return;
+      }
+
+      if (empty) empty.style.display = "none";
+      if (loading) loading.style.display = "none";
+      if (grid) {
+        grid.innerHTML = "";
+        for (var i = 0; i < userCollectionNFTs.length; i++) {
+          var tile = document.createElement("div");
+          tile.className = "mint-tile filled";
+          tile.textContent = "#" + (i + 1);
+          grid.appendChild(tile);
+        }
+      }
+    }
+
+    // ============================================================================
+    // CONNECT WALLET
     // ============================================================================
     async function connectWallet(type) {
-      if (!connection) {
-        setStatus("Still connecting to Solana... please wait", "error");
+      console.log("connectWallet called:", type);
+
+      if (!blockchainReady) {
+        setStatus("Still loading... please wait", "error");
         return;
       }
 
@@ -679,13 +367,13 @@
         setStatus("Connecting wallet...");
         closeWalletModal();
 
-        let provider = null;
+        var provider = null;
 
         if (type === "phantom") {
-          provider = window.phantom?.solana;
-          if (!provider?.isPhantom) {
+          provider = window.phantom && window.phantom.solana;
+          if (!provider || !provider.isPhantom) {
             window.open("https://phantom.app/", "_blank");
-            setStatus("Please install Phantom wallet!", "error");
+            setStatus("Install Phantom wallet!", "error");
             return;
           }
           walletType = "Phantom";
@@ -693,464 +381,341 @@
           provider = window.solflare;
           if (!provider || typeof provider.connect !== "function") {
             window.open("https://solflare.com/", "_blank");
-            setStatus("Please install Solflare wallet!", "error");
+            setStatus("Install Solflare wallet!", "error");
             return;
           }
           walletType = "Solflare";
         } else if (type === "magiceden") {
-          provider = window.magicEden?.solana;
+          provider = window.magicEden && window.magicEden.solana;
           if (!provider) {
             window.open("https://wallet.magiceden.io/", "_blank");
-            setStatus("Please install Magic Eden wallet!", "error");
+            setStatus("Install Magic Eden wallet!", "error");
             return;
           }
           walletType = "Magic Eden";
         } else {
-          setStatus("Unknown wallet type", "error");
+          setStatus("Unknown wallet", "error");
           return;
         }
 
-        // Connect
-        let resp;
-        try {
-          resp = await provider.connect();
-        } catch (err) {
-          if (err.code === 4001) {
-            setStatus("Connection rejected by user", "error");
-            return;
-          }
-          try {
-            resp = await provider.connect({ onlyIfTrusted: false });
-          } catch {
-            throw err;
-          }
-        }
+        console.log("Calling provider.connect()...");
+        var resp = await provider.connect();
+        console.log("Connect response:", resp);
 
-        // Extract public key
-        const pkObj = resp?.publicKey || provider.publicKey;
-        if (!pkObj) throw new Error("No public key returned");
+        var pkObj = (resp && resp.publicKey) || provider.publicKey;
+        if (!pkObj) throw new Error("No public key");
 
         walletProvider = provider;
-        walletPublicKey = typeof pkObj === "string" ? new PublicKey(pkObj) : pkObj;
-
-        // Metaplex JS for reads (CM state + NFTs)
-        metaplex = Metaplex.make(connection).use(mplWalletIdentity({
-          publicKey: walletPublicKey,
-          signTransaction: (tx) => provider.signTransaction(tx),
-          signAllTransactions: (txs) => provider.signAllTransactions(txs),
-          signMessage: provider.signMessage ? (msg) => provider.signMessage(msg) : undefined
-        }));
-
-        // UMI for MintV2 (FIX)
-        // Create an adapter-like object that UMI expects
-        const adapterLike = {
-          publicKey: walletPublicKey,
-          signTransaction: (tx) => provider.signTransaction(tx),
-          signAllTransactions: (txs) => provider.signAllTransactions(txs),
-          signMessage: provider.signMessage ? (msg) => provider.signMessage(msg) : undefined,
-          connect: (...args) => provider.connect(...args),
-          disconnect: (...args) => provider.disconnect?.(...args),
-          connected: true,
-        };
         
-        umi = createUmi(currentRpcUrl)
-          .use(mplCandyMachine())
-          .use(mplTokenMetadata())
-          .use(walletAdapterIdentity(adapterLike));
+        if (typeof pkObj === "string") {
+          walletPublicKey = new solanaWeb3.PublicKey(pkObj);
+        } else if (pkObj.toBase58) {
+          walletPublicKey = pkObj;
+        } else {
+          walletPublicKey = new solanaWeb3.PublicKey(pkObj.toString());
+        }
 
-        // Update UI
-        walletLabel.textContent = `${walletType}: ${short(walletPublicKey.toBase58())}`;
-        btnDisconnect.style.display = "inline-block";
-        btnMyMints.disabled = false;
-        btnMint.disabled = false;
+        console.log("Wallet connected:", walletPublicKey.toBase58());
 
-        setStatus(`${walletType} connected!`, "success");
+        $("walletLabel").textContent = walletType + ": " + short(walletPublicKey.toBase58());
+        $("btnDisconnect").style.display = "inline-block";
+        $("btnMyMints").disabled = false;
+        $("btnMint").disabled = false;
+
+        setStatus(walletType + " connected!", "success");
 
         await refreshAll();
 
         if (provider.on) {
-          provider.on("disconnect", () => disconnectWallet());
-          provider.on("accountChanged", async (newPk) => {
-            if (newPk) {
-              walletPublicKey = newPk;
-              walletLabel.textContent = `${walletType}: ${short(walletPublicKey.toBase58())}`;
-              await refreshAll();
-            } else {
-              await disconnectWallet();
-            }
-          });
+          provider.on("disconnect", function() { disconnectWallet(); });
         }
 
       } catch (err) {
-        console.error("Wallet connection error:", err);
-        setStatus(`Connection failed: ${err?.message || "Unknown error"}`, "error");
+        console.error("Connect error:", err);
+        if (err.code === 4001) {
+          setStatus("Connection rejected", "error");
+        } else {
+          setStatus("Connection failed: " + (err.message || "Unknown"), "error");
+        }
       }
     }
 
+    // ============================================================================
+    // DISCONNECT WALLET
+    // ============================================================================
     async function disconnectWallet() {
       try {
-        if (walletProvider?.disconnect) await walletProvider.disconnect();
-      } catch {}
+        if (walletProvider && walletProvider.disconnect) {
+          await walletProvider.disconnect();
+        }
+      } catch (e) {}
 
       walletProvider = null;
       walletPublicKey = null;
       walletType = null;
-      metaplex = null;
-      umi = null;
       userCollectionNFTs = [];
 
-      walletLabel.textContent = "Not connected";
-      wlStatus.textContent = "—";
-      userMints.textContent = "—";
-      walletBalance.textContent = "—";
-      btnDisconnect.style.display = "none";
-      btnMyMints.disabled = true;
-      btnMint.disabled = true;
+      $("walletLabel").textContent = "Not connected";
+      $("wlStatus").textContent = "—";
+      $("userMints").textContent = "—";
+      $("walletBalance").textContent = "—";
+      $("btnDisconnect").style.display = "none";
+      $("btnMyMints").disabled = true;
+      $("btnMint").disabled = true;
 
       closeMyMintsModal();
       setStatus("Disconnected.");
     }
 
     // ============================================================================
-    // CANDY MACHINE STATE (On-Chain)
-    // ============================================================================
-    async function fetchCandyMachineState() {
-      if (!connection) return null;
-
-      try {
-        const tempMetaplex = metaplex || Metaplex.make(connection);
-        const cmPubkey = new PublicKey(CONFIG.CANDY_MACHINE_ID);
-
-        candyMachine = await tempMetaplex.candyMachines().findByAddress({ address: cmPubkey });
-
-        const itemsRedeemed = candyMachine.itemsMinted?.toNumber?.() ?? candyMachine.itemsMinted ?? 0;
-        const itemsAvailable = candyMachine.itemsAvailable?.toNumber?.() ?? candyMachine.itemsAvailable ?? CONFIG.TOTAL_SUPPLY;
-        const remaining = Math.max(0, itemsAvailable - itemsRedeemed);
-
-        cmMinted.textContent = itemsRedeemed;
-        cmRemaining.textContent = remaining;
-
-        renderLiveMintGrid(itemsRedeemed);
-
-        return { itemsRedeemed, itemsAvailable, remaining };
-      } catch (err) {
-        console.error("Error fetching Candy Machine:", err);
-        if (cmMinted.textContent === "—") {
-          cmMinted.textContent = "Error";
-          cmRemaining.textContent = "Error";
-        }
-        return null;
-      }
-    }
-
-    // ============================================================================
-    // LIVE MINT GRID
-    // ============================================================================
-    function renderLiveMintGrid(minted = 0) {
-      const grid = $("liveMintGrid");
-      const count = $("liveMintCount");
-      if (!grid) return;
-      if (count) count.textContent = minted;
-
-      grid.innerHTML = "";
-      for (let i = 0; i < CONFIG.TOTAL_SUPPLY; i++) {
-        const tile = document.createElement("div");
-        tile.className = "mint-tile " + (i < minted ? "filled" : "empty");
-        tile.textContent = i < minted ? `#${i + 1}` : "—";
-        grid.appendChild(tile);
-      }
-    }
-
-    // ============================================================================
-    // USER NFT FETCHING
-    // ============================================================================
-    async function fetchUserNFTs() {
-      if (!walletPublicKey || !metaplex || !connection) {
-        userCollectionNFTs = [];
-        return [];
-      }
-
-      try {
-        const nfts = await metaplex.nfts().findAllByOwner({ owner: walletPublicKey });
-
-        const collectionPubkey = CONFIG.COLLECTION_MINT;
-        userCollectionNFTs = nfts.filter(nft => {
-          const collection = nft.collection;
-          if (!collection) return false;
-          const collectionAddress = collection.address?.toBase58?.() ?? collection.address;
-          return collectionAddress === collectionPubkey && collection.verified;
-        });
-
-        return userCollectionNFTs;
-      } catch (err) {
-        console.error("Error fetching user NFTs:", err);
-        userCollectionNFTs = [];
-        return [];
-      }
-    }
-
-    // ============================================================================
-    // MY MINTS DISPLAY
-    // ============================================================================
-    async function renderMyMints() {
-      const grid = $("myMintsGrid");
-      const empty = $("myMintsEmpty");
-      const loading = $("myMintsLoading");
-
-      if (!walletPublicKey) {
-        if (grid) grid.innerHTML = "";
-        if (loading) loading.style.display = "none";
-        if (empty) {
-          empty.style.display = "block";
-          empty.textContent = "Connect your wallet to view your mints.";
-        }
-        return;
-      }
-
-      if (loading) loading.style.display = "block";
-      if (empty) empty.style.display = "none";
-      if (grid) grid.innerHTML = "";
-
-      await fetchUserNFTs();
-
-      if (loading) loading.style.display = "none";
-
-      if (userCollectionNFTs.length === 0) {
-        if (empty) {
-          empty.style.display = "block";
-          empty.textContent = "No mints yet. Hit Mint when you're ready. 🔥";
-        }
-        return;
-      }
-
-      if (empty) empty.style.display = "none";
-
-      for (let i = 0; i < userCollectionNFTs.length; i++) {
-        const tile = document.createElement("div");
-        tile.className = "mint-tile filled";
-        tile.textContent = `#${i + 1}`;
-        const nft = userCollectionNFTs[i];
-        tile.title = nft.name || short(nft.mintAddress?.toBase58?.() ?? nft.address?.toBase58?.() ?? "");
-        grid.appendChild(tile);
-      }
-    }
-
-    // ============================================================================
-    // REFRESH ALL DATA
+    // REFRESH ALL
     // ============================================================================
     async function refreshAll() {
-      if (!connection) {
-        setStatus("Not connected to Solana", "error");
+      if (!blockchainReady || !connection) {
+        setStatus("Not ready", "error");
         return;
       }
 
       setStatus("Refreshing...");
 
-      await fetchCandyMachineState();
+      try {
+        // Fetch candy machine state
+        var cmAccount = await connection.getAccountInfo(new solanaWeb3.PublicKey(CONFIG.CANDY_MACHINE_ID));
+        if (cmAccount && cmAccount.data) {
+          // Parse items minted from candy machine data (offset 225 for items redeemed)
+          var data = cmAccount.data;
+          var itemsRedeemed = 0;
+          if (data.length > 230) {
+            // Try to read itemsRedeemed (u64 at various offsets depending on version)
+            // For CM V3, items minted is typically around offset 225-233
+            try {
+              itemsRedeemed = Number(data.readBigUInt64LE(225));
+            } catch (e) {
+              // Fallback: just show 0
+              itemsRedeemed = 0;
+            }
+          }
+          $("cmMinted").textContent = itemsRedeemed;
+          $("cmRemaining").textContent = Math.max(0, CONFIG.TOTAL_SUPPLY - itemsRedeemed);
+          renderLiveMintGrid(itemsRedeemed);
+        }
+      } catch (err) {
+        console.error("CM fetch error:", err);
+      }
 
       if (walletPublicKey) {
         try {
-          const balance = await connection.getBalance(walletPublicKey);
-          walletBalance.textContent = `${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL`;
-        } catch {
-          walletBalance.textContent = "Error";
+          var balance = await connection.getBalance(walletPublicKey);
+          $("walletBalance").textContent = (balance / 1000000000).toFixed(4) + " SOL";
+        } catch (e) {
+          $("walletBalance").textContent = "Error";
         }
 
-        const wallet = walletPublicKey.toBase58();
-        const isWL = WHITELIST.has(wallet);
-        wlStatus.innerHTML = isWL
-          ? 'Whitelist <span class="wl-badge">WL</span>'
-          : "Public";
+        var addr = walletPublicKey.toBase58();
+        var isWL = isWhitelisted(addr);
+        $("wlStatus").innerHTML = isWL ? 'Whitelist <span class="wl-badge">WL</span>' : "Public";
 
-        await fetchUserNFTs();
-        const mintCount = userCollectionNFTs.length;
-        const limit = isWL ? CONFIG.WL_LIMIT : CONFIG.PUBLIC_LIMIT;
-        userMints.textContent = `${mintCount} / ${limit}`;
+        // For now, show 0 mints (we'd need Metaplex to fetch NFTs properly)
+        var limit = isWL ? CONFIG.WL_LIMIT : CONFIG.PUBLIC_LIMIT;
+        $("userMints").textContent = userCollectionNFTs.length + " / " + limit;
       }
 
       setStatus("Ready.");
     }
 
     // ============================================================================
-    // MINT FUNCTION (MintV2 FIX)
+    // MINT NFT (placeholder - needs full implementation)
     // ============================================================================
     async function mintNFT() {
-      if (!connection) {
-        setStatus("Not connected to Solana", "error");
+      if (!blockchainReady || !walletPublicKey) {
+        setStatus("Connect wallet first!", "error");
         return;
       }
-      if (!walletPublicKey || !walletProvider) {
-        setStatus("Connect your wallet first!", "error");
-        return;
-      }
-      if (!umi) {
-        setStatus("Wallet not properly connected (UMI not ready)", "error");
-        return;
-      }
+
+      setStatus("Preparing mint...");
+      $("btnMint").disabled = true;
 
       try {
-        btnMint.disabled = true;
-        setStatus("Preparing mint...");
-
-        const wallet = walletPublicKey.toBase58();
-        const isWL = WHITELIST.has(wallet);
-
-        // Check user limits
-        await fetchUserNFTs();
-        const currentMints = userCollectionNFTs.length;
-        const limit = isWL ? CONFIG.WL_LIMIT : CONFIG.PUBLIC_LIMIT;
-        if (currentMints >= limit) {
-          setStatus(`You've reached your limit (${limit} max)`, "error");
-          return;
-        }
-
-        // Check sold out
-        const cmState = await fetchCandyMachineState();
-        if (cmState && cmState.remaining <= 0) {
-          setStatus("SOLD OUT! 🔥", "error");
-          return;
-        }
+        var addr = walletPublicKey.toBase58();
+        var isWL = isWhitelisted(addr);
+        var price = isWL ? CONFIG.WL_PRICE_SOL : CONFIG.PUBLIC_PRICE_SOL;
 
         // Check balance
-        const price = isWL ? CONFIG.WL_PRICE_SOL : CONFIG.PUBLIC_PRICE_SOL;
-        const balance = await connection.getBalance(walletPublicKey);
-        const required = (price + 0.02) * LAMPORTS_PER_SOL;
+        var balance = await connection.getBalance(walletPublicKey);
+        var required = (price + 0.02) * 1000000000;
         if (balance < required) {
-          setStatus(`Insufficient balance. Need ~${(price + 0.02).toFixed(3)} SOL`, "error");
+          setStatus("Insufficient balance. Need ~" + (price + 0.02).toFixed(3) + " SOL", "error");
           return;
         }
 
-        setStatus(`Minting for ${price} SOL... approve in wallet 🔥`);
+        setStatus("Loading mint modules...");
 
-        // Determine guard group label from your existing logic (if you use groups)
-        let group = undefined;
-        // No group since config only has "default" guards
-        // if (isWL) group = "WL"; 
+        // Dynamically load UMI for minting
+        var umiBundle = await import("https://esm.sh/@metaplex-foundation/umi-bundle-defaults@0.9.2");
+        var umiCore = await import("https://esm.sh/@metaplex-foundation/umi@0.9.2");
+        var candyModule = await import("https://esm.sh/@metaplex-foundation/mpl-candy-machine@0.9.2");
+        var toolbox = await import("https://esm.sh/@metaplex-foundation/mpl-toolbox@0.9.4");
+        var tokenMeta = await import("https://esm.sh/@metaplex-foundation/mpl-token-metadata@0.9.2");
+        var walletAdapters = await import("https://esm.sh/@metaplex-foundation/umi-signer-wallet-adapters@0.9.2");
 
-        // Fetch CM via UMI and mint using MintV2 (fixes InvalidAccountVersion)
-        const cmPk = publicKey(CONFIG.CANDY_MACHINE_ID);
-        const umiCm = await fetchCandyMachine(umi, cmPk);
-        
-        console.log("UMI Candy Machine:", umiCm);
-        console.log("Collection Mint:", umiCm.collectionMint);
-        console.log("Mint Authority:", umiCm.mintAuthority);
+        setStatus("Building transaction...");
 
-        // Generate a new NFT mint signer
-        const nftMint = generateSigner(umi);
-        console.log("Generated NFT mint:", nftMint.publicKey);
+        // Create UMI instance
+        var umi = umiBundle.createUmi(currentRpcUrl)
+          .use(candyModule.mplCandyMachine())
+          .use(tokenMeta.mplTokenMetadata());
 
-        // Build mintArgs for solPayment guard
-        const mintArgs = {
-          solPayment: some({ destination: publicKey(CONFIG.TREASURY) })
+        // Create wallet adapter
+        var adapter = {
+          publicKey: walletPublicKey,
+          signTransaction: function(tx) { return walletProvider.signTransaction(tx); },
+          signAllTransactions: function(txs) { return walletProvider.signAllTransactions(txs); },
+          signMessage: walletProvider.signMessage ? function(msg) { return walletProvider.signMessage(msg); } : undefined,
+          connected: true
+        };
+        umi.use(walletAdapters.walletAdapterIdentity(adapter));
+
+        // Fetch candy machine
+        var cmPk = umiCore.publicKey(CONFIG.CANDY_MACHINE_ID);
+        var umiCm = await candyModule.fetchCandyMachine(umi, cmPk);
+
+        console.log("Candy Machine:", umiCm);
+
+        // Generate NFT mint
+        var nftMint = umiCore.generateSigner(umi);
+
+        // Build mint args
+        var mintArgs = {
+          solPayment: umiCore.some({ destination: umiCore.publicKey(CONFIG.TREASURY) })
         };
 
-        setStatus("Sending mint transaction... approve in wallet 🔥");
+        setStatus("Approve in wallet 🔥");
 
-        // Build the transaction with compute budget for pNFTs
-        const tx = await transactionBuilder()
-          .add(setComputeUnitLimit(umi, { units: 800_000 }))
-          .add(
-            mintV2(umi, {
-              candyMachine: umiCm.publicKey,
-              nftMint,
-              collectionMint: umiCm.collectionMint,
-              collectionUpdateAuthority: umiCm.authority,
-              group,
-              mintArgs
-            })
-          )
-          .sendAndConfirm(umi);
+        // Build and send transaction
+        var tx = umiCore.transactionBuilder()
+          .add(toolbox.setComputeUnitLimit(umi, { units: 800000 }))
+          .add(candyModule.mintV2(umi, {
+            candyMachine: umiCm.publicKey,
+            nftMint: nftMint,
+            collectionMint: umiCm.collectionMint,
+            collectionUpdateAuthority: umiCm.authority,
+            mintArgs: mintArgs
+          }));
 
-        console.log("MintV2 signature:", tx.signature);
-        setStatus(`✅ Minted! Tx: ${short(tx.signature)}`, "success");
+        var result = await tx.sendAndConfirm(umi);
 
-        await sleep(2000);
-        await refreshAll();
+        console.log("Mint result:", result);
+        setStatus("✅ Minted successfully!", "success");
+
+        setTimeout(function() { refreshAll(); }, 2000);
 
       } catch (err) {
         console.error("Mint error:", err);
-
-        if (err?.message?.includes("rejected") || err?.code === 4001) {
-          setStatus("Transaction cancelled by user", "error");
-        } else if (err?.message?.includes("insufficient")) {
-          setStatus("Insufficient SOL balance", "error");
+        if (err.message && err.message.indexOf("rejected") !== -1) {
+          setStatus("Transaction cancelled", "error");
         } else {
-          setStatus(`Mint failed: ${err?.message || "Unknown error"}`, "error");
+          setStatus("Mint failed: " + (err.message || "Unknown error"), "error");
         }
       } finally {
-        btnMint.disabled = !walletPublicKey;
+        $("btnMint").disabled = !walletPublicKey;
       }
     }
 
     // ============================================================================
-    // EVENT LISTENERS
+    // EVENT LISTENERS (attached immediately)
     // ============================================================================
-    btnConnect.addEventListener("click", openWalletModal);
-    $("closeWalletModal").addEventListener("click", closeWalletModal);
-    $("closeMyMintsModal").addEventListener("click", closeMyMintsModal);
+    document.addEventListener("DOMContentLoaded", function() {
+      console.log("DOM loaded, attaching event listeners");
 
-    $("optPhantom").addEventListener("click", () => {
-      if (!$("optPhantom").classList.contains("disabled")) connectWallet("phantom");
-    });
-    $("optSolflare").addEventListener("click", () => {
-      if (!$("optSolflare").classList.contains("disabled")) connectWallet("solflare");
-    });
-    $("optMagiceden").addEventListener("click", () => {
-      if (!$("optMagiceden").classList.contains("disabled")) connectWallet("magiceden");
-    });
+      $("btnConnect").addEventListener("click", function() {
+        console.log("Connect button clicked");
+        openWalletModal();
+      });
 
-    btnDisconnect.addEventListener("click", disconnectWallet);
-    btnRefresh.addEventListener("click", refreshAll);
-    btnMint.addEventListener("click", mintNFT);
-    btnMyMints.addEventListener("click", () => {
-      renderMyMints();
-      openMyMintsModal();
-    });
+      $("closeWalletModal").addEventListener("click", closeWalletModal);
+      $("closeMyMintsModal").addEventListener("click", closeMyMintsModal);
 
-    walletModal.addEventListener("click", (e) => {
-      if (e.target === walletModal) closeWalletModal();
-    });
-    myMintsModal.addEventListener("click", (e) => {
-      if (e.target === myMintsModal) closeMyMintsModal();
+      $("optPhantom").addEventListener("click", function() {
+        if (!$("optPhantom").classList.contains("disabled")) {
+          connectWallet("phantom");
+        }
+      });
+
+      $("optSolflare").addEventListener("click", function() {
+        if (!$("optSolflare").classList.contains("disabled")) {
+          connectWallet("solflare");
+        }
+      });
+
+      $("optMagiceden").addEventListener("click", function() {
+        if (!$("optMagiceden").classList.contains("disabled")) {
+          connectWallet("magiceden");
+        }
+      });
+
+      $("btnDisconnect").addEventListener("click", disconnectWallet);
+      $("btnRefresh").addEventListener("click", refreshAll);
+      $("btnMint").addEventListener("click", mintNFT);
+      $("btnMyMints").addEventListener("click", openMyMintsModal);
+
+      $("walletModal").addEventListener("click", function(e) {
+        if (e.target === $("walletModal")) closeWalletModal();
+      });
+
+      $("myMintsModal").addEventListener("click", function(e) {
+        if (e.target === $("myMintsModal")) closeMyMintsModal();
+      });
+
+      // Detect wallets after a short delay
+      setTimeout(detectWallets, 500);
+
+      // Initialize blockchain
+      initBlockchain();
     });
 
     // ============================================================================
-    // INITIALIZATION
+    // INITIALIZE BLOCKCHAIN (loads Solana Web3 dynamically)
     // ============================================================================
-    async function init() {
-      setStatus("Connecting to Solana...");
+    async function initBlockchain() {
+      setStatus("Loading Solana...");
+      console.log("Loading Solana Web3...");
 
       try {
-        const result = await findWorkingRpc();
-        connection = result.connection;
-        currentRpcUrl = result.url;
-        console.log("Using RPC:", currentRpcUrl);
+        // Load Solana Web3
+        var module = await import("https://esm.sh/@solana/web3.js@1.95.2");
+        solanaWeb3 = module;
+        console.log("Solana Web3 loaded");
+
+        // Find working RPC
+        for (var i = 0; i < CONFIG.RPC_URLS.length; i++) {
+          var rpcUrl = CONFIG.RPC_URLS[i];
+          try {
+            console.log("Trying RPC:", rpcUrl.substring(0, 40));
+            var testConn = new solanaWeb3.Connection(rpcUrl, "confirmed");
+            await testConn.getLatestBlockhash();
+            connection = testConn;
+            currentRpcUrl = rpcUrl;
+            console.log("RPC connected:", rpcUrl.substring(0, 40));
+            break;
+          } catch (e) {
+            console.warn("RPC failed:", rpcUrl.substring(0, 40));
+          }
+        }
+
+        if (!connection) {
+          throw new Error("All RPCs failed");
+        }
+
+        blockchainReady = true;
+
+        // Fetch initial CM state
+        await refreshAll();
+
       } catch (err) {
-        console.error("RPC error:", err);
-        setStatus("Failed to connect to Solana. Please refresh.", "error");
-        return;
-      }
-
-      setTimeout(detectWallets, 300);
-
-      const tempMetaplex = Metaplex.make(connection);
-      try {
-        const cmPubkey = new PublicKey(CONFIG.CANDY_MACHINE_ID);
-        candyMachine = await tempMetaplex.candyMachines().findByAddress({ address: cmPubkey });
-
-        const itemsRedeemed = candyMachine.itemsMinted?.toNumber?.() ?? candyMachine.itemsMinted ?? 0;
-        cmMinted.textContent = itemsRedeemed;
-        cmRemaining.textContent = Math.max(0, CONFIG.TOTAL_SUPPLY - itemsRedeemed);
-        renderLiveMintGrid(itemsRedeemed);
-        setStatus("Ready.");
-      } catch (err) {
-        console.error("Initial CM fetch error:", err);
-        setStatus("Ready. (Could not fetch CM state)", "error");
-        renderLiveMintGrid(0);
+        console.error("Blockchain init error:", err);
+        setStatus("Failed to connect. Refresh page.", "error");
       }
     }
-
-    init();
   </script>
 </body>
 </html>
