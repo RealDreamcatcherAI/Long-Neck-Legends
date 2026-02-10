@@ -514,6 +514,7 @@
       TREASURY: "ChnzFpK4ty2vpzM48HUrtDVY7tWD8StmYaNxQcKSBuyc",
       CANDY_MACHINE_ID: "9gehPSjZz8i4SMUWR2d9wPQCxhZqKU1E8xmZBaMYw1E3",
       COLLECTION_MINT: "BzpsHMryoyXobwTPEVVohsy4tuEds8tw3siBfdN1GRQm",
+      COLLECTION_UPDATE_AUTHORITY: "HykDh8asNfG3f94bkxhxnFjA3wYuopEGD7SVhoVxEfyb",
       TOTAL_SUPPLY: 33,
       WL_PRICE_SOL: 0.355,
       PUBLIC_PRICE_SOL: 0.55,
@@ -1032,15 +1033,38 @@
         const cmPubkey = new PublicKey(CONFIG.CANDY_MACHINE_ID);
         const cm = await metaplex.candyMachines().findByAddress({ address: cmPubkey });
 
-        // Mint - let Metaplex SDK handle the collection authority automatically
+        console.log("Candy Machine loaded:", cm);
+
+        // Use the collection update authority from config
+        const collectionUpdateAuthority = new PublicKey(CONFIG.COLLECTION_UPDATE_AUTHORITY);
+
+        // Mint
         const mintResult = await metaplex.candyMachines().mint({
           candyMachine: cm,
+          collectionUpdateAuthority: collectionUpdateAuthority,
           // If you have guard groups (WL vs Public), specify here:
           // group: isWL ? 'WL' : 'public',
         });
 
-        const nft = mintResult.nft;
-        const nftAddress = nft.address?.toBase58?.() ?? nft.mintAddress?.toBase58?.() ?? "Unknown";
+        console.log("Mint result:", mintResult);
+
+        // Extract NFT address from result (handle different response structures)
+        let nftAddress = "Unknown";
+        try {
+          if (mintResult.nft) {
+            nftAddress = mintResult.nft.address?.toBase58?.() || 
+                         mintResult.nft.mintAddress?.toBase58?.() || 
+                         mintResult.nft.mint?.address?.toBase58?.() ||
+                         String(mintResult.nft.address || mintResult.nft.mintAddress || "Minted!");
+          } else if (mintResult.mintAddress) {
+            nftAddress = mintResult.mintAddress.toBase58?.() || String(mintResult.mintAddress);
+          } else if (mintResult.tokenAddress) {
+            nftAddress = mintResult.tokenAddress.toBase58?.() || String(mintResult.tokenAddress);
+          }
+        } catch (e) {
+          console.log("Could not extract NFT address:", e);
+          nftAddress = "Success!";
+        }
 
         setStatus(`✅ Minted! NFT: ${short(nftAddress)}`, "success");
 
