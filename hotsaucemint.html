@@ -275,7 +275,7 @@
       border-top: 1px solid #00d4ff;
       margin-top: 4rem;
     }
-  
+
     .mint-panel {
       margin-top: 1.5rem;
       padding: 1.25rem;
@@ -494,22 +494,29 @@
     import {
       Connection,
       PublicKey,
-      Transaction,
-      SystemProgram,
       LAMPORTS_PER_SOL
     } from "https://esm.sh/@solana/web3.js@1.95.2";
 
-    import { Metaplex, walletAdapterIdentity } from "https://esm.sh/@metaplex-foundation/js@0.20.1";
+    import { Metaplex, walletAdapterIdentity as mplWalletIdentity } from "https://esm.sh/@metaplex-foundation/js@0.20.1";
+
+    // --- MintV2 (UMI) imports (FIX for InvalidAccountVersion) ---
+    import { createUmi } from "https://esm.sh/@metaplex-foundation/umi-bundle-defaults@0.9.2";
+    import { walletAdapterIdentity } from "https://esm.sh/@metaplex-foundation/umi-signer-wallet-adapters@0.9.2";
+    import { publicKey } from "https://esm.sh/@metaplex-foundation/umi@0.9.2";
+    import {
+      mplCandyMachine,
+      fetchCandyMachine,
+      mintV2
+    } from "https://esm.sh/@metaplex-foundation/mpl-candy-machine@0.9.2";
 
     // ============================================================================
     // CONFIGURATION (Single source of truth)
     // ============================================================================
     const CONFIG = {
-      // RPC URLs - will try in order until one works
       RPC_URLS: [
-        "https://mainnet.helius-rpc.com/?api-key=44cfd082-9089-430d-8de3-cd310c478b1c", // Your Helius API key
-        "https://rpc.ankr.com/solana", // Ankr public fallback
-        "https://api.mainnet-beta.solana.com" // Public fallback (often rate limited)
+        "https://mainnet.helius-rpc.com/?api-key=44cfd082-9089-430d-8de3-cd310c478b1c",
+        "https://rpc.ankr.com/solana",
+        "https://api.mainnet-beta.solana.com"
       ],
       TREASURY: "ChnzFpK4ty2vpzM48HUrtDVY7tWD8StmYaNxQcKSBuyc",
       CANDY_MACHINE_ID: "9gehPSjZz8i4SMUWR2d9wPQCxhZqKU1E8xmZBaMYw1E3",
@@ -524,37 +531,37 @@
 
     // Whitelist addresses
     const WHITELIST = new Set([
-      "2aSJBUGpWWUZty3dafov1Z8Edw3YPA6Z1e2X3aqXu27i", "CjBK1dYZpuvvHQzj1Lt4h4pGNpr2xc7hk4mijG6G27VX",
-      "5xdg4SRm6SULCeMkrveX4faGPipbJUgA89UKZ5w93Lto", "8AWJ8XcHyGSABgk1GRZLTDqoKzRohtwSA1Hoo1Vy8KeH",
-      "9uRi3YASNUzvGeSaBb1wZ2TvVzdwWWdVDfLS5xZTgiLJ", "6mF6tWX985zwNQ51LX9VwLfv8j2YYYbezihuLFvYAeSH",
-      "ALrtiXXgEcrVZSH1AK88stuMppWB3SMGsc8AuhMq3GtE", "CLJHwun7n3t3BmNG5EtzhJ4c2HdC8w65SnTuncK7BjzJ",
-      "7A2FezC1ixuCVAVsTi9Tu7LFsVfL3dXn3csgw2JJqev7", "5ZMMwpc2JrRDjXkVuYxzbsPZhi9XHKnJi7qK4MeZxfPu",
-      "BeMvBqi5JpkY6QSjtjtAjNWojotC9oFeqhmrKovduzWc", "7BEHp18tiszdRLcNnpEaJx77E9sXksH88BtFDrZLkSNB",
-      "5kpQiFkWjLUrEJK5X5ScY4d68ubn1KNDx27Fbt8p7t5Z", "Cisbj4o37BT5KfZ7pj8oqgyQmhyk9zhQmZ5QDY9iQbhy",
-      "7FXbPCp8BdGpDfFkz6dNbNuKYCpVYmrzDUbb2nFZesAP", "BJikn9kPE2DZRsyxVSRCouNszZtJbQEa5A5f2ZuVDsPn",
-      "2H8tLB1FkuJCxd9X8zdgWNhNisP26u6p5Krhownaredz", "3mV9on4V5fM8Qz7GnbhBtXNXH2YkuhHs3Uj5y7SM3q89",
-      "GEf63c6j7yFquNcPhqnKHiESfAX4oVitip1aQJQVF5Wk", "FnoeG9p2Wtnad4SKGoN82JER3KjiDq6Cc5dWsLhHmEg6",
-      "7xy9aZ1sdvteynG5WkejgMrn4peDPoJL5fJZw94kdokr", "CFJprBVcveZsKks2UZEdZn7ygLHzk4e2M3Qxef14eSBP",
-      "Ghx5kVKmEQWocjLRL517MvWmimQEnALzMxU8q6hWpmwq", "4duMtY6XSp2AM9dvA4GeUqT3yCktVjeYqpThTaqHVUhU",
-      "EuVvXs5FUnHjMRgfFD9xZghkH4f1gRZHbStoB6DXskZQ", "BSGURLgsUCsRMgSeHLWdpRFpHT48pMP9ZXogRQQuojkU",
-      "6j3K5V5D2F9Awk4Yn2QVoSZkAve2Y8mqByDC85jv4kmn", "5VKGxhPvVP1SDCacDxXd9XmkAEC8JJ4zKgbrDzcWB6gv",
-      "9djHV9eeaUQ7ofRNvcS8Jo94LyFwSkLifPZCkBh1bRE2", "7uob8wsBH23aKRMVB18PCEZY1Ttwfjj4rhdWJZdgEYDa",
-      "FdfCCyvEEYKjNwvdpJdjcrGQF5oc9QMdWBDEpe4pDUPS", "9KbY8cb5wtgLVGKzShnuSjaxwFgogEbhXPeviEo8cAwg",
-      "GkLxRLLNLZCkfwX62U5m1u1nE5NchEwmjoVLPxu1eonh", "CCNZNC5JcspTFPB8qQCbKJZfqQzn8QW8QYUh2CiXVjsZ"
-      // Add remaining addresses from your CSV
+      "2aSJBUGpWWUZty3dafov1Z8Edw3YPA6Z1e2X3aqXu27i","CjBK1dYZpuvvHQzj1Lt4h4pGNpr2xc7hk4mijG6G27VX",
+      "5xdg4SRm6SULCeMkrveX4faGPipbJUgA89UKZ5w93Lto","8AWJ8XcHyGSABgk1GRZLTDqoKzRohtwSA1Hoo1Vy8KeH",
+      "9uRi3YASNUzvGeSaBb1wZ2TvVzdwWWdVDfLS5xZTgiLJ","6mF6tWX985zwNQ51LX9VwLfv8j2YYYbezihuLFvYAeSH",
+      "ALrtiXXgEcrVZSH1AK88stuMppWB3SMGsc8AuhMq3GtE","CLJHwun7n3t3BmNG5EtzhJ4c2HdC8w65SnTuncK7BjzJ",
+      "7A2FezC1ixuCVAVsTi9Tu7LFsVfL3dXn3csgw2JJqev7","5ZMMwpc2JrRDjXkVuYxzbsPZhi9XHKnJi7qK4MeZxfPu",
+      "BeMvBqi5JpkY6QSjtjtAjNWojotC9oFeqhmrKovduzWc","7BEHp18tiszdRLcNnpEaJx77E9sXksH88BtFDrZLkSNB",
+      "5kpQiFkWjLUrEJK5X5ScY4d68ubn1KNDx27Fbt8p7t5Z","Cisbj4o37BT5KfZ7pj8oqgyQmhyk9zhQmZ5QDY9iQbhy",
+      "7FXbPCp8BdGpDfFkz6dNbNuKYCpVYmrzDUbb2nFZesAP","BJikn9kPE2DZRsyxVSRCouNszZtJbQEa5A5f2ZuVDsPn",
+      "2H8tLB1FkuJCxd9X8zdgWNhNisP26u6p5Krhownaredz","3mV9on4V5fM8Qz7GnbhBtXNXH2YkuhHs3Uj5y7SM3q89",
+      "GEf63c6j7yFquNcPhqnKHiESfAX4oVitip1aQJQVF5Wk","FnoeG9p2Wtnad4SKGoN82JER3KjiDq6Cc5dWsLhHmEg6",
+      "7xy9aZ1sdvteynG5WkejgMrn4peDPoJL5fJZw94kdokr","CFJprBVcveZsKks2UZEdZn7ygLHzk4e2M3Qxef14eSBP",
+      "Ghx5kVKmEQWocjLRL517MvWmimQEnALzMxU8q6hWpmwq","4duMtY6XSp2AM9dvA4GeUqT3yCktVjeYqpThTaqHVUhU",
+      "EuVvXs5FUnHjMRgfFD9xZghkH4f1gRZHbStoB6DXskZQ","BSGURLgsUCsRMgSeHLWdpRFpHT48pMP9ZXogRQQuojkU",
+      "6j3K5V5D2F9Awk4Yn2QVoSZkAve2Y8mqByDC85jv4kmn","5VKGxhPvVP1SDCacDxXd9XmkAEC8JJ4zKgbrDzcWB6gv",
+      "9djHV9eeaUQ7ofRNvcS8Jo94LyFwSkLifPZCkBh1bRE2","7uob8wsBH23aKRMVB18PCEZY1Ttwfjj4rhdWJZdgEYDa",
+      "FdfCCyvEEYKjNwvdpJdjcrGQF5oc9QMdWBDEpe4pDUPS","9KbY8cb5wtgLVGKzShnuSjaxwFgogEbhXPeviEo8cAwg",
+      "GkLxRLLNLZCkfwX62U5m1u1nE5NchEwmjoVLPxu1eonh","CCNZNC5JcspTFPB8qQCbKJZfqQzn8QW8QYUh2CiXVjsZ"
     ]);
 
     // ============================================================================
     // STATE
     // ============================================================================
-    let connection = null;        // Will be set after finding working RPC
-    let currentRpcUrl = null;     // Track which RPC we're using
-    let walletProvider = null;    // The actual wallet provider (Phantom, Solflare, etc.)
-    let walletPublicKey = null;   // PublicKey object
-    let walletType = null;        // String: 'Phantom', 'Solflare', 'Magic Eden'
-    let candyMachine = null;      // Cached Candy Machine data
-    let metaplex = null;          // Metaplex instance
-    let userCollectionNFTs = [];  // User's NFTs from this collection
+    let connection = null;
+    let currentRpcUrl = null;
+    let walletProvider = null;
+    let walletPublicKey = null;
+    let walletType = null;
+    let candyMachine = null;
+    let metaplex = null;
+    let userCollectionNFTs = [];
+    let umi = null; // <-- MintV2 signer context
 
     // Find a working RPC
     async function findWorkingRpc() {
@@ -562,7 +569,6 @@
         try {
           console.log(`Trying RPC: ${rpcUrl.substring(0, 50)}...`);
           const testConn = new Connection(rpcUrl, "confirmed");
-          // Test with a simple call
           await testConn.getLatestBlockhash();
           console.log(`✓ RPC working: ${rpcUrl.substring(0, 50)}...`);
           return { connection: testConn, url: rpcUrl };
@@ -616,7 +622,6 @@
     // WALLET DETECTION
     // ============================================================================
     function detectWallets() {
-      // Phantom
       const phantomStatus = $("phantomStatus");
       const optPhantom = $("optPhantom");
       if (window.phantom?.solana?.isPhantom) {
@@ -627,7 +632,6 @@
         optPhantom.classList.add("disabled");
       }
 
-      // Solflare - check multiple locations
       const solflareStatus = $("solflareStatus");
       const optSolflare = $("optSolflare");
       const hasSolflare = window.solflare?.isSolflare ||
@@ -640,7 +644,6 @@
         optSolflare.classList.add("disabled");
       }
 
-      // Magic Eden
       const magicedenStatus = $("magicedenStatus");
       const optMagiceden = $("optMagiceden");
       if (window.magicEden?.solana) {
@@ -655,18 +658,10 @@
     // ============================================================================
     // MODAL HANDLERS
     // ============================================================================
-    function openWalletModal() {
-      walletModal.classList.add("active");
-    }
-    function closeWalletModal() {
-      walletModal.classList.remove("active");
-    }
-    function openMyMintsModal() {
-      myMintsModal.classList.add("active");
-    }
-    function closeMyMintsModal() {
-      myMintsModal.classList.remove("active");
-    }
+    function openWalletModal() { walletModal.classList.add("active"); }
+    function closeWalletModal() { walletModal.classList.remove("active"); }
+    function openMyMintsModal() { myMintsModal.classList.add("active"); }
+    function closeMyMintsModal() { myMintsModal.classList.remove("active"); }
 
     // ============================================================================
     // WALLET CONNECTION
@@ -721,7 +716,6 @@
             setStatus("Connection rejected by user", "error");
             return;
           }
-          // Try alternative
           try {
             resp = await provider.connect({ onlyIfTrusted: false });
           } catch {
@@ -731,20 +725,22 @@
 
         // Extract public key
         const pkObj = resp?.publicKey || provider.publicKey;
-        if (!pkObj) {
-          throw new Error("No public key returned");
-        }
+        if (!pkObj) throw new Error("No public key returned");
 
         walletProvider = provider;
         walletPublicKey = typeof pkObj === "string" ? new PublicKey(pkObj) : pkObj;
 
-        // Create Metaplex instance with wallet
-        metaplex = Metaplex.make(connection).use(walletAdapterIdentity({
+        // Metaplex JS for reads (CM state + NFTs)
+        metaplex = Metaplex.make(connection).use(mplWalletIdentity({
           publicKey: walletPublicKey,
           signTransaction: (tx) => provider.signTransaction(tx),
           signAllTransactions: (txs) => provider.signAllTransactions(txs),
           signMessage: provider.signMessage ? (msg) => provider.signMessage(msg) : undefined
         }));
+
+        // UMI for MintV2 (FIX)
+        umi = createUmi(currentRpcUrl).use(mplCandyMachine());
+        umi.use(walletAdapterIdentity(walletProvider));
 
         // Update UI
         walletLabel.textContent = `${walletType}: ${short(walletPublicKey.toBase58())}`;
@@ -754,10 +750,8 @@
 
         setStatus(`${walletType} connected!`, "success");
 
-        // Fetch all data
         await refreshAll();
 
-        // Listen for disconnect/account change
         if (provider.on) {
           provider.on("disconnect", () => disconnectWallet());
           provider.on("accountChanged", async (newPk) => {
@@ -779,15 +773,14 @@
 
     async function disconnectWallet() {
       try {
-        if (walletProvider?.disconnect) {
-          await walletProvider.disconnect();
-        }
+        if (walletProvider?.disconnect) await walletProvider.disconnect();
       } catch {}
 
       walletProvider = null;
       walletPublicKey = null;
       walletType = null;
       metaplex = null;
+      umi = null;
       userCollectionNFTs = [];
 
       walletLabel.textContent = "Not connected";
@@ -806,31 +799,26 @@
     // CANDY MACHINE STATE (On-Chain)
     // ============================================================================
     async function fetchCandyMachineState() {
-      if (!connection) {
-        console.warn("No connection available for CM fetch");
-        return null;
-      }
+      if (!connection) return null;
 
       try {
-        // Use Metaplex to fetch CM state
         const tempMetaplex = metaplex || Metaplex.make(connection);
         const cmPubkey = new PublicKey(CONFIG.CANDY_MACHINE_ID);
-        
+
         candyMachine = await tempMetaplex.candyMachines().findByAddress({ address: cmPubkey });
-        
+
         const itemsRedeemed = candyMachine.itemsMinted?.toNumber?.() ?? candyMachine.itemsMinted ?? 0;
         const itemsAvailable = candyMachine.itemsAvailable?.toNumber?.() ?? candyMachine.itemsAvailable ?? CONFIG.TOTAL_SUPPLY;
         const remaining = Math.max(0, itemsAvailable - itemsRedeemed);
 
         cmMinted.textContent = itemsRedeemed;
         cmRemaining.textContent = remaining;
-        
+
         renderLiveMintGrid(itemsRedeemed);
-        
+
         return { itemsRedeemed, itemsAvailable, remaining };
       } catch (err) {
         console.error("Error fetching Candy Machine:", err);
-        // Don't overwrite existing values on error
         if (cmMinted.textContent === "—") {
           cmMinted.textContent = "Error";
           cmRemaining.textContent = "Error";
@@ -845,11 +833,9 @@
     function renderLiveMintGrid(minted = 0) {
       const grid = $("liveMintGrid");
       const count = $("liveMintCount");
-      
       if (!grid) return;
-      
       if (count) count.textContent = minted;
-      
+
       grid.innerHTML = "";
       for (let i = 0; i < CONFIG.TOTAL_SUPPLY; i++) {
         const tile = document.createElement("div");
@@ -869,10 +855,8 @@
       }
 
       try {
-        // Fetch all NFTs owned by user
         const nfts = await metaplex.nfts().findAllByOwner({ owner: walletPublicKey });
-        
-        // Filter by collection
+
         const collectionPubkey = CONFIG.COLLECTION_MINT;
         userCollectionNFTs = nfts.filter(nft => {
           const collection = nft.collection;
@@ -924,7 +908,7 @@
       }
 
       if (empty) empty.style.display = "none";
-      
+
       for (let i = 0; i < userCollectionNFTs.length; i++) {
         const tile = document.createElement("div");
         tile.className = "mint-tile filled";
@@ -945,11 +929,10 @@
       }
 
       setStatus("Refreshing...");
-      
+
       await fetchCandyMachineState();
-      
+
       if (walletPublicKey) {
-        // Balance
         try {
           const balance = await connection.getBalance(walletPublicKey);
           walletBalance.textContent = `${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL`;
@@ -957,14 +940,12 @@
           walletBalance.textContent = "Error";
         }
 
-        // Whitelist status
         const wallet = walletPublicKey.toBase58();
         const isWL = WHITELIST.has(wallet);
-        wlStatus.innerHTML = isWL 
-          ? 'Whitelist <span class="wl-badge">WL</span>' 
+        wlStatus.innerHTML = isWL
+          ? 'Whitelist <span class="wl-badge">WL</span>'
           : "Public";
 
-        // User's mints
         await fetchUserNFTs();
         const mintCount = userCollectionNFTs.length;
         const limit = isWL ? CONFIG.WL_LIMIT : CONFIG.PUBLIC_LIMIT;
@@ -975,21 +956,19 @@
     }
 
     // ============================================================================
-    // MINT FUNCTION
+    // MINT FUNCTION (MintV2 FIX)
     // ============================================================================
     async function mintNFT() {
       if (!connection) {
         setStatus("Not connected to Solana", "error");
         return;
       }
-
       if (!walletPublicKey || !walletProvider) {
         setStatus("Connect your wallet first!", "error");
         return;
       }
-
-      if (!metaplex) {
-        setStatus("Wallet not properly connected", "error");
+      if (!umi) {
+        setStatus("Wallet not properly connected (UMI not ready)", "error");
         return;
       }
 
@@ -1004,13 +983,12 @@
         await fetchUserNFTs();
         const currentMints = userCollectionNFTs.length;
         const limit = isWL ? CONFIG.WL_LIMIT : CONFIG.PUBLIC_LIMIT;
-
         if (currentMints >= limit) {
           setStatus(`You've reached your limit (${limit} max)`, "error");
           return;
         }
 
-        // Check if sold out
+        // Check sold out
         const cmState = await fetchCandyMachineState();
         if (cmState && cmState.remaining <= 0) {
           setStatus("SOLD OUT! 🔥", "error");
@@ -1020,8 +998,7 @@
         // Check balance
         const price = isWL ? CONFIG.WL_PRICE_SOL : CONFIG.PUBLIC_PRICE_SOL;
         const balance = await connection.getBalance(walletPublicKey);
-        const required = (price + 0.02) * LAMPORTS_PER_SOL; // Add buffer for fees
-        
+        const required = (price + 0.02) * LAMPORTS_PER_SOL;
         if (balance < required) {
           setStatus(`Insufficient balance. Need ~${(price + 0.02).toFixed(3)} SOL`, "error");
           return;
@@ -1029,114 +1006,41 @@
 
         setStatus(`Minting for ${price} SOL... approve in wallet 🔥`);
 
-        // Fetch fresh CM data
-        const cmPubkey = new PublicKey(CONFIG.CANDY_MACHINE_ID);
-        console.log("Fetching CM at:", cmPubkey.toBase58());
-        
-        const cm = await metaplex.candyMachines().findByAddress({ address: cmPubkey });
-        console.log("Candy Machine loaded:", cm);
-        console.log("CM authority:", cm.authorityAddress?.toBase58());
-        console.log("CM has candy guard:", !!cm.candyGuard);
-        
-        if (cm.candyGuard) {
-          console.log("Candy Guard address:", cm.candyGuard.address?.toBase58());
-          console.log("Candy Guard groups:", cm.candyGuard.groups?.map(g => g.label));
-        }
+        // Determine guard group label from your existing logic (if you use groups)
+        let group = undefined;
+        if (isWL) group = "WL"; // adjust if your group label is "wl"
+        // else group could be "public" if your on-chain guard uses a public group label
 
-        // Fetch the collection NFT to get the REAL update authority
-        const collectionMintAddress = cm.collectionMintAddress;
-        console.log("Collection mint:", collectionMintAddress.toBase58());
-        
-        const collectionNft = await metaplex.nfts().findByMint({ mintAddress: collectionMintAddress });
-        console.log("Collection NFT update authority:", collectionNft.updateAuthorityAddress.toBase58());
+        // Fetch CM via UMI and mint using MintV2 (fixes InvalidAccountVersion)
+        const cmPk = publicKey(CONFIG.CANDY_MACHINE_ID);
+        const umiCm = await fetchCandyMachine(umi, cmPk);
 
-        // The REAL collection update authority from on-chain
-        const realAuthority = collectionNft.updateAuthorityAddress;
-        console.log("Will use collection update authority:", realAuthority.toBase58());
+        // If your guard requires args (mintLimit id, allowList proof, etc.), set mintArgs here.
+        // Example for mintLimit (ONLY if your guard uses it and your config expects an id):
+        // const mintArgs = { mintLimit: { id: 1 } };
+        const mintArgs = undefined;
 
-        setStatus("Building transaction... approve in wallet 🔥");
+        setStatus("Sending mint transaction... approve in wallet 🔥");
 
-        // Mint
-        let mintResult;
-        try {
-          const hasGuards = cm.candyGuard !== null && cm.candyGuard !== undefined;
-          console.log("Has candy guard:", hasGuards);
+        const res = await mintV2(umi, {
+          candyMachine: umiCm.publicKey,
+          collectionMint: umiCm.collectionMint,
+          group,
+          mintArgs
+        }).sendAndConfirm(umi);
 
-          // Determine group if any
-          let group = undefined;
-          if (hasGuards && cm.candyGuard?.groups?.length > 0) {
-            const groupLabels = cm.candyGuard.groups.map(g => g.label);
-            console.log("Available guard groups:", groupLabels);
-            
-            if (groupLabels.includes("WL") && isWL) {
-              group = "WL";
-            } else if (groupLabels.includes("wl") && isWL) {
-              group = "wl";
-            } else if (groupLabels.includes("public")) {
-              group = "public";
-            } else if (groupLabels.includes("Public")) {
-              group = "Public";
-            }
-            console.log("Using guard group:", group || "default (no group)");
-          }
+        console.log("MintV2 signature:", res.signature);
+        setStatus(`✅ Minted! Tx: ${short(res.signature)}`, "success");
 
-          // Call mint with all parameters explicitly
-          console.log("Calling metaplex.candyMachines().mint() with:");
-          console.log("  - candyMachine:", cm.address.toBase58());
-          console.log("  - collectionUpdateAuthority:", realAuthority.toBase58());
-          console.log("  - group:", group);
-          
-          mintResult = await metaplex.candyMachines().mint({
-            candyMachine: cm,
-            collectionUpdateAuthority: realAuthority,
-            group: group,
-          });
-          
-          console.log("Mint successful!", mintResult);
-
-        } catch (mintErr) {
-          console.error("Mint call error:", mintErr);
-          
-          // Log more details about the error
-          if (mintErr.logs) {
-            console.error("Program logs:", mintErr.logs);
-          }
-          
-          throw mintErr;
-        }
-
-        console.log("Mint result:", mintResult);
-
-        // Extract NFT address from result (handle different response structures)
-        let nftAddress = "Unknown";
-        try {
-          if (mintResult.nft) {
-            nftAddress = mintResult.nft.address?.toBase58?.() || 
-                         mintResult.nft.mintAddress?.toBase58?.() || 
-                         mintResult.nft.mint?.address?.toBase58?.() ||
-                         String(mintResult.nft.address || mintResult.nft.mintAddress || "Minted!");
-          } else if (mintResult.mintAddress) {
-            nftAddress = mintResult.mintAddress.toBase58?.() || String(mintResult.mintAddress);
-          } else if (mintResult.tokenAddress) {
-            nftAddress = mintResult.tokenAddress.toBase58?.() || String(mintResult.tokenAddress);
-          }
-        } catch (e) {
-          console.log("Could not extract NFT address:", e);
-          nftAddress = "Success!";
-        }
-
-        setStatus(`✅ Minted! NFT: ${short(nftAddress)}`, "success");
-
-        // Wait a bit for indexing then refresh
         await sleep(2000);
         await refreshAll();
 
       } catch (err) {
         console.error("Mint error:", err);
-        
-        if (err.message?.includes("rejected") || err.code === 4001) {
+
+        if (err?.message?.includes("rejected") || err?.code === 4001) {
           setStatus("Transaction cancelled by user", "error");
-        } else if (err.message?.includes("insufficient")) {
+        } else if (err?.message?.includes("insufficient")) {
           setStatus("Insufficient SOL balance", "error");
         } else {
           setStatus(`Mint failed: ${err?.message || "Unknown error"}`, "error");
@@ -1152,22 +1056,15 @@
     btnConnect.addEventListener("click", openWalletModal);
     $("closeWalletModal").addEventListener("click", closeWalletModal);
     $("closeMyMintsModal").addEventListener("click", closeMyMintsModal);
-    
-    // Wallet option clicks
+
     $("optPhantom").addEventListener("click", () => {
-      if (!$("optPhantom").classList.contains("disabled")) {
-        connectWallet("phantom");
-      }
+      if (!$("optPhantom").classList.contains("disabled")) connectWallet("phantom");
     });
     $("optSolflare").addEventListener("click", () => {
-      if (!$("optSolflare").classList.contains("disabled")) {
-        connectWallet("solflare");
-      }
+      if (!$("optSolflare").classList.contains("disabled")) connectWallet("solflare");
     });
     $("optMagiceden").addEventListener("click", () => {
-      if (!$("optMagiceden").classList.contains("disabled")) {
-        connectWallet("magiceden");
-      }
+      if (!$("optMagiceden").classList.contains("disabled")) connectWallet("magiceden");
     });
 
     btnDisconnect.addEventListener("click", disconnectWallet);
@@ -1178,7 +1075,6 @@
       openMyMintsModal();
     });
 
-    // Close modals on backdrop click
     walletModal.addEventListener("click", (e) => {
       if (e.target === walletModal) closeWalletModal();
     });
@@ -1191,8 +1087,7 @@
     // ============================================================================
     async function init() {
       setStatus("Connecting to Solana...");
-      
-      // Find a working RPC
+
       try {
         const result = await findWorkingRpc();
         connection = result.connection;
@@ -1204,15 +1099,13 @@
         return;
       }
 
-      // Detect wallets after a short delay (wallets inject async)
       setTimeout(detectWallets, 300);
-      
-      // Fetch initial CM state (without wallet)
+
       const tempMetaplex = Metaplex.make(connection);
       try {
         const cmPubkey = new PublicKey(CONFIG.CANDY_MACHINE_ID);
         candyMachine = await tempMetaplex.candyMachines().findByAddress({ address: cmPubkey });
-        
+
         const itemsRedeemed = candyMachine.itemsMinted?.toNumber?.() ?? candyMachine.itemsMinted ?? 0;
         cmMinted.textContent = itemsRedeemed;
         cmRemaining.textContent = Math.max(0, CONFIG.TOTAL_SUPPLY - itemsRedeemed);
