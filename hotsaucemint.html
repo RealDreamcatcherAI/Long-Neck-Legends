@@ -500,6 +500,16 @@
     import { Metaplex, walletAdapterIdentity } from "https://esm.sh/@metaplex-foundation/js@0.20.1";
 
     // ============================================================================
+    // IMPORTS - UMI for MintV2 (fixes InvalidAccountVersion error)
+    // ============================================================================
+    import { createUmi } from "https://esm.sh/@metaplex-foundation/umi-bundle-defaults";
+    import { publicKey as umiPublicKey, generateSigner, transactionBuilder, some } from "https://esm.sh/@metaplex-foundation/umi";
+    import { mplCandyMachine, fetchCandyMachine, mintV2 } from "https://esm.sh/@metaplex-foundation/mpl-candy-machine";
+    import { setComputeUnitLimit } from "https://esm.sh/@metaplex-foundation/mpl-toolbox";
+    import { mplTokenMetadata } from "https://esm.sh/@metaplex-foundation/mpl-token-metadata";
+    import { walletAdapterIdentity as umiWalletAdapterIdentity } from "https://esm.sh/@metaplex-foundation/umi-signer-wallet-adapters";
+
+    // ============================================================================
     // CONFIGURATION
     // ============================================================================
     const CONFIG = {
@@ -957,7 +967,7 @@
     }
 
     // ============================================================================
-    // MINT FUNCTION - Uses UMI MintV2 (dynamically loaded)
+    // MINT FUNCTION - Uses UMI MintV2
     // ============================================================================
     async function mintNFT() {
       if (!connection) {
@@ -1001,16 +1011,6 @@
           return;
         }
 
-        setStatus("Loading mint modules...");
-
-        // ========== DYNAMICALLY LOAD UMI FOR MINTV2 ==========
-        const { createUmi } = await import("https://esm.sh/@metaplex-foundation/umi-bundle-defaults@0.9.2");
-        const { publicKey, generateSigner, transactionBuilder, some } = await import("https://esm.sh/@metaplex-foundation/umi@0.9.2");
-        const { mplCandyMachine, fetchCandyMachine, mintV2 } = await import("https://esm.sh/@metaplex-foundation/mpl-candy-machine@0.9.2");
-        const { setComputeUnitLimit } = await import("https://esm.sh/@metaplex-foundation/mpl-toolbox@0.9.4");
-        const { mplTokenMetadata } = await import("https://esm.sh/@metaplex-foundation/mpl-token-metadata@0.9.2");
-        const { walletAdapterIdentity: umiWalletAdapterIdentity } = await import("https://esm.sh/@metaplex-foundation/umi-signer-wallet-adapters@0.9.2");
-
         setStatus(`Minting for ${price} SOL...`);
 
         // Create UMI instance
@@ -1029,7 +1029,7 @@
         umi.use(umiWalletAdapterIdentity(walletAdapter));
 
         // Fetch CM via UMI
-        const cmPk = publicKey(CONFIG.CANDY_MACHINE_ID);
+        const cmPk = umiPublicKey(CONFIG.CANDY_MACHINE_ID);
         const umiCm = await fetchCandyMachine(umi, cmPk);
 
         console.log("UMI Candy Machine:", umiCm);
@@ -1042,7 +1042,7 @@
 
         // Build mintArgs for solPayment guard
         const mintArgs = {
-          solPayment: some({ destination: publicKey(CONFIG.TREASURY) })
+          solPayment: some({ destination: umiPublicKey(CONFIG.TREASURY) })
         };
 
         setStatus("Approve in wallet 🔥");
