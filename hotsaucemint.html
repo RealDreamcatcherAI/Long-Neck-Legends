@@ -514,7 +514,6 @@
       TREASURY: "ChnzFpK4ty2vpzM48HUrtDVY7tWD8StmYaNxQcKSBuyc",
       CANDY_MACHINE_ID: "9gehPSjZz8i4SMUWR2d9wPQCxhZqKU1E8xmZBaMYw1E3",
       COLLECTION_MINT: "BzpsHMryoyXobwTPEVVohsy4tuEds8tw3siBfdN1GRQm",
-      COLLECTION_UPDATE_AUTHORITY: "HUMRWmxxZL9Kr6vKTrtuQpSH9WShkcPv96nqhJD49xX9", // From error log
       TOTAL_SUPPLY: 33,
       WL_PRICE_SOL: 0.355,
       PUBLIC_PRICE_SOL: 0.55,
@@ -1033,12 +1032,9 @@
         const cmPubkey = new PublicKey(CONFIG.CANDY_MACHINE_ID);
         const cm = await metaplex.candyMachines().findByAddress({ address: cmPubkey });
 
-        // Mint using the correct collection update authority
-        const collectionUpdateAuthority = new PublicKey(CONFIG.COLLECTION_UPDATE_AUTHORITY);
-        
+        // Mint - let Metaplex SDK handle the collection authority automatically
         const mintResult = await metaplex.candyMachines().mint({
           candyMachine: cm,
-          collectionUpdateAuthority: collectionUpdateAuthority,
           // If you have guard groups (WL vs Public), specify here:
           // group: isWL ? 'WL' : 'public',
         });
