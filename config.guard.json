@@ -1,22 +1,26 @@
 {
-  "number": 33,
-  "symbol": "MHHS",
-  "sellerFeeBasisPoints": 1000,
-  "isMutable": true,
-  "isSequential": false,
-  "creators": [
-    { "address": "ChnzFpK4ty2vpzM48HUrtDVY7tWD8StmYaNxQcKSBuyc", "share": 100 }
-  ],
-  "uploadMethod": "bundlr",
-  "hiddenSettings": null,
-  "guards": {
-    "default": {
-      "solPayment": {
-        "value": {
-          "amount": 0.55,
+  "default": {},
+  "groups": [
+    {
+      "label": "wl",
+      "guards": {
+        "solPayment": {
+          "value": 0.355,
+          "destination": "ChnzFpK4ty2vpzM48HUrtDVY7tWD8StmYaNxQcKSBuyc"
+        },
+        "allowList": {
+          "merkleRoot": "0012cf6fc0376541f16ff2e582a9745f4efb21db9a1b4537b2c90e07734bcd91"
+        }
+      }
+    },
+    {
+      "label": "public",
+      "guards": {
+        "solPayment": {
+          "value": 0.55,
           "destination": "ChnzFpK4ty2vpzM48HUrtDVY7tWD8StmYaNxQcKSBuyc"
         }
       }
     }
-  }
+  ]
 }

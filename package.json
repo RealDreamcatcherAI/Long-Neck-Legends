@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "@metaplex-foundation/mpl-candy-machine": "^6.1.0"
+  }
+}
