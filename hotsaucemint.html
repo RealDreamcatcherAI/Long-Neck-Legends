@@ -1,4 +1,4 @@
-    <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <link rel="icon" type="image/png" sizes="32x32" href="https://i.imgur.com/jpGdtHJ.jpeg">
@@ -489,7 +489,7 @@
 
   <script type="module">
     // ============================================================================
-    // IMPORTS - Solana Web3 and Metaplex (for reading data)
+    // IMPORTS
     // ============================================================================
     import {
       Connection,
@@ -497,20 +497,20 @@
       LAMPORTS_PER_SOL
     } from "https://esm.sh/@solana/web3.js@1.95.2";
 
-    import { Metaplex, walletAdapterIdentity } from "https://esm.sh/@metaplex-foundation/js@0.20.1";
+    import { Metaplex, walletAdapterIdentity as mplWalletIdentity } from "https://esm.sh/@metaplex-foundation/js@0.20.1";
+
+    // --- MintV2 (UMI) imports (FIX for InvalidAccountVersion) ---
+    import { createUmi } from "https://esm.sh/@metaplex-foundation/umi-bundle-defaults@0.9.2";
+    import { walletAdapterIdentity } from "https://esm.sh/@metaplex-foundation/umi-signer-wallet-adapters@0.9.2";
+    import { publicKey } from "https://esm.sh/@metaplex-foundation/umi@0.9.2";
+    import {
+      mplCandyMachine,
+      fetchCandyMachine,
+      mintV2
+    } from "https://esm.sh/@metaplex-foundation/mpl-candy-machine@0.9.2";
 
     // ============================================================================
-    // IMPORTS - UMI for MintV2 (fixes InvalidAccountVersion error)
-    // ============================================================================
-    import { createUmi } from "https://esm.sh/@metaplex-foundation/umi-bundle-defaults";
-    import { publicKey as umiPublicKey, generateSigner, transactionBuilder, some } from "https://esm.sh/@metaplex-foundation/umi";
-    import { mplCandyMachine, fetchCandyMachine, mintV2 } from "https://esm.sh/@metaplex-foundation/mpl-candy-machine";
-    import { setComputeUnitLimit } from "https://esm.sh/@metaplex-foundation/mpl-toolbox";
-    import { mplTokenMetadata } from "https://esm.sh/@metaplex-foundation/mpl-token-metadata";
-    import { walletAdapterIdentity as umiWalletAdapterIdentity } from "https://esm.sh/@metaplex-foundation/umi-signer-wallet-adapters";
-
-    // ============================================================================
-    // CONFIGURATION
+    // CONFIGURATION (Single source of truth)
     // ============================================================================
     const CONFIG = {
       RPC_URLS: [
@@ -531,40 +531,23 @@
 
     // Whitelist addresses
     const WHITELIST = new Set([
-      "2aSJBUGpWWUZty3dafov1Z8Edw3YPA6Z1e2X3aqXu27i",
-      "CjBK1dYZpuvvHQzj1Lt4h4pGNpr2xc7hk4mijG6G27VX",
-      "5xdg4SRm6SULCeMkrveX4faGPipbJUgA89UKZ5w93Lto",
-      "8AWJ8XcHyGSABgk1GRZLTDqoKzRohtwSA1Hoo1Vy8KeH",
-      "9uRi3YASNUzvGeSaBb1wZ2TvVzdwWWdVDfLS5xZTgiLJ",
-      "6mF6tWX985zwNQ51LX9VwLfv8j2YYYbezihuLFvYAeSH",
-      "ALrtiXXgEcrVZSH1AK88stuMppWB3SMGsc8AuhMq3GtE",
-      "CLJHwun7n3t3BmNG5EtzhJ4c2HdC8w65SnTuncK7BjzJ",
-      "7A2FezC1ixuCVAVsTi9Tu7LFsVfL3dXn3csgw2JJqev7",
-      "5ZMMwpc2JrRDjXkVuYxzbsPZhi9XHKnJi7qK4MeZxfPu",
-      "BeMvBqi5JpkY6QSjtjtAjNWojotC9oFeqhmrKovduzWc",
-      "7BEHp18tiszdRLcNnpEaJx77E9sXksH88BtFDrZLkSNB",
-      "5kpQiFkWjLUrEJK5X5ScY4d68ubn1KNDx27Fbt8p7t5Z",
-      "Cisbj4o37BT5KfZ7pj8oqgyQmhyk9zhQmZ5QDY9iQbhy",
-      "7FXbPCp8BdGpDfFkz6dNbNuKYCpVYmrzDUbb2nFZesAP",
-      "BJikn9kPE2DZRsyxVSRCouNszZtJbQEa5A5f2ZuVDsPn",
-      "2H8tLB1FkuJCxd9X8zdgWNhNisP26u6p5Krhownaredz",
-      "3mV9on4V5fM8Qz7GnbhBtXNXH2YkuhHs3Uj5y7SM3q89",
-      "GEf63c6j7yFquNcPhqnKHiESfAX4oVitip1aQJQVF5Wk",
-      "FnoeG9p2Wtnad4SKGoN82JER3KjiDq6Cc5dWsLhHmEg6",
-      "7xy9aZ1sdvteynG5WkejgMrn4peDPoJL5fJZw94kdokr",
-      "CFJprBVcveZsKks2UZEdZn7ygLHzk4e2M3Qxef14eSBP",
-      "Ghx5kVKmEQWocjLRL517MvWmimQEnALzMxU8q6hWpmwq",
-      "4duMtY6XSp2AM9dvA4GeUqT3yCktVjeYqpThTaqHVUhU",
-      "EuVvXs5FUnHjMRgfFD9xZghkH4f1gRZHbStoB6DXskZQ",
-      "BSGURLgsUCsRMgSeHLWdpRFpHT48pMP9ZXogRQQuojkU",
-      "6j3K5V5D2F9Awk4Yn2QVoSZkAve2Y8mqByDC85jv4kmn",
-      "5VKGxhPvVP1SDCacDxXd9XmkAEC8JJ4zKgbrDzcWB6gv",
-      "9djHV9eeaUQ7ofRNvcS8Jo94LyFwSkLifPZCkBh1bRE2",
-      "7uob8wsBH23aKRMVB18PCEZY1Ttwfjj4rhdWJZdgEYDa",
-      "FdfCCyvEEYKjNwvdpJdjcrGQF5oc9QMdWBDEpe4pDUPS",
-      "9KbY8cb5wtgLVGKzShnuSjaxwFgogEbhXPeviEo8cAwg",
-      "GkLxRLLNLZCkfwX62U5m1u1nE5NchEwmjoVLPxu1eonh",
-      "CCNZNC5JcspTFPB8qQCbKJZfqQzn8QW8QYUh2CiXVjsZ"
+      "2aSJBUGpWWUZty3dafov1Z8Edw3YPA6Z1e2X3aqXu27i","CjBK1dYZpuvvHQzj1Lt4h4pGNpr2xc7hk4mijG6G27VX",
+      "5xdg4SRm6SULCeMkrveX4faGPipbJUgA89UKZ5w93Lto","8AWJ8XcHyGSABgk1GRZLTDqoKzRohtwSA1Hoo1Vy8KeH",
+      "9uRi3YASNUzvGeSaBb1wZ2TvVzdwWWdVDfLS5xZTgiLJ","6mF6tWX985zwNQ51LX9VwLfv8j2YYYbezihuLFvYAeSH",
+      "ALrtiXXgEcrVZSH1AK88stuMppWB3SMGsc8AuhMq3GtE","CLJHwun7n3t3BmNG5EtzhJ4c2HdC8w65SnTuncK7BjzJ",
+      "7A2FezC1ixuCVAVsTi9Tu7LFsVfL3dXn3csgw2JJqev7","5ZMMwpc2JrRDjXkVuYxzbsPZhi9XHKnJi7qK4MeZxfPu",
+      "BeMvBqi5JpkY6QSjtjtAjNWojotC9oFeqhmrKovduzWc","7BEHp18tiszdRLcNnpEaJx77E9sXksH88BtFDrZLkSNB",
+      "5kpQiFkWjLUrEJK5X5ScY4d68ubn1KNDx27Fbt8p7t5Z","Cisbj4o37BT5KfZ7pj8oqgyQmhyk9zhQmZ5QDY9iQbhy",
+      "7FXbPCp8BdGpDfFkz6dNbNuKYCpVYmrzDUbb2nFZesAP","BJikn9kPE2DZRsyxVSRCouNszZtJbQEa5A5f2ZuVDsPn",
+      "2H8tLB1FkuJCxd9X8zdgWNhNisP26u6p5Krhownaredz","3mV9on4V5fM8Qz7GnbhBtXNXH2YkuhHs3Uj5y7SM3q89",
+      "GEf63c6j7yFquNcPhqnKHiESfAX4oVitip1aQJQVF5Wk","FnoeG9p2Wtnad4SKGoN82JER3KjiDq6Cc5dWsLhHmEg6",
+      "7xy9aZ1sdvteynG5WkejgMrn4peDPoJL5fJZw94kdokr","CFJprBVcveZsKks2UZEdZn7ygLHzk4e2M3Qxef14eSBP",
+      "Ghx5kVKmEQWocjLRL517MvWmimQEnALzMxU8q6hWpmwq","4duMtY6XSp2AM9dvA4GeUqT3yCktVjeYqpThTaqHVUhU",
+      "EuVvXs5FUnHjMRgfFD9xZghkH4f1gRZHbStoB6DXskZQ","BSGURLgsUCsRMgSeHLWdpRFpHT48pMP9ZXogRQQuojkU",
+      "6j3K5V5D2F9Awk4Yn2QVoSZkAve2Y8mqByDC85jv4kmn","5VKGxhPvVP1SDCacDxXd9XmkAEC8JJ4zKgbrDzcWB6gv",
+      "9djHV9eeaUQ7ofRNvcS8Jo94LyFwSkLifPZCkBh1bRE2","7uob8wsBH23aKRMVB18PCEZY1Ttwfjj4rhdWJZdgEYDa",
+      "FdfCCyvEEYKjNwvdpJdjcrGQF5oc9QMdWBDEpe4pDUPS","9KbY8cb5wtgLVGKzShnuSjaxwFgogEbhXPeviEo8cAwg",
+      "GkLxRLLNLZCkfwX62U5m1u1nE5NchEwmjoVLPxu1eonh","CCNZNC5JcspTFPB8qQCbKJZfqQzn8QW8QYUh2CiXVjsZ"
     ]);
 
     // ============================================================================
@@ -578,6 +561,7 @@
     let candyMachine = null;
     let metaplex = null;
     let userCollectionNFTs = [];
+    let umi = null; // <-- MintV2 signer context
 
     // Find a working RPC
     async function findWorkingRpc() {
@@ -593,7 +577,7 @@
           continue;
         }
       }
-      throw new Error("All RPC endpoints failed.");
+      throw new Error("All RPC endpoints failed. Please try again later.");
     }
 
     // ============================================================================
@@ -680,7 +664,7 @@
     function closeMyMintsModal() { myMintsModal.classList.remove("active"); }
 
     // ============================================================================
-    // WALLET CONNECTION (unchanged from working version)
+    // WALLET CONNECTION
     // ============================================================================
     async function connectWallet(type) {
       if (!connection) {
@@ -746,13 +730,17 @@
         walletProvider = provider;
         walletPublicKey = typeof pkObj === "string" ? new PublicKey(pkObj) : pkObj;
 
-        // Create Metaplex instance with wallet (for reads)
-        metaplex = Metaplex.make(connection).use(walletAdapterIdentity({
+        // Metaplex JS for reads (CM state + NFTs)
+        metaplex = Metaplex.make(connection).use(mplWalletIdentity({
           publicKey: walletPublicKey,
           signTransaction: (tx) => provider.signTransaction(tx),
           signAllTransactions: (txs) => provider.signAllTransactions(txs),
           signMessage: provider.signMessage ? (msg) => provider.signMessage(msg) : undefined
         }));
+
+        // UMI for MintV2 (FIX)
+        umi = createUmi(currentRpcUrl).use(mplCandyMachine());
+        umi.use(walletAdapterIdentity(walletProvider));
 
         // Update UI
         walletLabel.textContent = `${walletType}: ${short(walletPublicKey.toBase58())}`;
@@ -792,6 +780,7 @@
       walletPublicKey = null;
       walletType = null;
       metaplex = null;
+      umi = null;
       userCollectionNFTs = [];
 
       walletLabel.textContent = "Not connected";
@@ -807,7 +796,7 @@
     }
 
     // ============================================================================
-    // CANDY MACHINE STATE
+    // CANDY MACHINE STATE (On-Chain)
     // ============================================================================
     async function fetchCandyMachineState() {
       if (!connection) return null;
@@ -967,7 +956,7 @@
     }
 
     // ============================================================================
-    // MINT FUNCTION - Uses UMI MintV2
+    // MINT FUNCTION (MintV2 FIX)
     // ============================================================================
     async function mintNFT() {
       if (!connection) {
@@ -976,6 +965,10 @@
       }
       if (!walletPublicKey || !walletProvider) {
         setStatus("Connect your wallet first!", "error");
+        return;
+      }
+      if (!umi) {
+        setStatus("Wallet not properly connected (UMI not ready)", "error");
         return;
       }
 
@@ -1002,8 +995,8 @@
           return;
         }
 
-        // Check balance - guard config only has 0.55 price for everyone
-        const price = CONFIG.PUBLIC_PRICE_SOL; // 0.55 - on-chain price for all
+        // Check balance
+        const price = isWL ? CONFIG.WL_PRICE_SOL : CONFIG.PUBLIC_PRICE_SOL;
         const balance = await connection.getBalance(walletPublicKey);
         const required = (price + 0.02) * LAMPORTS_PER_SOL;
         if (balance < required) {
@@ -1011,64 +1004,33 @@
           return;
         }
 
-        setStatus(`Minting for ${price} SOL...`);
+        setStatus(`Minting for ${price} SOL... approve in wallet 🔥`);
 
-        // Create UMI instance
-        const umi = createUmi(currentRpcUrl)
-          .use(mplCandyMachine())
-          .use(mplTokenMetadata());
+        // Determine guard group label from your existing logic (if you use groups)
+        let group = undefined;
+        if (isWL) group = "WL"; // adjust if your group label is "wl"
+        // else group could be "public" if your on-chain guard uses a public group label
 
-        // Create wallet adapter for UMI
-        const walletAdapter = {
-          publicKey: walletPublicKey,
-          signTransaction: (tx) => walletProvider.signTransaction(tx),
-          signAllTransactions: (txs) => walletProvider.signAllTransactions(txs),
-          signMessage: walletProvider.signMessage ? (msg) => walletProvider.signMessage(msg) : undefined,
-          connected: true
-        };
-        umi.use(umiWalletAdapterIdentity(walletAdapter));
-
-        // Fetch CM via UMI
-        const cmPk = umiPublicKey(CONFIG.CANDY_MACHINE_ID);
+        // Fetch CM via UMI and mint using MintV2 (fixes InvalidAccountVersion)
+        const cmPk = publicKey(CONFIG.CANDY_MACHINE_ID);
         const umiCm = await fetchCandyMachine(umi, cmPk);
 
-        // ✅ Get the candy guard from mintAuthority
-        const candyGuardPk = umiCm.mintAuthority;
+        // If your guard requires args (mintLimit id, allowList proof, etc.), set mintArgs here.
+        // Example for mintLimit (ONLY if your guard uses it and your config expects an id):
+        // const mintArgs = { mintLimit: { id: 1 } };
+        const mintArgs = undefined;
 
-        console.log("UMI Candy Machine:", umiCm);
-        console.log("Collection Mint:", umiCm.collectionMint);
-        console.log("Authority:", umiCm.authority);
-        console.log("Candy Guard (mintAuthority):", candyGuardPk);
+        setStatus("Sending mint transaction... approve in wallet 🔥");
 
-        // Generate NFT mint signer
-        const nftMint = generateSigner(umi);
-        console.log("Generated NFT mint:", nftMint.publicKey);
+        const res = await mintV2(umi, {
+          candyMachine: umiCm.publicKey,
+          collectionMint: umiCm.collectionMint,
+          group,
+          mintArgs
+        }).sendAndConfirm(umi);
 
-        // ✅ Build mintArgs for solPayment guard (destination is on-chain, not passed here)
-        const mintArgs = {
-          solPayment: some({})
-        };
-
-        setStatus("Approve in wallet 🔥");
-
-        // Build and send transaction with MintV2
-        const tx = transactionBuilder()
-          .add(setComputeUnitLimit(umi, { units: 800000 }))
-          .add(
-            mintV2(umi, {
-              candyMachine: umiCm.publicKey,
-              candyGuard: candyGuardPk,  // ✅ ADD THIS - required for guarded CM
-              nftMint,
-              collectionMint: umiCm.collectionMint,
-              collectionUpdateAuthority: umiCm.authority,
-              mintArgs
-            })
-          );
-
-        const result = await tx.sendAndConfirm(umi);
-
-        console.log("MintV2 result:", result);
-        setStatus("✅ Minted successfully!", "success");
+        console.log("MintV2 signature:", res.signature);
+        setStatus(`✅ Minted! Tx: ${short(res.signature)}`, "success");
 
         await sleep(2000);
         await refreshAll();
@@ -1160,4 +1122,3 @@
   </script>
 </body>
 </html>
-    
