@@ -1,12 +1,26 @@
 {
-  "default": {
-    "solPayment": {
-      "amount": 0.55,
-      "destination": "ChnzFpK4ty2vpzM48HUrtDVY7tWD8StmYaNxQcKSBuyc"
+  "default": {},
+  "groups": [
+    {
+      "label": "wl",
+      "guards": {
+        "solPayment": {
+          "value": 0.355,
+          "destination": "ChnzFpK4ty2vpzM48HUrtDVY7tWD8StmYaNxQcKSBuyc"
+        },
+        "allowList": {
+          "merkleRoot": "0012cf6fc0376541f16ff2e582a9745f4efb21db9a1b4537b2c90e07734bcd91"
+        }
+      }
     },
-    "mintLimit": {
-      "id": 1,
-      "limit": 1
+    {
+      "label": "public",
+      "guards": {
+        "solPayment": {
+          "value": 0.55,
+          "destination": "ChnzFpK4ty2vpzM48HUrtDVY7tWD8StmYaNxQcKSBuyc"
+        }
+      }
     }
-  }
+  ]
 }

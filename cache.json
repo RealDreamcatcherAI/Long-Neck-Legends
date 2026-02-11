@@ -278,5 +278,7 @@
                              "metadata_link":  "https://gateway.irys.xyz/rvltd1J7dcgbfZq0PrecDi8gTcBE_wFmlUtanDCPh2s",
                              "onChain":  true
                          }
-              }
+              },
+    "candyMachine":  "9gehPSjZz8i4SMUWR2d9wPQCxhZqKU1E8xmZBaMYw1E3",
+    "candyGuard":  "6oAtjDu6NG2RLCni3Qo88zHC6Fi3KsA5uGWdVuNpJphS"
 }
