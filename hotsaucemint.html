@@ -506,6 +506,7 @@
     import {
       mplCandyMachine,
       fetchCandyMachine,
+      fetchCandyGuard,
       mintV2,
       route,
       getMerkleProof,
@@ -1127,31 +1128,63 @@
 
         setStatus(`Minting for ${price} SOL... approve in wallet 🔥`);
 
-        // Fetch CM via UMI and mint using MintV2 (fixes InvalidAccountVersion)
+        // Fetch CM and Guard via UMI
         const cmPk = publicKey(CONFIG.CANDY_MACHINE_ID);
         const umiCm = await fetchCandyMachine(umi, cmPk);
+        const umiGuard = await fetchCandyGuard(umi, umiCm.mintAuthority);
 
-        // Build mintArgs with solPayment (required by both groups)
-        const mintArgs = {
-          solPayment: {
-            destination: publicKey(CONFIG.TREASURY)
-          }
+        // Detect on-chain guard config (groups vs default-only)
+        const hasGroups = umiGuard.groups && umiGuard.groups.length > 0;
+        const wlGroup = hasGroups ? umiGuard.groups.find(g => g.label === "wl") : null;
+        const publicGroup = hasGroups ? umiGuard.groups.find(g => g.label === "public") : null;
+
+        console.log("Guard config:", {
+          hasGroups,
+          groupLabels: umiGuard.groups?.map(g => g.label),
+          hasDefault: !!umiGuard.guards,
+          wlGroup: !!wlGroup,
+          publicGroup: !!publicGroup
+        });
+
+        // Build mint parameters based on what's actually on-chain
+        let group = none();
+        let mintArgs = {
+          solPayment: { destination: publicKey(CONFIG.TREASURY) }
         };
 
-        // If WL, validate allowList proof on-chain first (route instruction)
-        if (isWL) {
+        if (hasGroups && isWL && wlGroup) {
+          // WL group exists on-chain — use it with allowList proof
+          group = some("wl");
+
           setStatus("Validating whitelist proof...");
-          await route(umi, {
-            candyMachine: umiCm.publicKey,
-            candyGuard: umiCm.mintAuthority,
-            guard: "allowList",
-            group: some("wl"),
-            routeArgs: {
-              path: "proof",
-              merkleRoot: getMerkleRoot(ALLOWLIST_SORTED),
-              merkleProof: getMerkleProof(ALLOWLIST_SORTED, wallet)
+          try {
+            await route(umi, {
+              candyMachine: umiCm.publicKey,
+              candyGuard: umiCm.mintAuthority,
+              guard: "allowList",
+              group: some("wl"),
+              routeArgs: {
+                path: "proof",
+                merkleRoot: getMerkleRoot(ALLOWLIST_SORTED),
+                merkleProof: getMerkleProof(ALLOWLIST_SORTED, wallet)
+              }
+            }).sendAndConfirm(umi);
+          } catch (routeErr) {
+            // If proof receipt already exists, that's fine — continue to mint
+            if (!routeErr?.message?.includes("already in use")) {
+              throw routeErr;
             }
-          }).sendAndConfirm(umi);
+            console.log("Proof receipt already exists, proceeding to mint");
+          }
+
+        } else if (hasGroups && publicGroup) {
+          // Public group exists on-chain
+          group = some("public");
+
+        } else {
+          // No groups — use default guard
+          console.log("No groups found on-chain, using default guard");
+          group = none();
         }
 
         setStatus("Sending mint transaction... approve in wallet 🔥");
@@ -1159,7 +1192,7 @@
         const res = await mintV2(umi, {
           candyMachine: umiCm.publicKey,
           collectionMint: umiCm.collectionMint,
-          group: isWL ? some("wl") : some("public"),
+          group,
           mintArgs
         }).sendAndConfirm(umi);
 
@@ -1171,13 +1204,16 @@
 
       } catch (err) {
         console.error("Mint error:", err);
+        console.error("Full error details:", JSON.stringify(err, null, 2));
 
         if (err?.message?.includes("rejected") || err?.code === 4001) {
           setStatus("Transaction cancelled by user", "error");
         } else if (err?.message?.includes("insufficient")) {
           setStatus("Insufficient SOL balance", "error");
+        } else if (err?.message?.includes("6005") || err?.message?.includes("not initialized")) {
+          setStatus("Mint failed: Guard account not initialized. Check browser console (F12) for guard config details.", "error");
         } else {
-          setStatus(`Mint failed: ${err?.message || "Unknown error"}`, "error");
+          setStatus(`Mint failed: ${err?.message || "Unknown error"}. Check console (F12) for details.`, "error");
         }
       } finally {
         btnMint.disabled = !walletPublicKey;
