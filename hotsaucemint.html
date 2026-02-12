@@ -499,10 +499,10 @@
 
     import { Metaplex, walletAdapterIdentity as mplWalletIdentity } from "https://esm.sh/@metaplex-foundation/js@0.20.1";
 
-    // --- MintV2 (UMI) imports (FIX for InvalidAccountVersion) ---
-    import { createUmi } from "https://esm.sh/@metaplex-foundation/umi-bundle-defaults";
-    import { walletAdapterIdentity } from "https://esm.sh/@metaplex-foundation/umi-signer-wallet-adapters";
-    import { publicKey, some, none } from "https://esm.sh/@metaplex-foundation/umi";
+    // --- MintV2 (UMI) imports — pinned to match local node versions for merkle compatibility ---
+    import { createUmi } from "https://esm.sh/@metaplex-foundation/umi-bundle-defaults@0.8.10";
+    import { walletAdapterIdentity } from "https://esm.sh/@metaplex-foundation/umi-signer-wallet-adapters@0.8.10";
+    import { publicKey, some, none } from "https://esm.sh/@metaplex-foundation/umi@0.8.10";
     import {
       mplCandyMachine,
       fetchCandyMachine,
@@ -511,7 +511,7 @@
       route,
       getMerkleProof,
       getMerkleRoot
-    } from "https://esm.sh/@metaplex-foundation/mpl-candy-machine";
+    } from "https://esm.sh/@metaplex-foundation/mpl-candy-machine@6.1.0";
 
     // ============================================================================
     // CONFIGURATION (Single source of truth)
@@ -1149,7 +1149,7 @@
         // Build mint parameters based on what's actually on-chain
         let group = none();
         let mintArgs = {
-          solPayment: { destination: publicKey(CONFIG.TREASURY) }
+          solPayment: some({ destination: publicKey(CONFIG.TREASURY) })
         };
 
         if (hasGroups && isWL && wlGroup) {
@@ -1160,8 +1160,8 @@
           const computedRoot = getMerkleRoot(ALLOWLIST_SORTED);
           const rootHex = Array.from(computedRoot).map(b => b.toString(16).padStart(2, "0")).join("");
           console.log("Computed merkle root:", rootHex);
-          console.log("On-chain merkle root (from config):", "0012cf6fc0376541f16ff2e582a9745f4efb21db9a1b4537b2c90e07734bcd91");
-          console.log("Roots match:", rootHex === "0012cf6fc0376541f16ff2e582a9745f4efb21db9a1b4537b2c90e07734bcd91");
+          console.log("On-chain merkle root (from config):", "15f5eecd4c41bac35fbba205b5057347d93b862de2492d1fa72624118a494732");
+          console.log("Roots match:", rootHex === "15f5eecd4c41bac35fbba205b5057347d93b862de2492d1fa72624118a494732");
           console.log("Wallet address:", wallet);
           console.log("Wallet in ALLOWLIST_SORTED:", ALLOWLIST_SORTED.includes(wallet));
           console.log("ALLOWLIST_SORTED length:", ALLOWLIST_SORTED.length);
@@ -1188,7 +1188,7 @@
               console.warn("WL proof failed, falling back to public mint:", routeErr?.message);
               if (publicGroup) {
                 group = some("public");
-                mintArgs = { solPayment: { destination: publicKey(CONFIG.TREASURY) } };
+                mintArgs = { solPayment: some({ destination: publicKey(CONFIG.TREASURY) }) };
                 setStatus("WL proof failed — minting at public price instead...");
               } else {
                 throw routeErr;
