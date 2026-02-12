@@ -502,7 +502,7 @@
     // --- MintV2 (UMI) imports (FIX for InvalidAccountVersion) ---
     import { createUmi } from "https://esm.sh/@metaplex-foundation/umi-bundle-defaults";
     import { walletAdapterIdentity } from "https://esm.sh/@metaplex-foundation/umi-signer-wallet-adapters";
-    import { publicKey } from "https://esm.sh/@metaplex-foundation/umi";
+    import { publicKey, some, none } from "https://esm.sh/@metaplex-foundation/umi";
     import {
       mplCandyMachine,
       fetchCandyMachine,
@@ -1127,9 +1127,6 @@
 
         setStatus(`Minting for ${price} SOL... approve in wallet 🔥`);
 
-        // Determine guard group label (must match on-chain labels exactly)
-        let group = isWL ? "wl" : "public";
-
         // Fetch CM via UMI and mint using MintV2 (fixes InvalidAccountVersion)
         const cmPk = publicKey(CONFIG.CANDY_MACHINE_ID);
         const umiCm = await fetchCandyMachine(umi, cmPk);
@@ -1146,8 +1143,9 @@
           setStatus("Validating whitelist proof...");
           await route(umi, {
             candyMachine: umiCm.publicKey,
+            candyGuard: umiCm.mintAuthority,
             guard: "allowList",
-            group: "wl",
+            group: some("wl"),
             routeArgs: {
               path: "proof",
               merkleRoot: getMerkleRoot(ALLOWLIST_SORTED),
@@ -1161,7 +1159,7 @@
         const res = await mintV2(umi, {
           candyMachine: umiCm.publicKey,
           collectionMint: umiCm.collectionMint,
-          group,
+          group: isWL ? some("wl") : some("public"),
           mintArgs
         }).sendAndConfirm(umi);
 
