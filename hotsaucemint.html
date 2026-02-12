@@ -362,18 +362,21 @@
     <div class="modal-content">
       <button class="close-modal" id="closeWalletModal">×</button>
       <h3>Select Your Wallet</h3>
+
       <div class="wallet-option" id="optPhantom" data-wallet="phantom">
         <div>
           <div class="wallet-name">Phantom</div>
           <div class="wallet-status" id="phantomStatus">Checking...</div>
         </div>
       </div>
+
       <div class="wallet-option" id="optSolflare" data-wallet="solflare">
         <div>
           <div class="wallet-name">Solflare</div>
           <div class="wallet-status" id="solflareStatus">Checking...</div>
         </div>
       </div>
+
       <div class="wallet-option" id="optMagiceden" data-wallet="magiceden">
         <div>
           <div class="wallet-name">Magic Eden</div>
@@ -485,6 +488,167 @@
 
   <script>
     window.addEventListener('load', () => document.body.classList.add('loaded'));
+
+    // --------------------------------------------------------------------------
+    // ALWAYS-ON UI WIRING (works even if the module script fails)
+    // --------------------------------------------------------------------------
+    (function(){
+      const $ = (id) => document.getElementById(id);
+
+      const walletModal = $("walletModal");
+      const myMintsModal = $("myMintsModal");
+
+      const btnConnect = $("btnConnect");
+      const btnMyMints = $("btnMyMints");
+
+      function openWalletModal(){ walletModal?.classList.add("active"); }
+      function closeWalletModal(){ walletModal?.classList.remove("active"); }
+      function openMyMintsModal(){ myMintsModal?.classList.add("active"); }
+      function closeMyMintsModal(){ myMintsModal?.classList.remove("active"); }
+
+      // Expose so other scripts can call safely if needed
+      window.__ui_openWalletModal = openWalletModal;
+      window.__ui_closeWalletModal = closeWalletModal;
+      window.__ui_openMyMintsModal = openMyMintsModal;
+      window.__ui_closeMyMintsModal = closeMyMintsModal;
+
+      // Wire Connect button (ALWAYS)
+      btnConnect?.addEventListener("click", openWalletModal);
+
+      // Wire close buttons (ALWAYS)
+      $("closeWalletModal")?.addEventListener("click", closeWalletModal);
+      $("closeMyMintsModal")?.addEventListener("click", closeMyMintsModal);
+
+      // Clicking backdrop closes
+      walletModal?.addEventListener("click", (e) => { if (e.target === walletModal) closeWalletModal(); });
+      myMintsModal?.addEventListener("click", (e) => { if (e.target === myMintsModal) closeMyMintsModal(); });
+
+      // Wallet detection (UI badges)
+      function setInstalled(statusId, installed){
+        const el = $(statusId);
+        if (!el) return;
+        if (installed){
+          el.textContent = "Installed ✓";
+          el.classList.add("installed");
+        } else {
+          el.textContent = "Not Installed";
+        }
+      }
+      function setDisabled(optId, disabled){
+        const el = $(optId);
+        if (!el) return;
+        el.classList.toggle("disabled", !!disabled);
+      }
+
+      function detectWallets(){
+        const phantomInstalled = !!(window.phantom?.solana?.isPhantom);
+        const solflareInstalled = !!(window.solflare?.isSolflare || (window.solflare && typeof window.solflare.connect === "function") || window.solflare?.solana);
+        const magicedenInstalled = !!(window.magicEden?.solana);
+
+        setInstalled("phantomStatus", phantomInstalled);
+        setInstalled("solflareStatus", solflareInstalled);
+        setInstalled("magicedenStatus", magicedenInstalled);
+
+        setDisabled("optPhantom", !phantomInstalled);
+        setDisabled("optSolflare", !solflareInstalled);
+        setDisabled("optMagiceden", !magicedenInstalled);
+      }
+
+      window.addEventListener("load", () => setTimeout(detectWallets, 200));
+
+      // Wallet option clicks:
+      // Prefer your FULL module connect (CandyMachine path) if it loaded,
+      // otherwise fallback connect (still connects + shows wallet label).
+      async function fallbackConnect(type){
+        const statusBox = $("statusBox");
+        const walletLabel = $("walletLabel");
+        const btnDisconnect = $("btnDisconnect");
+
+        const setStatus = (msg) => { if (statusBox) statusBox.textContent = "Status: " + msg; };
+        const short = (s) => (s && s.length > 10) ? (s.slice(0,4) + "..." + s.slice(-4)) : (s || "");
+
+        try{
+          setStatus("Connecting wallet...");
+          closeWalletModal();
+
+          let provider = null;
+          let walletType = null;
+
+          if (type === "phantom"){
+            provider = window.phantom?.solana;
+            if (!provider?.isPhantom){ window.open("https://phantom.app/", "_blank"); setStatus("Please install Phantom wallet!"); return; }
+            walletType = "Phantom";
+          } else if (type === "solflare"){
+            provider = window.solflare?.solana ?? window.solflare;
+            if (!provider){ window.open("https://solflare.com/", "_blank"); setStatus("Please install Solflare wallet!"); return; }
+            walletType = "Solflare";
+          } else if (type === "magiceden"){
+            provider = window.magicEden?.solana;
+            if (!provider){ window.open("https://wallet.magiceden.io/", "_blank"); setStatus("Please install Magic Eden wallet!"); return; }
+            walletType = "Magic Eden";
+          } else {
+            setStatus("Unknown wallet type");
+            return;
+          }
+
+          let resp;
+          try { resp = await provider.connect(); }
+          catch (e){
+            try { resp = await provider.connect({ onlyIfTrusted: false }); }
+            catch { throw e; }
+          }
+
+          const pkObj = resp?.publicKey || provider.publicKey;
+          const pk58 = (typeof pkObj === "string") ? pkObj : (pkObj?.toBase58 ? pkObj.toBase58() : "");
+
+          if (!pk58) throw new Error("No public key returned");
+
+          // store for module to pick up if it loads later
+          window.__wallet_fallback = { provider, type, pk58 };
+
+          if (walletLabel) walletLabel.textContent = `${walletType}: ${short(pk58)}`;
+          if (btnDisconnect) btnDisconnect.style.display = "inline-block";
+          if (btnMyMints) btnMyMints.disabled = false;
+
+          setStatus(`${walletType} connected! (fallback)`);
+        } catch (err){
+          console.error("Fallback connect error:", err);
+          const statusBox = $("statusBox");
+          if (statusBox) statusBox.textContent = "Status: Connection failed: " + (err?.message || "Unknown error");
+        }
+      }
+
+      function wireWalletOption(optId, type){
+        const el = $(optId);
+        if (!el) return;
+        el.addEventListener("click", async () => {
+          if (el.classList.contains("disabled")) return;
+
+          // If module loaded, use the full connect (sets up Metaplex/UMI/etc)
+          if (typeof window._cmConnectWallet === "function"){
+            closeWalletModal();
+            await window._cmConnectWallet(type);
+            return;
+          }
+
+          // Else fallback connect
+          await fallbackConnect(type);
+        });
+      }
+
+      wireWalletOption("optPhantom", "phantom");
+      wireWalletOption("optSolflare", "solflare");
+      wireWalletOption("optMagiceden", "magiceden");
+
+      // My Mints button should still open modal even if module fails
+      btnMyMints?.addEventListener("click", () => {
+        if (typeof window._cmOpenMyMints === "function"){
+          window._cmOpenMyMints();
+        } else {
+          openMyMintsModal();
+        }
+      });
+    })();
   </script>
 
   <script type="module">
@@ -591,7 +755,6 @@
     const statusBox = $("statusBox");
     const cmMinted = $("cmMinted");
     const cmRemaining = $("cmRemaining");
-    const btnConnect = $("btnConnect");
     const btnDisconnect = $("btnDisconnect");
     const btnRefresh = $("btnRefresh");
     const btnMint = $("btnMint");
@@ -619,46 +782,8 @@
     }
 
     // ============================================================================
-    // WALLET DETECTION
-    // ============================================================================
-    function detectWallets() {
-      const phantomStatus = $("phantomStatus");
-      const optPhantom = $("optPhantom");
-      if (window.phantom?.solana?.isPhantom) {
-        phantomStatus.textContent = "Installed ✓";
-        phantomStatus.classList.add("installed");
-      } else {
-        phantomStatus.textContent = "Not Installed";
-        optPhantom.classList.add("disabled");
-      }
-
-      const solflareStatus = $("solflareStatus");
-      const optSolflare = $("optSolflare");
-      const hasSolflare = window.solflare?.isSolflare ||
-                          (window.solflare && typeof window.solflare.connect === "function");
-      if (hasSolflare) {
-        solflareStatus.textContent = "Installed ✓";
-        solflareStatus.classList.add("installed");
-      } else {
-        solflareStatus.textContent = "Not Installed";
-        optSolflare.classList.add("disabled");
-      }
-
-      const magicedenStatus = $("magicedenStatus");
-      const optMagiceden = $("optMagiceden");
-      if (window.magicEden?.solana) {
-        magicedenStatus.textContent = "Installed ✓";
-        magicedenStatus.classList.add("installed");
-      } else {
-        magicedenStatus.textContent = "Not Installed";
-        optMagiceden.classList.add("disabled");
-      }
-    }
-
-    // ============================================================================
     // MODAL HANDLERS
     // ============================================================================
-    function openWalletModal() { walletModal.classList.add("active"); }
     function closeWalletModal() { walletModal.classList.remove("active"); }
     function openMyMintsModal() { myMintsModal.classList.add("active"); }
     function closeMyMintsModal() { myMintsModal.classList.remove("active"); }
@@ -687,7 +812,7 @@
           }
           walletType = "Phantom";
         } else if (type === "solflare") {
-          provider = window.solflare;
+          provider = window.solflare?.solana ?? window.solflare;
           if (!provider || typeof provider.connect !== "function") {
             window.open("https://solflare.com/", "_blank");
             setStatus("Please install Solflare wallet!", "error");
@@ -712,7 +837,7 @@
         try {
           resp = await provider.connect();
         } catch (err) {
-          if (err.code === 4001) {
+          if (err?.code === 4001) {
             setStatus("Connection rejected by user", "error");
             return;
           }
@@ -738,7 +863,7 @@
           signMessage: provider.signMessage ? (msg) => provider.signMessage(msg) : undefined
         }));
 
-        // UMI for MintV2 (FIX)
+        // UMI for MintV2
         umi = createUmi(currentRpcUrl).use(mplCandyMachine());
         umi.use(walletAdapterIdentity(walletProvider));
 
@@ -1006,18 +1131,11 @@
 
         setStatus(`Minting for ${price} SOL... approve in wallet 🔥`);
 
-        // Determine guard group label from your existing logic (if you use groups)
         let group = undefined;
-        if (isWL) group = "WL"; // adjust if your group label is "wl"
-        // else group could be "public" if your on-chain guard uses a public group label
+        if (isWL) group = "WL";
 
-        // Fetch CM via UMI and mint using MintV2 (fixes InvalidAccountVersion)
         const cmPk = publicKey(CONFIG.CANDY_MACHINE_ID);
         const umiCm = await fetchCandyMachine(umi, cmPk);
-
-        // If your guard requires args (mintLimit id, allowList proof, etc.), set mintArgs here.
-        // Example for mintLimit (ONLY if your guard uses it and your config expects an id):
-        // const mintArgs = { mintLimit: { id: 1 } };
         const mintArgs = undefined;
 
         setStatus("Sending mint transaction... approve in wallet 🔥");
@@ -1051,36 +1169,26 @@
     }
 
     // ============================================================================
-    // EVENT LISTENERS
+    // EVENT LISTENERS (module-side; safe to keep)
     // ============================================================================
-    btnConnect.addEventListener("click", openWalletModal);
-    $("closeWalletModal").addEventListener("click", closeWalletModal);
-    $("closeMyMintsModal").addEventListener("click", closeMyMintsModal);
-
-    $("optPhantom").addEventListener("click", () => {
-      if (!$("optPhantom").classList.contains("disabled")) connectWallet("phantom");
-    });
-    $("optSolflare").addEventListener("click", () => {
-      if (!$("optSolflare").classList.contains("disabled")) connectWallet("solflare");
-    });
-    $("optMagiceden").addEventListener("click", () => {
-      if (!$("optMagiceden").classList.contains("disabled")) connectWallet("magiceden");
-    });
-
     btnDisconnect.addEventListener("click", disconnectWallet);
     btnRefresh.addEventListener("click", refreshAll);
     btnMint.addEventListener("click", mintNFT);
-    btnMyMints.addEventListener("click", () => {
-      renderMyMints();
-      openMyMintsModal();
-    });
 
-    walletModal.addEventListener("click", (e) => {
-      if (e.target === walletModal) closeWalletModal();
-    });
-    myMintsModal.addEventListener("click", (e) => {
-      if (e.target === myMintsModal) closeMyMintsModal();
-    });
+    // My Mints open helper (used by always-on script)
+    async function openMyMintsAndRender(){
+      await renderMyMints();
+      openMyMintsModal();
+    }
+    btnMyMints.addEventListener("click", openMyMintsAndRender);
+
+    // ============================================================================
+    // EXPOSE MODULE FUNCTIONS TO WINDOW (so non-module wiring can call them)
+    // ============================================================================
+    window._cmConnectWallet = connectWallet;
+    window._cmDisconnectWallet = disconnectWallet;
+    window._cmRefreshAll = refreshAll;
+    window._cmOpenMyMints = openMyMintsAndRender;
 
     // ============================================================================
     // INITIALIZATION
@@ -1098,8 +1206,6 @@
         setStatus("Failed to connect to Solana. Please refresh.", "error");
         return;
       }
-
-      setTimeout(detectWallets, 300);
 
       const tempMetaplex = Metaplex.make(connection);
       try {
