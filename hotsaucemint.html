@@ -1156,6 +1156,16 @@
           // WL group exists on-chain — use it with allowList proof
           group = some("wl");
 
+          // Debug: log computed merkle root vs on-chain
+          const computedRoot = getMerkleRoot(ALLOWLIST_SORTED);
+          const rootHex = Array.from(computedRoot).map(b => b.toString(16).padStart(2, "0")).join("");
+          console.log("Computed merkle root:", rootHex);
+          console.log("On-chain merkle root (from config):", "0012cf6fc0376541f16ff2e582a9745f4efb21db9a1b4537b2c90e07734bcd91");
+          console.log("Roots match:", rootHex === "0012cf6fc0376541f16ff2e582a9745f4efb21db9a1b4537b2c90e07734bcd91");
+          console.log("Wallet address:", wallet);
+          console.log("Wallet in ALLOWLIST_SORTED:", ALLOWLIST_SORTED.includes(wallet));
+          console.log("ALLOWLIST_SORTED length:", ALLOWLIST_SORTED.length);
+
           setStatus("Validating whitelist proof...");
           try {
             await route(umi, {
@@ -1165,16 +1175,25 @@
               group: some("wl"),
               routeArgs: {
                 path: "proof",
-                merkleRoot: getMerkleRoot(ALLOWLIST_SORTED),
+                merkleRoot: computedRoot,
                 merkleProof: getMerkleProof(ALLOWLIST_SORTED, wallet)
               }
             }).sendAndConfirm(umi);
           } catch (routeErr) {
             // If proof receipt already exists, that's fine — continue to mint
-            if (!routeErr?.message?.includes("already in use")) {
-              throw routeErr;
+            if (routeErr?.message?.includes("already in use")) {
+              console.log("Proof receipt already exists, proceeding to mint");
+            } else {
+              // WL proof failed — fall back to public mint
+              console.warn("WL proof failed, falling back to public mint:", routeErr?.message);
+              if (publicGroup) {
+                group = some("public");
+                mintArgs = { solPayment: { destination: publicKey(CONFIG.TREASURY) } };
+                setStatus("WL proof failed — minting at public price instead...");
+              } else {
+                throw routeErr;
+              }
             }
-            console.log("Proof receipt already exists, proceeding to mint");
           }
 
         } else if (hasGroups && publicGroup) {
