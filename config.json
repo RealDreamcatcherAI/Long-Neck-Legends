@@ -1,48 +1,48 @@
 {
-    "tokenStandard":  "pnft",
-    "number":  33,
-    "symbol":  "MHHS",
-    "sellerFeeBasisPoints":  1000,
-    "isMutable":  true,
-    "isSequential":  false,
-    "creators":  [
-                     {
-                         "address":  "ChnzFpK4ty2vpzM48HUrtDVY7tWD8StmYaNxQcKSBuyc",
-                         "share":  100
-                     }
-                 ],
-    "uploadMethod":  "bundlr",
-    "ruleSet":  "eBJLFYPxJmMGKuFwpDWkzxZeUrad92kZRC5BJLpzyT9",
-    "hiddenSettings":  null,
-    "guards":  {
-                   "default":  {
-                                   "solPayment":  {
-                                                      "destination":  "ChnzFpK4ty2vpzM48HUrtDVY7tWD8StmYaNxQcKSBuyc",
-                                                      "value":  0.55
-                                                  }
-                               },
-                   "groups":  [
-                                  {
-                                      "guards":  {
-                                                     "allowList":  {
-                                                                       "merkleRoot":  "0012cf6fc0376541f16ff2e582a9745f4efb21db9a1b4537b2c90e07734bcd91"
-                                                                   },
-                                                     "solPayment":  {
-                                                                        "destination":  "ChnzFpK4ty2vpzM48HUrtDVY7tWD8StmYaNxQcKSBuyc",
-                                                                        "value":  0.355
-                                                                    }
-                                                 },
-                                      "label":  "wl"
-                                  },
-                                  {
-                                      "guards":  {
-                                                     "solPayment":  {
-                                                                        "destination":  "ChnzFpK4ty2vpzM48HUrtDVY7tWD8StmYaNxQcKSBuyc",
-                                                                        "value":  0.55
-                                                                    }
-                                                 },
-                                      "label":  "public"
-                                  }
-                              ]
-               }
+    "tokenStandard": "pnft",
+    "number": 33,
+    "symbol": "MHHS",
+    "sellerFeeBasisPoints": 1000,
+    "isMutable": true,
+    "isSequential": false,
+    "creators": [
+        {
+            "address": "ChnzFpK4ty2vpzM48HUrtDVY7tWD8StmYaNxQcKSBuyc",
+            "share": 100
+        }
+    ],
+    "uploadMethod": "bundlr",
+    "ruleSet": "eBJLFYPxJmMGKuFwpDWkzxZeUrad92kZRC5BJLpzyT9",
+    "hiddenSettings": null,
+    "guards": {
+        "default": {
+            "solPayment": {
+                "destination": "ChnzFpK4ty2vpzM48HUrtDVY7tWD8StmYaNxQcKSBuyc",
+                "value": 0.55
+            }
+        },
+        "groups": [
+            {
+                "guards": {
+                    "allowList": {
+                        "merkleRoot": "0012cf6fc0376541f16ff2e582a9745f4efb21db9a1b4537b2c90e07734bcd91"
+                    },
+                    "solPayment": {
+                        "destination": "ChnzFpK4ty2vpzM48HUrtDVY7tWD8StmYaNxQcKSBuyc",
+                        "value": 0.355
+                    }
+                },
+                "label": "wl"
+            },
+            {
+                "guards": {
+                    "solPayment": {
+                        "destination": "ChnzFpK4ty2vpzM48HUrtDVY7tWD8StmYaNxQcKSBuyc",
+                        "value": 0.55
+                    }
+                },
+                "label": "public"
+            }
+        ]
+    }
 }
