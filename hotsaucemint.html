@@ -502,7 +502,7 @@
     // --- MintV2 (UMI) imports — pinned to match local node versions for merkle compatibility ---
     import { createUmi } from "https://esm.sh/@metaplex-foundation/umi-bundle-defaults@0.8.10";
     import { walletAdapterIdentity } from "https://esm.sh/@metaplex-foundation/umi-signer-wallet-adapters@0.8.10";
-    import { publicKey, some, none } from "https://esm.sh/@metaplex-foundation/umi@0.8.10";
+    import { publicKey, some, none, generateSigner } from "https://esm.sh/@metaplex-foundation/umi@0.8.10";
     import {
       mplCandyMachine,
       fetchCandyMachine,
@@ -882,6 +882,42 @@
         umi = createUmi(currentRpcUrl).use(mplCandyMachine());
         umi.use(walletAdapterIdentity(walletProvider));
 
+        // === ON-CHAIN GUARD DEBUG ===
+        try {
+          const cmPk = publicKey(CONFIG.CANDY_MACHINE_ID);
+          const umiCm = await fetchCandyMachine(umi, cmPk);
+          const guard = await fetchCandyGuard(umi, umiCm.mintAuthority);
+          console.log("=== ON-CHAIN GUARD DEBUG ===");
+          console.log("Groups found:", guard.groups?.map(g => g.label) || "NONE");
+          
+          // Check default guard allowList
+          if (guard.guards?.allowList?.__option === "Some") {
+            const defRoot = guard.guards.allowList.value.merkleRoot;
+            const defRootHex = Array.from(defRoot).map(b => b.toString(16).padStart(2, "0")).join("");
+            console.log("DEFAULT allowList root:", defRootHex);
+          } else {
+            console.log("DEFAULT allowList: NONE");
+          }
+          
+          // Check group allowList roots
+          for (const g of (guard.groups || [])) {
+            if (g.guards?.allowList?.__option === "Some") {
+              const gRoot = g.guards.allowList.value.merkleRoot;
+              const gRootHex = Array.from(gRoot).map(b => b.toString(16).padStart(2, "0")).join("");
+              console.log(`Group "${g.label}" allowList root:`, gRootHex);
+              console.log(`Group "${g.label}" root matches browser:`, gRootHex === _debugRootHex);
+            } else {
+              console.log(`Group "${g.label}" allowList: NONE`);
+            }
+          }
+          
+          // Dump full guard structure for inspection
+          console.log("Full guard object:", JSON.stringify(guard, (k, v) => typeof v === 'bigint' ? v.toString() : v, 2));
+          console.log("============================");
+        } catch (dbgErr) {
+          console.warn("Guard debug failed:", dbgErr.message);
+        }
+
         // Update UI
         walletLabel.textContent = `${walletType}: ${short(walletPublicKey.toBase58())}`;
         btnDisconnect.style.display = "inline-block";
@@ -1226,9 +1262,15 @@
 
         setStatus("Sending mint transaction... approve in wallet 🔥");
 
+        const nftMint = generateSigner(umi);
+        console.log("Generated nftMint:", nftMint.publicKey);
+
         const res = await mintV2(umi, {
           candyMachine: umiCm.publicKey,
+          candyGuard: umiCm.mintAuthority,
+          nftMint,
           collectionMint: umiCm.collectionMint,
+          collectionUpdateAuthority: umiCm.authority,
           group,
           mintArgs
         }).sendAndConfirm(umi);
