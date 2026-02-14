@@ -291,13 +291,13 @@
       color: #00d4ff;
       text-align: center;
     }
-    .mint-display-grid {
+    .mint-display-grid{
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
       gap: 0.6rem;
-    }
-    @media (min-width: 900px) {
-      .mint-display-grid { grid-template-columns: repeat(11, 1fr); }
+      grid-template-columns: repeat(auto-fit, minmax(62px, 1fr));
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
     }
     .mint-tile {
       border-radius: 14px;
@@ -526,6 +526,7 @@
         "https://rpc.ankr.com/solana",
         "https://api.mainnet-beta.solana.com"
       ],
+      HELIUS_API_KEY: "44cfd082-9089-430d-8de3-cd310c478b1c",
       TREASURY: "ChnzFpK4ty2vpzM48HUrtDVY7tWD8StmYaNxQcKSBuyc",
       CANDY_MACHINE_ID: "9gehPSjZz8i4SMUWR2d9wPQCxhZqKU1E8xmZBaMYw1E3",
       COLLECTION_MINT: "BzpsHMryoyXobwTPEVVohsy4tuEds8tw3siBfdN1GRQm",
@@ -706,6 +707,12 @@
     let metaplex = null;
     let userCollectionNFTs = [];
     let umi = null; // <-- MintV2 signer context
+
+    let _liveMintCache = {
+      mintedCount: 0,
+      mints: [],          // [{ mint, image, name }]
+      byMint: new Map()   // mint -> { mint, image, name }
+    };
 
     // Find a working RPC
     async function findWorkingRpc() {
@@ -994,7 +1001,8 @@
         cmMinted.textContent = itemsRedeemed;
         cmRemaining.textContent = remaining;
 
-        renderLiveMintGrid(itemsRedeemed, candyMachine.items || []);
+        await refreshLiveMintImages(itemsRedeemed);
+        renderLiveMintGrid(itemsRedeemed);
 
         return { itemsRedeemed, itemsAvailable, remaining };
       } catch (err) {
@@ -1010,53 +1018,156 @@
     // ============================================================================
     // LIVE MINT GRID
     // ============================================================================
-    function renderLiveMintGrid(minted = 0, cmItems = []) {
-      const grid = $("liveMintGrid");
-      const count = $("liveMintCount");
-      if (!grid) return;
-      if (count) count.textContent = minted;
+    async function fetchMintedMintsFromHelius(limit = 20) {
+  try {
+    // Candy Machine address tx feed (newest first)
+    const url =
+      `https://api.helius.xyz/v0/addresses/${CONFIG.CANDY_MACHINE_ID}/transactions` +
+      `?api-key=${CONFIG.HELIUS_API_KEY}&limit=${Math.max(10, limit)}`;
 
-      grid.innerHTML = "";
-      for (let i = 0; i < CONFIG.TOTAL_SUPPLY; i++) {
-        const tile = document.createElement("div");
-        tile.className = "mint-tile " + (i < minted ? "filled" : "empty");
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Helius HTTP ${res.status}`);
+    const txs = await res.json();
 
-        if (i < minted && cmItems[i]?.uri) {
-          // Create image container
-          tile.style.padding = "0";
-          tile.style.overflow = "hidden";
-          tile.style.position = "relative";
+    const seen = new Set();
+    const mintsNewestFirst = [];
 
-          const img = document.createElement("img");
-          img.alt = cmItems[i]?.name || `#${i + 1}`;
-          img.style.cssText = "width:100%;height:100%;object-fit:cover;border-radius:13px;display:block;min-height:54px;";
-          img.loading = "lazy";
+    for (const tx of txs) {
+      // Best-effort: find the NFT mint in tokenTransfers
+      const transfers = tx?.tokenTransfers || [];
+      const mintTransfer = transfers.find(t =>
+        t &&
+        t.mint &&
+        Number(t.tokenAmount) === 1 &&
+        Number(t.decimals) === 0
+      );
 
-          // Show number as placeholder while image loads
-          const placeholder = document.createElement("span");
-          placeholder.textContent = `#${i + 1}`;
-          placeholder.style.cssText = "position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-weight:800;";
-          tile.appendChild(placeholder);
-
-          // Fetch metadata JSON to get image URL
-          fetch(cmItems[i].uri)
-            .then(r => r.json())
-            .then(meta => {
-              if (meta.image) {
-                img.src = meta.image;
-                img.onload = () => { if (placeholder.parentNode) placeholder.remove(); };
-              }
-            })
-            .catch(() => {}); // Keep placeholder on error
-
-          tile.appendChild(img);
-        } else {
-          tile.textContent = i < minted ? `#${i + 1}` : "—";
-        }
-
-        grid.appendChild(tile);
+      const mint = mintTransfer?.mint;
+      if (mint && !seen.has(mint)) {
+        seen.add(mint);
+        mintsNewestFirst.push(mint);
       }
     }
+
+    // We want oldest -> newest for “mint order”
+    return mintsNewestFirst.reverse().slice(-limit);
+  } catch (e) {
+    console.warn("Helius mint fetch failed:", e?.message || e);
+    return null;
+  }
+}
+
+async function resolveMintImage(mintStr) {
+  if (_liveMintCache.byMint.has(mintStr)) return _liveMintCache.byMint.get(mintStr);
+
+  try {
+    if (!metaplex) throw new Error("Metaplex not ready");
+
+    const mintPk = new PublicKey(mintStr);
+    const nft = await metaplex.nfts().findByMint({ mintAddress: mintPk });
+
+    // Try loaded json first
+    let image = nft?.json?.image || null;
+    let name = nft?.name || null;
+
+    // Otherwise fetch uri json
+    if (!image && nft?.uri) {
+      const r = await fetch(nft.uri);
+      const j = await r.json();
+      image = j?.image || null;
+      name = name || j?.name || null;
+    }
+
+    const obj = { mint: mintStr, image, name };
+    _liveMintCache.byMint.set(mintStr, obj);
+    return obj;
+  } catch (e) {
+    const obj = { mint: mintStr, image: null, name: null };
+    _liveMintCache.byMint.set(mintStr, obj);
+    return obj;
+  }
+}
+
+async function refreshLiveMintImages(mintedCount) {
+  // Only refetch if count changed (or cache empty)
+  if (mintedCount <= 0) {
+    _liveMintCache.mintedCount = 0;
+    _liveMintCache.mints = [];
+    return;
+  }
+
+  if (_liveMintCache.mintedCount === mintedCount && _liveMintCache.mints.length === mintedCount) return;
+
+  // Pull minted mints from chain (Helius)
+  const mintList = await fetchMintedMintsFromHelius(Math.min(CONFIG.TOTAL_SUPPLY, mintedCount + 8));
+  if (!mintList || mintList.length === 0) {
+    // Keep old cache if we have it, otherwise clear
+    if (_liveMintCache.mints.length === 0) _liveMintCache.mintedCount = mintedCount;
+    return;
+  }
+
+  // Keep the oldest->newest, last N = mintedCount
+  const ordered = mintList.slice(-mintedCount);
+
+  // Resolve images (small counts = fast; you’re at 2 right now)
+  const resolved = [];
+  for (const m of ordered) {
+    resolved.push(await resolveMintImage(m));
+  }
+
+  _liveMintCache.mintedCount = mintedCount;
+  _liveMintCache.mints = resolved;
+}
+
+function renderLiveMintGrid(minted = 0) {
+  const grid = $("liveMintGrid");
+  const count = $("liveMintCount");
+  if (!grid) return;
+  if (count) count.textContent = minted;
+
+  grid.innerHTML = "";
+
+  for (let i = 0; i < CONFIG.TOTAL_SUPPLY; i++) {
+    const tile = document.createElement("div");
+    const isFilled = i < minted;
+    tile.className = "mint-tile " + (isFilled ? "filled" : "empty");
+
+    if (!isFilled) {
+      tile.textContent = "—";
+      grid.appendChild(tile);
+      continue;
+    }
+
+    // Filled tile: use cached on-chain mint order image
+    const entry = _liveMintCache.mints[i];
+
+    tile.style.padding = "0";
+    tile.style.overflow = "hidden";
+    tile.style.position = "relative";
+
+    const placeholder = document.createElement("span");
+    placeholder.textContent = `#${i + 1}`;
+    placeholder.style.cssText =
+      "position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-weight:900;opacity:0.9;z-index:2;";
+    tile.appendChild(placeholder);
+
+    if (entry?.image) {
+      const img = document.createElement("img");
+      img.alt = entry?.name || `Mint #${i + 1}`;
+      img.loading = "lazy";
+      img.src = entry.image;
+      img.style.cssText = "width:100%;height:100%;object-fit:cover;border-radius:13px;display:block;min-height:54px;";
+      img.onload = () => { if (placeholder.parentNode) placeholder.remove(); };
+      tile.appendChild(img);
+      tile.title = `${entry?.name || "Mint"} • ${short(entry?.mint || "")}`;
+    } else {
+      // If we don’t have image yet, keep placeholder
+      tile.title = entry?.mint ? short(entry.mint) : `Mint #${i + 1}`;
+    }
+
+    grid.appendChild(tile);
+  }
+}
 
     // ============================================================================
     // USER NFT FETCHING
@@ -1410,7 +1521,8 @@
         const itemsRedeemed = candyMachine.itemsMinted?.toNumber?.() ?? candyMachine.itemsMinted ?? 0;
         cmMinted.textContent = itemsRedeemed;
         cmRemaining.textContent = Math.max(0, CONFIG.TOTAL_SUPPLY - itemsRedeemed);
-        renderLiveMintGrid(itemsRedeemed, candyMachine.items || []);
+        await refreshLiveMintImages(itemsRedeemed);
+        renderLiveMintGrid(itemsRedeemed);
         setStatus("Ready.");
       } catch (err) {
         console.error("Initial CM fetch error:", err);
