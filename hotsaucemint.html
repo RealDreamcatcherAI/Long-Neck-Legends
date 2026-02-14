@@ -1,4 +1,5 @@
-<!DOCTYPE html>
+
+  <!DOCTYPE html>
 <html lang="en">
 <head>
   <link rel="icon" type="image/png" sizes="32x32" href="https://i.imgur.com/jpGdtHJ.jpeg">
@@ -304,6 +305,7 @@
       background: rgba(0,212,255,0.06);
       border: 1px solid rgba(0,212,255,0.14);
       min-height: 54px;
+      aspect-ratio: 1;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -992,7 +994,7 @@
         cmMinted.textContent = itemsRedeemed;
         cmRemaining.textContent = remaining;
 
-        renderLiveMintGrid(itemsRedeemed);
+        renderLiveMintGrid(itemsRedeemed, candyMachine.items || []);
 
         return { itemsRedeemed, itemsAvailable, remaining };
       } catch (err) {
@@ -1008,7 +1010,7 @@
     // ============================================================================
     // LIVE MINT GRID
     // ============================================================================
-    function renderLiveMintGrid(minted = 0) {
+    function renderLiveMintGrid(minted = 0, cmItems = []) {
       const grid = $("liveMintGrid");
       const count = $("liveMintCount");
       if (!grid) return;
@@ -1018,7 +1020,40 @@
       for (let i = 0; i < CONFIG.TOTAL_SUPPLY; i++) {
         const tile = document.createElement("div");
         tile.className = "mint-tile " + (i < minted ? "filled" : "empty");
-        tile.textContent = i < minted ? `#${i + 1}` : "—";
+
+        if (i < minted && cmItems[i]?.uri) {
+          // Create image container
+          tile.style.padding = "0";
+          tile.style.overflow = "hidden";
+          tile.style.position = "relative";
+
+          const img = document.createElement("img");
+          img.alt = cmItems[i]?.name || `#${i + 1}`;
+          img.style.cssText = "width:100%;height:100%;object-fit:cover;border-radius:13px;display:block;min-height:54px;";
+          img.loading = "lazy";
+
+          // Show number as placeholder while image loads
+          const placeholder = document.createElement("span");
+          placeholder.textContent = `#${i + 1}`;
+          placeholder.style.cssText = "position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-weight:800;";
+          tile.appendChild(placeholder);
+
+          // Fetch metadata JSON to get image URL
+          fetch(cmItems[i].uri)
+            .then(r => r.json())
+            .then(meta => {
+              if (meta.image) {
+                img.src = meta.image;
+                img.onload = () => { if (placeholder.parentNode) placeholder.remove(); };
+              }
+            })
+            .catch(() => {}); // Keep placeholder on error
+
+          tile.appendChild(img);
+        } else {
+          tile.textContent = i < minted ? `#${i + 1}` : "—";
+        }
+
         grid.appendChild(tile);
       }
     }
@@ -1375,7 +1410,7 @@
         const itemsRedeemed = candyMachine.itemsMinted?.toNumber?.() ?? candyMachine.itemsMinted ?? 0;
         cmMinted.textContent = itemsRedeemed;
         cmRemaining.textContent = Math.max(0, CONFIG.TOTAL_SUPPLY - itemsRedeemed);
-        renderLiveMintGrid(itemsRedeemed);
+        renderLiveMintGrid(itemsRedeemed, candyMachine.items || []);
         setStatus("Ready.");
       } catch (err) {
         console.error("Initial CM fetch error:", err);
