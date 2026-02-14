@@ -25,7 +25,7 @@
             {
                 "guards": {
                     "allowList": {
-                        "merkleRoot": "015f5eecd4c41bac35fbba205b5057347d93b862de2492d1fa72624118a494732"
+                        "merkleRoot": "15f5eecd4c41bac35fbba205b5057347d93b862de2492d1fa72624118a494732"
                     },
                     "solPayment": {
                         "destination": "ChnzFpK4ty2vpzM48HUrtDVY7tWD8StmYaNxQcKSBuyc",
@@ -45,4 +45,5 @@
             }
         ]
     }
+
 }
