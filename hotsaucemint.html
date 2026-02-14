@@ -933,7 +933,7 @@
         walletLabel.textContent = `${walletType}: ${short(walletPublicKey.toBase58())}`;
         btnDisconnect.style.display = "inline-block";
         btnMyMints.disabled = false;
-        btnMint.disabled = false;
+        btnMint.disabled = true;
 
         setStatus(`${walletType} connected!`, "success");
 
@@ -1022,7 +1022,7 @@
   try {
     // Candy Machine address tx feed (newest first)
     const url =
-      `https://api.helius.xyz/v0/addresses/${CONFIG.CANDY_MACHINE_ID}/transactions` +
+      `https://api.helius.xyz/v0/addresses/${CONFIG.COLLECTION_MINT}/transactions` +
       `?api-key=${CONFIG.HELIUS_API_KEY}&limit=${Math.max(10, limit)}`;
 
     const res = await fetch(url);
@@ -1035,12 +1035,22 @@
     for (const tx of txs) {
       // Best-effort: find the NFT mint in tokenTransfers
       const transfers = tx?.tokenTransfers || [];
-      const mintTransfer = transfers.find(t =>
-        t &&
-        t.mint &&
-        Number(t.tokenAmount) === 1 &&
-        Number(t.decimals) === 0
-      );
+      const mintTransfer = transfers.find(t => {
+      if (!t?.mint) return false;
+      // Accept common shapes (tokenAmount may be number/string/object)
+      const amt = (typeof t.tokenAmount === "number" || typeof t.tokenAmount === "string")
+        ? Number(t.tokenAmount)
+        : (t.tokenAmount?.amount ? Number(t.tokenAmount.amount) : NaN);
+
+      const dec = (t.decimals != null) ? Number(t.decimals)
+        : (t.tokenAmount?.decimals != null ? Number(t.tokenAmount.decimals) : null);
+
+      // NFTs are typically 1 with 0 decimals
+      if (Number.isFinite(amt) && amt === 1 && (dec === 0 || dec === null)) return true;
+
+      // Fallback: if it’s a mint transfer and looks like an NFT mint, accept it
+      return false;
+    });
 
       const mint = mintTransfer?.mint;
       if (mint && !seen.has(mint)) {
@@ -1061,10 +1071,11 @@ async function resolveMintImage(mintStr) {
   if (_liveMintCache.byMint.has(mintStr)) return _liveMintCache.byMint.get(mintStr);
 
   try {
-    if (!metaplex) throw new Error("Metaplex not ready");
+    const mx = metaplex || (connection ? Metaplex.make(connection) : null);
+    if (!mx) throw new Error("Metaplex not ready");
 
     const mintPk = new PublicKey(mintStr);
-    const nft = await metaplex.nfts().findByMint({ mintAddress: mintPk });
+    const nft = await mx.nfts().findByMint({ mintAddress: mintPk });
 
     // Try loaded json first
     let image = nft?.json?.image || null;
