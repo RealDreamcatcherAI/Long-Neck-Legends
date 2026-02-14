@@ -488,9 +488,18 @@
   </script>
 
   <script type="module">
-    import { Connection, PublicKey, LAMPORTS_PER_SOL } from "https://esm.sh/@solana/web3.js@1.95.2";
+    // ============================================================================
+    // IMPORTS
+    // ============================================================================
+    import {
+      Connection,
+      PublicKey,
+      LAMPORTS_PER_SOL
+    } from "https://esm.sh/@solana/web3.js@1.95.2";
+
     import { Metaplex, walletAdapterIdentity as mplWalletIdentity } from "https://esm.sh/@metaplex-foundation/js@0.20.1";
 
+    // --- MintV2 (UMI) imports — pinned to match local node versions for merkle compatibility ---
     import { createUmi } from "https://esm.sh/@metaplex-foundation/umi-bundle-defaults@0.8.10";
     import { walletAdapterIdentity } from "https://esm.sh/@metaplex-foundation/umi-signer-wallet-adapters@0.8.10";
     import { publicKey, some, none } from "https://esm.sh/@metaplex-foundation/umi@0.8.10";
@@ -504,6 +513,9 @@
       getMerkleRoot
     } from "https://esm.sh/@metaplex-foundation/mpl-candy-machine@6.1.0";
 
+    // ============================================================================
+    // CONFIGURATION (Single source of truth)
+    // ============================================================================
     const CONFIG = {
       RPC_URLS: [
         "https://mainnet.helius-rpc.com/?api-key=44cfd082-9089-430d-8de3-cd310c478b1c",
@@ -513,6 +525,7 @@
       TREASURY: "ChnzFpK4ty2vpzM48HUrtDVY7tWD8StmYaNxQcKSBuyc",
       CANDY_MACHINE_ID: "9gehPSjZz8i4SMUWR2d9wPQCxhZqKU1E8xmZBaMYw1E3",
       COLLECTION_MINT: "BzpsHMryoyXobwTPEVVohsy4tuEds8tw3siBfdN1GRQm",
+      COLLECTION_UPDATE_AUTHORITY: "HykDh8asNfG3f94bkxhxnFjA3wYuopEGD7SVhoVxEfyb",
       TOTAL_SUPPLY: 33,
       WL_PRICE_SOL: 0.355,
       PUBLIC_PRICE_SOL: 0.55,
@@ -520,7 +533,7 @@
       PUBLIC_LIMIT: 1
     };
 
-    // Whitelist addresses (unchanged)
+    // Whitelist addresses
     const WHITELIST = new Set([
       "2aSJBUGpWWUZty3dafov1Z8Edw3YPA6Z1e2X3aqXu27i","CjBK1dYZpuvvHQzj1Lt4h4pGNpr2xc7hk4mijG6G27VX",
       "5xdg4SRm6SULCeMkrveX4faGPipbJUgA89UKZ5w93Lto","8AWJ8XcHyGSABgk1GRZLTDqoKzRohtwSA1Hoo1Vy8KeH",
@@ -534,17 +547,152 @@
       "3mV9on4V5fM8Qz7GnbhBtXNXH2YkuhHs3Uj5y7SM3q89","GEf63c6j7yFquNcPhqnKHiESfAX4oVitip1aQJQVF5Wk",
       "EuVvXs5FUnHjMRgfFD9xZghkH4f1gRZHbStoB6DXskZQ","HUMRWmxxZL9Kr6vKTrtuQpSH9WShkcPv96nqhJD49xX9",
       "7xy9aZ1sdvteynG5WkejgMrn4peDPoJL5fJZw94kdokr","CFJprBVcveZsKks2UZEdZn7ygLHzk4e2M3Qxef14eSBP",
-      "6j3K5V5D2F9Awk4Yn2QVoSZkAve2Y8mqByDC85jv4kmn"
-      /* ... keep the rest of your list exactly as-is ... */
+      "6j3K5V5D2F9Awk4Yn2QVoSZkAve2Y8mqByDC85jv4kmn","FnoeG9p2Wtnad4SKGoN82JER3KjiDq6Cc5dWsLhHmEg6",
+      "Ghx5kVKmEQWocjLRL517MvWmimQEnALzMxU8q6hWpmwq","BSGURLgsUCsRMgSeHLWdpRFpHT48pMP9ZXogRQQuojkU",
+      "7uob8wsBH23aKRMVB18PCEZY1Ttwfjj4rhdWJZdgEYDa","5VKGxhPvVP1SDCacDxXd9XmkAEC8JJ4zKgbrDzcWB6gv",
+      "9djHV9eeaUQ7ofRNvcS8Jo94LyFwSkLifPZCkBh1bRE2","CCNZNC5JcspTFPB8qQCbKJZfqQzn8QW8QYUh2CiXVjsZ",
+      "8R6ZK2s8JuQ8yYPkZN1N2rFAuFKe7UngWwWpXjCe49Gk","9KbY8cb5wtgLVGKzShnuSjaxwFgogEbhXPeviEo8cAwg",
+      "GX4eehZnEDcct41dBV3qRNrqRzWUZb48gND1ja2931FD","DavmQ7EqY46eND6V6TgE1L6CsQgTt6MmhT9KWep34AS6",
+      "21tisg7oDosxBGDzoBKRTtmD4e5EQLUjYMdcYYvZkwoj","4AJqnx9GnRvZcAzjKsuJrsmo5oM64ExtLx3Xs6LVtgAR",
+      "Ba3cSSAajoZ538Y6msdUYTc8tE4YCHaoTWms9fiPmgg6","2n9UY2g6thBLCzEL1V5PBXaLMQFxbWi2PJ4MhrDmhJtA",
+      "64zRDbC8fqBark9D86sGxQtcf2cBn3Cy7woUF7LvMCBk","ERQrBMUuRMR2qb8VRDuDcaqjnMZjC6UUsKrqFXhiHSQD",
+      "FKvv6D9LkHoLJsdxK8FG9QKSxHzPcoBi9uv8qAimYS65","Dc2WeThQn6zAEEaMZBvj39T38YU1dNW9hJAAJHmGUu26",
+      "9CuBeMAzjo3qtd56uaFJ9dfNd48QmWfWpjpqxKpdUg4q","CGksN7f2DJMU2mWpT1FVfAEdVWVCqaV4oNinGVPWqRCq",
+      "AA4e637PNPZxnZWDGiRC9cy8WkBcs9tr3exUA55pbEom","bwA6AePrh49WMSw54TTRSWz1sArh7gAij4KdcBN44SX",
+      "7smChPFGdqTBtEBiiawAhhoyGiSmLHZ2NikBgQpVUhP8","EXvu9TWjR7hFawiyBzGHnxft5QVUTSvHmw7miYqYPEoJ",
+      "AbJgyc4aGWrsD9814aLAD1B58y91cNHhzU3nfohcj7t1","KMKAAAAhb6a395es6UdHfuxeMQ6YbDjBuMBEKkwkgnu",
+      "D5n6JYyEDv9bwMU4vr2EowumhzPJoyHcxq5wiU1wYjX2","B1RhZhdWECUUSAKDaatvik4dpwJzVk4yQedBpJDWDYQz",
+      "A5XQNuKQmJpsRRrTEJB1bGgjoU6LGgHYS8KTRcuMhH4U","8FugD5gLw1RnaiZxUMWYPXiqVUwNrZ3FYs5GFnK9YzqS",
+      "BcpGeg1uwnmiSuH54ieMkEhv74DgoyNBCbp7mdFf6H4E","7wKj9KSUbmpZznoMUfaBc1ZwEz9Gkpw7Eays9RdsqRgg",
+      "FqUAMYxeUGZmPii3srzLscqzecC19RHzu4jrNPksM5cc","9eUzi2S8V8Zc4epFAESZxR1kGBrQzdb84AeDcdfeyCkv",
+      "3nNHqKpPQR84iqmTHqSZ1msBq7qQo2sdS5uNB8Y7RqHH","3X4KkurRWiLecg7Pa2YgYu8mQ9iZXFLtvwHPgWzfhJTq",
+      "33yd8szd2poDpzkToDmqEU7G9ugw139qYPQwM4pobQSr","G1Hr5mCgudt6WecncgW56pPrTTDDTr7yzsDGEzQBzgaP",
+      "Dh3G8tSHq9AEDbNXgp5R9RUxsuz5tJHFrcSLeWxmUY6L","GBWGs5asBAbAe7iMX91jXBfM6dUB7bLt7pmdgqBUVDYy",
+      "HwLorX3mezcp5d8R2N287eF2DvZTj5NPWSXh6wnXWJkP","GkLxRLLNLZCkfwX62U5m1u1nE5NchEwmjoVLPxu1eonh",
+      "5skdTuDJfrtT5fSSbZiW56S16qucCUU8GzDnbM5iUnv8","DDgAXsTt2ybas2U2BZC6dEzWb5uA6U5bnA8ggtzvcmsf",
+      "9hc6eMUiueUH7ZXjDxLwqynZwfw4sYELRxyRidVp96HH","DEFBdDNKgoGvu2gZWu8TT3UXZxPHBuSYs9AP5jT9V1W3",
+      "4Wti8Dn48ko11Ea8y6KfUAVVmj9wobr9CUNnf9tBkfJV","d2j8ADaT4hgKwsJGF3HsqoPeeDb4zft4rdLxz4AzXUn",
+      "GPPoDGBQXxuhZ5UCe9XSTnFR7Hu6JSwyaFJ24GemjfLM","YXWkcPEu7XeZDhwAnc357Pzr8Ck3Up7tqN6odX69ZRW",
+      "F5WxRVpDB4EQ9XTZpSNEgwESJnfebw6PAZWqRJnPdFkS","F8rHowt1B5GBNQwLzAgUj3qTUUaavrc2FFzkdXoyKu5q",
+      "HKt89ub6rUgc7gAJEat4JpBwSqAupDP3Epu2fzrkmsXF","CDvtS4DNJuB5bLLoF7JcXCkMVjPhfudpWi3Xwnog6YKp",
+      "6S6NTbDLSYCAJc6SuUwHJ9P9trtZVeXrGqYRWqddd8oV","Dg968DWnniVHKNA6vwSbTTViBCPfMrfbytDngiDncqxX",
+      "EnMyQuRRHD9fXsPqbQntzHdXuRr9tERAMxhX2yWxkCW7","AKXSm6HEWA9Dhjsw6HTZBfsQELwgkbzdE245uvhRT9Yw",
+      "3bD1CCmHPW6Hw2CjevucJbaqxSkdQXD1t4APs3wgSwgf","BnF3Na775p993CMXWmQd4ZF11pnj2gyubR3NZze8HYx8",
+      "Be6pak5uRmFDcWNGYs7cGqQrExNrvviTVhB3pthAw6WQ","3xjaUjsKEJaaEWmGaZbZaA4psWCrN92QHSXhK5BxDCoK",
+      "DLxEBF6Fi7nJi2KaqnPFAw1P7b5D91KQFZkbP93h6wSL","3HFFxHovw53BxrPeEiJG8pBSrxYtCks41KHKxdQLsFXo",
+      "J43wJp2heb7o66BM23hzisJ61DW9Cms2Vorqs29GBj24","CQn9fPZ2i3JhtTcCKkUpBg35gmHChHyrq1DECZ13wLb8",
+      "4RQByEJEkkedDEirw3bC9UAmD9EeGyzQAL9XqdMQwrKV","9s2UgmtgttHPbkrmvE8uQTw7fCHJmgMTT2w7HGfaS9fh",
+      "E8cm452Csjs17F18fpiTqwWhi35mKv8L5A23LsNUpfmj","7GN6ri47nxiicVAFMmmw8cfRLjSRZoVRwavsQM1mHB2N",
+      "CHaknhhicZ5mAM9yBkDdZdrAp3taCSF1tDhFBwtdTXcL","HeZ4B1GCX9Qv7XAfWtJzd6RYBw57N3NZdX3u3Sk2xvnn",
+      "EmAV9CBfaPLTMsBSFY5tSJtxL2EmU81S1KCsFwgaGov7","FKzspMzAowAsz5JdihnKJNx1bRUuxGaAWh19ZNCLzLVk",
+      "CsU6g4xPK57bKqWmm5aDax9G97GKdCutkkyyPcoPAthn","9GDAY2pzWZPGAB9jLBUwUFC4TDf4VXiRtdG4NBZLEfR8",
+      "8C6ZC8yMUgNXSXkQQgSNkGXbpj3m3VjXoU4QxJKm42gS","Dsv5uRXSTRwEfmNEuaAbozyXeZMkZQ7zW21VCy6gVaHG",
+      "A4T6Cg2oSgH5uc9FDTsAngCU9qmtgwjjL2xdSQ3TDpPE","CWZ1obqDNA55S8ZibfWEkidLAg22VNFQT9mJ235t9KGn",
+      "5niy7uGdD2r31dRUk2SbD3pv7qRpigwGoekho6T8GRxg","DoQPWhjpfY3eCheNri6RGLn3oKLWK6WuYDZSNZhgYUhA",
+      "16XjzqfthHnDQvE8nfK1vCXVbtD5hTkJnbEk1vUBoTo","DbpsCmL843gmjZyJeJSJSpFvrUAnFn4na1CmSD9SyqRJ",
+      "25VSFGcKuHy4rYkpv54ZVU4rdPyhv6EEXyTRNEFBSmjf","His2SEGbjrxWuh2vC3aerbMDQ6MgbWE6S8XwpmDRvnfr",
+      "EQ2Z8XJkDRHXsXp4E9BiDzrrFcTtdHTGZSHzgv3dmSYD","D6eLQJhPiH7ZpWM6gkAYp66X7PMyt9Yjo5cRgcFgURtE",
+      "2wwaLuuFXrCqL9ht6TTmX3ixRaext4kj3GnAQNuis4UE","AQCNmAr3ULVKG71pZTsiobzHbk7uxS4NZbRP86EKmfbX",
+      "3seMZ5icrfQDgAQN5SWxEUJSzYyM7Gq5zRoCUtjHj9yJ","FGqmGHXti7DWELRGUV3sZr6ZPEub8ziJtaXhuT1WNuP4",
+      "8n9bKZ92Uk9SHe4fZNqG3rXrtbq7TGB3rrueZ5bBR7ot","VhJU54wnuwWVvS9RKkJ8pDifvQwGfNsutTXw8YH72D6",
+      "7fdS8htXSFknqViqWyJ5pyu7xt2HcKiH3UgStwMWHZuG","8EcjvjWRx1FULUSYRD7okjJj1ntUS6p8dLtGkVK31H4U",
+      "7wFgY4wMPBV5t4Z4NnR1j4JfBkg5pRPQs6ZGRxS951VF","4WqC11Z3x8EydCxc9xvemijs6ZDWXYHTpWNmS2r1pnmP",
+      "D2MKWaTwkG7wa28C684wYi9BpgLvrZV4NPdDHaHbMY6K","AVXfKU6YczGJYpk8GFTRrGdKGsX6PqudRcxmytwd6EZi",
+      "GGP8bjmURy16jM7YKnjsPxWZXKytez17F13tmuSSsqqX","GttmPfJjmhdehNuTE2sRHRQZ1PCpKrrjyrV4znaj9iTP",
+      "4JaeLwNFs6gXpwS8n9qNrV3hVQ8fUngpWc2RDXt45KJL","64dHQimPRPDyd6FMWaTpriDwXhLzHPaYq9YokbvqZVNd",
+      "8NZYuQCbGrEmv63m8sk7LTicsmA7jCeGKhKZtUk8Bgcp","E8BAZ8qUeK5p5DgWEW8NYmWxUZdLTx2sQbdThDS9bpHY",
+      "HKjSEH77U5Ukg9k2V4BhoxCMH85KK18QV3hK7WQDYZJV","DKYjose2URsPUBewPtaNvkmMWsatuT7Cwcvw2tqL9VSz",
+      "GGUSusKaoCNpY4Nediz3pV8PX98H7oesqPKazzxEHTCg","3i71TencFR13h4YYhP9Ky3peKAiRCr5zKtyHyiERjRvT",
+      "CPGzSCvY3wn5wfbRGJ2FrADp96aKuqCL3ZjvERo7W3rM","8ncCPDXKwG1Foqq2xLDv5q2b29KXxALxWEf4cwSY6kPj",
+      "6GKQFTzFLrzEZohMytz6WubJLm38SrThAi4EreakrU6n","3z1BuqTQ1qwNVZtZRuJHANbGGQUA7YQe87duwd6bgZxg",
+      "41hM3Qf7ciwXyM7Y5m7Lp9iSFBEekgvbfcerf4QyVPn3","DJJ8KZUUzANveeTqb6uEu4h4KsyjJg6QUtSped5x4Pw8",
+      "32KTTCeZu858jTw3sWTYnAwMH5VKekW8y2GemirKR2sF","AdjDJtgHW6V2nLymzjwg9EdmqusVu2S29Gry99rHqnse",
+      "HX4gvp29Rys5JpNHeigLkhMRkV9rTX5QtzYLZuoAY3rn","6Fp9EnXQFfJSmutJWdHYMW8SpZsJDbKv12YREEGGVuTm",
+      "FdcpugP99BvNJwPscwXqjZMXYP94vPooxmAhKNFas8v5","HPyECwJ4si2Pn5oXPi7rk6i8vMt9oLeVpXnQDEmUp27M",
+      "BruhrvyoAHY1MmS1zf1a3oaq55Qa5s7NBxiDdexjjF5H","Hmd1AUEJYex5qjjw42j9MJ6NcQ4eB1HNktK6FUfy9qUx",
+      "4A1ax5Lc3bzjKrZjRJenreDbn8YCGzHiA1Q1DGQZ15Ev","3APQXFUiDuUMHcLdycBprvobjtQc6ug4M92ALKTXMTsm",
+      "3hChjfyncxKnQdeUCZkdVL1sMGHuJ1oAB9fQ5z8GrPCb","3KP3N9BaW284vTDZqVM1aESZyTTwxfXDNqRETm48Bimq",
+      "HsXTGFgSUCdDKbXiT4GRkhyMzZxCu9Qu7yKNUnQc564g","Fby7TB9kS84MUoUvPerGNMXhLjHszcA23aqh54wk7cnG",
+      "GdpiCh48NZbYTCj2ygqJqudgRfaetzfDT6btRkTBDbUV","BPg8WoptybW1eZRyVmaNh2cZ8B3Yt2sfqeQywW5zhJEG",
+      "4ZDEzRYDV9ZGrY47Wvk8JYGN9aZgEgkJqmL6sYmS2w2R","7sK5zzjmUc4DDQMeF9X5qNgKsvXcLCvgbeG3r3jKwzKi",
+      "8bDLBzmqWMX5tVjmagzZkd7dCQTgTtEuAdLELNPFqLFF","54Yk9e5CUrex2YskvEJir5TQkZuNkBdMBYHPXKBGi9o2",
+      "DeJKhvRikwNpteFCvkCDXXNPmKPkEbHR5MpKFCrEfrRR","5MsZVaqBqsLD8pzAPeJVsvjKX6N4wBE1qYfoB9RQTRB5",
+      "ApfTr1LvTdi1G1KjPfjsCrBqhva7y8vPPHDr9T7DzxXh","B2m6UUH34YTLeHvTAHGnPMoEY97th37MBiUhuKaDkkgD",
+      "3QKmAcswefZQ7p9k5L75QJ8rLbKpwQcC4MkuaoXKdECG","AkkgBiabHKsj68vjAuU7RPB456au87dQfH5AV8fDc5KC",
+      "3hSEDiguj2LyYuZTjuMmDJ64tcaBg2eK5SDp8NqNbhC4","EgAVYoNjEUK6CqMM77D2XbFbh6iGWeH89VNYY7nmC221",
+      "8sDPYB6UfYxixDU9xP9amycmXJoGEtiyZqceyjU2GiCR","HZaAqBxiY6eiFNjtkXKG4ZHP9a5rCdHScGoAazFAkT7r",
+      "F5rU8Y1RFqxt7YwDSL2uxeVPBE9J9xU6itA5sPuzWoV8","5KwzpCWrPDJsgdieUfGWzfPAsYfZHzdW4G7Y43DQavNU",
+      "8QgkfmL4GsP37DekLQxzVf5k3yfDJySCp8UAeFoSVQdg","G2HtsHmrVe8617wgW9gGks72oZAsWjC5tz9YhWLwpnvj",
+      "AYHfMMpbo9AC3quePJdBAHpj5q3W8AduVv7ABhMpepMc","2fnZpzoLPdCQJDmZsAX7Tv6DbdnUtEA2QHzcangZdhGP",
+      "7jTa6W9eHhMJRC6RL9HUGBH233uuV2hzHkFB8rGVoYJq","2mHGQ79boBzrQuo52kHa9Tzxr3xQtJYHHa8Z186kQUfv",
+      "46Swotp8pz8qGuGeHzEVciosUS8yYMxi3MveMD3RySvp","G4ZDoWyy6HhEAB6WeaJGDimdMNerV1GTfHVrzSNomNJz",
+      "25KJgdsjTVoZzJWHWmymJkvWAF1qyWhrSQpTbqc1dorG","7txHUYcN8poffxXZ3ESJcN5sX4aRbNp53EVEzF7vjuKX",
+      "9aMXaNvfBzQFxJ9NyotSZbLbahFK4eXL9PYQbT8pxNB6","EMWqrejk7M4qPsZcYAnHjfdy6CFZToxVPVBUUopSfdWz",
+      "EJXTV87mv34BAAqATW3NgrFXEpEjPbMsCw27bf5oaLtZ","FVvjbZVg24dzpNS9DQvJecsSdHTD6Zqf7c962zLZDAqc",
+      "EBf9wB9ZjRoBJ1xdJvNCxhscLD9V7jvgt7nzQuLvwSMo","DvzCPnAhYpqSqvGE5UMKSMLW2nL4rNHqNRPZPhLGQu59",
+      "3yZScWEgt9WLVhnLxa3ErZLo41BwsHoJXeHQRhywemUR","72XahPL4WTfQ7nEbBF3MSngCquwRsm5Gf2Ue5P8h32qS",
+      "3XZUmhQMgq9cMwKe96hp4VwiqA7beTpzqcShETLSDmsY","BhCgpLyk76x7TQiKAsjdSAtcyJZPZwpbP5oWj9R9fbvu",
+      "J2NEAur3pA5fkx7ZxvJKaw7zY18BFA1nWBSFAipWCpZm","95bVAzVNQsCYSf4Ae595QBD7e9zow4R6ccqbDRD8oh8M",
+      "BjvYaEAiMWk56t2MqUoJgdgWWmSTAK9EwBpjAZrB3qTv","CuP3Rt5XhsF9CDe1bqc4keeupyXyWXXMh6uDKVXPXMsH",
+      "A4gpuFxKZ6ZFmHa2dzA6rAfyFwvpbs518oHAV4Xc9STX","639CbFjQK5gCyBCZfBiCtCW41eYRrWSzXdtjBuUNNnpz",
+      "13AMMJ539vDeuAxrdgZk9LJTxo9EpwWaUCeDMZeGRsiB","Eoav1RFu4GgC8B9qiFTondyVHxERnvAhy8XTRkuNdkHa",
+      "45ur6DK55uKhyXuBf32AYVVMg9DwGHXLcVT9HwM3e8Tc","4bC7teuYL5fJmpPckRaQyoxyr8fa9NU2PwynUaGvNRFR",
+      "BMScW2jAeKpL4kHJNXKGK4fPcaVziXtN5RbXWvfvkZ3g","Ck3dPBUnMsMqwAxFFi2G4hsebqTqT85MoK2r7594z7Co",
+      "EomVxkVGkfox7x7UCgwfRfQETKxGj5ob814B3tLbYT89","GLernrvuWjCFiBkhQ6rGcgj27KTDK4nRi3ahaFnyJ6cw",
+      "2BcsWwnZw7mN6TM4oKkH869j5AWkx6nJ2UEy1bd89Q66","CjABhDG2oXueF6EwfwrBn8iuTsYBt8FSCKRbAWYXXn1P",
+      "2tGAwDkmGtRKLptjRzSTtbyJSdsVu1LBE9y757u3x5oF","BejNAujYVcttZCAMbH1ni6Ho3FC6pTBBSrEkSeKAvnLA",
+      "H2cEkagHCmBSESDCy2pkZfAT2AxwwUpM7qAxhr1AJZ7s","FKaiEdD96SRm6PPyrjKvvm6vBebSrm74E9GckEaL1qMo",
+      "J5uAypvTmLhg8kjwBvTF6BEF1RRzEbovhCKPieGcc9Sc","GXrWWKm6xSEs7N1Lor2mzvKiJCW57ruoN4nYnTc6eRGW",
+      "GvnR21UjXnXbMbo3Y9fnkiKNPBAUhMdpoZuAuVCe1Fha","h6VG3SKVfCjFavPC8r5ztnSCJFFPhm6yDmzbZF8fEQP",
+      "82UVnQ9jFSkCvzhaAU1CCU6Vkuvda8J55yvzH9afnNCp","7nkLm2eHHuBf2ssLerMYeFXA9WzMHceAAeFnuv669rhx",
+      "CcQkzZfzC14x4QNDnVtu3zBV1GfkaajUxjBFRVc4Uinc","E9S7P2DBwpJSvJFju4FJ7KWvxp2LivqE8M6ubPUmKQzm",
+      "AzEWDa4gQ6aQVX1iSWNxxQwkVEhnHZmbvL6c8J55HjAx","9aW4CQ7xbTKfqFMCbz7HNiDZpSpDYmXEb8mUZqsGng4o",
+      "3RDhvoFwUBjiEPW4ZRxiE9KUrkrhXHo7b22Vfr6gE7e5","7XuHNTdLhs5C8Tz79RSJiSYjrKgZvHtdZwLA68VgYWrn",
+      "CbHhXeSfKmBpYBxUkMtqsLcTXRp8D9Q1XjMJjUoLj1yA","6wQXg4QPPhV6DpBksWvo8jkSVyJN4PTNsme8CMq2X6He",
+      "8TJFr3oKFqYku1RtaDa69zsF3A8m5pi4k7M1hnTfNvoJ","C2r4gy1wJJVCpNd9otniE9PYmqEHRfWE9EuKFNVp5X7Z",
+      "4mXCNejoTrbDjrT4ZK8YU3Eu7E9X93Us8xRLAqzsKXLW","25eLZUdr24geCBy3H7q8Hk7muFBSr4Dinxp83Dc1nwR8",
+      "FCwWXUVJ82m14h6iJxAzrfpTQYRSiNsqLKvhb3Wfn5iy","3K9GauByQicRX7Tn7hW92R8RXoJog2kWfCQRRtVSKsGG",
+      "6FxzvyPGR4VKde2D7i2Hkv51QSSUWoQwRUk4Rd8xGuSM","6YaetH3aavbvA3CRk8P87zYzibWwdPXGAXYDHcKBD8Vp",
+      "ATAZQsFf6LVFyJ6eZYqCgUFCZMR6BZp5PYTaT7mvxFoe","3nUJXwz29t9YPM36fYvNxEM58fQM88kUK2KntXwpKHMn",
+      "AjvTRk59JnUir6VNU6T9Q7L1amSqFrsP62JAQdNjeR7g","Gf39Gu72Gmfxrfo6NJSGMfaE8KMeJovy8GWKvnRXsrAu",
+      "EbAfD2CySQSa52o2pDfppSXb7ysbu6TDySbzVc14L9oT","9oLWZJexk6Fn7jpLdwmLmbFnKHUHUB3dAU32eiP3BLvH",
+      "D6MjCAePrYHumkTA3cQQgCeQJqfDCv67hAK6pqkz1PHX","QgxTguwgFYKCorZUaGNuQxrM5XYuvzzxJVN12LjUfSh",
+      "7GRi1fb2tdwr66wELC5HeDc7jGvT3VnoH6tXLYwQN5kV","Hyk2t7R4kydMzsWxCpA4yqcehaUiaKi3aqqCbmwnUgrP",
+      "6PbGkeu9VABQSNDRgPgHidPw77tAf6rG5uKERwMkEf7s","GbW2bRrytakMCzVFJCCr5tEhks3vNyfVvXUuMY1zQUnE",
+      "AL1udq3TSJm6o8h4dMFo3te9MuhAQ9g8iMzJSRqcF3yY","AAfh33i6FxFaZmMqtDKS5isKuX3wU85vwjJ1FBdo4NYv",
+      "6h9z5VmDjMCZnUQTCTQS2LuaAKu168G4LKYshhPm7ts2","DDGfyDB1YUxFFFpA7zpjjJcWBXKF5pQsT6QnMMqXveoH",
+      "Fkr7XyCqA9bJwqJgLgDCbcy28VJQFJYhxNDNvtqbZ7ff","Do9Me3pDVdMWnkYfzCkitTGWVRK8iy3c35rubEDnNYJk",
+      "A2J9qPKRRD7wbzdSi6oGHyAW6vcQLJZDbp7MbB7sXcRd","97VugYHMfBvd335SQTWve6DfF8sduwHV9tPevvhQQ9xX",
+      "yvoW6JcfXyQqe3LpZ9ugFigyMZNWroiiP9y4ahDkNBV","3FZHAv65tKAwPE72aoWaA5WaQfUSkCjnNHpV4LfMMx8K",
+      "4wDgtVs38T6pcWN4N5USSCa2VGFSLPDBT8kdCYjHLsy4","Ap2JEduk4bkXjt9tiuMKCGbYRz6LDJ7WPKWTfpAVp6no",
+      "3XPronZdt9MMg1yatgWvkdqdHXcPVDspYXMVQbit5fN6","DMyPdJP67d1YBQD1V9h8RBs6MAmE7ownBLUtqAKFLRyx",
+      "8d2za8WCG81Gh557KXEX3L4aNGyFLkHSw1Rkje5zeYpN","CwhvVqVFSdfoc5X3mPAvES4smBXYctRbY8cr7TDmVNP6"
     ]);
 
-    // IMPORTANT: This is what your Merkle proof system depends on.
-    // Use THIS for WL membership, not WHITELIST.has().
-    const ALLOWLIST_SORTED = [...WHITELIST]
-      .map(a => String(a).trim())
-      .filter(Boolean)
-      .sort();
+    // Sorted array for merkle proof (must match on-chain merkle root)
+    const ALLOWLIST_SORTED = [...WHITELIST].sort();
 
+    // === AUTO DEBUG: compute and log merkle root on load ===
+    const _debugRoot = getMerkleRoot(ALLOWLIST_SORTED);
+    const _debugRootHex = Array.from(_debugRoot).map(b => b.toString(16).padStart(2, "0")).join("");
+    console.log("=== MERKLE DEBUG (auto) ===");
+    console.log("Browser computed merkle root:", _debugRootHex);
+    console.log("Expected on-chain root:      ", "15f5eecd4c41bac35fbba205b5057347d93b862de2492d1fa72624118a494732");
+    console.log("Roots match:", _debugRootHex === "15f5eecd4c41bac35fbba205b5057347d93b862de2492d1fa72624118a494732");
+    console.log("ALLOWLIST size:", ALLOWLIST_SORTED.length);
+    console.log("First 3 sorted:", ALLOWLIST_SORTED.slice(0, 3));
+    console.log("===========================");
+
+    // Expose on window so console debugging works
+    window._WHITELIST = WHITELIST;
+    window._ALLOWLIST_SORTED = ALLOWLIST_SORTED;
+    window._getMerkleRoot = getMerkleRoot;
+    window._getMerkleProof = getMerkleProof;
+    window._debugRootHex = _debugRootHex;
+
+    // ============================================================================
+    // STATE
+    // ============================================================================
     let connection = null;
     let currentRpcUrl = null;
     let walletProvider = null;
@@ -553,8 +701,9 @@
     let candyMachine = null;
     let metaplex = null;
     let userCollectionNFTs = [];
-    let umi = null;
+    let umi = null; // <-- MintV2 signer context
 
+    // Find a working RPC
     async function findWorkingRpc() {
       for (const rpcUrl of CONFIG.RPC_URLS) {
         try {
@@ -565,11 +714,15 @@
           return { connection: testConn, url: rpcUrl };
         } catch (err) {
           console.warn(`✗ RPC failed: ${rpcUrl.substring(0, 50)}...`, err.message);
+          continue;
         }
       }
       throw new Error("All RPC endpoints failed. Please try again later.");
     }
 
+    // ============================================================================
+    // UI ELEMENTS
+    // ============================================================================
     const $ = (id) => document.getElementById(id);
     const walletLabel = $("walletLabel");
     const wlStatus = $("wlStatus");
@@ -586,6 +739,9 @@
     const walletModal = $("walletModal");
     const myMintsModal = $("myMintsModal");
 
+    // ============================================================================
+    // UTILITY FUNCTIONS
+    // ============================================================================
     function setStatus(msg, type = "normal") {
       statusBox.textContent = "Status: " + msg;
       statusBox.className = "status";
@@ -602,6 +758,9 @@
       return new Promise(r => setTimeout(r, ms));
     }
 
+    // ============================================================================
+    // WALLET DETECTION
+    // ============================================================================
     function detectWallets() {
       const phantomStatus = $("phantomStatus");
       const optPhantom = $("optPhantom");
@@ -615,7 +774,8 @@
 
       const solflareStatus = $("solflareStatus");
       const optSolflare = $("optSolflare");
-      const hasSolflare = window.solflare?.isSolflare || (window.solflare && typeof window.solflare.connect === "function");
+      const hasSolflare = window.solflare?.isSolflare ||
+                          (window.solflare && typeof window.solflare.connect === "function");
       if (hasSolflare) {
         solflareStatus.textContent = "Installed ✓";
         solflareStatus.classList.add("installed");
@@ -635,11 +795,17 @@
       }
     }
 
+    // ============================================================================
+    // MODAL HANDLERS
+    // ============================================================================
     function openWalletModal() { walletModal.classList.add("active"); }
     function closeWalletModal() { walletModal.classList.remove("active"); }
     function openMyMintsModal() { myMintsModal.classList.add("active"); }
     function closeMyMintsModal() { myMintsModal.classList.remove("active"); }
 
+    // ============================================================================
+    // WALLET CONNECTION
+    // ============================================================================
     async function connectWallet(type) {
       if (!connection) {
         setStatus("Still connecting to Solana... please wait", "error");
@@ -681,6 +847,7 @@
           return;
         }
 
+        // Connect
         let resp;
         try {
           resp = await provider.connect();
@@ -689,15 +856,21 @@
             setStatus("Connection rejected by user", "error");
             return;
           }
-          resp = await provider.connect({ onlyIfTrusted: false });
+          try {
+            resp = await provider.connect({ onlyIfTrusted: false });
+          } catch {
+            throw err;
+          }
         }
 
+        // Extract public key
         const pkObj = resp?.publicKey || provider.publicKey;
         if (!pkObj) throw new Error("No public key returned");
 
         walletProvider = provider;
         walletPublicKey = typeof pkObj === "string" ? new PublicKey(pkObj) : pkObj;
 
+        // Metaplex JS for reads (CM state + NFTs)
         metaplex = Metaplex.make(connection).use(mplWalletIdentity({
           publicKey: walletPublicKey,
           signTransaction: (tx) => provider.signTransaction(tx),
@@ -705,15 +878,18 @@
           signMessage: provider.signMessage ? (msg) => provider.signMessage(msg) : undefined
         }));
 
+        // UMI for MintV2 (FIX)
         umi = createUmi(currentRpcUrl).use(mplCandyMachine());
         umi.use(walletAdapterIdentity(walletProvider));
 
+        // Update UI
         walletLabel.textContent = `${walletType}: ${short(walletPublicKey.toBase58())}`;
         btnDisconnect.style.display = "inline-block";
         btnMyMints.disabled = false;
         btnMint.disabled = false;
 
         setStatus(`${walletType} connected!`, "success");
+
         await refreshAll();
 
         if (provider.on) {
@@ -736,7 +912,9 @@
     }
 
     async function disconnectWallet() {
-      try { if (walletProvider?.disconnect) await walletProvider.disconnect(); } catch {}
+      try {
+        if (walletProvider?.disconnect) await walletProvider.disconnect();
+      } catch {}
 
       walletProvider = null;
       walletPublicKey = null;
@@ -757,6 +935,9 @@
       setStatus("Disconnected.");
     }
 
+    // ============================================================================
+    // CANDY MACHINE STATE (On-Chain)
+    // ============================================================================
     async function fetchCandyMachineState() {
       if (!connection) return null;
 
@@ -774,6 +955,7 @@
         cmRemaining.textContent = remaining;
 
         renderLiveMintGrid(itemsRedeemed);
+
         return { itemsRedeemed, itemsAvailable, remaining };
       } catch (err) {
         console.error("Error fetching Candy Machine:", err);
@@ -785,6 +967,9 @@
       }
     }
 
+    // ============================================================================
+    // LIVE MINT GRID
+    // ============================================================================
     function renderLiveMintGrid(minted = 0) {
       const grid = $("liveMintGrid");
       const count = $("liveMintCount");
@@ -800,6 +985,9 @@
       }
     }
 
+    // ============================================================================
+    // USER NFT FETCHING
+    // ============================================================================
     async function fetchUserNFTs() {
       if (!walletPublicKey || !metaplex || !connection) {
         userCollectionNFTs = [];
@@ -825,6 +1013,9 @@
       }
     }
 
+    // ============================================================================
+    // MY MINTS DISPLAY
+    // ============================================================================
     async function renderMyMints() {
       const grid = $("myMintsGrid");
       const empty = $("myMintsEmpty");
@@ -868,24 +1059,9 @@
       }
     }
 
-    function isWalletInMerkleAllowlist(walletBase58) {
-      return ALLOWLIST_SORTED.includes(String(walletBase58).trim());
-    }
-
-    function safeMerkleProofForWallet(walletBase58) {
-      const wallet = String(walletBase58).trim();
-      const inList = isWalletInMerkleAllowlist(wallet);
-      if (!inList) return { inList: false, root: null, proof: null };
-
-      const root = getMerkleRoot(ALLOWLIST_SORTED);
-      const proof = getMerkleProof(ALLOWLIST_SORTED, wallet);
-
-      // proof can be [] for some trees, but it should never be undefined if wallet is included properly
-      if (!proof) return { inList: false, root: null, proof: null };
-
-      return { inList: true, root, proof };
-    }
-
+    // ============================================================================
+    // REFRESH ALL DATA
+    // ============================================================================
     async function refreshAll() {
       if (!connection) {
         setStatus("Not connected to Solana", "error");
@@ -893,6 +1069,7 @@
       }
 
       setStatus("Refreshing...");
+
       await fetchCandyMachineState();
 
       if (walletPublicKey) {
@@ -904,8 +1081,7 @@
         }
 
         const wallet = walletPublicKey.toBase58();
-        const isWL = isWalletInMerkleAllowlist(wallet);
-
+        const isWL = WHITELIST.has(wallet);
         wlStatus.innerHTML = isWL
           ? 'Whitelist <span class="wl-badge">WL</span>'
           : "Public";
@@ -919,6 +1095,9 @@
       setStatus("Ready.");
     }
 
+    // ============================================================================
+    // MINT FUNCTION (MintV2 FIX)
+    // ============================================================================
     async function mintNFT() {
       if (!connection) {
         setStatus("Not connected to Solana", "error");
@@ -938,9 +1117,9 @@
         setStatus("Preparing mint...");
 
         const wallet = walletPublicKey.toBase58();
-        const wlCheck = safeMerkleProofForWallet(wallet);
-        const isWL = wlCheck.inList;
+        const isWL = WHITELIST.has(wallet);
 
+        // Check user limits
         await fetchUserNFTs();
         const currentMints = userCollectionNFTs.length;
         const limit = isWL ? CONFIG.WL_LIMIT : CONFIG.PUBLIC_LIMIT;
@@ -949,12 +1128,14 @@
           return;
         }
 
+        // Check sold out
         const cmState = await fetchCandyMachineState();
         if (cmState && cmState.remaining <= 0) {
           setStatus("SOLD OUT! 🔥", "error");
           return;
         }
 
+        // Check balance
         const price = isWL ? CONFIG.WL_PRICE_SOL : CONFIG.PUBLIC_PRICE_SOL;
         const balance = await connection.getBalance(walletPublicKey);
         const required = (price + 0.02) * LAMPORTS_PER_SOL;
@@ -965,27 +1146,45 @@
 
         setStatus(`Minting for ${price} SOL... approve in wallet 🔥`);
 
+        // Fetch CM and Guard via UMI
         const cmPk = publicKey(CONFIG.CANDY_MACHINE_ID);
         const umiCm = await fetchCandyMachine(umi, cmPk);
         const umiGuard = await fetchCandyGuard(umi, umiCm.mintAuthority);
 
+        // Detect on-chain guard config (groups vs default-only)
         const hasGroups = umiGuard.groups && umiGuard.groups.length > 0;
         const wlGroup = hasGroups ? umiGuard.groups.find(g => g.label === "wl") : null;
         const publicGroup = hasGroups ? umiGuard.groups.find(g => g.label === "public") : null;
 
+        console.log("Guard config:", {
+          hasGroups,
+          groupLabels: umiGuard.groups?.map(g => g.label),
+          hasDefault: !!umiGuard.guards,
+          wlGroup: !!wlGroup,
+          publicGroup: !!publicGroup
+        });
+
+        // Build mint parameters based on what's actually on-chain
         let group = none();
         let mintArgs = {
           solPayment: some({ destination: publicKey(CONFIG.TREASURY) })
         };
 
-        // Try WL route ONLY if:
-        // - on-chain has a wl group
-        // - wallet is truly in merkle list
-        // - proof is not undefined
-        if (hasGroups && wlGroup && isWL && wlCheck.proof) {
+        if (hasGroups && isWL && wlGroup) {
+          // WL group exists on-chain — use it with allowList proof
           group = some("wl");
-          setStatus("Validating whitelist proof...");
 
+          // Debug: log computed merkle root vs on-chain
+          const computedRoot = getMerkleRoot(ALLOWLIST_SORTED);
+          const rootHex = Array.from(computedRoot).map(b => b.toString(16).padStart(2, "0")).join("");
+          console.log("Computed merkle root:", rootHex);
+          console.log("On-chain merkle root (from config):", "15f5eecd4c41bac35fbba205b5057347d93b862de2492d1fa72624118a494732");
+          console.log("Roots match:", rootHex === "15f5eecd4c41bac35fbba205b5057347d93b862de2492d1fa72624118a494732");
+          console.log("Wallet address:", wallet);
+          console.log("Wallet in ALLOWLIST_SORTED:", ALLOWLIST_SORTED.includes(wallet));
+          console.log("ALLOWLIST_SORTED length:", ALLOWLIST_SORTED.length);
+
+          setStatus("Validating whitelist proof...");
           try {
             await route(umi, {
               candyMachine: umiCm.publicKey,
@@ -994,40 +1193,34 @@
               group: some("wl"),
               routeArgs: {
                 path: "proof",
-                merkleRoot: wlCheck.root,
-                merkleProof: wlCheck.proof
+                merkleRoot: computedRoot,
+                merkleProof: getMerkleProof(ALLOWLIST_SORTED, wallet)
               }
             }).sendAndConfirm(umi);
           } catch (routeErr) {
-            const msg = String(routeErr?.message || "");
-            const isNotInList =
-              msg.includes("AddressNotFoundInAllowedList") ||
-              msg.includes("6026") ||
-              msg.toLowerCase().includes("not found on the allowed list");
-
-            console.warn("WL route failed:", routeErr);
-
-            if (isNotInList) {
-              // wallet isn't in the merkle tree the guard expects
-              // fall back to public cleanly
-              if (publicGroup) {
-                group = some("public");
-                setStatus("WL proof rejected — switching to public mint…");
-              } else {
-                group = none();
-                setStatus("WL proof rejected — minting without group…");
-              }
-            } else if (msg.includes("already in use")) {
-              // proof receipt exists, ok
+            // If proof receipt already exists, that's fine — continue to mint
+            if (routeErr?.message?.includes("already in use")) {
               console.log("Proof receipt already exists, proceeding to mint");
             } else {
-              // unknown route error
-              throw routeErr;
+              // WL proof failed — fall back to public mint
+              console.warn("WL proof failed, falling back to public mint:", routeErr?.message);
+              if (publicGroup) {
+                group = some("public");
+                mintArgs = { solPayment: some({ destination: publicKey(CONFIG.TREASURY) }) };
+                setStatus("WL proof failed — minting at public price instead...");
+              } else {
+                throw routeErr;
+              }
             }
           }
+
         } else if (hasGroups && publicGroup) {
+          // Public group exists on-chain
           group = some("public");
+
         } else {
+          // No groups — use default guard
+          console.log("No groups found on-chain, using default guard");
           group = none();
         }
 
@@ -1048,20 +1241,25 @@
 
       } catch (err) {
         console.error("Mint error:", err);
+        console.error("Full error details:", JSON.stringify(err, null, 2));
 
-        const msg = String(err?.message || "");
-        if (msg.includes("rejected") || err?.code === 4001) {
+        if (err?.message?.includes("rejected") || err?.code === 4001) {
           setStatus("Transaction cancelled by user", "error");
-        } else if (msg.toLowerCase().includes("insufficient")) {
+        } else if (err?.message?.includes("insufficient")) {
           setStatus("Insufficient SOL balance", "error");
+        } else if (err?.message?.includes("6005") || err?.message?.includes("not initialized")) {
+          setStatus("Mint failed: Guard account not initialized. Check browser console (F12) for guard config details.", "error");
         } else {
-          setStatus(`Mint failed: ${msg || "Unknown error"}. Check console (F12).`, "error");
+          setStatus(`Mint failed: ${err?.message || "Unknown error"}. Check console (F12) for details.`, "error");
         }
       } finally {
         btnMint.disabled = !walletPublicKey;
       }
     }
 
+    // ============================================================================
+    // EVENT LISTENERS
+    // ============================================================================
     btnConnect.addEventListener("click", openWalletModal);
     $("closeWalletModal").addEventListener("click", closeWalletModal);
     $("closeMyMintsModal").addEventListener("click", closeMyMintsModal);
@@ -1084,9 +1282,16 @@
       openMyMintsModal();
     });
 
-    walletModal.addEventListener("click", (e) => { if (e.target === walletModal) closeWalletModal(); });
-    myMintsModal.addEventListener("click", (e) => { if (e.target === myMintsModal) closeMyMintsModal(); });
+    walletModal.addEventListener("click", (e) => {
+      if (e.target === walletModal) closeWalletModal();
+    });
+    myMintsModal.addEventListener("click", (e) => {
+      if (e.target === myMintsModal) closeMyMintsModal();
+    });
 
+    // ============================================================================
+    // INITIALIZATION
+    // ============================================================================
     async function init() {
       setStatus("Connecting to Solana...");
 
