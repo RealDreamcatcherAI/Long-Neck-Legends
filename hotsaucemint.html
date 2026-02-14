@@ -502,7 +502,7 @@
     // --- MintV2 (UMI) imports — pinned to match local node versions for merkle compatibility ---
     import { createUmi } from "https://esm.sh/@metaplex-foundation/umi-bundle-defaults@0.8.10";
     import { walletAdapterIdentity } from "https://esm.sh/@metaplex-foundation/umi-signer-wallet-adapters@0.8.10";
-    import { publicKey, some, none, generateSigner } from "https://esm.sh/@metaplex-foundation/umi@0.8.10";
+    import { publicKey, some, none, generateSigner, transactionBuilder } from "https://esm.sh/@metaplex-foundation/umi@0.8.10";
     import {
       mplCandyMachine,
       fetchCandyMachine,
@@ -513,6 +513,7 @@
       getMerkleRoot
     } from "https://esm.sh/@metaplex-foundation/mpl-candy-machine@6.1.0";
     import { mplTokenMetadata } from "https://esm.sh/@metaplex-foundation/mpl-token-metadata@3.0.0-alpha.27";
+    import { setComputeUnitLimit } from "https://esm.sh/@metaplex-foundation/mpl-toolbox@0.10.0";
 
     // ============================================================================
     // CONFIGURATION (Single source of truth)
@@ -1271,16 +1272,25 @@
 
         const nftMint = generateSigner(umi);
         console.log("Generated nftMint:", nftMint.publicKey);
+        console.log("Candy machine tokenStandard:", umiCm.tokenStandard);
+        console.log("Candy machine authority:", umiCm.authority);
+        console.log("Collection mint:", umiCm.collectionMint);
+        console.log("Mint group:", group);
+        console.log("Mint args:", JSON.stringify(mintArgs, (k,v) => typeof v === 'bigint' ? v.toString() : v));
 
-        const res = await mintV2(umi, {
-          candyMachine: umiCm.publicKey,
-          candyGuard: umiCm.mintAuthority,
-          nftMint,
-          collectionMint: umiCm.collectionMint,
-          collectionUpdateAuthority: umiCm.authority,
-          group,
-          mintArgs
-        }).sendAndConfirm(umi);
+        const res = await transactionBuilder()
+          .add(setComputeUnitLimit(umi, { units: 800_000 }))
+          .add(mintV2(umi, {
+            candyMachine: umiCm.publicKey,
+            candyGuard: umiCm.mintAuthority,
+            nftMint,
+            collectionMint: umiCm.collectionMint,
+            collectionUpdateAuthority: umiCm.authority,
+            tokenStandard: umiCm.tokenStandard,
+            group,
+            mintArgs
+          }))
+          .sendAndConfirm(umi);
 
         console.log("MintV2 signature:", res.signature);
         setStatus(`✅ Minted! Tx: ${short(res.signature)}`, "success");
