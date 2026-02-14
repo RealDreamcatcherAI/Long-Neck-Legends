@@ -512,6 +512,7 @@
       getMerkleProof,
       getMerkleRoot
     } from "https://esm.sh/@metaplex-foundation/mpl-candy-machine@6.1.0";
+    import { mplTokenMetadata } from "https://esm.sh/@metaplex-foundation/mpl-token-metadata@3.0.0-alpha.27";
 
     // ============================================================================
     // CONFIGURATION (Single source of truth)
@@ -879,7 +880,7 @@
         }));
 
         // UMI for MintV2 (FIX)
-        umi = createUmi(currentRpcUrl).use(mplCandyMachine());
+        umi = createUmi(currentRpcUrl).use(mplCandyMachine()).use(mplTokenMetadata());
         umi.use(walletAdapterIdentity(walletProvider));
 
         // === ON-CHAIN GUARD DEBUG ===
@@ -1214,11 +1215,8 @@
           const computedRoot = getMerkleRoot(ALLOWLIST_SORTED);
           const rootHex = Array.from(computedRoot).map(b => b.toString(16).padStart(2, "0")).join("");
           console.log("Computed merkle root:", rootHex);
-          console.log("On-chain merkle root (from config):", "15f5eecd4c41bac35fbba205b5057347d93b862de2492d1fa72624118a494732");
-          console.log("Roots match:", rootHex === "15f5eecd4c41bac35fbba205b5057347d93b862de2492d1fa72624118a494732");
           console.log("Wallet address:", wallet);
           console.log("Wallet in ALLOWLIST_SORTED:", ALLOWLIST_SORTED.includes(wallet));
-          console.log("ALLOWLIST_SORTED length:", ALLOWLIST_SORTED.length);
 
           setStatus("Validating whitelist proof...");
           try {
@@ -1233,6 +1231,7 @@
                 merkleProof: getMerkleProof(ALLOWLIST_SORTED, wallet)
               }
             }).sendAndConfirm(umi);
+            console.log("WL proof validated successfully");
           } catch (routeErr) {
             // If proof receipt already exists, that's fine — continue to mint
             if (routeErr?.message?.includes("already in use")) {
@@ -1248,6 +1247,14 @@
                 throw routeErr;
               }
             }
+          }
+
+          // CRITICAL: include allowList in mintArgs so SDK adds proof receipt PDA
+          if (group.__option === "Some" && group.value === "wl") {
+            mintArgs = {
+              solPayment: some({ destination: publicKey(CONFIG.TREASURY) }),
+              allowList: some({ merkleRoot: computedRoot })
+            };
           }
 
         } else if (hasGroups && publicGroup) {
