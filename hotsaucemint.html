@@ -933,7 +933,7 @@
         walletLabel.textContent = `${walletType}: ${short(walletPublicKey.toBase58())}`;
         btnDisconnect.style.display = "inline-block";
         btnMyMints.disabled = false;
-        btnMint.disabled = true;
+        btnMint.disabled = false;
 
         setStatus(`${walletType} connected!`, "success");
 
