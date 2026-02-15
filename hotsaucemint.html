@@ -1,5 +1,4 @@
-
-  <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <link rel="icon" type="image/png" sizes="32x32" href="https://i.imgur.com/jpGdtHJ.jpeg">
@@ -381,6 +380,24 @@
           <div class="wallet-name">Magic Eden</div>
           <div class="wallet-status" id="magicedenStatus">Checking...</div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- My Mints Modal -->
+  <div class="modal" id="myMintsModal">
+    <div class="modal-content" style="max-width: 820px;">
+      <button class="close-modal" id="closeMyMintsModal">×</button>
+      <h3 style="margin-bottom:0.75rem;">My Mints</h3>
+      <div style="opacity:0.8; font-size:0.95rem; text-align:center; margin-bottom: 1rem;">
+        Your minted Hot Sauce NFTs from this collection.
+      </div>
+      <div id="myMintsGrid" class="mint-display-grid"></div>
+      <div id="myMintsEmpty" style="display:none; text-align:center; opacity:0.7; padding: 1.25rem 0;">
+        No mints yet. Hit <strong>Mint Hot Sauce NFT</strong> when you're ready. 🔥
+      </div>
+      <div id="myMintsLoading" style="text-align:center; padding: 1.25rem 0; display:none;">
+        <span class="loading-spinner"></span> Loading your NFTs...
       </div>
     </div>
   </div>
