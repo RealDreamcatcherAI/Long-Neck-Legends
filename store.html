@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="icon" type="image/png" sizes="32x32" href="https://i.imgur.com/jpGdtHJ.jpeg">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LNL STORE | Long Neck Legends</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Orbitron:wght@700;900&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-dark: #0a0a1a;
+      --bg-card: #111125;
+      --bg-card-hover: #1a1a35;
+      --accent: #00d4ff;
+      --accent-glow: rgba(0, 212, 255, 0.35);
+      --purple: #7b68ee;
+      --purple-glow: rgba(123, 104, 238, 0.25);
+      --text-primary: #e0e0ff;
+      --text-secondary: #888;
+      --text-dim: #555;
+      --border: #1e1e3a;
+      --success: #00ff88;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Space Grotesk', sans-serif;
+      background: var(--bg-dark);
+      color: var(--text-primary);
+      overflow-x: hidden;
+      opacity: 0;
+      transition: opacity 0.8s ease;
+    }
+    body.loaded { opacity: 1; }
+
+    /* ---- NAV (matches site) ---- */
+    nav {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      padding: 1rem 0;
+      background: rgba(10,10,26,0.92);
+      backdrop-filter: blur(12px);
+      z-index: 1000;
+      text-align: center;
+      border-bottom: 1px solid rgba(0,212,255,0.15);
+    }
+    nav a {
+      color: var(--text-primary);
+      margin: 0 1.5rem;
+      text-decoration: none;
+      font-weight: 600;
+      position: relative;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+    }
+    nav a::after {
+      content: '';
+      position: absolute;
+      bottom: -5px;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background: var(--accent);
+      transition: 0.3s;
+    }
+    nav a:hover::after { width: 100%; }
+    nav a:hover { color: var(--accent); }
+
+    /* ---- HERO ---- */
+    .hero {
+      margin-top: 60px;
+      padding: 5rem 2rem 3rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      border-bottom: 1px solid var(--border);
+    }
+    .hero::before {
+      content: 'LNL';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(200px, 30vw, 500px);
+      color: rgba(0,212,255,0.04);
+      pointer-events: none;
+      white-space: nowrap;
+      letter-spacing: 20px;
+    }
+    .hero-tag {
+      display: inline-block;
+      background: var(--accent);
+      color: #000;
+      font-weight: 700;
+      font-size: 0.7rem;
+      padding: 4px 14px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+    }
+    .hero h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(3rem, 8vw, 7rem);
+      letter-spacing: 6px;
+      line-height: 0.95;
+      margin-bottom: 1rem;
+    }
+    .hero h1 span {
+      color: var(--accent);
+      text-shadow: 0 0 40px var(--accent-glow);
+    }
+    .hero-sub {
+      color: var(--text-secondary);
+      font-size: 1.05rem;
+      max-width: 500px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* ---- WALLET BAR ---- */
+    .wallet-bar {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      padding: 0.9rem 2rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .wallet-bar .wallet-info {
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+    }
+    .wallet-bar .wallet-info strong {
+      color: var(--text-primary);
+      font-weight: 700;
+    }
+    .wallet-btn {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      padding: 8px 22px;
+      font-weight: 700;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: 'Space Grotesk', sans-serif;
+    }
+    .wallet-btn:hover {
+      background: #fff;
+      box-shadow: 0 0 20px var(--accent-glow);
+    }
+    .wallet-btn.disconnect {
+      background: transparent;
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+      font-size: 0.75rem;
+      padding: 6px 14px;
+    }
+    .wallet-btn.disconnect:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: transparent;
+      box-shadow: none;
+    }
+    .wallet-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .wallet-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+    }
+
+    /* ---- FILTER TABS ---- */
+    .filter-bar {
+      display: flex;
+      justify-content: center;
+      gap: 0;
+      padding: 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .filter-tab {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.2rem;
+      letter-spacing: 3px;
+      padding: 1rem 2.5rem;
+      cursor: pointer;
+      position: relative;
+      transition: color 0.2s;
+    }
+    .filter-tab:hover { color: var(--text-primary); }
+    .filter-tab.active {
+      color: var(--text-primary);
+    }
+    .filter-tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: var(--accent);
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+
+    /* ---- PRODUCT GRID ---- */
+    .store-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1px;
+      background: var(--border);
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .product-card {
+      background: var(--bg-card);
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .product-card:hover { background: var(--bg-card-hover); }
+    .product-card:hover .product-img img {
+      transform: scale(1.05);
+    }
+    .product-card:hover .quick-buy {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .product-img {
+      position: relative;
+      overflow: hidden;
+      background: #0d0d0d;
+      aspect-ratio: 1;
+    }
+    .product-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .product-tag {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      background: var(--accent);
+      color: #000;
+      font-weight: 700;
+      font-size: 0.65rem;
+      padding: 3px 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      z-index: 2;
+    }
+    .product-tag.sold-out {
+      background: #333;
+      color: #888;
+    }
+    .product-tag.limited {
+      background: var(--purple);
+    }
+
+    .quick-buy {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(transparent, rgba(0,0,0,0.9));
+      padding: 2rem 1rem 1rem;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.3s;
+    }
+    .quick-buy button {
+      width: 100%;
+      background: var(--accent);
+      color: #000;
+      border: none;
+      padding: 12px;
+      font-weight: 700;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      cursor: pointer;
+      font-family: 'Space Grotesk', sans-serif;
+      transition: background 0.2s;
+    }
+    .quick-buy button:hover { background: #fff; }
+    .quick-buy button:disabled {
+      background: #333;
+      color: #666;
+      cursor: not-allowed;
+    }
+
+    .product-info {
+      padding: 1.2rem 1.2rem 1.5rem;
+    }
+    .product-name {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.35rem;
+      letter-spacing: 2px;
+      margin-bottom: 0.2rem;
+    }
+    .product-desc {
+      color: var(--text-secondary);
+      font-size: 0.8rem;
+      line-height: 1.5;
+      margin-bottom: 0.8rem;
+    }
+    .product-price {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .sol-price {
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--text-primary);
+    }
+    .sol-icon {
+      width: 16px;
+      height: 16px;
+      opacity: 0.7;
+    }
+    .usd-equiv {
+      color: var(--text-dim);
+      font-size: 0.75rem;
+    }
+    .stock-info {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-top: 0.5rem;
+    }
+    .stock-info.low { color: var(--accent); }
+
+    /* ---- CART DRAWER ---- */
+    .cart-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 2000;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s;
+    }
+    .cart-overlay.open { opacity: 1; visibility: visible; }
+
+    .cart-drawer {
+      position: fixed;
+      top: 0;
+      right: -420px;
+      width: 400px;
+      max-width: 90vw;
+      height: 100vh;
+      background: var(--bg-card);
+      border-left: 1px solid var(--border);
+      z-index: 2001;
+      transition: right 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      flex-direction: column;
+    }
+    .cart-drawer.open { right: 0; }
+
+    .cart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .cart-header h3 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.5rem;
+      letter-spacing: 3px;
+    }
+    .cart-close {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 1.5rem;
+      cursor: pointer;
+      padding: 4px 8px;
+      transition: color 0.2s;
+    }
+    .cart-close:hover { color: var(--accent); }
+
+    .cart-items {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem 1.5rem;
+    }
+    .cart-empty {
+      text-align: center;
+      color: var(--text-dim);
+      padding: 3rem 1rem;
+      font-size: 0.85rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .cart-item {
+      display: flex;
+      gap: 1rem;
+      padding: 1rem 0;
+      border-bottom: 1px solid var(--border);
+      align-items: center;
+    }
+    .cart-item-img {
+      width: 70px;
+      height: 70px;
+      object-fit: cover;
+      background: #0d0d0d;
+      flex-shrink: 0;
+    }
+    .cart-item-details { flex: 1; }
+    .cart-item-name {
+      font-weight: 700;
+      font-size: 0.85rem;
+      letter-spacing: 0.5px;
+      margin-bottom: 2px;
+    }
+    .cart-item-variant {
+      color: var(--text-dim);
+      font-size: 0.75rem;
+    }
+    .cart-item-price {
+      font-weight: 700;
+      font-size: 0.9rem;
+      white-space: nowrap;
+    }
+    .cart-item-remove {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 4px;
+      padding: 0;
+      transition: color 0.2s;
+    }
+    .cart-item-remove:hover { color: var(--accent); }
+
+    .cart-footer {
+      border-top: 1px solid var(--border);
+      padding: 1.5rem;
+    }
+    .cart-total {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .cart-total-label {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.2rem;
+      letter-spacing: 2px;
+    }
+    .cart-total-amount {
+      font-weight: 700;
+      font-size: 1.3rem;
+    }
+    .cart-checkout-btn {
+      width: 100%;
+      background: var(--accent);
+      color: #000;
+      border: none;
+      padding: 14px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      cursor: pointer;
+      font-family: 'Space Grotesk', sans-serif;
+      transition: all 0.2s;
+    }
+    .cart-checkout-btn:hover {
+      background: #fff;
+      box-shadow: 0 0 30px var(--accent-glow);
+    }
+    .cart-checkout-btn:disabled {
+      background: #333;
+      color: #666;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    /* Cart count badge */
+    .cart-toggle {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      width: 60px;
+      height: 60px;
+      background: var(--accent);
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      z-index: 1500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 30px var(--accent-glow);
+      transition: all 0.2s;
+    }
+    .cart-toggle:hover {
+      transform: scale(1.1);
+      box-shadow: 0 4px 40px rgba(0,212,255,0.5);
+    }
+    .cart-toggle svg { width: 24px; height: 24px; fill: #000; }
+    .cart-badge {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      background: #fff;
+      color: #000;
+      font-weight: 800;
+      font-size: 0.7rem;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transform: scale(0);
+      transition: all 0.2s;
+    }
+    .cart-badge.show { opacity: 1; transform: scale(1); }
+
+    /* ---- STATUS TOAST ---- */
+    .toast {
+      position: fixed;
+      bottom: 6rem;
+      right: 2rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      padding: 0.9rem 1.4rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      z-index: 3000;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.3s;
+      max-width: 300px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .toast.success { border-color: var(--success); color: var(--success); }
+    .toast.error { border-color: var(--accent); color: var(--accent); }
+
+    /* ---- PRODUCT MODAL ---- */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 3000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      max-width: 900px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+    @media (max-width: 700px) {
+      .modal { grid-template-columns: 1fr; }
+    }
+    .modal-img {
+      aspect-ratio: 1;
+      overflow: hidden;
+      background: #0d0d0d;
+    }
+    .modal-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .modal-body {
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .modal-close {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: rgba(0,0,0,0.6);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      width: 36px;
+      height: 36px;
+      font-size: 1.2rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    .modal-close:hover {
+      background: var(--accent);
+      color: #000;
+      border-color: var(--accent);
+    }
+    .modal-name {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2rem;
+      letter-spacing: 3px;
+    }
+    .modal-desc {
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      line-height: 1.7;
+    }
+    .modal-price {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+    .modal-variants {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .variant-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      padding: 6px 16px;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      cursor: pointer;
+      font-family: 'Space Grotesk', sans-serif;
+      transition: all 0.2s;
+    }
+    .variant-btn:hover,
+    .variant-btn.selected {
+      border-color: var(--accent);
+      color: var(--text-primary);
+      background: rgba(0,212,255,0.08);
+    }
+    .modal-add-btn {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      padding: 14px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      cursor: pointer;
+      font-family: 'Space Grotesk', sans-serif;
+      transition: all 0.2s;
+      margin-top: auto;
+    }
+    .modal-add-btn:hover {
+      background: #fff;
+    }
+
+    /* ---- FOOTER ---- */
+    footer {
+      text-align: center;
+      padding: 3rem 2rem;
+      border-top: 1px solid var(--border);
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    /* ---- RESPONSIVE ---- */
+    @media (max-width: 600px) {
+      .store-grid { grid-template-columns: repeat(2, 1fr); }
+      .hero { padding: 4rem 1.5rem 2rem; }
+      .filter-tab { padding: 0.8rem 1.2rem; font-size: 1rem; }
+      nav a { margin: 0 0.8rem; font-size: 0.75rem; }
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-dark); }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="https://longnecklegends.xyz/">Home</a>
+    <a href="https://longnecklegends.xyz/#about">About</a>
+    <a href="https://longnecklegends.xyz/#team">Team</a>
+    <a href="/music.html">Music</a>
+    <a href="/starternecks.html">Starter Necks</a>
+    <a href="/hotsaucemint.html">Mint</a>
+    <a href="/store.html" style="color:var(--accent);">Store</a>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-tag">NOW SHIPPING WORLDWIDE</div>
+    <h1>LNL <span>SUPPLY</span></h1>
+    <p class="hero-sub">Official drops. Hot sauce, merch, and everything Long Neck. Pay with SOL.</p>
+  </section>
+
+  <!-- WALLET BAR -->
+  <div class="wallet-bar">
+    <div id="walletInfoArea">
+      <button class="wallet-btn" id="btnConnectStore" onclick="connectWallet()">CONNECT WALLET</button>
+    </div>
+  </div>
+
+  <!-- FILTER TABS -->
+  <div class="filter-bar">
+    <button class="filter-tab active" onclick="filterProducts('all', this)">ALL</button>
+    <button class="filter-tab" onclick="filterProducts('sauce', this)">HOT SAUCE</button>
+    <button class="filter-tab" onclick="filterProducts('merch', this)">MERCH</button>
+  </div>
+
+  <!-- PRODUCT GRID -->
+  <div class="store-grid" id="productGrid"></div>
+
+  <!-- CART TOGGLE BUTTON -->
+  <button class="cart-toggle" onclick="toggleCart()">
+    <svg viewBox="0 0 24 24"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>
+    <span class="cart-badge" id="cartBadge">0</span>
+  </button>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast"></div>
+
+  <!-- CART DRAWER -->
+  <div class="cart-overlay" id="cartOverlay" onclick="toggleCart()"></div>
+  <div class="cart-drawer" id="cartDrawer">
+    <div class="cart-header">
+      <h3>YOUR BAG</h3>
+      <button class="cart-close" onclick="toggleCart()">&times;</button>
+    </div>
+    <div class="cart-items" id="cartItems">
+      <div class="cart-empty">YOUR BAG IS EMPTY</div>
+    </div>
+    <div class="cart-footer">
+      <div class="cart-total">
+        <span class="cart-total-label">TOTAL</span>
+        <span class="cart-total-amount" id="cartTotal">0 SOL</span>
+      </div>
+      <button class="cart-checkout-btn" id="btnCheckout" onclick="checkout()" disabled>PAY WITH SOL</button>
+    </div>
+  </div>
+
+  <!-- PRODUCT MODAL -->
+  <div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+    <div class="modal" id="productModal">
+      <div class="modal-img"><img id="modalImg" src="" alt=""></div>
+      <div class="modal-body">
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+        <div id="modalTag" class="product-tag" style="display:inline-block;width:fit-content;position:static;"></div>
+        <h2 class="modal-name" id="modalName"></h2>
+        <p class="modal-desc" id="modalDesc"></p>
+        <div class="modal-price" id="modalPrice"></div>
+        <div class="modal-variants" id="modalVariants"></div>
+        <button class="modal-add-btn" id="modalAddBtn" onclick="addToCartFromModal()">ADD TO BAG</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>&copy; 2026 Long Neck Legends &bull; All rights reserved</p>
+  </footer>
+
+  <script>
+    window.addEventListener('load', () => document.body.classList.add('loaded'));
+
+    // =========================================================================
+    // PRODUCT DATA — edit these to update your store
+    // =========================================================================
+    const PRODUCTS = [
+      {
+        id: "mango-hab-single",
+        name: "Mango Habanero Hot Sauce",
+        desc: "Our flagship sauce. Sweet mango heat meets smoky habanero. 5oz bottle, handcrafted in small batches.",
+        price: 0.08,
+        image: "https://i.imgur.com/jpGdtHJ.jpeg",
+        category: "sauce",
+        tag: "DROP 1",
+        stock: 100,
+        variants: null
+      },
+      {
+        id: "mango-hab-3pack",
+        name: "Mango Habanero 3-Pack",
+        desc: "Three bottles of the Mango Habanero. Perfect for the kitchen, the grill, and the stash.",
+        price: 0.2,
+        image: "https://i.imgur.com/jpGdtHJ.jpeg",
+        category: "sauce",
+        tag: "BUNDLE",
+        stock: 50,
+        variants: null
+      },
+      {
+        id: "lnl-tee-black",
+        name: "LNL Logo Tee",
+        desc: "Heavyweight 100% cotton. Oversized fit. Long Neck Legends logo front and back. Runs big — size down if you want fitted.",
+        price: 0.15,
+        image: "https://placehold.co/600x600/111125/7b68ee?text=LNL+TEE",
+        category: "merch",
+        tag: "NEW",
+        stock: 75,
+        variants: ["S", "M", "L", "XL", "XXL"]
+      },
+      {
+        id: "lnl-hoodie",
+        name: "LNL Heavyweight Hoodie",
+        desc: "400gsm French terry. Embroidered logo. Dropped shoulders, ribbed cuffs. The hoodie that goes hard.",
+        price: 0.35,
+        image: "https://placehold.co/600x600/111125/7b68ee?text=LNL+HOODIE",
+        category: "merch",
+        tag: "LIMITED",
+        stock: 30,
+        variants: ["S", "M", "L", "XL", "XXL"]
+      },
+      {
+        id: "lnl-hat",
+        name: "LNL Snapback",
+        desc: "Structured 6-panel snapback. Embroidered LNL on front, Long Neck Legends script on back.",
+        price: 0.1,
+        image: "https://placehold.co/600x600/111125/7b68ee?text=LNL+HAT",
+        category: "merch",
+        tag: "NEW",
+        stock: 100,
+        variants: null
+      },
+      {
+        id: "lnl-sauce-bundle-all",
+        name: "The Collectors Box",
+        desc: "One of each sauce we make, plus an exclusive LNL sticker pack. Only available here.",
+        price: 0.45,
+        image: "https://placehold.co/600x600/111125/00d4ff?text=COLLECTORS+BOX",
+        category: "sauce",
+        tag: "EXCLUSIVE",
+        stock: 15,
+        variants: null
+      }
+    ];
+
+    const TREASURY = "ChnzFpK4ty2vpzM48HUrtDVY7tWD8StmYaNxQcKSBuyc";
+
+    // =========================================================================
+    // STATE
+    // =========================================================================
+    let cart = [];
+    let walletProvider = null;
+    let walletPublicKey = null;
+    let currentFilter = "all";
+    let modalProduct = null;
+    let modalVariant = null;
+
+    // =========================================================================
+    // RENDER PRODUCTS
+    // =========================================================================
+    function renderProducts(filter = "all") {
+      const grid = document.getElementById("productGrid");
+      grid.innerHTML = "";
+
+      const items = filter === "all"
+        ? PRODUCTS
+        : PRODUCTS.filter(p => p.category === filter);
+
+      items.forEach(product => {
+        const card = document.createElement("div");
+        card.className = "product-card";
+        card.dataset.category = product.category;
+        card.onclick = () => openModal(product);
+
+        const isLow = product.stock <= 20;
+        const soldOut = product.stock <= 0;
+
+        let tagClass = "";
+        if (soldOut) tagClass = "sold-out";
+        else if (product.tag === "LIMITED") tagClass = "limited";
+
+        card.innerHTML = `
+          <div class="product-img">
+            <div class="product-tag ${tagClass}">${soldOut ? "SOLD OUT" : product.tag}</div>
+            <img src="${product.image}" alt="${product.name}" loading="lazy">
+            <div class="quick-buy">
+              <button ${soldOut ? "disabled" : ""} onclick="event.stopPropagation(); quickAdd('${product.id}')">${soldOut ? "SOLD OUT" : "ADD TO BAG"}</button>
+            </div>
+          </div>
+          <div class="product-info">
+            <div class="product-name">${product.name}</div>
+            <div class="product-desc">${product.desc.substring(0, 70)}${product.desc.length > 70 ? "..." : ""}</div>
+            <div class="product-price">
+              <span class="sol-price">${product.price} SOL</span>
+            </div>
+            ${isLow && !soldOut ? `<div class="stock-info low">Only ${product.stock} left</div>` : ""}
+          </div>
+        `;
+
+        grid.appendChild(card);
+      });
+    }
+
+    function filterProducts(filter, el) {
+      currentFilter = filter;
+      document.querySelectorAll(".filter-tab").forEach(t => t.classList.remove("active"));
+      el.classList.add("active");
+      renderProducts(filter);
+    }
+
+    // =========================================================================
+    // MODAL
+    // =========================================================================
+    function openModal(product) {
+      modalProduct = product;
+      modalVariant = product.variants ? product.variants[0] : null;
+
+      document.getElementById("modalImg").src = product.image;
+      document.getElementById("modalName").textContent = product.name;
+      document.getElementById("modalDesc").textContent = product.desc;
+      document.getElementById("modalPrice").textContent = product.price + " SOL";
+      document.getElementById("modalTag").textContent = product.tag;
+      document.getElementById("modalTag").className = "product-tag" +
+        (product.tag === "LIMITED" ? " limited" : "");
+
+      const variantsEl = document.getElementById("modalVariants");
+      variantsEl.innerHTML = "";
+      if (product.variants) {
+        product.variants.forEach((v, i) => {
+          const btn = document.createElement("button");
+          btn.className = "variant-btn" + (i === 0 ? " selected" : "");
+          btn.textContent = v;
+          btn.onclick = () => {
+            modalVariant = v;
+            variantsEl.querySelectorAll(".variant-btn").forEach(b => b.classList.remove("selected"));
+            btn.classList.add("selected");
+          };
+          variantsEl.appendChild(btn);
+        });
+      }
+
+      const addBtn = document.getElementById("modalAddBtn");
+      addBtn.disabled = product.stock <= 0;
+      addBtn.textContent = product.stock <= 0 ? "SOLD OUT" : "ADD TO BAG";
+
+      document.getElementById("modalOverlay").classList.add("open");
+    }
+
+    function closeModal() {
+      document.getElementById("modalOverlay").classList.remove("open");
+      modalProduct = null;
+      modalVariant = null;
+    }
+
+    function addToCartFromModal() {
+      if (!modalProduct) return;
+      addToCart(modalProduct.id, modalVariant);
+      closeModal();
+    }
+
+    // =========================================================================
+    // CART
+    // =========================================================================
+    function quickAdd(productId) {
+      const product = PRODUCTS.find(p => p.id === productId);
+      if (!product || product.stock <= 0) return;
+      const defaultVariant = product.variants ? product.variants[1] || product.variants[0] : null; // default M
+      addToCart(productId, defaultVariant);
+    }
+
+    function addToCart(productId, variant = null) {
+      const product = PRODUCTS.find(p => p.id === productId);
+      if (!product || product.stock <= 0) return;
+
+      const key = productId + (variant ? "-" + variant : "");
+      const existing = cart.find(c => c.key === key);
+
+      if (existing) {
+        existing.qty += 1;
+      } else {
+        cart.push({
+          key,
+          productId,
+          variant,
+          name: product.name,
+          image: product.image,
+          price: product.price,
+          qty: 1
+        });
+      }
+
+      renderCart();
+      showToast("Added to bag", "success");
+    }
+
+    function removeFromCart(key) {
+      cart = cart.filter(c => c.key !== key);
+      renderCart();
+    }
+
+    function renderCart() {
+      const container = document.getElementById("cartItems");
+      const totalEl = document.getElementById("cartTotal");
+      const badge = document.getElementById("cartBadge");
+      const checkoutBtn = document.getElementById("btnCheckout");
+
+      const totalQty = cart.reduce((s, c) => s + c.qty, 0);
+      const totalPrice = cart.reduce((s, c) => s + c.price * c.qty, 0);
+
+      badge.textContent = totalQty;
+      badge.classList.toggle("show", totalQty > 0);
+
+      totalEl.textContent = totalPrice.toFixed(3) + " SOL";
+      checkoutBtn.disabled = totalQty === 0 || !walletPublicKey;
+
+      if (cart.length === 0) {
+        container.innerHTML = '<div class="cart-empty">YOUR BAG IS EMPTY</div>';
+        return;
+      }
+
+      container.innerHTML = cart.map(item => `
+        <div class="cart-item">
+          <img class="cart-item-img" src="${item.image}" alt="${item.name}">
+          <div class="cart-item-details">
+            <div class="cart-item-name">${item.name}</div>
+            ${item.variant ? `<div class="cart-item-variant">Size: ${item.variant}</div>` : ""}
+            <div class="cart-item-variant">Qty: ${item.qty}</div>
+            <button class="cart-item-remove" onclick="removeFromCart('${item.key}')">Remove</button>
+          </div>
+          <div class="cart-item-price">${(item.price * item.qty).toFixed(3)} SOL</div>
+        </div>
+      `).join("");
+    }
+
+    function toggleCart() {
+      document.getElementById("cartDrawer").classList.toggle("open");
+      document.getElementById("cartOverlay").classList.toggle("open");
+    }
+
+    // =========================================================================
+    // WALLET
+    // =========================================================================
+    async function connectWallet() {
+      try {
+        const provider = window.phantom?.solana
+          || window.solflare
+          || window.backpack
+          || window.solana;
+
+        if (!provider) {
+          showToast("No Solana wallet found", "error");
+          return;
+        }
+
+        const resp = await provider.connect();
+        walletProvider = provider;
+        walletPublicKey = resp.publicKey;
+
+        const short = walletPublicKey.toBase58();
+        const display = short.slice(0, 4) + "..." + short.slice(-4);
+
+        document.getElementById("walletInfoArea").innerHTML = `
+          <div class="wallet-status">
+            <div class="wallet-dot"></div>
+            <span class="wallet-info"><strong>${display}</strong></span>
+          </div>
+          <button class="wallet-btn disconnect" onclick="disconnectWallet()">DISCONNECT</button>
+        `;
+
+        renderCart();
+        showToast("Wallet connected", "success");
+      } catch (err) {
+        console.error("Wallet connect error:", err);
+        showToast("Connection failed", "error");
+      }
+    }
+
+    function disconnectWallet() {
+      if (walletProvider?.disconnect) walletProvider.disconnect();
+      walletProvider = null;
+      walletPublicKey = null;
+
+      document.getElementById("walletInfoArea").innerHTML =
+        '<button class="wallet-btn" onclick="connectWallet()">CONNECT WALLET</button>';
+
+      renderCart();
+    }
+
+    // =========================================================================
+    // CHECKOUT — SOL TRANSFER
+    // =========================================================================
+    async function checkout() {
+      if (!walletPublicKey || cart.length === 0) return;
+
+      const totalSOL = cart.reduce((s, c) => s + c.price * c.qty, 0);
+
+      try {
+        showToast("Preparing transaction...", "success");
+
+        // Dynamic import for checkout only
+        const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } =
+          await import("https://esm.sh/@solana/web3.js@1.95.2");
+
+        const connection = new Connection("https://mainnet.helius-rpc.com/?api-key=44cfd082-9089-430d-8de3-cd310c478b1c", "confirmed");
+
+        const lamports = Math.round(totalSOL * LAMPORTS_PER_SOL);
+
+        const tx = new Transaction().add(
+          SystemProgram.transfer({
+            fromPubkey: walletPublicKey,
+            toPubkey: new PublicKey(TREASURY),
+            lamports
+          })
+        );
+
+        tx.feePayer = walletPublicKey;
+        const { blockhash } = await connection.getLatestBlockhash();
+        tx.recentBlockhash = blockhash;
+
+        const signed = await walletProvider.signTransaction(tx);
+        const sig = await connection.sendRawTransaction(signed.serialize());
+
+        showToast("Confirming...", "success");
+        await connection.confirmTransaction(sig, "confirmed");
+
+        // Build order summary for records
+        const orderSummary = cart.map(c =>
+          `${c.qty}x ${c.name}${c.variant ? " ("+c.variant+")" : ""}`
+        ).join(", ");
+
+        console.log("ORDER CONFIRMED:", {
+          signature: sig,
+          total: totalSOL + " SOL",
+          items: orderSummary,
+          buyer: walletPublicKey.toBase58()
+        });
+
+        cart = [];
+        renderCart();
+        toggleCart();
+
+        showToast(`Order confirmed! Tx: ${sig.slice(0,8)}...`, "success");
+
+        // TODO: Send order details to your backend/Discord webhook
+
+      } catch (err) {
+        console.error("Checkout error:", err);
+        if (err?.message?.includes("reject") || err?.code === 4001) {
+          showToast("Transaction cancelled", "error");
+        } else {
+          showToast("Payment failed: " + (err?.message || "Unknown error"), "error");
+        }
+      }
+    }
+
+    // =========================================================================
+    // TOAST
+    // =========================================================================
+    let toastTimeout;
+    function showToast(msg, type = "") {
+      const toast = document.getElementById("toast");
+      toast.textContent = msg;
+      toast.className = "toast show " + type;
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => toast.classList.remove("show"), 3000);
+    }
+
+    // =========================================================================
+    // INIT
+    // =========================================================================
+    renderProducts();
+    renderCart();
+  </script>
+</body>
+</html>
