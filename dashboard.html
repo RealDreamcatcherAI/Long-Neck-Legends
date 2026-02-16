@@ -638,7 +638,7 @@
     window.addEventListener('load', function() { document.body.classList.add('loaded'); });
 
     var CONFIG = {
-      COLLECTION_MINT: "2WvxCvgFUiqUSBx32c5Z5Zsbcu4ZJCE1GEaaWpbD685P",
+      COLLECTION_MINT: "8Rt3Ayqth4DAiPnW9MDFi63TiQJHmohfTWLMQFHi4KZH",
       RPC_URL: "https://mainnet.helius-rpc.com/?api-key=44cfd082-9089-430d-8de3-cd310c478b1c",
       MAGIC_EDEN_LINK: "https://magiceden.us/marketplace/long_neck_legends"
     };
@@ -685,37 +685,34 @@
       return Math.floor(count * 100 * tier.pointsMultiplier);
     }
 
-    async function loadSDK() {
-      if (sdkLoaded) return true;
-      try {
-        document.querySelector(".connect-btn").textContent = "LOADING SDK...";
-        SolanaWeb3 = await import("https://esm.sh/@solana/web3.js@1.95.2");
-        MetaplexJS = await import("https://esm.sh/@metaplex-foundation/js@0.20.1");
-        sdkLoaded = true;
-        console.log("SDK loaded");
-        return true;
-      } catch (err) {
-        console.error("SDK load failed:", err);
-        alert("Failed to load SDK. Please refresh the page.");
-        document.querySelector(".connect-btn").textContent = "CONNECT WALLET";
-        return false;
-      }
+    async function loadSDK() { return true; }
+
+    function detectWalletProvider() {
+      if (window.phantom && window.phantom.solana && window.phantom.solana.isPhantom) return window.phantom.solana;
+      if (window.backpack && window.backpack.solana) return window.backpack.solana;
+      if (window.solflare && window.solflare.isSolflare) return window.solflare;
+      if (window.solflare && window.solflare.solana) return window.solflare.solana;
+      if (window.solana && window.solana.isPhantom) return window.solana;
+      if (window.solana) return window.solana;
+      return null;
     }
 
     async function connectWallet() {
       console.log("Connect clicked");
-      var provider = (window.phantom && window.phantom.solana) || window.solflare || window.backpack || window.solana;
-      console.log("Provider found:", !!provider);
-
-      if (!provider) {
-        alert("No Solana wallet found. Please install Phantom, Solflare, or Backpack.");
+      var provider = detectWalletProvider();
+      console.log("Provider:", provider);
+      if (!provider || typeof provider.connect !== "function") {
+        alert("No compatible Solana wallet found. Install Phantom, Solflare, or Backpack.");
         return;
       }
-
       try {
-        var resp = await provider.connect();
+        if (provider.isConnected && typeof provider.disconnect === "function") {
+          try { await provider.disconnect(); } catch (e) {}
+        }
+        var resp = await provider.connect({ onlyIfTrusted: false });
         walletProvider = provider;
-        walletPublicKey = resp.publicKey;
+        walletPublicKey = resp.publicKey || provider.publicKey;
+        if (!walletPublicKey) throw new Error("Wallet connected but no publicKey found.");
         console.log("Connected:", walletPublicKey.toBase58());
 
         var addr = walletPublicKey.toBase58();
@@ -750,76 +747,63 @@
 
     async function loadDashboard() {
       try {
-        var connection = new SolanaWeb3.Connection(CONFIG.RPC_URL, "confirmed");
-        var metaplex = MetaplexJS.Metaplex.make(connection);
-
-        var allNfts = await metaplex.nfts().findAllByOwner({ owner: walletPublicKey });
-
+        var owner = walletPublicKey.toBase58();
+        var res = await fetch(CONFIG.RPC_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: "lnl",
+            method: "getAssetsByOwner",
+            params: {
+              ownerAddress: owner,
+              page: 1,
+              limit: 1000,
+              displayOptions: { showCollectionMetadata: true }
+            }
+          })
+        });
+        var json = await res.json();
+        var items = (json && json.result && json.result.items) ? json.result.items : [];
         console.log("=== DASHBOARD DEBUG ===");
-        console.log("Total NFTs in wallet:", allNfts.length);
+        console.log("DAS total assets:", items.length);
         console.log("Looking for collection:", CONFIG.COLLECTION_MINT);
 
-        allNfts.slice(0, 10).forEach(function(nft, i) {
-          var col = nft.collection;
-          var colAddr = col ? (col.address && col.address.toBase58 ? col.address.toBase58() : col.address) : "none";
-          console.log("NFT " + i + ": " + nft.name + " | collection: " + colAddr + " | verified: " + (col ? col.verified : "N/A"));
-        });
-
-        var userNFTs = allNfts.filter(function(nft) {
-          var col = nft.collection;
-          if (!col) return false;
-          var colAddr = col.address && col.address.toBase58 ? col.address.toBase58() : col.address;
-          return colAddr === CONFIG.COLLECTION_MINT && col.verified;
+        var userNFTs = items.filter(function(a) {
+          var groups = a.grouping || [];
+          var collectionGroup = groups.find(function(g) { return g.group_key === "collection"; });
+          if (!collectionGroup) return false;
+          return collectionGroup.group_value === CONFIG.COLLECTION_MINT;
         });
 
         console.log("Matched LNL NFTs:", userNFTs.length);
 
         if (userNFTs.length === 0) {
-          var unverified = allNfts.filter(function(nft) {
-            var col = nft.collection;
-            if (!col) return false;
-            var colAddr = col.address && col.address.toBase58 ? col.address.toBase58() : col.address;
-            return colAddr === CONFIG.COLLECTION_MINT;
-          });
-          console.log("Matched WITHOUT verified:", unverified.length);
-          if (unverified.length > 0) userNFTs = unverified;
-
           var uniqueCollections = [];
-          allNfts.forEach(function(nft) {
-            var col = nft.collection;
-            if (col) {
-              var addr = col.address && col.address.toBase58 ? col.address.toBase58() : col.address;
-              var entry = addr + " (verified:" + col.verified + ")";
-              if (uniqueCollections.indexOf(entry) === -1) uniqueCollections.push(entry);
-            }
+          items.forEach(function(a) {
+            var groups = a.grouping || [];
+            groups.forEach(function(g) {
+              if (g.group_key === "collection" && uniqueCollections.indexOf(g.group_value) === -1) {
+                uniqueCollections.push(g.group_value);
+              }
+            });
           });
           console.log("All collections in wallet:", uniqueCollections);
         }
         console.log("========================");
 
-        var loadedNFTs = [];
-        for (var i = 0; i < userNFTs.length; i++) {
-          var nft = userNFTs[i];
-          try {
-            if (nft.uri) {
-              var r = await fetch(nft.uri);
-              var meta = await r.json();
-              loadedNFTs.push({
-                name: nft.name || meta.name || "LNL",
-                image: meta.image || "",
-                mint: nft.mintAddress ? (nft.mintAddress.toBase58 ? nft.mintAddress.toBase58() : nft.mintAddress) : (nft.address ? (nft.address.toBase58 ? nft.address.toBase58() : nft.address) : "")
-              });
-            } else {
-              loadedNFTs.push({ name: nft.name || "LNL", image: "", mint: "" });
-            }
-          } catch(e) {
-            loadedNFTs.push({ name: nft.name || "LNL", image: "", mint: "" });
-          }
-        }
+        var loadedNFTs = userNFTs.map(function(a) {
+          var name = (a.content && a.content.metadata && a.content.metadata.name) ||
+                     (a.content && a.content.json && a.content.json.name) || "LNL";
+          var image = (a.content && a.content.links && a.content.links.image) ||
+                      (a.content && a.content.files && a.content.files[0] && a.content.files[0].uri) ||
+                      (a.content && a.content.json && a.content.json.image) || "";
+          var mint = a.id || "";
+          return { name: name, image: image, mint: mint };
+        });
 
         document.getElementById("loadingSection").style.display = "none";
         renderDashboard(loadedNFTs);
-
       } catch (err) {
         console.error("Dashboard error:", err);
         document.getElementById("loadingSection").style.display = "none";
