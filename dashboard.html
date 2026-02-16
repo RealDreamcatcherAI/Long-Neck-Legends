@@ -769,16 +769,24 @@
         console.log("DAS total assets:", items.length);
         console.log("Looking for collection:", CONFIG.COLLECTION_MINT);
 
-        var userNFTs = items.filter(function(a) {
+        var lnlAssets = items.filter(function(a) {
           var groups = a.grouping || [];
-          var collectionGroup = groups.find(function(g) { return g.group_key === "collection"; });
-          if (!collectionGroup) return false;
-          return collectionGroup.group_value === CONFIG.COLLECTION_MINT;
+          var g = groups.find(function(x) { return x.group_key === "collection"; });
+          return g && g.group_value === CONFIG.COLLECTION_MINT;
         });
 
-        console.log("Matched LNL NFTs:", userNFTs.length);
+        var picked = lnlAssets.length > 0 ? lnlAssets : items.filter(function(a) {
+          var sym = (a.content && a.content.metadata && a.content.metadata.symbol) ||
+                    (a.content && a.content.json && a.content.json.symbol) || "";
+          var name = (a.content && a.content.metadata && a.content.metadata.name) ||
+                     (a.content && a.content.json && a.content.json.name) || "";
+          return (sym === "LNL") || (name.toLowerCase().indexOf("long neck") !== -1);
+        });
 
-        if (userNFTs.length === 0) {
+        console.log("Matched by collection:", lnlAssets.length);
+        console.log("Final matched LNL assets:", picked.length);
+
+        if (picked.length === 0) {
           var uniqueCollections = [];
           items.forEach(function(a) {
             var groups = a.grouping || [];
@@ -789,10 +797,13 @@
             });
           });
           console.log("All collections in wallet:", uniqueCollections);
+          items.slice(0, 5).forEach(function(a, i) {
+            console.log("Sample NFT " + i + ":", a.content && a.content.metadata ? a.content.metadata.name : "?", "| symbol:", a.content && a.content.metadata ? a.content.metadata.symbol : "?");
+          });
         }
         console.log("========================");
 
-        var loadedNFTs = userNFTs.map(function(a) {
+        var loadedNFTs = picked.map(function(a) {
           var name = (a.content && a.content.metadata && a.content.metadata.name) ||
                      (a.content && a.content.json && a.content.json.name) || "LNL";
           var image = (a.content && a.content.links && a.content.links.image) ||
