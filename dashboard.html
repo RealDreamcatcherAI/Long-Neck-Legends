@@ -639,13 +639,22 @@
   </script>
 
   <script type="module">
-    import {
-      Connection,
-      PublicKey,
-      LAMPORTS_PER_SOL
-    } from "https://esm.sh/@solana/web3.js@1.95.2";
+    let Connection, PublicKey, LAMPORTS_PER_SOL, Metaplex;
 
-    import { Metaplex } from "https://esm.sh/@metaplex-foundation/js@0.20.1";
+    try {
+      const web3 = await import("https://esm.sh/@solana/web3.js@1.95.2");
+      Connection = web3.Connection;
+      PublicKey = web3.PublicKey;
+      LAMPORTS_PER_SOL = web3.LAMPORTS_PER_SOL;
+
+      const mplex = await import("https://esm.sh/@metaplex-foundation/js@0.20.1");
+      Metaplex = mplex.Metaplex;
+
+      console.log("✓ All imports loaded successfully");
+    } catch (err) {
+      console.error("Import failed:", err);
+      document.querySelector(".connect-prompt").textContent = "Error loading — try refreshing the page";
+    }
 
     // =========================================================================
     // CONFIG — UPDATE THESE
@@ -826,6 +835,11 @@
     // =========================================================================
     window.connectWallet = async function() {
       try {
+        if (!Connection || !Metaplex) {
+          alert("Page still loading — please wait a moment and try again.");
+          return;
+        }
+
         const provider = window.phantom?.solana
           || window.solflare
           || window.backpack
