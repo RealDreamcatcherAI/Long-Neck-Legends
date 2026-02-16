@@ -878,6 +878,17 @@
         // Fetch all NFTs owned by wallet
         const allNfts = await metaplex.nfts().findAllByOwner({ owner: walletPublicKey });
 
+        console.log("=== DASHBOARD DEBUG ===");
+        console.log("Total NFTs in wallet:", allNfts.length);
+        console.log("Looking for collection:", CONFIG.COLLECTION_MINT);
+        
+        // Log first 10 NFTs to see their collection fields
+        allNfts.slice(0, 10).forEach((nft, i) => {
+          const col = nft.collection;
+          const colAddr = col?.address?.toBase58?.() ?? col?.address ?? "none";
+          console.log(`NFT ${i}: "${nft.name}" | collection: ${colAddr} | verified: ${col?.verified} | creators:`, nft.creators?.map(c => c.address?.toBase58?.() ?? c.address));
+        });
+
         // Filter to LNL collection
         userNFTs = allNfts.filter(nft => {
           const col = nft.collection;
@@ -886,7 +897,39 @@
           return colAddr === CONFIG.COLLECTION_MINT && col.verified;
         });
 
-        console.log(`Found ${userNFTs.length} Long Neck Legends NFTs`);
+        console.log("Matched LNL NFTs:", userNFTs.length);
+        
+        // If none matched, try without verified check
+        if (userNFTs.length === 0) {
+          const unverifiedMatch = allNfts.filter(nft => {
+            const col = nft.collection;
+            if (!col) return false;
+            const colAddr = col.address?.toBase58?.() ?? col.address;
+            return colAddr === CONFIG.COLLECTION_MINT;
+          });
+          console.log("Matched WITHOUT verified check:", unverifiedMatch.length);
+          
+          // Also check by creator address
+          const byCreator = allNfts.filter(nft => {
+            return nft.creators?.some(c => {
+              const addr = c.address?.toBase58?.() ?? c.address;
+              return addr === CONFIG.COLLECTION_MINT;
+            });
+          });
+          console.log("Matched by creator address:", byCreator.length);
+          
+          // Log all unique collection addresses found
+          const uniqueCollections = new Set();
+          allNfts.forEach(nft => {
+            const col = nft.collection;
+            if (col) {
+              const addr = col.address?.toBase58?.() ?? col.address;
+              uniqueCollections.add(addr + " (verified:" + col.verified + ")");
+            }
+          });
+          console.log("All unique collection addresses in wallet:", [...uniqueCollections]);
+        }
+        console.log("========================");
 
         // Load metadata for image URLs
         const loadedNFTs = [];
