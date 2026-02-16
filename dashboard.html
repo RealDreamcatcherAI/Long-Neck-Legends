@@ -635,341 +635,185 @@
   </footer>
 
   <script>
-    window.addEventListener('load', () => document.body.classList.add('loaded'));
-  </script>
+    window.addEventListener('load', function() { document.body.classList.add('loaded'); });
 
-  <script type="module">
-    let Connection, PublicKey, LAMPORTS_PER_SOL, Metaplex;
-
-    try {
-      const web3 = await import("https://esm.sh/@solana/web3.js@1.95.2");
-      Connection = web3.Connection;
-      PublicKey = web3.PublicKey;
-      LAMPORTS_PER_SOL = web3.LAMPORTS_PER_SOL;
-
-      const mplex = await import("https://esm.sh/@metaplex-foundation/js@0.20.1");
-      Metaplex = mplex.Metaplex;
-
-      console.log("✓ All imports loaded successfully");
-    } catch (err) {
-      console.error("Import failed:", err);
-      document.querySelector(".connect-prompt").textContent = "Error loading — try refreshing the page";
-    }
-
-    // =========================================================================
-    // CONFIG — UPDATE THESE
-    // =========================================================================
-    const CONFIG = {
-      // Long Neck Legends collection mint (verified collection address)
-      // Update this to your actual LNL collection address
+    var CONFIG = {
       COLLECTION_MINT: "2WvxCvgFUiqUSBx32c5Z5Zsbcu4ZJCE1GEaaWpbD685P",
       RPC_URL: "https://mainnet.helius-rpc.com/?api-key=44cfd082-9089-430d-8de3-cd310c478b1c",
       MAGIC_EDEN_LINK: "https://magiceden.us/marketplace/long_neck_legends"
     };
 
-    // =========================================================================
-    // TIER DEFINITIONS
-    // =========================================================================
-    const TIERS = [
-      {
-        id: "civilian",
-        name: "CIVILIAN",
-        min: 0, max: 0,
-        icon: "👤",
-        pointsMultiplier: 0,
-        discount: 0,
-        raffleMultiplier: 0,
-        cssClass: ""
-      },
-      {
-        id: "neck",
-        name: "NECK",
-        min: 1, max: 9,
-        icon: "🦒",
-        pointsMultiplier: 1,
-        discount: 10,
-        raffleMultiplier: 1,
-        cssClass: "tier-neck"
-      },
-      {
-        id: "longneck",
-        name: "LONG NECK",
-        min: 10, max: 29,
-        icon: "🔥",
-        pointsMultiplier: 1.5,
-        discount: 15,
-        raffleMultiplier: 2,
-        cssClass: "tier-longneck"
-      },
-      {
-        id: "legend",
-        name: "LEGEND",
-        min: 30, max: 59,
-        icon: "⚡",
-        pointsMultiplier: 2.5,
-        discount: 25,
-        raffleMultiplier: 3,
-        cssClass: "tier-legend"
-      },
-      {
-        id: "og",
-        name: "OG LEGEND",
-        min: 60, max: 99,
-        icon: "👑",
-        pointsMultiplier: 4,
-        discount: 30,
-        raffleMultiplier: 5,
-        cssClass: "tier-og"
-      },
-      {
-        id: "whale",
-        name: "WHALE",
-        min: 100, max: Infinity,
-        icon: "🐋",
-        pointsMultiplier: 10,
-        discount: 40,
-        raffleMultiplier: 10,
-        cssClass: "tier-whale"
-      }
+    var TIERS = [
+      { id: "civilian", name: "CIVILIAN", min: 0, icon: "\u{1F464}", pointsMultiplier: 0, discount: 0, raffleMultiplier: 0, cssClass: "" },
+      { id: "neck", name: "NECK", min: 1, icon: "\u{1F992}", pointsMultiplier: 1, discount: 10, raffleMultiplier: 1, cssClass: "tier-neck" },
+      { id: "longneck", name: "LONG NECK", min: 10, icon: "\u{1F525}", pointsMultiplier: 1.5, discount: 15, raffleMultiplier: 2, cssClass: "tier-longneck" },
+      { id: "legend", name: "LEGEND", min: 30, icon: "\u{26A1}", pointsMultiplier: 2.5, discount: 25, raffleMultiplier: 3, cssClass: "tier-legend" },
+      { id: "og", name: "OG LEGEND", min: 60, icon: "\u{1F451}", pointsMultiplier: 4, discount: 30, raffleMultiplier: 5, cssClass: "tier-og" },
+      { id: "whale", name: "WHALE", min: 100, icon: "\u{1F40B}", pointsMultiplier: 10, discount: 40, raffleMultiplier: 10, cssClass: "tier-whale" }
     ];
 
-    // =========================================================================
-    // PERKS DEFINITIONS
-    // =========================================================================
-    const PERKS = [
-      {
-        icon: "🏷️",
-        name: "Store Discount",
-        desc: "Get a discount on all LNL Store purchases paid in SOL",
-        reqTier: "neck",
-        dynamic: true
-      },
-      {
-        icon: "🎟️",
-        name: "Raffle Entries",
-        desc: "Earn entries into exclusive drops, giveaways, and raffles",
-        reqTier: "neck",
-        dynamic: true
-      },
-      {
-        icon: "🚀",
-        name: "Early Access",
-        desc: "Get first dibs on new sauce flavors, merch drops, and collections",
-        reqTier: "longneck"
-      },
-      {
-        icon: "👕",
-        name: "Exclusive Merch",
-        desc: "Unlock holder-only merch that never hits the public store",
-        reqTier: "longneck"
-      },
-      {
-        icon: "🗳️",
-        name: "Flavor Voting",
-        desc: "Vote on the next hot sauce flavor. Your neck, your choice.",
-        reqTier: "legend"
-      },
-      {
-        icon: "🎤",
-        name: "IRL Access",
-        desc: "VIP entry to LNL events, listening parties, and tastings",
-        reqTier: "legend"
-      },
-      {
-        icon: "💎",
-        name: "Diamond Hands Club",
-        desc: "Private group with alpha, airdrops, and direct team access",
-        reqTier: "og"
-      },
-      {
-        icon: "🎁",
-        name: "Monthly Airdrop",
-        desc: "Free products, NFTs, and surprises delivered monthly",
-        reqTier: "og"
-      },
-      {
-        icon: "🐋",
-        name: "Whale Council",
-        desc: "Direct input on project direction, partnerships, and roadmap decisions",
-        reqTier: "whale"
-      },
-      {
-        icon: "🔓",
-        name: "Lifetime Perks",
-        desc: "Permanent max discount, first priority on all future drops, and custom merch",
-        reqTier: "whale"
-      }
+    var PERKS = [
+      { icon: "\u{1F3F7}\u{FE0F}", name: "Store Discount", desc: "Get a discount on all LNL Store purchases paid in SOL", reqTier: "neck", dynamic: true },
+      { icon: "\u{1F39F}\u{FE0F}", name: "Raffle Entries", desc: "Earn entries into exclusive drops, giveaways, and raffles", reqTier: "neck", dynamic: true },
+      { icon: "\u{1F680}", name: "Early Access", desc: "Get first dibs on new sauce flavors, merch drops, and collections", reqTier: "longneck" },
+      { icon: "\u{1F455}", name: "Exclusive Merch", desc: "Unlock holder-only merch that never hits the public store", reqTier: "longneck" },
+      { icon: "\u{1F5F3}\u{FE0F}", name: "Flavor Voting", desc: "Vote on the next hot sauce flavor. Your neck, your choice.", reqTier: "legend" },
+      { icon: "\u{1F3A4}", name: "IRL Access", desc: "VIP entry to LNL events, listening parties, and tastings", reqTier: "legend" },
+      { icon: "\u{1F48E}", name: "Diamond Hands Club", desc: "Private group with alpha, airdrops, and direct team access", reqTier: "og" },
+      { icon: "\u{1F381}", name: "Monthly Airdrop", desc: "Free products, NFTs, and surprises delivered monthly", reqTier: "og" },
+      { icon: "\u{1F40B}", name: "Whale Council", desc: "Direct input on project direction, partnerships, and roadmap decisions", reqTier: "whale" },
+      { icon: "\u{1F513}", name: "Lifetime Perks", desc: "Permanent max discount, first priority on all future drops, and custom merch", reqTier: "whale" }
     ];
 
-    // =========================================================================
-    // STATE
-    // =========================================================================
-    let walletProvider = null;
-    let walletPublicKey = null;
-    let connection = null;
-    let metaplex = null;
-    let userNFTs = [];
+    var walletProvider = null;
+    var walletPublicKey = null;
+    var sdkLoaded = false;
+    var SolanaWeb3 = null;
+    var MetaplexJS = null;
 
-    // =========================================================================
-    // TIER CALCULATION
-    // =========================================================================
     function getTier(count) {
-      for (let i = TIERS.length - 1; i >= 0; i--) {
+      for (var i = TIERS.length - 1; i >= 0; i--) {
         if (count >= TIERS[i].min) return TIERS[i];
       }
       return TIERS[0];
     }
-
-    function getNextTier(currentTier) {
-      const idx = TIERS.findIndex(t => t.id === currentTier.id);
+    function getNextTier(tier) {
+      var idx = TIERS.findIndex(function(t) { return t.id === tier.id; });
       return idx < TIERS.length - 1 ? TIERS[idx + 1] : null;
     }
-
-    function calculatePoints(nftCount, tier) {
-      const basePoints = nftCount * 100;
-      return Math.floor(basePoints * tier.pointsMultiplier);
+    function calcPoints(count, tier) {
+      return Math.floor(count * 100 * tier.pointsMultiplier);
     }
 
-    // =========================================================================
-    // WALLET
-    // =========================================================================
-    window.connectWallet = async function() {
+    async function loadSDK() {
+      if (sdkLoaded) return true;
       try {
-        if (!Connection || !Metaplex) {
-          alert("Page still loading — please wait a moment and try again.");
-          return;
-        }
+        document.querySelector(".connect-btn").textContent = "LOADING SDK...";
+        SolanaWeb3 = await import("https://esm.sh/@solana/web3.js@1.95.2");
+        MetaplexJS = await import("https://esm.sh/@metaplex-foundation/js@0.20.1");
+        sdkLoaded = true;
+        console.log("SDK loaded");
+        return true;
+      } catch (err) {
+        console.error("SDK load failed:", err);
+        alert("Failed to load SDK. Please refresh the page.");
+        document.querySelector(".connect-btn").textContent = "CONNECT WALLET";
+        return false;
+      }
+    }
 
-        const provider = window.phantom?.solana
-          || window.solflare
-          || window.backpack
-          || window.solana;
+    async function connectWallet() {
+      console.log("Connect clicked");
+      var provider = (window.phantom && window.phantom.solana) || window.solflare || window.backpack || window.solana;
+      console.log("Provider found:", !!provider);
 
-        if (!provider) {
-          alert("No Solana wallet found. Install Phantom, Solflare, or Backpack.");
-          return;
-        }
+      if (!provider) {
+        alert("No Solana wallet found. Please install Phantom, Solflare, or Backpack.");
+        return;
+      }
 
-        const resp = await provider.connect();
+      try {
+        var resp = await provider.connect();
         walletProvider = provider;
         walletPublicKey = resp.publicKey;
+        console.log("Connected:", walletPublicKey.toBase58());
 
-        connection = new Connection(CONFIG.RPC_URL, "confirmed");
-        metaplex = Metaplex.make(connection);
-
-        const addr = walletPublicKey.toBase58();
-        document.getElementById("walletDisplay").textContent =
-          addr.slice(0, 4) + "..." + addr.slice(-4);
-
+        var addr = walletPublicKey.toBase58();
+        document.getElementById("walletDisplay").textContent = addr.slice(0, 4) + "..." + addr.slice(-4);
         document.getElementById("connectSection").style.display = "none";
         document.getElementById("loadingSection").style.display = "block";
         document.getElementById("walletBar").classList.add("show");
 
+        var ok = await loadSDK();
+        if (!ok) {
+          document.getElementById("loadingSection").style.display = "none";
+          document.getElementById("connectSection").style.display = "block";
+          return;
+        }
+
         await loadDashboard();
-
       } catch (err) {
-        console.error("Wallet connect error:", err);
+        console.error("Connect error:", err);
+        alert("Connection error: " + (err.message || err));
       }
-    };
+    }
 
-    window.disconnectWallet = function() {
-      if (walletProvider?.disconnect) walletProvider.disconnect();
+    function disconnectWallet() {
+      if (walletProvider && walletProvider.disconnect) walletProvider.disconnect();
       walletProvider = null;
       walletPublicKey = null;
-      userNFTs = [];
-
       document.getElementById("connectSection").style.display = "block";
       document.getElementById("loadingSection").style.display = "none";
       document.getElementById("dashboard").classList.remove("show");
       document.getElementById("walletBar").classList.remove("show");
-    };
+    }
 
-    // =========================================================================
-    // LOAD DASHBOARD
-    // =========================================================================
     async function loadDashboard() {
       try {
-        // Fetch all NFTs owned by wallet
-        const allNfts = await metaplex.nfts().findAllByOwner({ owner: walletPublicKey });
+        var connection = new SolanaWeb3.Connection(CONFIG.RPC_URL, "confirmed");
+        var metaplex = MetaplexJS.Metaplex.make(connection);
+
+        var allNfts = await metaplex.nfts().findAllByOwner({ owner: walletPublicKey });
 
         console.log("=== DASHBOARD DEBUG ===");
         console.log("Total NFTs in wallet:", allNfts.length);
         console.log("Looking for collection:", CONFIG.COLLECTION_MINT);
-        
-        // Log first 10 NFTs to see their collection fields
-        allNfts.slice(0, 10).forEach((nft, i) => {
-          const col = nft.collection;
-          const colAddr = col?.address?.toBase58?.() ?? col?.address ?? "none";
-          console.log(`NFT ${i}: "${nft.name}" | collection: ${colAddr} | verified: ${col?.verified} | creators:`, nft.creators?.map(c => c.address?.toBase58?.() ?? c.address));
+
+        allNfts.slice(0, 10).forEach(function(nft, i) {
+          var col = nft.collection;
+          var colAddr = col ? (col.address && col.address.toBase58 ? col.address.toBase58() : col.address) : "none";
+          console.log("NFT " + i + ": " + nft.name + " | collection: " + colAddr + " | verified: " + (col ? col.verified : "N/A"));
         });
 
-        // Filter to LNL collection
-        userNFTs = allNfts.filter(nft => {
-          const col = nft.collection;
+        var userNFTs = allNfts.filter(function(nft) {
+          var col = nft.collection;
           if (!col) return false;
-          const colAddr = col.address?.toBase58?.() ?? col.address;
+          var colAddr = col.address && col.address.toBase58 ? col.address.toBase58() : col.address;
           return colAddr === CONFIG.COLLECTION_MINT && col.verified;
         });
 
         console.log("Matched LNL NFTs:", userNFTs.length);
-        
-        // If none matched, try without verified check
+
         if (userNFTs.length === 0) {
-          const unverifiedMatch = allNfts.filter(nft => {
-            const col = nft.collection;
+          var unverified = allNfts.filter(function(nft) {
+            var col = nft.collection;
             if (!col) return false;
-            const colAddr = col.address?.toBase58?.() ?? col.address;
+            var colAddr = col.address && col.address.toBase58 ? col.address.toBase58() : col.address;
             return colAddr === CONFIG.COLLECTION_MINT;
           });
-          console.log("Matched WITHOUT verified check:", unverifiedMatch.length);
-          
-          // Also check by creator address
-          const byCreator = allNfts.filter(nft => {
-            return nft.creators?.some(c => {
-              const addr = c.address?.toBase58?.() ?? c.address;
-              return addr === CONFIG.COLLECTION_MINT;
-            });
-          });
-          console.log("Matched by creator address:", byCreator.length);
-          
-          // Log all unique collection addresses found
-          const uniqueCollections = new Set();
-          allNfts.forEach(nft => {
-            const col = nft.collection;
+          console.log("Matched WITHOUT verified:", unverified.length);
+          if (unverified.length > 0) userNFTs = unverified;
+
+          var uniqueCollections = [];
+          allNfts.forEach(function(nft) {
+            var col = nft.collection;
             if (col) {
-              const addr = col.address?.toBase58?.() ?? col.address;
-              uniqueCollections.add(addr + " (verified:" + col.verified + ")");
+              var addr = col.address && col.address.toBase58 ? col.address.toBase58() : col.address;
+              var entry = addr + " (verified:" + col.verified + ")";
+              if (uniqueCollections.indexOf(entry) === -1) uniqueCollections.push(entry);
             }
           });
-          console.log("All unique collection addresses in wallet:", [...uniqueCollections]);
+          console.log("All collections in wallet:", uniqueCollections);
         }
         console.log("========================");
 
-        // Load metadata for image URLs
-        const loadedNFTs = [];
-        for (const nft of userNFTs) {
+        var loadedNFTs = [];
+        for (var i = 0; i < userNFTs.length; i++) {
+          var nft = userNFTs[i];
           try {
             if (nft.uri) {
-              const resp = await fetch(nft.uri);
-              const meta = await resp.json();
+              var r = await fetch(nft.uri);
+              var meta = await r.json();
               loadedNFTs.push({
                 name: nft.name || meta.name || "LNL",
                 image: meta.image || "",
-                mint: nft.mintAddress?.toBase58?.() ?? nft.address?.toBase58?.() ?? ""
+                mint: nft.mintAddress ? (nft.mintAddress.toBase58 ? nft.mintAddress.toBase58() : nft.mintAddress) : (nft.address ? (nft.address.toBase58 ? nft.address.toBase58() : nft.address) : "")
               });
             } else {
-              loadedNFTs.push({
-                name: nft.name || "LNL",
-                image: "",
-                mint: nft.mintAddress?.toBase58?.() ?? ""
-              });
+              loadedNFTs.push({ name: nft.name || "LNL", image: "", mint: "" });
             }
-          } catch {
-            loadedNFTs.push({
-              name: nft.name || "LNL",
-              image: "",
-              mint: ""
-            });
+          } catch(e) {
+            loadedNFTs.push({ name: nft.name || "LNL", image: "", mint: "" });
           }
         }
 
@@ -977,193 +821,67 @@
         renderDashboard(loadedNFTs);
 
       } catch (err) {
-        console.error("Dashboard load error:", err);
+        console.error("Dashboard error:", err);
         document.getElementById("loadingSection").style.display = "none";
         document.getElementById("connectSection").style.display = "block";
+        alert("Error loading NFTs: " + (err.message || err));
       }
     }
 
-    // =========================================================================
-    // RENDER DASHBOARD
-    // =========================================================================
     function renderDashboard(nfts) {
-      const dash = document.getElementById("dashboard");
+      var dash = document.getElementById("dashboard");
       dash.innerHTML = "";
-
-      const count = nfts.length;
-      const tier = getTier(count);
-      const nextTier = getNextTier(tier);
-      const points = calculatePoints(count, tier);
+      var count = nfts.length;
+      var tier = getTier(count);
+      var nextTier = getNextTier(tier);
+      var points = calcPoints(count, tier);
 
       if (count === 0) {
-        dash.innerHTML = `
-          <div class="no-nfts">
-            <h2>NO LONG NECK LEGENDS FOUND</h2>
-            <p>You don't hold any LNL NFTs in this wallet. Cop one to unlock holder perks.</p>
-            <a href="${CONFIG.MAGIC_EDEN_LINK}" target="_blank">BUY ON MAGIC EDEN</a>
-          </div>
-        `;
+        dash.innerHTML = '<div class="no-nfts"><h2>NO LONG NECK LEGENDS FOUND</h2><p>You don\'t hold any LNL NFTs in this wallet. Cop one to unlock holder perks.</p><a href="' + CONFIG.MAGIC_EDEN_LINK + '" target="_blank">BUY ON MAGIC EDEN</a></div>';
         dash.classList.add("show");
         return;
       }
 
-      // ---- TIER CARD ----
-      let progressHTML = "";
+      var progressHTML = "";
       if (nextTier) {
-        const progress = ((count - tier.min) / (nextTier.min - tier.min)) * 100;
-        progressHTML = `
-          <div class="tier-progress-wrap">
-            <div class="tier-progress-label">
-              <span>${tier.name}</span>
-              <span>${nextTier.name} (${nextTier.min} NFTs)</span>
-            </div>
-            <div class="tier-progress-bar">
-              <div class="tier-progress-fill" style="width: ${Math.min(progress, 100)}%"></div>
-            </div>
-          </div>
-        `;
+        var progress = ((count - tier.min) / (nextTier.min - tier.min)) * 100;
+        progressHTML = '<div class="tier-progress-wrap"><div class="tier-progress-label"><span>' + tier.name + '</span><span>' + nextTier.name + ' (' + nextTier.min + ' NFTs)</span></div><div class="tier-progress-bar"><div class="tier-progress-fill" style="width:' + Math.min(progress,100) + '%"></div></div></div>';
       } else {
-        progressHTML = `<div style="color:#555;font-size:0.75rem;letter-spacing:2px;text-transform:uppercase;">MAX TIER REACHED 👑</div>`;
+        progressHTML = '<div style="color:#555;font-size:0.75rem;letter-spacing:2px;text-transform:uppercase;">MAX TIER REACHED \u{1F451}</div>';
       }
 
-      dash.innerHTML += `
-        <div class="tier-card ${tier.cssClass}">
-          <div class="tier-badge">${tier.icon}</div>
-          <div class="tier-info">
-            <div class="tier-label">YOUR TIER</div>
-            <div class="tier-name">${tier.name}</div>
-            <div class="tier-nfts-held">Holding <strong>${count}</strong> Long Neck Legend${count !== 1 ? "s" : ""}</div>
-            ${progressHTML}
-          </div>
-        </div>
-      `;
+      dash.innerHTML += '<div class="tier-card ' + tier.cssClass + '"><div class="tier-badge">' + tier.icon + '</div><div class="tier-info"><div class="tier-label">YOUR TIER</div><div class="tier-name">' + tier.name + '</div><div class="tier-nfts-held">Holding <strong>' + count + '</strong> Long Neck Legend' + (count !== 1 ? "s" : "") + '</div>' + progressHTML + '</div></div>';
 
-      // ---- POINTS + STATS CARDS ----
-      dash.innerHTML += `
-        <div class="stats-card">
-          <div class="stats-title">LEGEND POINTS</div>
-          <div class="points-display">
-            <div class="points-number">${points.toLocaleString()}</div>
-            <div class="points-label">Total Points</div>
-          </div>
-          <div class="stat-row">
-            <span class="stat-label">Base (${count} × 100)</span>
-            <span class="stat-value">${count * 100}</span>
-          </div>
-          <div class="stat-row">
-            <span class="stat-label">Tier Multiplier</span>
-            <span class="stat-value cyan">${tier.pointsMultiplier}x</span>
-          </div>
-          <div class="stat-row">
-            <span class="stat-label">Raffle Entries</span>
-            <span class="stat-value purple">${count * tier.raffleMultiplier}</span>
-          </div>
-        </div>
-        <div class="stats-card">
-          <div class="stats-title">YOUR STATS</div>
-          <div class="stat-row">
-            <span class="stat-label">NFTs Held</span>
-            <span class="stat-value cyan">${count}</span>
-          </div>
-          <div class="stat-row">
-            <span class="stat-label">Current Tier</span>
-            <span class="stat-value">${tier.name}</span>
-          </div>
-          <div class="stat-row">
-            <span class="stat-label">Store Discount</span>
-            <span class="stat-value green">${tier.discount}%</span>
-          </div>
-          <div class="stat-row">
-            <span class="stat-label">Raffle Multiplier</span>
-            <span class="stat-value purple">${tier.raffleMultiplier}x</span>
-          </div>
-          ${nextTier ? `
-          <div class="stat-row">
-            <span class="stat-label">Next Tier At</span>
-            <span class="stat-value gold">${nextTier.min} NFTs</span>
-          </div>
-          ` : `
-          <div class="stat-row">
-            <span class="stat-label">Status</span>
-            <span class="stat-value gold">MAXED 👑</span>
-          </div>
-          `}
-        </div>
-      `;
+      dash.innerHTML += '<div class="stats-card"><div class="stats-title">LEGEND POINTS</div><div class="points-display"><div class="points-number">' + points.toLocaleString() + '</div><div class="points-label">Total Points</div></div><div class="stat-row"><span class="stat-label">Base (' + count + ' \u00D7 100)</span><span class="stat-value">' + (count*100) + '</span></div><div class="stat-row"><span class="stat-label">Tier Multiplier</span><span class="stat-value cyan">' + tier.pointsMultiplier + 'x</span></div><div class="stat-row"><span class="stat-label">Raffle Entries</span><span class="stat-value purple">' + (count * tier.raffleMultiplier) + '</span></div></div>';
 
-      // ---- PERKS ----
-      const tierOrder = TIERS.map(t => t.id);
-      const currentTierIdx = tierOrder.indexOf(tier.id);
+      var nextTierRow = nextTier ? '<div class="stat-row"><span class="stat-label">Next Tier At</span><span class="stat-value gold">' + nextTier.min + ' NFTs</span></div>' : '<div class="stat-row"><span class="stat-label">Status</span><span class="stat-value gold">MAXED \u{1F451}</span></div>';
 
-      let perksHTML = PERKS.map(perk => {
-        const reqIdx = tierOrder.indexOf(perk.reqTier);
-        const unlocked = currentTierIdx >= reqIdx;
-        const reqTierObj = TIERS.find(t => t.id === perk.reqTier);
+      dash.innerHTML += '<div class="stats-card"><div class="stats-title">YOUR STATS</div><div class="stat-row"><span class="stat-label">NFTs Held</span><span class="stat-value cyan">' + count + '</span></div><div class="stat-row"><span class="stat-label">Current Tier</span><span class="stat-value">' + tier.name + '</span></div><div class="stat-row"><span class="stat-label">Store Discount</span><span class="stat-value green">' + tier.discount + '%</span></div><div class="stat-row"><span class="stat-label">Raffle Multiplier</span><span class="stat-value purple">' + tier.raffleMultiplier + 'x</span></div>' + nextTierRow + '</div>';
 
-        let desc = perk.desc;
-        if (perk.dynamic && perk.name === "Store Discount") {
-          desc = unlocked
-            ? `${tier.discount}% off all LNL Store purchases paid in SOL`
-            : perk.desc;
-        }
-        if (perk.dynamic && perk.name === "Raffle Entries") {
-          desc = unlocked
-            ? `${tier.raffleMultiplier}x entries into every raffle and giveaway`
-            : perk.desc;
-        }
-
-        return `
-          <div class="perk ${unlocked ? "unlocked" : "locked"}">
-            <div class="perk-status ${unlocked ? "on" : "off"}"></div>
-            <div class="perk-icon">${perk.icon}</div>
-            <div class="perk-name">${perk.name}</div>
-            <div class="perk-desc">${desc}</div>
-            <div class="perk-req ${unlocked ? "met" : ""}">
-              ${unlocked ? "✓ UNLOCKED" : "REQUIRES " + reqTierObj.name}
-            </div>
-          </div>
-        `;
+      var tierOrder = TIERS.map(function(t) { return t.id; });
+      var currentTierIdx = tierOrder.indexOf(tier.id);
+      var perksHTML = PERKS.map(function(perk) {
+        var reqIdx = tierOrder.indexOf(perk.reqTier);
+        var unlocked = currentTierIdx >= reqIdx;
+        var reqTierObj = TIERS.find(function(t) { return t.id === perk.reqTier; });
+        var desc = perk.desc;
+        if (perk.dynamic && perk.name === "Store Discount" && unlocked) desc = tier.discount + "% off all LNL Store purchases paid in SOL";
+        if (perk.dynamic && perk.name === "Raffle Entries" && unlocked) desc = tier.raffleMultiplier + "x entries into every raffle and giveaway";
+        return '<div class="perk ' + (unlocked ? "unlocked" : "locked") + '"><div class="perk-status ' + (unlocked ? "on" : "off") + '"></div><div class="perk-icon">' + perk.icon + '</div><div class="perk-name">' + perk.name + '</div><div class="perk-desc">' + desc + '</div><div class="perk-req ' + (unlocked ? "met" : "") + '">' + (unlocked ? "\u2713 UNLOCKED" : "REQUIRES " + reqTierObj.name) + '</div></div>';
       }).join("");
 
-      dash.innerHTML += `
-        <div class="perks-card">
-          <div class="stats-title">HOLDER PERKS</div>
-          <div class="perks-grid">${perksHTML}</div>
-        </div>
-      `;
+      dash.innerHTML += '<div class="perks-card"><div class="stats-title">HOLDER PERKS</div><div class="perks-grid">' + perksHTML + '</div></div>';
 
-      // ---- NFT GALLERY ----
-      let galleryHTML = nfts.map(nft => `
-        <div class="nft-tile" onclick="window.open('https://magiceden.us/item-details/${nft.mint}', '_blank')">
-          ${nft.image
-            ? `<img src="${nft.image}" alt="${nft.name}" loading="lazy">`
-            : `<div style="aspect-ratio:1;background:#1e1e3a;display:flex;align-items:center;justify-content:center;color:#555;font-size:0.8rem;">No Image</div>`
-          }
-          <div class="nft-tile-info">
-            <div class="nft-tile-name">${nft.name}</div>
-            <div class="nft-tile-id">${nft.mint ? nft.mint.slice(0,4) + "..." + nft.mint.slice(-4) : ""}</div>
-          </div>
-        </div>
-      `).join("");
+      var galleryHTML = nfts.map(function(nft) {
+        var img = nft.image ? '<img src="' + nft.image + '" alt="' + nft.name + '" loading="lazy">' : '<div style="aspect-ratio:1;background:#1e1e3a;display:flex;align-items:center;justify-content:center;color:#555;font-size:0.8rem;">No Image</div>';
+        var mintShort = nft.mint ? nft.mint.slice(0,4) + "..." + nft.mint.slice(-4) : "";
+        return '<div class="nft-tile" onclick="window.open(\'https://magiceden.us/item-details/' + nft.mint + '\',\'_blank\')">' + img + '<div class="nft-tile-info"><div class="nft-tile-name">' + nft.name + '</div><div class="nft-tile-id">' + mintShort + '</div></div></div>';
+      }).join("");
 
-      dash.innerHTML += `
-        <div class="gallery-card">
-          <div class="stats-title">YOUR COLLECTION</div>
-          <div class="gallery-grid">${galleryHTML}</div>
-        </div>
-      `;
+      dash.innerHTML += '<div class="gallery-card"><div class="stats-title">YOUR COLLECTION</div><div class="gallery-grid">' + galleryHTML + '</div></div>';
 
-      // ---- SHARE BUTTON ----
-      const shareText = encodeURIComponent(
-        `🦒 I'm a ${tier.name} holder with ${count} Long Neck Legend${count !== 1 ? "s" : ""}!\n\n${points} Legend Points | ${tier.discount}% store discount\n\nCheck your status: longnecklegends.xyz/dashboard`
-      );
-      dash.innerHTML += `
-        <div class="share-section">
-          <button class="share-btn" onclick="window.open('https://twitter.com/intent/tweet?text=${shareText}', '_blank')">
-            SHARE ON X / TWITTER
-          </button>
-        </div>
-      `;
+      var shareText = encodeURIComponent("\u{1F992} I'm a " + tier.name + " holder with " + count + " Long Neck Legend" + (count !== 1 ? "s" : "") + "!\n\n" + points + " Legend Points | " + tier.discount + "% store discount\n\nCheck your status: longnecklegends.xyz/dashboard");
+      dash.innerHTML += '<div class="share-section"><button class="share-btn" onclick="window.open(\'https://twitter.com/intent/tweet?text=' + shareText + '\',\'_blank\')">SHARE ON X / TWITTER</button></div>';
 
       dash.classList.add("show");
     }
