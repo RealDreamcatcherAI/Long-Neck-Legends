@@ -158,7 +158,10 @@
     .tier-card.tier-neck::before { background: radial-gradient(circle, #00d4ff, transparent); }
     .tier-card.tier-longneck::before { background: radial-gradient(circle, #7b68ee, transparent); }
     .tier-card.tier-legend::before { background: radial-gradient(circle, #ffd700, transparent); }
-    .tier-card.tier-og::before { background: radial-gradient(circle, #ff3c5c, transparent); }
+    .tier-card.tier-og::before { background: radial-gradient(circle, #ffd700, transparent); }
+    .tier-card.tier-sardine::before { background: radial-gradient(circle, #ff3c5c, transparent); }
+    .tier-card.tier-barracuda::before { background: radial-gradient(circle, #ff3c5c, transparent); }
+    .tier-card.tier-shark::before { background: radial-gradient(circle, #00ffcc, transparent); }
     .tier-card.tier-whale::before { background: radial-gradient(circle, #00ffcc, transparent); }
 
     @media (max-width: 600px) {
@@ -197,8 +200,14 @@
     .tier-longneck .tier-badge::after { border-color: #7b68ee; }
     .tier-legend .tier-badge { background: rgba(255,215,0,0.1); color: #ffd700; }
     .tier-legend .tier-badge::after { border-color: #ffd700; }
-    .tier-og .tier-badge { background: rgba(255,60,92,0.1); color: #ff3c5c; }
-    .tier-og .tier-badge::after { border-color: #ff3c5c; }
+    .tier-og .tier-badge { background: rgba(255,215,0,0.1); color: #ffd700; }
+    .tier-og .tier-badge::after { border-color: #ffd700; }
+    .tier-sardine .tier-badge { background: rgba(255,60,92,0.1); color: #ff3c5c; }
+    .tier-sardine .tier-badge::after { border-color: #ff3c5c; }
+    .tier-barracuda .tier-badge { background: rgba(255,60,92,0.1); color: #ff3c5c; }
+    .tier-barracuda .tier-badge::after { border-color: #ff3c5c; }
+    .tier-shark .tier-badge { background: rgba(0,255,204,0.1); color: #00ffcc; }
+    .tier-shark .tier-badge::after { border-color: #00ffcc; }
     .tier-whale .tier-badge { background: rgba(0,255,204,0.1); color: #00ffcc; }
     .tier-whale .tier-badge::after { border-color: #00ffcc; }
 
@@ -220,7 +229,10 @@
     .tier-neck .tier-name { color: #00d4ff; }
     .tier-longneck .tier-name { color: #7b68ee; }
     .tier-legend .tier-name { color: #ffd700; }
-    .tier-og .tier-name { color: #ff3c5c; }
+    .tier-og .tier-name { color: #ffd700; }
+    .tier-sardine .tier-name { color: #ff3c5c; }
+    .tier-barracuda .tier-name { color: #ff3c5c; }
+    .tier-shark .tier-name { color: #00ffcc; }
     .tier-whale .tier-name { color: #00ffcc; }
 
     .tier-nfts-held {
@@ -256,7 +268,10 @@
     .tier-neck .tier-progress-fill { background: #00d4ff; box-shadow: 0 0 10px rgba(0,212,255,0.5); }
     .tier-longneck .tier-progress-fill { background: #7b68ee; box-shadow: 0 0 10px rgba(123,104,238,0.5); }
     .tier-legend .tier-progress-fill { background: #ffd700; box-shadow: 0 0 10px rgba(255,215,0,0.5); }
-    .tier-og .tier-progress-fill { background: #ff3c5c; box-shadow: 0 0 10px rgba(255,60,92,0.5); }
+    .tier-og .tier-progress-fill { background: #ffd700; box-shadow: 0 0 10px rgba(255,215,0,0.5); }
+    .tier-sardine .tier-progress-fill { background: #ff3c5c; box-shadow: 0 0 10px rgba(255,60,92,0.5); }
+    .tier-barracuda .tier-progress-fill { background: #ff3c5c; box-shadow: 0 0 10px rgba(255,60,92,0.5)); }
+    .tier-shark .tier-progress-fill { background: #00ffcc; box-shadow: 0 0 10px rgba(0,255,204,0.5); }
     .tier-whale .tier-progress-fill { background: #00ffcc; box-shadow: 0 0 10px rgba(0,255,204,0.5); }
 
     @media (max-width: 600px) {
@@ -642,28 +657,28 @@
 
     var TIERS = [
       { id: "civilian", name: "CIVILIAN", min: 0, icon: "\u{1F464}", pointsMultiplier: 0, discount: 0, raffleMultiplier: 0, cssClass: "" }, // 👤
-      { id: "neck", name: "NECK", min: 1, icon: "\u{1F992}", pointsMultiplier: 1, discount: 10, raffleMultiplier: 1, cssClass: "tier-neck" }, // 🦒
+      { id: "neck", name: "NECK", min: 1, icon: "\u{1F995}", pointsMultiplier: 1, discount: 10, raffleMultiplier: 1, cssClass: "tier-neck" }, // 🦒
       { id: "longneck", name: "LONG NECK", min: 5, icon: "\u{1F525}", pointsMultiplier: 1.5, discount: 15, raffleMultiplier: 2, cssClass: "tier-longneck" }, // 🔥
       { id: "legend", name: "LEGEND", min: 10, icon: "\u{2B50}", pointsMultiplier: 2.5, discount: 20, raffleMultiplier: 3, cssClass: "tier-legend" }, // ⭐
       { id: "og", name: "OG LEGEND", min: 20, icon: "\u{1F451}", pointsMultiplier: 4, discount: 25, raffleMultiplier: 5, cssClass: "tier-og" }, // 👑
       { id: "sardine", name: "SARDINE", min: 30, icon: "\u{1F41F}", pointsMultiplier: 6, discount: 30, raffleMultiplier: 6, cssClass: "tier-sardine" }, // 🐟
-      { id: "barracuda", name: "BARRACUDA", min: 50, icon: "\u{1F988}", pointsMultiplier: 7, discount: 35, raffleMultiplier: 7, cssClass: "tier-barracuda" }, // 🦈 (aggressive predator vibe)
-      { id: "shark", name: "SHARK", min: 75, icon: "\u{1F52A}", pointsMultiplier: 8, discount: 35, raffleMultiplier: 8, cssClass: "tier-shark" }, // 🔪 (apex energy)
+      { id: "barracuda", name: "BARRACUDA", min: 50, icon: "\u{1F52A}", pointsMultiplier: 7, discount: 35, raffleMultiplier: 7, cssClass: "tier-barracuda" }, // 🦈 (aggressive predator vibe)
+      { id: "shark", name: "SHARK", min: 75, icon: "\u{1F988}", pointsMultiplier: 8, discount: 35, raffleMultiplier: 8, cssClass: "tier-shark" }, // 🔪 (apex energy)
       { id: "whale", name: "WHALE", min: 100, icon: "\u{1F40B}", pointsMultiplier: 10, discount: 40, raffleMultiplier: 10, cssClass: "tier-whale" } // 🐋
     ];
 
     var PERKS = [
-      { icon: "\u{1F992}", name: "Store Discount", desc: "Get a discount on all LNL Store purchases paid in SOL", reqTier: "neck", dynamic: true },
-      { icon: "\u{1F992}", name: "Raffle Entries", desc: "Earn entries into exclusive drops, giveaways, and raffles", reqTier: "neck", dynamic: true },
-      { icon: "\u{1F992}", name: "IRL Access", desc: "Entry to LNL events, listening parties, and tastings", reqTier: "neck" },
+      { icon: "\u{1F995}", name: "Store Discount", desc: "Get a discount on all LNL Store purchases paid in SOL", reqTier: "neck", dynamic: true },
+      { icon: "\u{1F995}", name: "Raffle Entries", desc: "Earn entries into exclusive drops, giveaways, and raffles", reqTier: "neck", dynamic: true },
+      { icon: "\u{1F995}", name: "IRL Access", desc: "Entry to LNL events, listening parties, and tastings", reqTier: "neck" },
       { icon: "\u{1F525}", name: "Exclusive Merch", desc: "Unlock holder-only merch that never hits the public store", reqTier: "longneck" },
       { icon: "\u{2B50}", name: "Exclusive Merch", desc: "Vote on the next apparel drop. Your neck, your choice.", reqTier: "legend" },
       { icon: "\u{2B50}", name: "Flavor Voting", desc: "Vote on the next hot sauce flavor. Your taste, your choice.", reqTier: "legend" },
       { icon: "\u{1F451}", name: "Early Access", desc: "Get first dibs on new sauce flavors, merch drops, and collections", reqTier: "og" },
       { icon: "\u{1F451}", name: "VIP IRL Access", desc: "VIP entry to LNL events, listening parties, and tastings", reqTier: "og" },
       { icon: "\u{1F41F}", name: "Diamond Hands Club", desc: "Private group with alpha, airdrops, and direct team access", reqTier: "sardine" },
-      { icon: "\u{1F988}", name: "Monthly Airdrop", desc: "Free products, NFTs, and surprises delivered monthly", reqTier: "barracuda" },
-      { icon: "\u{1F52A}", name: "Shark Council", desc: "Direct input on project direction, partnerships, and roadmap decisions", reqTier: "shark" },
+      { icon: "\u{1F52A}", name: "Monthly Airdrop", desc: "Free products, NFTs, and surprises delivered monthly", reqTier: "barracuda" },
+      { icon: "\u{1F988}", name: "Shark Council", desc: "Direct input on project direction, partnerships, and roadmap decisions", reqTier: "shark" },
       { icon: "\u{1F40B}", name: "Lifetime Perks", desc: "Permanent max discount, first priority on all future drops, and custom merch", reqTier: "whale" }
     ];
 
