@@ -1565,7 +1565,7 @@ function connectX(){
 // ---- Discord OAuth start ----
 function connectDiscord(){
   if (!walletPublicKey) return alert("Connect wallet first.");
-  const url = "/auth/discord/start?wallet=" + encodeURIComponent(walletPublicKey.toBase58());
+  const url = "/auth/discord/start");
   openAuthPopup(url, "Connect Discord");
 }
 
