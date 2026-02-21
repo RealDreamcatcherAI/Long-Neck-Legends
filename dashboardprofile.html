@@ -766,6 +766,7 @@
 
     .modal{
       width: min(920px, 100%);
+      max-height: 85vh; 
       background: linear-gradient(135deg, #111125 0%, #0d0d20 100%);
       border: 1px solid rgba(255,255,255,0.10);
       border-radius: 16px;
@@ -803,8 +804,12 @@
       color: #ff3c5c;
       box-shadow: 0 0 16px rgba(255,60,92,0.12);
     }
-    .modal-body{ padding: 1.2rem; }
-
+    .modal-body{
+      padding: 1.2rem;
+      max-height: min(70vh, 640px);
+      overflow: auto;
+      -webkit-overflow-scrolling: touch;
+    }
     .pfp-grid{
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
