@@ -1376,13 +1376,13 @@
           : '<div style="aspect-ratio:1;background:#1e1e3a;display:flex;align-items:center;justify-content:center;color:#555;font-size:0.8rem;">No Image</div>';
         var mintShort = nft.mint ? nft.mint.slice(0,4) + "..." + nft.mint.slice(-4) : "";
         return '' +
-          '<div class="nft-tile" onclick="window.open(\\'https://magiceden.us/item-details/' + nft.mint + '\\',\\'_blank\\')">' +
-            img +
-            '<div class="nft-tile-info">' +
-              '<div class="nft-tile-name">' + escapeHtml(nft.name) + '</div>' +
-              '<div class="nft-tile-id">' + mintShort + '</div>' +
-            '</div>' +
-          '</div>';
+      '<div class="nft-tile" onclick="window.open(\'https://magiceden.us/item-details/' + nft.mint + '\', \'_blank\')">' +
+        img +
+        '<div class="nft-tile-info">' +
+          '<div class="nft-tile-name">' + escapeHtml(nft.name) + '</div>' +
+          '<div class="nft-tile-id">' + mintShort + '</div>' +
+        '</div>' +
+      '</div>';
       }).join("");
 
       view.innerHTML +=
@@ -1392,9 +1392,9 @@
         '</div>';
 
       view.innerHTML +=
-        '<div class="share-section">' +
-          '<button class="share-btn" onclick="window.open(\\'' + CONFIG.MAGIC_EDEN_LINK + '\\',\\'_blank\\')">MAGIC EDEN</button>' +
-        '</div>';
+      '<div class="share-section">' +
+        '<button class="share-btn" onclick="window.open(\'' + CONFIG.MAGIC_EDEN_LINK + '\', \'_blank\')">MAGIC EDEN</button>' +
+      '</div>';
     }
 
     /* -------- Profile actions -------- */
@@ -1476,11 +1476,11 @@
       session.loadedNFTs.forEach(function(nft){
         var selected = (session.profile.pfpMint && nft.mint === session.profile.pfpMint);
         var tile =
-          '<div class="pfp-tile ' + (selected ? "selected" : "") + '" onclick="selectPfp(\\'' + nft.mint + '\\')">' +
-            '<div class="pfp-selected"></div>' +
-            (nft.image ? '<img src="' + nft.image + '" alt="' + escapeHtml(nft.name) + '" loading="lazy">' : '<div style="aspect-ratio:1;background:#1e1e3a;"></div>') +
-            '<div class="pfp-name">' + escapeHtml(nft.name) + '</div>' +
-          '</div>';
+      '<div class="pfp-tile ' + (selected ? "selected" : "") + '" onclick="selectPfp(\'' + nft.mint + '\')">' +
+        '<div class="pfp-selected"></div>' +
+        (nft.image ? '<img src="' + nft.image + '" alt="' + escapeHtml(nft.name) + '" loading="lazy">' : '<div style="aspect-ratio:1;background:#1e1e3a;"></div>') +
+        '<div class="pfp-name">' + escapeHtml(nft.name) + '</div>' +
+      '</div>';
         grid.innerHTML += tile;
       });
 
