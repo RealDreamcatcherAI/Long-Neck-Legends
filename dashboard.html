@@ -641,25 +641,30 @@
     };
 
     var TIERS = [
-      { id: "civilian", name: "CIVILIAN", min: 0, icon: "\u{1F464}", pointsMultiplier: 0, discount: 0, raffleMultiplier: 0, cssClass: "" },
-      { id: "neck", name: "NECK", min: 1, icon: "\u{1F992}", pointsMultiplier: 1, discount: 10, raffleMultiplier: 1, cssClass: "tier-neck" },
-      { id: "longneck", name: "LONG NECK", min: 10, icon: "\u{1F525}", pointsMultiplier: 1.5, discount: 15, raffleMultiplier: 2, cssClass: "tier-longneck" },
-      { id: "legend", name: "LEGEND", min: 30, icon: "\u{26A1}", pointsMultiplier: 2.5, discount: 25, raffleMultiplier: 3, cssClass: "tier-legend" },
-      { id: "og", name: "OG LEGEND", min: 60, icon: "\u{1F451}", pointsMultiplier: 4, discount: 30, raffleMultiplier: 5, cssClass: "tier-og" },
-      { id: "whale", name: "WHALE", min: 100, icon: "\u{1F40B}", pointsMultiplier: 10, discount: 40, raffleMultiplier: 10, cssClass: "tier-whale" }
+      { id: "civilian", name: "CIVILIAN", min: 0, icon: "\u{1F464}", pointsMultiplier: 0, discount: 0, raffleMultiplier: 0, cssClass: "" }, // 👤
+      { id: "neck", name: "NECK", min: 1, icon: "\u{1F992}", pointsMultiplier: 1, discount: 10, raffleMultiplier: 1, cssClass: "tier-neck" }, // 🦒
+      { id: "longneck", name: "LONG NECK", min: 5, icon: "\u{1F525}", pointsMultiplier: 1.5, discount: 15, raffleMultiplier: 2, cssClass: "tier-longneck" }, // 🔥
+      { id: "legend", name: "LEGEND", min: 10, icon: "\u{2B50}", pointsMultiplier: 2.5, discount: 20, raffleMultiplier: 3, cssClass: "tier-legend" }, // ⭐
+      { id: "og", name: "OG LEGEND", min: 20, icon: "\u{1F451}", pointsMultiplier: 4, discount: 25, raffleMultiplier: 5, cssClass: "tier-og" }, // 👑
+      { id: "sardine", name: "SARDINE", min: 30, icon: "\u{1F41F}", pointsMultiplier: 6, discount: 30, raffleMultiplier: 6, cssClass: "tier-sardine" }, // 🐟
+      { id: "barracuda", name: "BARRACUDA", min: 50, icon: "\u{1F988}", pointsMultiplier: 7, discount: 35, raffleMultiplier: 7, cssClass: "tier-barracuda" }, // 🦈 (aggressive predator vibe)
+      { id: "shark", name: "SHARK", min: 75, icon: "\u{1F52A}", pointsMultiplier: 8, discount: 35, raffleMultiplier: 8, cssClass: "tier-shark" }, // 🔪 (apex energy)
+      { id: "whale", name: "WHALE", min: 100, icon: "\u{1F40B}", pointsMultiplier: 10, discount: 40, raffleMultiplier: 10, cssClass: "tier-whale" } // 🐋
     ];
 
     var PERKS = [
-      { icon: "\u{1F3F7}\u{FE0F}", name: "Store Discount", desc: "Get a discount on all LNL Store purchases paid in SOL", reqTier: "neck", dynamic: true },
-      { icon: "\u{1F39F}\u{FE0F}", name: "Raffle Entries", desc: "Earn entries into exclusive drops, giveaways, and raffles", reqTier: "neck", dynamic: true },
-      { icon: "\u{1F680}", name: "Early Access", desc: "Get first dibs on new sauce flavors, merch drops, and collections", reqTier: "longneck" },
-      { icon: "\u{1F455}", name: "Exclusive Merch", desc: "Unlock holder-only merch that never hits the public store", reqTier: "longneck" },
-      { icon: "\u{1F5F3}\u{FE0F}", name: "Flavor Voting", desc: "Vote on the next hot sauce flavor. Your neck, your choice.", reqTier: "legend" },
-      { icon: "\u{1F3A4}", name: "IRL Access", desc: "VIP entry to LNL events, listening parties, and tastings", reqTier: "legend" },
-      { icon: "\u{1F48E}", name: "Diamond Hands Club", desc: "Private group with alpha, airdrops, and direct team access", reqTier: "og" },
-      { icon: "\u{1F381}", name: "Monthly Airdrop", desc: "Free products, NFTs, and surprises delivered monthly", reqTier: "og" },
-      { icon: "\u{1F40B}", name: "Whale Council", desc: "Direct input on project direction, partnerships, and roadmap decisions", reqTier: "whale" },
-      { icon: "\u{1F513}", name: "Lifetime Perks", desc: "Permanent max discount, first priority on all future drops, and custom merch", reqTier: "whale" }
+      { icon: "\u{1F992}", name: "Store Discount", desc: "Get a discount on all LNL Store purchases paid in SOL", reqTier: "neck", dynamic: true },
+      { icon: "\u{1F992}", name: "Raffle Entries", desc: "Earn entries into exclusive drops, giveaways, and raffles", reqTier: "neck", dynamic: true },
+      { icon: "\u{1F992}", name: "IRL Access", desc: "Entry to LNL events, listening parties, and tastings", reqTier: "neck" },
+      { icon: "\u{1F525}", name: "Exclusive Merch", desc: "Unlock holder-only merch that never hits the public store", reqTier: "longneck" },
+      { icon: "\u{2B50}", name: "Exclusive Merch", desc: "Vote on the next apparel drop. Your neck, your choice.", reqTier: "legend" },
+      { icon: "\u{2B50}", name: "Flavor Voting", desc: "Vote on the next hot sauce flavor. Your taste, your choice.", reqTier: "legend" },
+      { icon: "\u{1F451}", name: "Early Access", desc: "Get first dibs on new sauce flavors, merch drops, and collections", reqTier: "og" },
+      { icon: "\u{1F451}", name: "VIP IRL Access", desc: "VIP entry to LNL events, listening parties, and tastings", reqTier: "og" },
+      { icon: "\u{1F41F}", name: "Diamond Hands Club", desc: "Private group with alpha, airdrops, and direct team access", reqTier: "sardine" },
+      { icon: "\u{1F988}", name: "Monthly Airdrop", desc: "Free products, NFTs, and surprises delivered monthly", reqTier: "barracuda" },
+      { icon: "\u{1F52A}", name: "Shark Council", desc: "Direct input on project direction, partnerships, and roadmap decisions", reqTier: "shark" },
+      { icon: "\u{1F40B}", name: "Lifetime Perks", desc: "Permanent max discount, first priority on all future drops, and custom merch", reqTier: "whale" }
     ];
 
     var walletProvider = null;
