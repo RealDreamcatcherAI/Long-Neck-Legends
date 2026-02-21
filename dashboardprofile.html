@@ -1319,8 +1319,8 @@
           '<div class="actions-grid">' +
             '<button class="action-btn" onclick="openPfpModal()">Edit PFP</button>' +
             '<button class="action-btn" onclick="editUsername()">Edit Username</button>' +
-            '<button class="action-btn" onclick="linkX()">Link X</button>' +
-            '<button class="action-btn" onclick="linkDiscord()">Link Discord</button>' +
+            '<button class="action-btn" onclick="connectX()">Connect X</button>' +
+            '<button class="action-btn" onclick="connectDiscord()">Connect Discord</button>' +
             '<button class="action-btn" onclick="copySolWallet()">Link SOL wallet</button>' +
             '<button class="action-btn danger" onclick="linkLedger()">Link Ledger</button>' +
           '</div>' +
@@ -1540,6 +1540,61 @@
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
     }
+
+    function openAuthPopup(url, title){
+  var w = 520, h = 720;
+  var y = window.top.outerHeight / 2 + window.top.screenY - (h / 2);
+  var x = window.top.outerWidth  / 2 + window.top.screenX - (w / 2);
+  var popup = window.open(
+    url,
+    title,
+    'toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=yes, resizable=yes, copyhistory=no, width=' + w + ', height=' + h + ', top=' + y + ', left=' + x
+  );
+  if (!popup) alert("Popup blocked. Please allow popups for this site.");
+  return popup;
+}
+
+// ---- X OAuth start ----
+function connectX(){
+  if (!walletPublicKey) return alert("Connect wallet first.");
+  // your backend URL (same domain recommended)
+  var url = "/auth/x/start?wallet=" + encodeURIComponent(walletPublicKey.toBase58());
+  openAuthPopup(url, "Connect X");
+}
+
+// ---- Discord OAuth start ----
+function connectDiscord(){
+  if (!walletPublicKey) return alert("Connect wallet first.");
+  var url = "/auth/discord/start?wallet=" + encodeURIComponent(walletPublicKey.toBase58());
+  openAuthPopup(url, "Connect Discord");
+}
+
+// Receive auth results from popup (backend callback page posts this)
+window.addEventListener("message", function(ev){
+  // optional: lock this down to your domain in production
+  // if (ev.origin !== window.location.origin) return;
+
+  var data = ev.data || {};
+  if (!data || !data.type) return;
+
+  if (data.type === "x_connected") {
+    // data: { id, username, name }
+    session.profile.x = data.username || "";
+    saveProfileToStorage();
+    refreshBanner();
+    alert("X connected: @" + (data.username || "unknown"));
+  }
+
+  if (data.type === "discord_connected") {
+    // data: { id, username, discriminator, global_name }
+    // store something human friendly, but keep id around too if you want
+    session.profile.discord = data.username ? (data.username + (data.discriminator ? ("#" + data.discriminator) : "")) : "";
+    // If you want the ID too, add a new field in session.profile like discordId
+    saveProfileToStorage();
+    refreshBanner();
+    alert("Discord connected: " + (session.profile.discord || "connected"));
+  }
+});
   </script>
 </body>
 </html>
