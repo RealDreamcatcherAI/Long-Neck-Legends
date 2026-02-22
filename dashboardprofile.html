@@ -1557,7 +1557,7 @@
 // ---- X OAuth start ----
 function connectX(){
   if (!walletPublicKey) return alert("Connect wallet first.");
-  // your backend URL (same domain recommended)
+  // IMPORTANT: use /api on Vercel
   var url = "/api/auth/x/start?wallet=" + encodeURIComponent(walletPublicKey.toBase58());
   openAuthPopup(url, "Connect X");
 }
@@ -1565,20 +1565,20 @@ function connectX(){
 // ---- Discord OAuth start ----
 function connectDiscord(){
   if (!walletPublicKey) return alert("Connect wallet first.");
-  const url = "/api/auth/discord/start?wallet=" + encodeURIComponent(walletPublicKey.toBase58());
+  // IMPORTANT: use /api on Vercel
+  var url = "/api/auth/discord/start?wallet=" + encodeURIComponent(walletPublicKey.toBase58());
   openAuthPopup(url, "Connect Discord");
 }
 
 // Receive auth results from popup (backend callback page posts this)
 window.addEventListener("message", function(ev){
-  // optional: lock this down to your domain in production
-  // if (ev.origin !== window.location.origin) return;
+  // LOCK THIS DOWN (prevents spoof messages)
+  if (ev.origin !== window.location.origin) return;
 
   var data = ev.data || {};
   if (!data || !data.type) return;
 
   if (data.type === "x_connected") {
-    // data: { id, username, name }
     session.profile.x = data.username || "";
     saveProfileToStorage();
     refreshBanner();
@@ -1586,13 +1586,16 @@ window.addEventListener("message", function(ev){
   }
 
   if (data.type === "discord_connected") {
-    // data: { id, username, discriminator, global_name }
-    // store something human friendly, but keep id around too if you want
-    session.profile.discord = data.username ? (data.username + (data.discriminator ? ("#" + data.discriminator) : "")) : "";
-    // If you want the ID too, add a new field in session.profile like discordId
+    session.profile.discord = data.username
+      ? (data.username + (data.discriminator ? ("#" + data.discriminator) : ""))
+      : "";
     saveProfileToStorage();
     refreshBanner();
     alert("Discord connected: " + (session.profile.discord || "connected"));
+  }
+
+  if (data.type === "x_error" || data.type === "discord_error") {
+    alert("Auth failed. Please try again.");
   }
 });
   </script>
