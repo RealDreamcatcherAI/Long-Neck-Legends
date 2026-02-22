@@ -1558,14 +1558,14 @@
 function connectX(){
   if (!walletPublicKey) return alert("Connect wallet first.");
   // your backend URL (same domain recommended)
-  var url = "/auth/x/start?wallet=" + encodeURIComponent(walletPublicKey.toBase58());
+  var url = "/api/auth/x/start?wallet=" + encodeURIComponent(walletPublicKey.toBase58());
   openAuthPopup(url, "Connect X");
 }
 
 // ---- Discord OAuth start ----
 function connectDiscord(){
   if (!walletPublicKey) return alert("Connect wallet first.");
-  const url = "/auth/discord/start?wallet=" + encodeURIComponent(walletPublicKey.toBase58());
+  const url = "/api/auth/discord/start?wallet=" + encodeURIComponent(walletPublicKey.toBase58());
   openAuthPopup(url, "Connect Discord");
 }
 
