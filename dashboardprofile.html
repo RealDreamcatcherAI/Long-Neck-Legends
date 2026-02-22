@@ -1554,13 +1554,34 @@
 
     session.loadedNFTs.forEach(function(nft){
       var selected = (session.profile.pfpMint && nft.mint === session.profile.pfpMint);
-      var tile =
-        '<div class="pfp-tile ' + (selected ? "selected" : "") + '" onclick="selectPfp(\\'' + nft.mint + '\\')">' +
-          '<div class="pfp-selected"></div>' +
-          (nft.image ? '<img src="' + nft.image + '" alt="' + escapeHtml(nft.name) + '" loading="lazy">' : '<div style="aspect-ratio:1;background:#1e1e3a;"></div>') +
-          '<div class="pfp-name">' + escapeHtml(nft.name) + '</div>' +
-        '</div>';
-      grid.innerHTML += tile;
+
+      var tile = document.createElement("div");
+      tile.className = "pfp-tile" + (selected ? " selected" : "");
+      tile.addEventListener("click", function(){ selectPfp(nft.mint); });
+
+      var dot = document.createElement("div");
+      dot.className = "pfp-selected";
+      tile.appendChild(dot);
+
+      if (nft.image) {
+        var img = document.createElement("img");
+        img.src = nft.image;
+        img.alt = nft.name || "LNL";
+        img.loading = "lazy";
+        tile.appendChild(img);
+      } else {
+        var ph = document.createElement("div");
+        ph.style.aspectRatio = "1";
+        ph.style.background = "#1e1e3a";
+        tile.appendChild(ph);
+      }
+
+      var name = document.createElement("div");
+      name.className = "pfp-name";
+      name.textContent = nft.name || "LNL";
+      tile.appendChild(name);
+
+      grid.appendChild(tile);
     });
 
     document.getElementById("pfpModalBackdrop").classList.add("show");
