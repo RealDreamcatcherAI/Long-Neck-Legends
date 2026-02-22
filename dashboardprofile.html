@@ -955,300 +955,398 @@
     </div>
   </div>
 
+  <!-- SECOND WALLET MODAL -->
+<div class="modal-backdrop" id="secondWalletModalBackdrop" onclick="closeSecondWalletModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <div class="modal-title">Link 2nd Wallet</div>
+      <button class="modal-close" onclick="hideSecondWalletModal()">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="modal-note">
+        Connect a second wallet to combine your LNL holdings across wallets. (Main wallet stays connected.)
+      </div>
+
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
+        <button class="action-btn" style="flex:1; min-width:180px;" onclick="connectSecondWallet('phantom')">Phantom</button>
+        <button class="action-btn" style="flex:1; min-width:180px;" onclick="connectSecondWallet('solflare')">Solflare</button>
+        <button class="action-btn" style="flex:1; min-width:180px;" onclick="connectSecondWallet('magiceden')">Magic Eden</button>
+      </div>
+
+      <div id="secondWalletStatus" style="color:#666; font-size:0.82rem; line-height:1.5;">
+        No second wallet linked yet.
+      </div>
+
+      <div style="margin-top:14px; display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap;">
+        <button class="disconnect-btn" style="border-color:rgba(255,255,255,0.12);" onclick="unlinkSecondWallet()">Unlink</button>
+        <button class="disconnect-btn" onclick="hideSecondWalletModal()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+  
   <footer>
     <p>&copy; 2026 Long Neck Legends &bull; Diamond Hands Only</p>
   </footer>
 
   <script>
-    window.addEventListener('load', function() { document.body.classList.add('loaded'); });
+  window.addEventListener('load', function() { document.body.classList.add('loaded'); });
 
-    var CONFIG = {
-      COLLECTION_MINT: "8Rt3Ayqth4DAiPnW9MDFi63TiQJHmohfTWLMQFHi4KZH",
-      RPC_URL: "https://mainnet.helius-rpc.com/?api-key=44cfd082-9089-430d-8de3-cd310c478b1c",
-      MAGIC_EDEN_LINK: "https://magiceden.us/marketplace/long_neck_legends"
-    };
+  var CONFIG = {
+    COLLECTION_MINT: "8Rt3Ayqth4DAiPnW9MDFi63TiQJHmohfTWLMQFHi4KZH",
+    RPC_URL: "https://mainnet.helius-rpc.com/?api-key=44cfd082-9089-430d-8de3-cd310c478b1c",
+    MAGIC_EDEN_LINK: "https://magiceden.us/marketplace/long_neck_legends"
+  };
 
-    var TIERS = [
-      { id: "civilian", name: "CIVILIAN", min: 0, icon: "\u{1F464}", pointsMultiplier: 0, discount: 0, raffleMultiplier: 0, cssClass: "" }, // 👤
-      { id: "neck", name: "NECK", min: 1, icon: "\u{1F995}", pointsMultiplier: 1, discount: 10, raffleMultiplier: 1, cssClass: "tier-neck" }, // 🦒
-      { id: "longneck", name: "LONG NECK", min: 5, icon: "\u{1F525}", pointsMultiplier: 1.5, discount: 15, raffleMultiplier: 2, cssClass: "tier-longneck" }, // 🔥
-      { id: "legend", name: "LEGEND", min: 10, icon: "\u{2B50}", pointsMultiplier: 2.5, discount: 20, raffleMultiplier: 3, cssClass: "tier-legend" }, // ⭐
-      { id: "og", name: "OG LEGEND", min: 20, icon: "\u{1F451}", pointsMultiplier: 4, discount: 25, raffleMultiplier: 5, cssClass: "tier-og" }, // 👑
-      { id: "sardine", name: "SARDINE", min: 30, icon: "\u{1F41F}", pointsMultiplier: 6, discount: 30, raffleMultiplier: 6, cssClass: "tier-sardine" }, // 🐟
-      { id: "barracuda", name: "BARRACUDA", min: 50, icon: "\u{1F52A}", pointsMultiplier: 7, discount: 35, raffleMultiplier: 7, cssClass: "tier-barracuda" }, // 🔪
-      { id: "shark", name: "SHARK", min: 75, icon: "\u{1F988}", pointsMultiplier: 8, discount: 35, raffleMultiplier: 8, cssClass: "tier-shark" }, // 🦈
-      { id: "whale", name: "WHALE", min: 100, icon: "\u{1F40B}", pointsMultiplier: 10, discount: 40, raffleMultiplier: 10, cssClass: "tier-whale" } // 🐋
-    ];
+  var TIERS = [
+    { id: "civilian", name: "CIVILIAN", min: 0, icon: "\u{1F464}", pointsMultiplier: 0, discount: 0, raffleMultiplier: 0, cssClass: "" }, // 👤
+    { id: "neck", name: "NECK", min: 1, icon: "\u{1F995}", pointsMultiplier: 1, discount: 10, raffleMultiplier: 1, cssClass: "tier-neck" }, // 🦒
+    { id: "longneck", name: "LONG NECK", min: 5, icon: "\u{1F525}", pointsMultiplier: 1.5, discount: 15, raffleMultiplier: 2, cssClass: "tier-longneck" }, // 🔥
+    { id: "legend", name: "LEGEND", min: 10, icon: "\u{2B50}", pointsMultiplier: 2.5, discount: 20, raffleMultiplier: 3, cssClass: "tier-legend" }, // ⭐
+    { id: "og", name: "OG LEGEND", min: 20, icon: "\u{1F451}", pointsMultiplier: 4, discount: 25, raffleMultiplier: 5, cssClass: "tier-og" }, // 👑
+    { id: "sardine", name: "SARDINE", min: 30, icon: "\u{1F41F}", pointsMultiplier: 6, discount: 30, raffleMultiplier: 6, cssClass: "tier-sardine" }, // 🐟
+    { id: "barracuda", name: "BARRACUDA", min: 50, icon: "\u{1F52A}", pointsMultiplier: 7, discount: 35, raffleMultiplier: 7, cssClass: "tier-barracuda" }, // 🔪
+    { id: "shark", name: "SHARK", min: 75, icon: "\u{1F988}", pointsMultiplier: 8, discount: 35, raffleMultiplier: 8, cssClass: "tier-shark" }, // 🦈
+    { id: "whale", name: "WHALE", min: 100, icon: "\u{1F40B}", pointsMultiplier: 10, discount: 40, raffleMultiplier: 10, cssClass: "tier-whale" } // 🐋
+  ];
 
-    var PERKS = [
-      { icon: "\u{1F995}", name: "Store Discount", desc: "Get a discount on all LNL Store purchases paid in SOL.", reqTier: "neck", dynamic: true },
-      { icon: "\u{1F995}", name: "Raffle Entries", desc: "Earn entries into exclusive drops, giveaways, and raffles.", reqTier: "neck", dynamic: true },
-      { icon: "\u{1F995}", name: "IRL Access", desc: "Entry to LNL events, listening parties, and tastings.", reqTier: "neck" },
-      { icon: "\u{1F525}", name: "Exclusive Merch", desc: "Unlock holder-only merch that never hits the public store.", reqTier: "longneck" },
-      { icon: "\u{2B50}", name: "Exclusive Merch", desc: "Vote on the next apparel drop. Your neck, your choice.", reqTier: "legend" },
-      { icon: "\u{2B50}", name: "Flavor Voting", desc: "Vote on the next hot sauce flavor. Your taste, your choice.", reqTier: "legend" },
-      { icon: "\u{1F451}", name: "Early Access", desc: "Get first dibs on new sauce flavors, merch drops, and collections.", reqTier: "og" },
-      { icon: "\u{1F451}", name: "VIP IRL Access", desc: "VIP entry to LNL events, listening parties, and tastings.", reqTier: "og" },
-      { icon: "\u{1F41F}", name: "Diamond Hands Club", desc: "Private group with alpha, airdrops, and direct team access.", reqTier: "sardine" },
-      { icon: "\u{1F52A}", name: "Monthly Airdrop", desc: "Free products, NFTs, and surprises delivered monthly.", reqTier: "barracuda" },
-      { icon: "\u{1F988}", name: "Shark Council", desc: "Direct input on project direction, partnerships, and roadmap decisions.", reqTier: "shark" },
-      { icon: "\u{1F40B}", name: "Lifetime Perks", desc: "Permanent max discount, first priority on all future drops, and custom merch.", reqTier: "whale" }
-    ];
+  var PERKS = [
+    { icon: "\u{1F995}", name: "Store Discount", desc: "Get a discount on all LNL Store purchases paid in SOL.", reqTier: "neck", dynamic: true },
+    { icon: "\u{1F995}", name: "Raffle Entries", desc: "Earn entries into exclusive drops, giveaways, and raffles.", reqTier: "neck", dynamic: true },
+    { icon: "\u{1F995}", name: "IRL Access", desc: "Entry to LNL events, listening parties, and tastings.", reqTier: "neck" },
+    { icon: "\u{1F525}", name: "Exclusive Merch", desc: "Unlock holder-only merch that never hits the public store.", reqTier: "longneck" },
+    { icon: "\u{2B50}", name: "Exclusive Merch", desc: "Vote on the next apparel drop. Your neck, your choice.", reqTier: "legend" },
+    { icon: "\u{2B50}", name: "Flavor Voting", desc: "Vote on the next hot sauce flavor. Your taste, your choice.", reqTier: "legend" },
+    { icon: "\u{1F451}", name: "Early Access", desc: "Get first dibs on new sauce flavors, merch drops, and collections.", reqTier: "og" },
+    { icon: "\u{1F451}", name: "VIP IRL Access", desc: "VIP entry to LNL events, listening parties, and tastings.", reqTier: "og" },
+    { icon: "\u{1F41F}", name: "Diamond Hands Club", desc: "Private group with alpha, airdrops, and direct team access.", reqTier: "sardine" },
+    { icon: "\u{1F52A}", name: "Monthly Airdrop", desc: "Free products, NFTs, and surprises delivered monthly.", reqTier: "barracuda" },
+    { icon: "\u{1F988}", name: "Shark Council", desc: "Direct input on project direction, partnerships, and roadmap decisions.", reqTier: "shark" },
+    { icon: "\u{1F40B}", name: "Lifetime Perks", desc: "Permanent max discount, first priority on all future drops, and custom merch.", reqTier: "whale" }
+  ];
 
-    var walletProvider = null;
-    var walletPublicKey = null;
+  var walletProvider = null;
+  var walletPublicKey = null;
 
-    var session = {
-      loadedNFTs: [],
-      profile: {
-        username: "",
-        pfpMint: "",
-        pfpImage: "",
-        x: "",
-        discord: "",
-        ledger: ""
-      },
-      currentView: "profile"
-    };
+  var session = {
+    loadedNFTs: [],
+    profile: {
+      username: "",
+      pfpMint: "",
+      pfpImage: "",
+      x: "",
+      discord: "",
+      ledger: ""
+    },
+    secondWallet: {
+      address: "" // base58
+    },
+    currentView: "profile"
+  };
 
-    function getTier(count) {
-      for (var i = TIERS.length - 1; i >= 0; i--) {
-        if (count >= TIERS[i].min) return TIERS[i];
-      }
-      return TIERS[0];
+  function getTier(count) {
+    for (var i = TIERS.length - 1; i >= 0; i--) {
+      if (count >= TIERS[i].min) return TIERS[i];
     }
-    function getNextTier(tier) {
-      var idx = TIERS.findIndex(function(t) { return t.id === tier.id; });
-      return idx < TIERS.length - 1 ? TIERS[idx + 1] : null;
-    }
-    function calcPoints(count, tier) {
-      return Math.floor(count * 100 * tier.pointsMultiplier);
-    }
+    return TIERS[0];
+  }
+  function getNextTier(tier) {
+    var idx = TIERS.findIndex(function(t) { return t.id === tier.id; });
+    return idx < TIERS.length - 1 ? TIERS[idx + 1] : null;
+  }
+  function calcPoints(count, tier) {
+    return Math.floor(count * 100 * tier.pointsMultiplier);
+  }
 
-    function detectWalletProvider() {
+  function getProviderByName(name){
+    // Phantom
+    if (name === "phantom") {
       if (window.phantom && window.phantom.solana && window.phantom.solana.isPhantom) return window.phantom.solana;
-      if (window.backpack && window.backpack.solana) return window.backpack.solana;
+      if (window.solana && window.solana.isPhantom) return window.solana;
+    }
+
+    // Solflare
+    if (name === "solflare") {
       if (window.solflare && window.solflare.isSolflare) return window.solflare;
       if (window.solflare && window.solflare.solana) return window.solflare.solana;
-      if (window.solana && window.solana.isPhantom) return window.solana;
-      if (window.solana) return window.solana;
-      return null;
     }
 
-    function storageKey() {
-      var addr = walletPublicKey ? walletPublicKey.toBase58() : "no_wallet";
-      return "lnl_profile_" + addr;
+    // Magic Eden (varies by build/version)
+    if (name === "magiceden") {
+      if (window.magicEden && window.magicEden.solana) return window.magicEden.solana;
+      if (window.solana && window.solana.isMagicEden) return window.solana;
+      if (window.solana && window.solana.isMagicEdenWallet) return window.solana;
     }
 
-    function loadProfileFromStorage() {
-      try {
-        var raw = localStorage.getItem(storageKey());
-        if (!raw) return;
-        var data = JSON.parse(raw);
-        if (data && typeof data === "object") {
-          session.profile.username = data.username || "";
-          session.profile.pfpMint = data.pfpMint || "";
-          session.profile.pfpImage = data.pfpImage || "";
-          session.profile.x = data.x || "";
-          session.profile.discord = data.discord || "";
-          session.profile.ledger = data.ledger || "";
-        }
-      } catch (e) {}
-    }
+    return null;
+  }
 
-    function saveProfileToStorage() {
-      try {
-        localStorage.setItem(storageKey(), JSON.stringify(session.profile));
-      } catch (e) {}
-    }
+  function detectWalletProvider() {
+    if (window.phantom && window.phantom.solana && window.phantom.solana.isPhantom) return window.phantom.solana;
+    if (window.backpack && window.backpack.solana) return window.backpack.solana;
+    if (window.solflare && window.solflare.isSolflare) return window.solflare;
+    if (window.solflare && window.solflare.solana) return window.solflare.solana;
+    if (window.solana && window.solana.isPhantom) return window.solana;
+    if (window.solana) return window.solana;
+    return null;
+  }
 
-    function shortAddr(addr){
-      if (!addr) return "—";
-      return addr.slice(0,4) + "..." + addr.slice(-4);
-    }
+  function storageKey() {
+    var addr = walletPublicKey ? walletPublicKey.toBase58() : "no_wallet";
+    return "lnl_profile_" + addr;
+  }
 
-    function sanitizeName(input){
-      var s = (input || "").trim();
-      s = s.replace(/\s+/g, " ");
-      if (s.length > 24) s = s.slice(0, 24);
-      return s;
-    }
-
-    function normalizeHandle(input){
-      var s = (input || "").trim();
-      if (!s) return "";
-      s = s.replace(/^@+/, "");
-      if (s.length > 30) s = s.slice(0, 30);
-      return s;
-    }
-
-    function normalizeDiscord(input){
-      var s = (input || "").trim();
-      if (!s) return "";
-      s = s.replace(/\s+/g, "");
-      if (s.length > 32) s = s.slice(0, 32);
-      return s;
-    }
-
-    function buildXUrl(handle){
-      var h = normalizeHandle(handle);
-      if (!h) return "";
-      return "https://x.com/" + encodeURIComponent(h);
-    }
-
-    async function connectWallet() {
-      console.log("Connect clicked");
-      var provider = detectWalletProvider();
-      console.log("Provider:", provider);
-      if (!provider || typeof provider.connect !== "function") {
-        alert("No compatible Solana wallet found. Install Phantom, Solflare, or Backpack.");
-        return;
+  function loadProfileFromStorage() {
+    try {
+      var raw = localStorage.getItem(storageKey());
+      if (!raw) return;
+      var data = JSON.parse(raw);
+      if (data && typeof data === "object") {
+        session.profile.username = data.username || "";
+        session.profile.pfpMint = data.pfpMint || "";
+        session.profile.pfpImage = data.pfpImage || "";
+        session.profile.x = data.x || "";
+        session.profile.discord = data.discord || "";
+        session.profile.ledger = data.ledger || "";
       }
-      try {
-        if (provider.isConnected && typeof provider.disconnect === "function") {
-          try { await provider.disconnect(); } catch (e) {}
+    } catch (e) {}
+  }
+
+  function saveProfileToStorage() {
+    try {
+      localStorage.setItem(storageKey(), JSON.stringify(session.profile));
+    } catch (e) {}
+  }
+
+  function secondWalletStorageKey(){
+    var primary = walletPublicKey ? walletPublicKey.toBase58() : "no_wallet";
+    return "lnl_second_wallet_for_" + primary;
+  }
+
+  function loadSecondWalletFromStorage(){
+    try{
+      var raw = localStorage.getItem(secondWalletStorageKey());
+      if (!raw) return;
+      var data = JSON.parse(raw);
+      if (data && data.address) session.secondWallet.address = data.address;
+    }catch(e){}
+  }
+
+  function saveSecondWalletToStorage(){
+    try{
+      localStorage.setItem(secondWalletStorageKey(), JSON.stringify({ address: session.secondWallet.address || "" }));
+    }catch(e){}
+  }
+
+  function shortAddr(addr){
+    if (!addr) return "—";
+    return addr.slice(0,4) + "..." + addr.slice(-4);
+  }
+
+  function sanitizeName(input){
+    var s = (input || "").trim();
+    s = s.replace(/\s+/g, " ");
+    if (s.length > 24) s = s.slice(0, 24);
+    return s;
+  }
+
+  function normalizeHandle(input){
+    var s = (input || "").trim();
+    if (!s) return "";
+    s = s.replace(/^@+/, "");
+    if (s.length > 30) s = s.slice(0, 30);
+    return s;
+  }
+
+  function normalizeDiscord(input){
+    var s = (input || "").trim();
+    if (!s) return "";
+    s = s.replace(/\s+/g, "");
+    if (s.length > 32) s = s.slice(0, 32);
+    return s;
+  }
+
+  function buildXUrl(handle){
+    var h = normalizeHandle(handle);
+    if (!h) return "";
+    return "https://x.com/" + encodeURIComponent(h);
+  }
+
+  // ---- FIXED: fetch assets helper (top-level) ----
+  async function fetchAssetsByOwner(ownerAddress){
+    var res = await fetch(CONFIG.RPC_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: "lnl",
+        method: "getAssetsByOwner",
+        params: {
+          ownerAddress: ownerAddress,
+          page: 1,
+          limit: 1000,
+          displayOptions: { showCollectionMetadata: true }
         }
+      })
+    });
 
-        var resp = await provider.connect({ onlyIfTrusted: false });
-        walletProvider = provider;
-        walletPublicKey = resp.publicKey || provider.publicKey;
-        if (!walletPublicKey) throw new Error("Wallet connected but no publicKey found.");
+    var json = await res.json();
+    var items = (json && json.result && json.result.items) ? json.result.items : [];
 
-        var addr = walletPublicKey.toBase58();
-        document.getElementById("walletDisplay").textContent = shortAddr(addr);
+    // prefer collection grouping match
+    var lnlAssets = items.filter(function(a) {
+      var groups = a.grouping || [];
+      var g = groups.find(function(x) { return x.group_key === "collection"; });
+      return g && g.group_value === CONFIG.COLLECTION_MINT;
+    });
 
-        // show dashboard-only nav + wallet bits
-        document.getElementById("dashNavWrap").classList.add("show");
-        document.getElementById("walletChip").style.display = "flex";
-        document.getElementById("disconnectBtn").style.display = "inline-block";
+    // fallback to symbol/name safe checks
+    var picked = (lnlAssets.length > 0) ? lnlAssets : items.filter(function(a) {
+      var sym = (a.content && a.content.metadata && a.content.metadata.symbol) ||
+                (a.content && a.content.json && a.content.json.symbol) || "";
+      var name = (a.content && a.content.metadata && a.content.metadata.name) ||
+                 (a.content && a.content.json && a.content.json.name) || "";
+      var lname = String(name || "").toLowerCase();
+      return (sym === "LNL") || (lname.indexOf("long neck") !== -1);
+    });
 
-        document.getElementById("connectSection").style.display = "none";
-        document.getElementById("loadingSection").style.display = "block";
+    return picked.map(function(a) {
+      var name = (a.content && a.content.metadata && a.content.metadata.name) ||
+                 (a.content && a.content.json && a.content.json.name) || "LNL";
+      var image = (a.content && a.content.links && a.content.links.image) ||
+                  (a.content && a.content.files && a.content.files[0] && a.content.files[0].uri) ||
+                  (a.content && a.content.json && a.content.json.image) || "";
+      var mint = a.id || "";
+      return { name: name, image: image, mint: mint, owner: ownerAddress };
+    });
+  }
 
-        // Load saved profile (per-wallet)
-        loadProfileFromStorage();
-
-        await loadDashboard();
-      } catch (err) {
-        console.error("Connect error:", err);
-        alert("Connection error: " + (err.message || err));
+  async function connectWallet() {
+    console.log("Connect clicked");
+    var provider = detectWalletProvider();
+    console.log("Provider:", provider);
+    if (!provider || typeof provider.connect !== "function") {
+      alert("No compatible Solana wallet found. Install Phantom, Solflare, or Backpack.");
+      return;
+    }
+    try {
+      if (provider.isConnected && typeof provider.disconnect === "function") {
+        try { await provider.disconnect(); } catch (e) {}
       }
+
+      var resp = await provider.connect({ onlyIfTrusted: false });
+      walletProvider = provider;
+      walletPublicKey = resp.publicKey || provider.publicKey;
+      if (!walletPublicKey) throw new Error("Wallet connected but no publicKey found.");
+
+      var addr = walletPublicKey.toBase58();
+      document.getElementById("walletDisplay").textContent = shortAddr(addr);
+
+      document.getElementById("dashNavWrap").classList.add("show");
+      document.getElementById("walletChip").style.display = "flex";
+      document.getElementById("disconnectBtn").style.display = "inline-block";
+
+      document.getElementById("connectSection").style.display = "none";
+      document.getElementById("loadingSection").style.display = "block";
+
+      loadProfileFromStorage();
+      loadSecondWalletFromStorage();
+
+      await loadDashboard();
+    } catch (err) {
+      console.error("Connect error:", err);
+      alert("Connection error: " + (err.message || err));
     }
+  }
 
-    function disconnectWallet() {
-      try { if (walletProvider && walletProvider.disconnect) walletProvider.disconnect(); } catch (e) {}
-      walletProvider = null;
-      walletPublicKey = null;
+  function disconnectWallet() {
+    try { if (walletProvider && walletProvider.disconnect) walletProvider.disconnect(); } catch (e) {}
+    walletProvider = null;
+    walletPublicKey = null;
 
-      // hide dashboard-only nav + wallet bits
-      document.getElementById("dashNavWrap").classList.remove("show");
-      document.getElementById("walletChip").style.display = "none";
-      document.getElementById("disconnectBtn").style.display = "none";
+    document.getElementById("dashNavWrap").classList.remove("show");
+    document.getElementById("walletChip").style.display = "none";
+    document.getElementById("disconnectBtn").style.display = "none";
 
-      document.getElementById("connectSection").style.display = "block";
-      document.getElementById("loadingSection").style.display = "none";
-      document.getElementById("dashboard").classList.remove("show");
-      document.getElementById("view-profile").classList.remove("show");
+    document.getElementById("connectSection").style.display = "block";
+    document.getElementById("loadingSection").style.display = "none";
+    document.getElementById("dashboard").classList.remove("show");
+    document.getElementById("view-profile").classList.remove("show");
 
-      // reset view tab state
-      session.currentView = "profile";
-      document.getElementById("tabProfile").classList.add("active");
-    }
+    session.currentView = "profile";
+    document.getElementById("tabProfile").classList.add("active");
+  }
 
-    function switchView(viewName){
-      session.currentView = viewName;
+  function switchView(viewName){
+    session.currentView = viewName;
 
-      // tabs
-      var tabProfile = document.getElementById("tabProfile");
-      tabProfile.classList.toggle("active", viewName === "profile");
+    var tabProfile = document.getElementById("tabProfile");
+    tabProfile.classList.toggle("active", viewName === "profile");
 
-      // views
-      var vp = document.getElementById("view-profile");
-      vp.classList.toggle("show", viewName === "profile");
-    }
+    var vp = document.getElementById("view-profile");
+    vp.classList.toggle("show", viewName === "profile");
+  }
 
-    async function loadDashboard() {
-      try {
-        var owner = walletPublicKey.toBase58();
+  // ---- FIXED: merge both wallets ----
+  async function loadDashboard() {
+    try {
+      var primary = walletPublicKey.toBase58();
+      var owners = [primary];
 
-        var res = await fetch(CONFIG.RPC_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            jsonrpc: "2.0",
-            id: "lnl",
-            method: "getAssetsByOwner",
-            params: {
-              ownerAddress: owner,
-              page: 1,
-              limit: 1000,
-              displayOptions: { showCollectionMetadata: true }
-            }
-          })
-        });
+      if (session.secondWallet.address) owners.push(session.secondWallet.address);
 
-        var json = await res.json();
-        var items = (json && json.result && json.result.items) ? json.result.items : [];
+      var all = [];
+      for (var i=0; i<owners.length; i++){
+        var arr = await fetchAssetsByOwner(owners[i]);
+        all = all.concat(arr);
+      }
 
-        var lnlAssets = items.filter(function(a) {
-          var groups = a.grouping || [];
-          var g = groups.find(function(x) { return x.group_key === "collection"; });
-          return g && g.group_value === CONFIG.COLLECTION_MINT;
-        });
+      // de-dupe by mint
+      var seen = {};
+      var merged = [];
+      for (var j=0; j<all.length; j++){
+        var m = all[j].mint;
+        if (!m) continue;
+        if (seen[m]) continue;
+        seen[m] = true;
+        merged.push(all[j]);
+      }
 
-        var picked = lnlAssets.length > 0 ? lnlAssets : items.filter(function(a) {
-          var sym = (a.content && a.content.metadata && a.content.metadata.symbol) ||
-                    (a.content && a.content.json && a.content.json.symbol) || "";
-          var name = (a.content && a.content.metadata && a.content.metadata.name) ||
-                     (a.content && a.content.json && a.content.json.name) || "";
-          return (sym === "LNL") || (name.toLowerCase().indexOf("long neck") !== -1);
-        });
+      session.loadedNFTs = merged;
 
-        var loadedNFTs = picked.map(function(a) {
-          var name = (a.content && a.content.metadata && a.content.metadata.name) ||
-                     (a.content && a.content.json && a.content.json.name) || "LNL";
-          var image = (a.content && a.content.links && a.content.links.image) ||
-                      (a.content && a.content.files && a.content.files[0] && a.content.files[0].uri) ||
-                      (a.content && a.content.json && a.content.json.image) || "";
-          var mint = a.id || "";
-          return { name: name, image: image, mint: mint };
-        });
-
-        session.loadedNFTs = loadedNFTs;
-
-        // If no PFP picked yet, pick first NFT automatically
-        if (!session.profile.pfpMint && loadedNFTs.length > 0) {
-          session.profile.pfpMint = loadedNFTs[0].mint;
-          session.profile.pfpImage = loadedNFTs[0].image || "";
+      // PFP auto-pick/refresh
+      if (!session.profile.pfpMint && merged.length > 0) {
+        session.profile.pfpMint = merged[0].mint;
+        session.profile.pfpImage = merged[0].image || "";
+        saveProfileToStorage();
+      } else if (session.profile.pfpMint) {
+        var found = merged.find(function(n){ return n.mint === session.profile.pfpMint; });
+        if (found && found.image) {
+          session.profile.pfpImage = found.image;
           saveProfileToStorage();
-        } else if (session.profile.pfpMint) {
-          // If we have a saved mint, refresh its image in case it changed
-          var found = loadedNFTs.find(function(n){ return n.mint === session.profile.pfpMint; });
-          if (found && found.image) {
-            session.profile.pfpImage = found.image;
-            saveProfileToStorage();
-          }
         }
-
-        document.getElementById("loadingSection").style.display = "none";
-        renderProfileView(loadedNFTs);
-
-        document.getElementById("dashboard").classList.add("show");
-        switchView("profile");
-
-      } catch (err) {
-        console.error("Dashboard error:", err);
-        document.getElementById("loadingSection").style.display = "none";
-        document.getElementById("connectSection").style.display = "block";
-        alert("Error loading NFTs: " + (err.message || err));
       }
+
+      document.getElementById("loadingSection").style.display = "none";
+      renderProfileView(merged);
+
+      document.getElementById("dashboard").classList.add("show");
+      switchView("profile");
+
+    } catch (err) {
+      console.error("Dashboard error:", err);
+      document.getElementById("loadingSection").style.display = "none";
+      document.getElementById("connectSection").style.display = "block";
+      alert("Error loading NFTs: " + (err.message || err));
     }
+  }
 
-    function renderProfileView(nfts) {
-      var view = document.getElementById("view-profile");
-      view.innerHTML = "";
+  function renderProfileView(nfts) {
+    var view = document.getElementById("view-profile");
+    view.innerHTML = "";
 
-      var count = nfts.length;
+    var count = nfts.length;
 
     if (count === 0) {
       view.innerHTML = `
@@ -1260,344 +1358,370 @@
       `;
       return;
     }
-      
-      var tier = getTier(count);
-      var nextTier = getNextTier(tier);
-      var points = calcPoints(count, tier);
 
-      var displayName = session.profile.username ? session.profile.username : shortAddr(walletPublicKey.toBase58());
-      var xUrl = session.profile.x ? buildXUrl(session.profile.x) : "";
-      var disc = session.profile.discord ? session.profile.discord : "";
-      var ledger = session.profile.ledger ? session.profile.ledger : "";
+    var tier = getTier(count);
+    var nextTier = getNextTier(tier);
+    var points = calcPoints(count, tier);
 
-      var progressHTML = "";
-      if (nextTier) {
-        var progress = ((count - tier.min) / (nextTier.min - tier.min)) * 100;
-        progressHTML =
-          '<div class="tier-progress-wrap">' +
-            '<div class="tier-progress-label"><span>' + tier.name + '</span><span>' + nextTier.name + ' (' + nextTier.min + ' NFTs)</span></div>' +
-            '<div class="tier-progress-bar"><div class="tier-progress-fill" style="width:' + Math.min(progress,100) + '%"></div></div>' +
-          '</div>';
-      } else {
-        progressHTML = '<div style="color:#555;font-size:0.75rem;letter-spacing:2px;text-transform:uppercase;">MAX TIER REACHED \u{1F451}</div>';
-      }
+    var displayName = session.profile.username ? session.profile.username : shortAddr(walletPublicKey.toBase58());
+    var xUrl = session.profile.x ? buildXUrl(session.profile.x) : "";
+    var disc = session.profile.discord ? session.profile.discord : "";
+    var ledger = session.profile.ledger ? session.profile.ledger : "";
 
-      var badgeInner = "";
-      if (session.profile.pfpImage) {
-        badgeInner = '<img src="' + session.profile.pfpImage + '" alt="Selected PFP" loading="lazy">';
-      } else {
-        badgeInner = tier.icon;
-      }
+    var progressHTML = "";
+    if (nextTier) {
+      var progress = ((count - tier.min) / (nextTier.min - tier.min)) * 100;
+      progressHTML =
+        '<div class="tier-progress-wrap">' +
+          '<div class="tier-progress-label"><span>' + tier.name + '</span><span>' + nextTier.name + ' (' + nextTier.min + ' NFTs)</span></div>' +
+          '<div class="tier-progress-bar"><div class="tier-progress-fill" style="width:' + Math.min(progress,100) + '%"></div></div>' +
+        '</div>';
+    } else {
+      progressHTML = '<div style="color:#555;font-size:0.75rem;letter-spacing:2px;text-transform:uppercase;">MAX TIER REACHED \u{1F451}</div>';
+    }
 
-      var linksHTML = '';
-      if (xUrl) linksHTML += '<a class="plink" href="' + xUrl + '" target="_blank">X: @' + normalizeHandle(session.profile.x) + '</a>';
-      if (disc) linksHTML += '<span class="plink" style="cursor:default;">Discord: ' + disc + '</span>';
-      if (ledger) linksHTML += '<span class="plink" style="cursor:default;">Ledger: ' + ledger + '</span>';
+    var badgeInner = "";
+    if (session.profile.pfpImage) {
+      badgeInner = '<img src="' + session.profile.pfpImage + '" alt="Selected PFP" loading="lazy">';
+    } else {
+      badgeInner = tier.icon;
+    }
 
-      view.innerHTML +=
-        '<div class="tier-card ' + tier.cssClass + '">' +
-          '<div class="tier-badge" id="pfpBadge">' + badgeInner + '</div>' +
-          '<div class="tier-info">' +
-            '<div class="tier-label">YOUR TIER</div>' +
-            '<div class="tier-name">' + tier.name + '</div>' +
-            '<div class="tier-nfts-held">Holding <strong>' + count + '</strong> Long Neck Legend' + (count !== 1 ? "s" : "") + '</div>' +
-            progressHTML +
+    var linksHTML = '';
+    if (xUrl) linksHTML += '<a class="plink" href="' + xUrl + '" target="_blank">X: @' + normalizeHandle(session.profile.x) + '</a>';
+    if (disc) linksHTML += '<span class="plink" style="cursor:default;">Discord: ' + disc + '</span>';
+    if (ledger) linksHTML += '<span class="plink" style="cursor:default;">Ledger: ' + ledger + '</span>';
+    if (session.secondWallet.address) linksHTML += '<span class="plink" style="cursor:default;">2nd Wallet: ' + shortAddr(session.secondWallet.address) + '</span>';
+
+    view.innerHTML +=
+      '<div class="tier-card ' + tier.cssClass + '">' +
+        '<div class="tier-badge" id="pfpBadge">' + badgeInner + '</div>' +
+        '<div class="tier-info">' +
+          '<div class="tier-label">YOUR TIER</div>' +
+          '<div class="tier-name">' + tier.name + '</div>' +
+          '<div class="tier-nfts-held">Holding <strong>' + count + '</strong> Long Neck Legend' + (count !== 1 ? "s" : "") + '</div>' +
+          progressHTML +
+        '</div>' +
+        '<div class="profile-name-box">' +
+          '<div class="profile-name-inner">' +
+            '<div class="profile-name-label">Profile Name</div>' +
+            '<div class="profile-name" id="bannerName">' + escapeHtml(displayName) + '</div>' +
+            '<div class="profile-links" id="bannerLinks">' + linksHTML + '</div>' +
           '</div>' +
-          '<div class="profile-name-box">' +
-            '<div class="profile-name-inner">' +
-              '<div class="profile-name-label">Profile Name</div>' +
-              '<div class="profile-name" id="bannerName">' + escapeHtml(displayName) + '</div>' +
-              '<div class="profile-links" id="bannerLinks">' + linksHTML + '</div>' +
-            '</div>' +
-          '</div>' +
-        '</div>';
-
-      // Profile actions (your exact buttons list)
-      view.innerHTML +=
-        '<div class="profile-actions">' +
-          '<div class="stats-title">PROFILE</div>' +
-          '<div class="actions-grid">' +
-            '<button class="action-btn" onclick="openPfpModal()">Edit PFP</button>' +
-            '<button class="action-btn" onclick="editUsername()">Edit Username</button>' +
-            '<button class="action-btn" onclick="connectX()">Connect X</button>' +
-            '<button class="action-btn" onclick="connectDiscord()">Connect Discord</button>' +
-            '<button class="action-btn" onclick="copySolWallet()">Link SOL wallet</button>' +
-            '<button class="action-btn danger" onclick="linkLedger()">Link Ledger</button>' +
-          '</div>' +
-        '</div>';
-
-      // Legend points card
-      view.innerHTML +=
-        '<div class="stats-card">' +
-          '<div class="stats-title">LEGEND POINTS</div>' +
-          '<div class="points-display">' +
-            '<div class="points-number">' + points.toLocaleString() + '</div>' +
-            '<div class="points-label">Total Points</div>' +
-          '</div>' +
-          '<div class="stat-row"><span class="stat-label">Base (' + count + ' \u00D7 100)</span><span class="stat-value">' + (count*100) + '</span></div>' +
-          '<div class="stat-row"><span class="stat-label">Tier Multiplier</span><span class="stat-value cyan">' + tier.pointsMultiplier + 'x</span></div>' +
-          '<div class="stat-row"><span class="stat-label">Raffle Entries</span><span class="stat-value purple">' + (count * tier.raffleMultiplier) + '</span></div>' +
-        '</div>';
-
-      // Holder stats card
-      var nextTierRow = nextTier
-        ? '<div class="stat-row"><span class="stat-label">Next Tier At</span><span class="stat-value gold">' + nextTier.min + ' NFTs</span></div>'
-        : '<div class="stat-row"><span class="stat-label">Status</span><span class="stat-value gold">MAXED \u{1F451}</span></div>';
-
-      view.innerHTML +=
-        '<div class="stats-card">' +
-          '<div class="stats-title">HOLDER STATS</div>' +
-          '<div class="stat-row"><span class="stat-label">NFTs Held</span><span class="stat-value cyan">' + count + '</span></div>' +
-          '<div class="stat-row"><span class="stat-label">Current Tier</span><span class="stat-value">' + tier.name + '</span></div>' +
-          '<div class="stat-row"><span class="stat-label">Store Discount</span><span class="stat-value green">' + tier.discount + '%</span></div>' +
-          '<div class="stat-row"><span class="stat-label">Raffle Multiplier</span><span class="stat-value purple">' + tier.raffleMultiplier + 'x</span></div>' +
-          nextTierRow +
-        '</div>';
-
-      // Perks
-      var tierOrder = TIERS.map(function(t) { return t.id; });
-      var currentTierIdx = tierOrder.indexOf(tier.id);
-      var perksHTML = PERKS.map(function(perk) {
-        var reqIdx = tierOrder.indexOf(perk.reqTier);
-        var unlocked = currentTierIdx >= reqIdx;
-        var reqTierObj = TIERS.find(function(t) { return t.id === perk.reqTier; });
-        var desc = perk.desc;
-        if (perk.dynamic && perk.name === "Store Discount" && unlocked) desc = tier.discount + "% off all LNL Store purchases paid in SOL";
-        if (perk.dynamic && perk.name === "Raffle Entries" && unlocked) desc = tier.raffleMultiplier + "x entries into every raffle and giveaway";
-        return '' +
-          '<div class="perk ' + (unlocked ? "unlocked" : "locked") + '">' +
-            '<div class="perk-status ' + (unlocked ? "on" : "off") + '"></div>' +
-            '<div class="perk-icon">' + perk.icon + '</div>' +
-            '<div class="perk-name">' + perk.name + '</div>' +
-            '<div class="perk-desc">' + desc + '</div>' +
-            '<div class="perk-req ' + (unlocked ? "met" : "") + '">' + (unlocked ? "\u2713 UNLOCKED" : "REQUIRES " + reqTierObj.name) + '</div>' +
-          '</div>';
-      }).join("");
-
-      view.innerHTML +=
-        '<div class="perks-card">' +
-          '<div class="stats-title">HOLDER PERKS</div>' +
-          '<div class="perks-grid">' + perksHTML + '</div>' +
-        '</div>';
-
-      // Gallery (same as your dashboard)
-      var galleryHTML = nfts.map(function(nft) {
-        var img = nft.image
-          ? '<img src="' + nft.image + '" alt="' + escapeHtml(nft.name) + '" loading="lazy">'
-          : '<div style="aspect-ratio:1;background:#1e1e3a;display:flex;align-items:center;justify-content:center;color:#555;font-size:0.8rem;">No Image</div>';
-        var mintShort = nft.mint ? nft.mint.slice(0,4) + "..." + nft.mint.slice(-4) : "";
-        return '' +
-      '<div class="nft-tile" onclick="window.open(\'https://magiceden.us/item-details/' + nft.mint + '\', \'_blank\')">' +
-        img +
-        '<div class="nft-tile-info">' +
-          '<div class="nft-tile-name">' + escapeHtml(nft.name) + '</div>' +
-          '<div class="nft-tile-id">' + mintShort + '</div>' +
         '</div>' +
       '</div>';
-      }).join("");
 
-      view.innerHTML +=
-        '<div class="gallery-card">' +
-          '<div class="stats-title">YOUR COLLECTION</div>' +
-          '<div class="gallery-grid">' + galleryHTML + '</div>' +
+    view.innerHTML +=
+      '<div class="profile-actions">' +
+        '<div class="stats-title">PROFILE</div>' +
+        '<div class="actions-grid">' +
+          '<button class="action-btn" onclick="openPfpModal()">Edit PFP</button>' +
+          '<button class="action-btn" onclick="editUsername()">Edit Username</button>' +
+          '<button class="action-btn" onclick="connectX()">Connect X</button>' +
+          '<button class="action-btn" onclick="connectDiscord()">Connect Discord</button>' +
+          '<button class="action-btn" onclick="openSecondWalletModal()">Link 2nd Wallet</button>' +
+          '<button class="action-btn danger" onclick="linkLedger()">Link Ledger</button>' +
+        '</div>' +
+      '</div>';
+
+    view.innerHTML +=
+      '<div class="stats-card">' +
+        '<div class="stats-title">LEGEND POINTS</div>' +
+        '<div class="points-display">' +
+          '<div class="points-number">' + points.toLocaleString() + '</div>' +
+          '<div class="points-label">Total Points</div>' +
+        '</div>' +
+        '<div class="stat-row"><span class="stat-label">Base (' + count + ' \u00D7 100)</span><span class="stat-value">' + (count*100) + '</span></div>' +
+        '<div class="stat-row"><span class="stat-label">Tier Multiplier</span><span class="stat-value cyan">' + tier.pointsMultiplier + 'x</span></div>' +
+        '<div class="stat-row"><span class="stat-label">Raffle Entries</span><span class="stat-value purple">' + (count * tier.raffleMultiplier) + '</span></div>' +
+      '</div>';
+
+    var nextTierRow = nextTier
+      ? '<div class="stat-row"><span class="stat-label">Next Tier At</span><span class="stat-value gold">' + nextTier.min + ' NFTs</span></div>'
+      : '<div class="stat-row"><span class="stat-label">Status</span><span class="stat-value gold">MAXED \u{1F451}</span></div>';
+
+    view.innerHTML +=
+      '<div class="stats-card">' +
+        '<div class="stats-title">HOLDER STATS</div>' +
+        '<div class="stat-row"><span class="stat-label">NFTs Held</span><span class="stat-value cyan">' + count + '</span></div>' +
+        '<div class="stat-row"><span class="stat-label">Current Tier</span><span class="stat-value">' + tier.name + '</span></div>' +
+        '<div class="stat-row"><span class="stat-label">Store Discount</span><span class="stat-value green">' + tier.discount + '%</span></div>' +
+        '<div class="stat-row"><span class="stat-label">Raffle Multiplier</span><span class="stat-value purple">' + tier.raffleMultiplier + 'x</span></div>' +
+        nextTierRow +
+      '</div>';
+
+    var tierOrder = TIERS.map(function(t) { return t.id; });
+    var currentTierIdx = tierOrder.indexOf(tier.id);
+
+    var perksHTML = PERKS.map(function(perk) {
+      var reqIdx = tierOrder.indexOf(perk.reqTier);
+      var unlocked = currentTierIdx >= reqIdx;
+      var reqTierObj = TIERS.find(function(t) { return t.id === perk.reqTier; });
+      var desc = perk.desc;
+
+      if (perk.dynamic && perk.name === "Store Discount" && unlocked) desc = tier.discount + "% off all LNL Store purchases paid in SOL";
+      if (perk.dynamic && perk.name === "Raffle Entries" && unlocked) desc = tier.raffleMultiplier + "x entries into every raffle and giveaway";
+
+      return '' +
+        '<div class="perk ' + (unlocked ? "unlocked" : "locked") + '">' +
+          '<div class="perk-status ' + (unlocked ? "on" : "off") + '"></div>' +
+          '<div class="perk-icon">' + perk.icon + '</div>' +
+          '<div class="perk-name">' + perk.name + '</div>' +
+          '<div class="perk-desc">' + desc + '</div>' +
+          '<div class="perk-req ' + (unlocked ? "met" : "") + '">' + (unlocked ? "\u2713 UNLOCKED" : "REQUIRES " + reqTierObj.name) + '</div>' +
         '</div>';
+    }).join("");
 
-      view.innerHTML +=
+    view.innerHTML +=
+      '<div class="perks-card">' +
+        '<div class="stats-title">HOLDER PERKS</div>' +
+        '<div class="perks-grid">' + perksHTML + '</div>' +
+      '</div>';
+
+    var galleryHTML = nfts.map(function(nft) {
+      var img = nft.image
+        ? '<img src="' + nft.image + '" alt="' + escapeHtml(nft.name) + '" loading="lazy">'
+        : '<div style="aspect-ratio:1;background:#1e1e3a;display:flex;align-items:center;justify-content:center;color:#555;font-size:0.8rem;">No Image</div>';
+      var mintShort = nft.mint ? nft.mint.slice(0,4) + "..." + nft.mint.slice(-4) : "";
+      return '' +
+        '<div class="nft-tile" onclick="window.open(\'https://magiceden.us/item-details/' + nft.mint + '\', \'_blank\')">' +
+          img +
+          '<div class="nft-tile-info">' +
+            '<div class="nft-tile-name">' + escapeHtml(nft.name) + '</div>' +
+            '<div class="nft-tile-id">' + mintShort + '</div>' +
+          '</div>' +
+        '</div>';
+    }).join("");
+
+    view.innerHTML +=
+      '<div class="gallery-card">' +
+        '<div class="stats-title">YOUR COLLECTION</div>' +
+        '<div class="gallery-grid">' + galleryHTML + '</div>' +
+      '</div>';
+
+    view.innerHTML +=
       '<div class="share-section">' +
         '<button class="share-btn" onclick="window.open(\'' + CONFIG.MAGIC_EDEN_LINK + '\', \'_blank\')">MAGIC EDEN</button>' +
       '</div>';
-    }
+  }
 
-    /* -------- Profile actions -------- */
+  /* -------- Profile actions -------- */
 
-    function editUsername(){
-      var current = session.profile.username || "";
-      var input = prompt("Set your Profile Username (max 24 chars):", current);
-      if (input === null) return;
-      session.profile.username = sanitizeName(input);
-      saveProfileToStorage();
-      refreshBanner();
-    }
-
-    function linkX(){
-      var current = session.profile.x || "";
-      var input = prompt("Enter your X handle (no @ needed):", current);
-      if (input === null) return;
-      session.profile.x = normalizeHandle(input);
-      saveProfileToStorage();
-      refreshBanner();
-    }
-
-    function linkDiscord(){
-      var current = session.profile.discord || "";
-      var input = prompt("Enter your Discord name (example: Glitch#1337 or glitch):", current);
-      if (input === null) return;
-      session.profile.discord = normalizeDiscord(input);
-      saveProfileToStorage();
-      refreshBanner();
-    }
-
-    function copySolWallet(){
-      var addr = walletPublicKey ? walletPublicKey.toBase58() : "";
-      if (!addr) return;
-      try{
-        navigator.clipboard.writeText(addr);
-        alert("SOL wallet copied: " + shortAddr(addr));
-      }catch(e){
-        alert("Your SOL wallet: " + addr);
-      }
-    }
-
-    function linkLedger(){
-      // placeholder: you can upgrade this later to a real ledger-connect flow
-      var current = session.profile.ledger || "";
-      var input = prompt("Paste your Ledger public key / label (optional):", current);
-      if (input === null) return;
-      session.profile.ledger = (input || "").trim().slice(0, 42);
-      saveProfileToStorage();
-      refreshBanner();
-    }
-
-    function refreshBanner(){
-      var bn = document.getElementById("bannerName");
-      if (bn) {
-        var displayName = session.profile.username ? session.profile.username : shortAddr(walletPublicKey.toBase58());
-        bn.textContent = displayName;
-      }
-
-      var bl = document.getElementById("bannerLinks");
-      if (bl) {
-        var linksHTML = "";
-        var xUrl = session.profile.x ? buildXUrl(session.profile.x) : "";
-        if (xUrl) linksHTML += '<a class="plink" href="' + xUrl + '" target="_blank">X: @' + normalizeHandle(session.profile.x) + '</a>';
-        if (session.profile.discord) linksHTML += '<span class="plink" style="cursor:default;">Discord: ' + session.profile.discord + '</span>';
-        if (session.profile.ledger) linksHTML += '<span class="plink" style="cursor:default;">Ledger: ' + session.profile.ledger + '</span>';
-        bl.innerHTML = linksHTML;
-      }
-    }
-
-    /* -------- PFP modal -------- */
-
-    function openPfpModal(){
-      if (!session.loadedNFTs || session.loadedNFTs.length === 0) return;
-
-      var grid = document.getElementById("pfpGrid");
-      grid.innerHTML = "";
-
-      session.loadedNFTs.forEach(function(nft){
-        var selected = (session.profile.pfpMint && nft.mint === session.profile.pfpMint);
-        var tile =
-      '<div class="pfp-tile ' + (selected ? "selected" : "") + '" onclick="selectPfp(\'' + nft.mint + '\')">' +
-        '<div class="pfp-selected"></div>' +
-        (nft.image ? '<img src="' + nft.image + '" alt="' + escapeHtml(nft.name) + '" loading="lazy">' : '<div style="aspect-ratio:1;background:#1e1e3a;"></div>') +
-        '<div class="pfp-name">' + escapeHtml(nft.name) + '</div>' +
-      '</div>';
-        grid.innerHTML += tile;
-      });
-
-      document.getElementById("pfpModalBackdrop").classList.add("show");
-    }
-
-    function hidePfpModal(){
-      document.getElementById("pfpModalBackdrop").classList.remove("show");
-    }
-
-    function closePfpModal(e){
-      // click outside modal
-      if (e && e.target && e.target.id === "pfpModalBackdrop") hidePfpModal();
-    }
-
-    function selectPfp(mint){
-      var found = session.loadedNFTs.find(function(n){ return n.mint === mint; });
-      if (!found) return;
-
-      session.profile.pfpMint = mint;
-      session.profile.pfpImage = found.image || "";
-      saveProfileToStorage();
-
-      // update badge immediately
-      var badge = document.getElementById("pfpBadge");
-      if (badge) {
-        badge.innerHTML = session.profile.pfpImage
-          ? '<img src="' + session.profile.pfpImage + '" alt="Selected PFP" loading="lazy">'
-          : badge.innerHTML;
-      }
-
-      // update modal selection dot
-      var tiles = document.querySelectorAll(".pfp-tile");
-      for (var i=0;i<tiles.length;i++){
-        tiles[i].classList.remove("selected");
-      }
-      // Auto Close
-      hidePfpModal();
-    }
-
-    function escapeHtml(str){
-      return (str || "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-    }
-
-    function openAuthPopup(url, title){
-  var w = 520, h = 720;
-  var y = window.top.outerHeight / 2 + window.top.screenY - (h / 2);
-  var x = window.top.outerWidth  / 2 + window.top.screenX - (w / 2);
-  var popup = window.open(
-    url,
-    title,
-    'toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=yes, resizable=yes, copyhistory=no, width=' + w + ', height=' + h + ', top=' + y + ', left=' + x
-  );
-  if (!popup) alert("Popup blocked. Please allow popups for this site.");
-  return popup;
-}
-
-// ---- X OAuth start ----
-function connectX(){
-  if (!walletPublicKey) return alert("Connect wallet first.");
-  // IMPORTANT: use /api on Vercel
-  var url = "/api/auth/x/start?wallet=" + encodeURIComponent(walletPublicKey.toBase58());
-  openAuthPopup(url, "Connect X");
-}
-
-// ---- Discord OAuth start ----
-function connectDiscord(){
-  if (!walletPublicKey) return alert("Connect wallet first.");
-  // IMPORTANT: use /api on Vercel
-  var url = "/api/auth/discord/start?wallet=" + encodeURIComponent(walletPublicKey.toBase58());
-  openAuthPopup(url, "Connect Discord");
-}
-
-// Receive auth results from popup (backend callback page posts this)
-window.addEventListener("message", function(ev){
-  // LOCK THIS DOWN (prevents spoof messages)
-  if (ev.origin !== window.location.origin) return;
-
-  var data = ev.data || {};
-  if (!data || !data.type) return;
-
-  if (data.type === "x_connected") {
-    session.profile.x = data.username || "";
+  function editUsername(){
+    var current = session.profile.username || "";
+    var input = prompt("Set your Profile Username (max 24 chars):", current);
+    if (input === null) return;
+    session.profile.username = sanitizeName(input);
     saveProfileToStorage();
     refreshBanner();
-    alert("X connected: @" + (data.username || "unknown"));
   }
 
-  if (data.type === "discord_connected") {
-    session.profile.discord = data.username
-      ? (data.username + (data.discriminator ? ("#" + data.discriminator) : ""))
-      : "";
+  function linkLedger(){
+    var current = session.profile.ledger || "";
+    var input = prompt("Paste your Ledger public key / label (optional):", current);
+    if (input === null) return;
+    session.profile.ledger = (input || "").trim().slice(0, 42);
     saveProfileToStorage();
     refreshBanner();
-    alert("Discord connected: " + (session.profile.discord || "connected"));
   }
 
-  if (data.type === "x_error" || data.type === "discord_error") {
-    alert("Auth failed. Please try again.");
+  function refreshBanner(){
+    var bn = document.getElementById("bannerName");
+    if (bn) {
+      var displayName = session.profile.username ? session.profile.username : shortAddr(walletPublicKey.toBase58());
+      bn.textContent = displayName;
+    }
+
+    var bl = document.getElementById("bannerLinks");
+    if (bl) {
+      var linksHTML = "";
+      var xUrl = session.profile.x ? buildXUrl(session.profile.x) : "";
+      if (xUrl) linksHTML += '<a class="plink" href="' + xUrl + '" target="_blank">X: @' + normalizeHandle(session.profile.x) + '</a>';
+      if (session.profile.discord) linksHTML += '<span class="plink" style="cursor:default;">Discord: ' + session.profile.discord + '</span>';
+      if (session.profile.ledger) linksHTML += '<span class="plink" style="cursor:default;">Ledger: ' + session.profile.ledger + '</span>';
+      if (session.secondWallet.address) linksHTML += '<span class="plink" style="cursor:default;">2nd Wallet: ' + shortAddr(session.secondWallet.address) + '</span>';
+      bl.innerHTML = linksHTML;
+    }
   }
-});
-  </script>
+
+  /* -------- PFP modal -------- */
+
+  function openPfpModal(){
+    if (!session.loadedNFTs || session.loadedNFTs.length === 0) return;
+
+    var grid = document.getElementById("pfpGrid");
+    grid.innerHTML = "";
+
+    session.loadedNFTs.forEach(function(nft){
+      var selected = (session.profile.pfpMint && nft.mint === session.profile.pfpMint);
+      var tile =
+        '<div class="pfp-tile ' + (selected ? "selected" : "") + '" onclick="selectPfp(\\'' + nft.mint + '\\')">' +
+          '<div class="pfp-selected"></div>' +
+          (nft.image ? '<img src="' + nft.image + '" alt="' + escapeHtml(nft.name) + '" loading="lazy">' : '<div style="aspect-ratio:1;background:#1e1e3a;"></div>') +
+          '<div class="pfp-name">' + escapeHtml(nft.name) + '</div>' +
+        '</div>';
+      grid.innerHTML += tile;
+    });
+
+    document.getElementById("pfpModalBackdrop").classList.add("show");
+  }
+
+  function hidePfpModal(){
+    document.getElementById("pfpModalBackdrop").classList.remove("show");
+  }
+
+  function closePfpModal(e){
+    if (e && e.target && e.target.id === "pfpModalBackdrop") hidePfpModal();
+  }
+
+  function selectPfp(mint){
+    var found = session.loadedNFTs.find(function(n){ return n.mint === mint; });
+    if (!found) return;
+
+    session.profile.pfpMint = mint;
+    session.profile.pfpImage = found.image || "";
+    saveProfileToStorage();
+
+    var badge = document.getElementById("pfpBadge");
+    if (badge) {
+      badge.innerHTML = session.profile.pfpImage
+        ? '<img src="' + session.profile.pfpImage + '" alt="Selected PFP" loading="lazy">'
+        : badge.innerHTML;
+    }
+
+    hidePfpModal();
+  }
+
+  function escapeHtml(str){
+    return (str || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  /* -------- 2nd wallet modal + connect -------- */
+
+  function openSecondWalletModal(){
+    if (!walletPublicKey) return alert("Connect main wallet first.");
+    var el = document.getElementById("secondWalletStatus");
+    if (el) {
+      el.textContent = session.secondWallet.address
+        ? ("Linked: " + shortAddr(session.secondWallet.address))
+        : "No second wallet linked yet.";
+    }
+    document.getElementById("secondWalletModalBackdrop").classList.add("show");
+  }
+
+  function hideSecondWalletModal(){
+    document.getElementById("secondWalletModalBackdrop").classList.remove("show");
+  }
+
+  function closeSecondWalletModal(e){
+    if (e && e.target && e.target.id === "secondWalletModalBackdrop") hideSecondWalletModal();
+  }
+
+  async function connectSecondWallet(which){
+    try{
+      var provider = getProviderByName(which);
+      if (!provider || typeof provider.connect !== "function") {
+        return alert("Wallet provider not found. Make sure " + which + " is installed & enabled.");
+      }
+
+      var resp = await provider.connect({ onlyIfTrusted: false });
+      var pk = resp && resp.publicKey ? resp.publicKey : provider.publicKey;
+      if (!pk) throw new Error("Connected but no publicKey returned.");
+
+      var addr = (typeof pk.toBase58 === "function") ? pk.toBase58() : String(pk);
+
+      if (walletPublicKey && addr === walletPublicKey.toBase58()){
+        return alert("That’s your main wallet already. Pick a different wallet for the 2nd slot.");
+      }
+
+      session.secondWallet.address = addr;
+      saveSecondWalletToStorage();
+
+      var el = document.getElementById("secondWalletStatus");
+      if (el) el.textContent = "Linked: " + shortAddr(addr) + " — rescanning…";
+
+      document.getElementById("loadingSection").style.display = "block";
+      document.getElementById("dashboard").classList.remove("show");
+      await loadDashboard();
+
+      hideSecondWalletModal();
+      alert("2nd wallet linked: " + shortAddr(addr));
+    } catch (err) {
+      console.error("Second wallet connect error:", err);
+      alert("Failed to link 2nd wallet: " + (err.message || err));
+    }
+  }
+
+  function unlinkSecondWallet(){
+    session.secondWallet.address = "";
+    saveSecondWalletToStorage();
+
+    var el = document.getElementById("secondWalletStatus");
+    if (el) el.textContent = "Second wallet unlinked. Rescanning…";
+
+    document.getElementById("loadingSection").style.display = "block";
+    document.getElementById("dashboard").classList.remove("show");
+    loadDashboard();
+  }
+
+  /* -------- X + Discord OAuth popups (your existing logic) -------- */
+
+  function openAuthPopup(url, title){
+    var w = 520, h = 720;
+    var y = window.top.outerHeight / 2 + window.top.screenY - (h / 2);
+    var x = window.top.outerWidth  / 2 + window.top.screenX - (w / 2);
+    var popup = window.open(
+      url,
+      title,
+      'toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=yes, resizable=yes, copyhistory=no, width=' + w + ', height=' + h + ', top=' + y + ', left=' + x
+    );
+    if (!popup) alert("Popup blocked. Please allow popups for this site.");
+    return popup;
+  }
+
+  function connectX(){
+    if (!walletPublicKey) return alert("Connect wallet first.");
+    var url = "/api/auth/x/start?wallet=" + encodeURIComponent(walletPublicKey.toBase58());
+    openAuthPopup(url, "Connect X");
+  }
+
+  function connectDiscord(){
+    if (!walletPublicKey) return alert("Connect wallet first.");
+    var url = "/api/auth/discord/start?wallet=" + encodeURIComponent(walletPublicKey.toBase58());
+    openAuthPopup(url, "Connect Discord");
+  }
+
+  window.addEventListener("message", function(ev){
+    if (ev.origin !== window.location.origin) return;
+
+    var data = ev.data || {};
+    if (!data || !data.type) return;
+
+    if (data.type === "x_connected") {
+      session.profile.x = data.username || "";
+      saveProfileToStorage();
+      refreshBanner();
+      alert("X connected: @" + (data.username || "unknown"));
+    }
+
+    if (data.type === "discord_connected") {
+      session.profile.discord = data.username
+        ? (data.username + (data.discriminator ? ("#" + data.discriminator) : ""))
+        : "";
+      saveProfileToStorage();
+      refreshBanner();
+      alert("Discord connected: " + (session.profile.discord || "connected"));
+    }
+
+    if (data.type === "x_error" || data.type === "discord_error") {
+      alert("Auth failed. Please try again.");
+    }
+  });
+</script>
 </body>
 </html>
