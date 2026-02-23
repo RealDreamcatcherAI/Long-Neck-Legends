@@ -887,6 +887,15 @@
       padding-top: 1.2rem;
       border-top: 1px solid rgba(255,255,255,0.06);
     }
+    .subdao-grid{
+      grid-template-columns: repeat(3, 1fr);
+    }
+    @media (max-width: 900px){
+      .subdao-grid{ grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 600px){
+      .subdao-grid{ grid-template-columns: 1fr; }
+    }
     .trait-pills{
       display:flex;
       flex-wrap:wrap;
@@ -1667,7 +1676,7 @@
       view.innerHTML +=
         '<div class="perks-card">' +
           '<div class="stats-title">SUBDAO PERKS</div>' +
-          '<div class="perks-grid">' + subdaoPerksHTML + '</div>' +
+          '<div class="perks-grid subdao-grid">' + subdaoPerksHTML + '</div>' +
         '</div>';
 
       var galleryHTML = nfts.map(function(nft) {
