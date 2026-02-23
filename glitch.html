@@ -1562,20 +1562,21 @@
       if (session.secondWallet.address) linksHTML += '<span class="plink" style="cursor:default;">2nd Wallet: ' + shortAddr(session.secondWallet.address) + '</span>';
 
       view.innerHTML +=
-        '<div class="tier-card ' + tier.cssClass + '">' +
-          '<div class="tier-badge" id="pfpBadge">' + badgeInner + '</div>' +
-          '<div class="tier-info">' +
-            '<div class="tier-label">YOUR TIER</div>' +
-            '<div class="tier-name">' + tier.name + '</div>' +
-            '<div class="tier-nfts-held">Holding <strong>' + count + '</strong> Long Neck Legend' + (count !== 1 ? "s" : "") + '</div>' +
-            progressHTML +
+      '<div class="tier-card ' + tier.cssClass + '">' +
+        '<div class="tier-badge" id="pfpBadge">' + badgeInner + '</div>' +
+        '<div class="tier-info">' +
+          '<div class="tier-label">YOUR TIER</div>' +
+          '<div class="tier-name">' + tier.name + '</div>' +
+          '<div class="tier-nfts-held">Holding <strong>' + count + '</strong> Long Neck Legend' + (count !== 1 ? "s" : "") + '</div>' +
+          progressHTML +
+        '</div>' +
+        '<div class="profile-name-box">' +
+          '<div class="profile-username" id="bannerUsername">' + escapeHtml(displayName) + '</div>' +
+          '<div class="profile-name-inner">' +
+            '<div class="profile-links" id="bannerLinks">' + linksHTML + '</div>' +
           '</div>' +
-          '<div class="profile-name-box">' +
-      '<div class="profile-username" id="bannerUsername">' + escapeHtml(displayName) + '</div>' +
-      '<div class="profile-name-inner">' +
-        '<div class="profile-links" id="bannerLinks">' + linksHTML + '</div>' +
-      '</div>' +
-    '</div>' +
+        '</div>' +
+      '</div>';
 
       view.innerHTML +=
         '<div class="profile-actions" id="profilePanel">' +
