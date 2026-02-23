@@ -11,6 +11,18 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
+    /* Keep banner links (like X) white */
+a.plink,
+a.plink:visited,
+a.plink:hover,
+a.plink:active {
+  color: #e0e0ff;          /* your “white” */
+  text-decoration: none;
+}
+a.plink:hover{
+  text-decoration: underline; /* optional */
+}
+    
     body {
       font-family: 'Space Grotesk', sans-serif;
       background: #0a0a1a;
@@ -429,68 +441,65 @@
     .tier-shark .tier-progress-fill { background: #00ffcc; box-shadow: 0 0 10px rgba(0,255,204,0.5); }
     .tier-whale .tier-progress-fill { background: #00ffcc; box-shadow: 0 0 10px rgba(0,255,204,0.5); }
 
-    /* ---- Profile Name (right side of tier card) ---- */
-    .profile-name-box{
-      flex: 0 0 320px;
-      max-width: 360px;
-      display: flex;
-      justify-content: flex-end;
-      align-items: center;
-      text-align: right;
-    }
-    .profile-name-inner{
-      width: 100%;
-      padding: 0.6rem 0.8rem;
-      border-radius: 14px;
-      background: rgba(0,0,0,0.18);
-      border: 1px solid rgba(255,255,255,0.06);
-    }
-    .profile-name-label{
-      font-size: 0.65rem;
-      letter-spacing: 2.5px;
-      text-transform: uppercase;
-      color: #555;
-      margin-bottom: 0.35rem;
-    }
-    .profile-name{
-      font-family: 'Orbitron', sans-serif;
-      font-weight: 900;
-      letter-spacing: 1px;
-      font-size: 1.15rem;
-      color: #e0e0ff;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .profile-links{
-      margin-top: 0.45rem;
-      display: flex;
-      justify-content: flex-end;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    .plink{
-      font-size: 0.7rem;
-      color: #888;
-      border: 1px solid rgba(255,255,255,0.08);
-      background: rgba(255,255,255,0.02);
-      padding: 6px 10px;
-      border-radius: 999px;
-      text-decoration: none;
-      transition: all 0.2s;
-      letter-spacing: 1px;
-    }
-    .plink:hover{
-      border-color: rgba(0,212,255,0.4);
-      color: #00d4ff;
-      box-shadow: 0 0 18px rgba(0,212,255,0.12);
-    }
+/* ---- Username + Social Box (right side of tier card) ---- */
+.profile-name-box{
+  flex: 0 0 320px;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;     /* right align */
+  justify-content: center;
+  text-align: right;
+  gap: 0.5rem;
+}
 
-    @media (max-width: 900px){
-      .profile-name-box{ flex: 1 1 auto; max-width: 100%; justify-content: center; text-align: center; }
-      .profile-links{ justify-content: center; }
-      .profile-name-inner{ margin-top: 0.5rem; }
-    }
+.profile-username{
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2.4rem;
+  letter-spacing: 4px;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* username color mimics tier-name color */
+.tier-neck .profile-username { color: #00d4ff; }
+.tier-longneck .profile-username { color: #7b68ee; }
+.tier-legend .profile-username { color: #ffd700; }
+.tier-og .profile-username { color: #ffd700; }
+.tier-sardine .profile-username { color: #ff3c5c; }
+.tier-barracuda .profile-username { color: #ff3c5c; }
+.tier-shark .profile-username { color: #00ffcc; }
+.tier-whale .profile-username { color: #00ffcc; }
+
+.profile-name-inner{
+  width: 100%;
+  padding: 0.7rem 0.8rem;
+  border-radius: 14px;
+  background: rgba(0,0,0,0.18);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.profile-links{
+  display: flex;
+  justify-content: flex-end; /* keep right aligned */
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* responsive: center it on smaller widths */
+@media (max-width: 900px){
+  .profile-name-box{
+    flex: 1 1 auto;
+    max-width: 100%;
+    align-items: center;
+    text-align: center;
+  }
+  .profile-links{ justify-content: center; }
+}
 
     /* ---- STATS CARD ---- */
     .stats-card {
@@ -1565,22 +1574,21 @@
       if (session.secondWallet.address) linksHTML += '<span class="plink" style="cursor:default;">2nd Wallet: ' + shortAddr(session.secondWallet.address) + '</span>';
 
       view.innerHTML +=
-        '<div class="tier-card ' + tier.cssClass + '">' +
-          '<div class="tier-badge" id="pfpBadge">' + badgeInner + '</div>' +
-          '<div class="tier-info">' +
-            '<div class="tier-label">YOUR TIER</div>' +
-            '<div class="tier-name">' + tier.name + '</div>' +
-            '<div class="tier-nfts-held">Holding <strong>' + count + '</strong> Long Neck Legend' + (count !== 1 ? "s" : "") + '</div>' +
-            progressHTML +
+      '<div class="tier-card ' + tier.cssClass + '">' +
+        '<div class="tier-badge" id="pfpBadge">' + badgeInner + '</div>' +
+        '<div class="tier-info">' +
+          '<div class="tier-label">YOUR TIER</div>' +
+          '<div class="tier-name">' + tier.name + '</div>' +
+          '<div class="tier-nfts-held">Holding <strong>' + count + '</strong> Long Neck Legend' + (count !== 1 ? "s" : "") + '</div>' +
+          progressHTML +
+        '</div>' +
+        '<div class="profile-name-box">' +
+          '<div class="profile-username" id="bannerUsername">' + escapeHtml(displayName) + '</div>' +
+          '<div class="profile-name-inner">' +
+            '<div class="profile-links" id="bannerLinks">' + linksHTML + '</div>' +
           '</div>' +
-          '<div class="profile-name-box">' +
-            '<div class="profile-name-inner">' +
-              '<div class="profile-name-label">Profile Name</div>' +
-              '<div class="profile-name" id="bannerName">' + escapeHtml(displayName) + '</div>' +
-              '<div class="profile-links" id="bannerLinks">' + linksHTML + '</div>' +
-            '</div>' +
-          '</div>' +
-        '</div>';
+        '</div>' +
+      '</div>';
 
       view.innerHTML +=
         '<div class="profile-actions" id="profilePanel">' +
@@ -1728,11 +1736,11 @@
     }
 
     function refreshBanner(){
-      var bn = document.getElementById("bannerName");
-      if (bn) {
-        var displayName = session.profile.username ? session.profile.username : shortAddr(walletPublicKey.toBase58());
-        bn.textContent = displayName;
-      }
+      var bn = document.getElementById("bannerUsername");
+    if (bn) {
+      var displayName = session.profile.username ? session.profile.username : shortAddr(walletPublicKey.toBase58());
+      bn.textContent = displayName;
+    }
 
       var bl = document.getElementById("bannerLinks");
       if (bl) {
