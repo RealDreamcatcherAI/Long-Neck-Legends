@@ -275,7 +275,196 @@
       .dashboard{ padding: 1.4rem 1rem 3rem; }
     }
 
-    /* ---- TIER CARD ---- */
+    
+    /* ---- TRADES (MVP) ---- */
+    .trade-head{
+      grid-column: 1 / -1;
+      display:flex;
+      align-items:center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 1.1rem 1.4rem;
+      background: #111125;
+      border: 1px solid #1e1e3a;
+      border-radius: 14px;
+    }
+    .trade-title{
+      font-family: 'Bebas Neue', sans-serif;
+      letter-spacing: 3px;
+      color: #555;
+      font-size: 1.3rem;
+    }
+    .trade-sub{
+      color:#666;
+      font-size: 0.8rem;
+      margin-top: 2px;
+      letter-spacing: 0.4px;
+    }
+    .trade-plus{
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight: 900;
+      font-size: 1.2rem;
+      cursor:pointer;
+      border: 1px solid rgba(255,255,255,0.10);
+      color:#00d4ff;
+      background: rgba(0,0,0,0.22);
+      transition: all 0.2s;
+      flex: 0 0 auto;
+    }
+    .trade-plus:hover{
+      border-color: rgba(0,212,255,0.45);
+      box-shadow: 0 0 22px rgba(0,212,255,0.12);
+      transform: translateY(-1px);
+    }
+
+    .trade-card{
+      grid-column: 1 / -1;
+      background: #111125;
+      border: 1px solid #1e1e3a;
+      border-radius: 14px;
+      padding: 1.6rem 1.6rem;
+    }
+
+    .trade-filters{
+      display:flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .trade-input{
+      background: rgba(0,0,0,0.22);
+      border: 1px solid rgba(255,255,255,0.10);
+      color: #e0e0ff;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 0.82rem;
+      outline: none;
+      min-width: 220px;
+      flex: 1 1 220px;
+    }
+    .trade-input::placeholder{ color:#5f5f88; }
+
+    .trade-table{
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+      margin-top: 10px;
+    }
+    .trade-table th, .trade-table td{
+      padding: 12px 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      text-align: left;
+      vertical-align: top;
+    }
+    .trade-table th{
+      font-family: 'Bebas Neue', sans-serif;
+      letter-spacing: 2px;
+      color:#777;
+      font-size: 0.95rem;
+      white-space: nowrap;
+    }
+    .trade-pill{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(0,0,0,0.22);
+      color:#bfc2ff;
+      font-size:0.68rem;
+      letter-spacing:0.6px;
+      text-transform: uppercase;
+      margin-right: 6px;
+      margin-bottom: 6px;
+      user-select:none;
+    }
+    .trade-pill.good{ border-color: rgba(0,255,136,0.30); color:#00ff88; background: rgba(0,255,136,0.05); }
+    .trade-pill.warn{ border-color: rgba(255,215,0,0.30); color:#ffd700; background: rgba(255,215,0,0.05); }
+    .trade-pill.bad{ border-color: rgba(255,60,92,0.35); color:#ff7a90; background: rgba(255,60,92,0.06); }
+
+    .trade-mini{
+      color:#666;
+      font-size: 0.75rem;
+      margin-top: 6px;
+      line-height: 1.5;
+    }
+    .trade-actions{
+      display:flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content:flex-end;
+    }
+    .tiny-btn{
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 0.72rem;
+      letter-spacing: 1.6px;
+      text-transform: uppercase;
+      font-weight: 900;
+      cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(0,0,0,0.22);
+      color:#cfd2ff;
+      transition: all 0.2s;
+    }
+    .tiny-btn:hover{ border-color: rgba(0,212,255,0.45); color:#e0e0ff; box-shadow: 0 0 18px rgba(0,212,255,0.10); transform: translateY(-1px); }
+    .tiny-btn.danger:hover{ border-color: rgba(255,60,92,0.55); color:#ff3c5c; box-shadow: 0 0 16px rgba(255,60,92,0.10); }
+
+    .form-row{
+      display:flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    .form-col{ flex: 1 1 220px; min-width: 220px; }
+    .label{
+      font-size: 0.68rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color:#666;
+      margin-bottom: 6px;
+      display:block;
+    }
+    .select-grid{
+      display:grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .select-nft{
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(0,0,0,0.22);
+      border-radius: 14px;
+      overflow:hidden;
+      cursor:pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+    .select-nft:hover{ border-color: rgba(0,212,255,0.35); transform: translateY(-1px); box-shadow: 0 10px 24px rgba(0,212,255,0.10); }
+    .select-nft img{ width:100%; aspect-ratio:1; object-fit:cover; display:block; }
+    .select-nft .nm{ padding: 8px 10px; font-size: 0.72rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .select-nft .chk{
+      position:absolute;
+      top:10px;
+      right:10px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background:#00ff88;
+      box-shadow: 0 0 10px rgba(0,255,136,0.55);
+      display:none;
+    }
+    .select-nft.selected .chk{ display:block; }
+
+
+/* ---- TIER CARD ---- */
     .tier-card {
       grid-column: 1 / -1;
       background: linear-gradient(135deg, #111125 0%, #0d0d20 100%);
@@ -966,7 +1155,8 @@
     <div class="dash-nav">
       <div class="dash-tabs">
         <button class="dash-tab" id="tabProfile" onclick="toggleProfilePanel()">Profile</button>
-      </div>
+              <button class="dash-tab" id="tabTrade" onclick="openTrade()">Trade</button>
+</div>
 
       <div class="dash-right">
         <div class="wallet-chip" id="walletChip" style="display:none;">
@@ -981,7 +1171,7 @@
   <!-- CONNECT PROMPT -->
   <div class="connect-section" id="connectSection">
     <button class="connect-btn" onclick="connectWallet()">CONNECT WALLET</button>
-    <p class="connect-prompt">Phantom &bull; Solflare &bull; Backpack</p>
+    <p class="connect-prompt">Phantom &bull; Solflare &bull; Magic Eden</p>
   </div>
 
   <!-- LOADING -->
@@ -993,6 +1183,7 @@
   <!-- DASHBOARD WRAP -->
   <div class="dashboard" id="dashboard">
     <div class="view show" id="view-profile"></div>
+    <div class="view" id="view-trade"></div>
   </div>
 
   <!-- PFP MODAL -->
@@ -1063,7 +1254,100 @@
   </div>
 
 
-  <footer>
+  
+  <!-- TRADE CREATE MODAL -->
+  <div class="modal-backdrop" id="tradeModalBackdrop" onclick="closeTradeModal(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <div class="modal-title">Create Trade Listing</div>
+        <button class="modal-close" onclick="hideTradeModal()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="modal-note">
+          List what you&apos;re offering, then what you want back. This is a <strong>listing board</strong> (no auto-swap). Always verify mints/collections before sending anything.
+        </div>
+
+        <div class="profile-actions" style="margin:0; padding: 1.2rem 1.2rem;">
+          <div class="stats-title" style="margin-bottom:0.6rem;">OFFER</div>
+
+          <div class="form-row">
+            <div class="form-col">
+              <span class="label">Offer SOL (optional)</span>
+              <input class="trade-input" id="offerSol" inputmode="decimal" placeholder="e.g. 0.25" />
+            </div>
+
+            <div class="form-col">
+              <span class="label">Offer Token (optional) — mint + amount</span>
+              <input class="trade-input" id="offerTokenMint" placeholder="Token mint address (SPL)" />
+              <div style="height:8px;"></div>
+              <input class="trade-input" id="offerTokenAmount" inputmode="decimal" placeholder="Amount (e.g. 1000)" />
+            </div>
+          </div>
+
+          <div style="margin-top: 12px;">
+            <span class="label">Offer NFTs (pick up to 5)</span>
+            <div class="select-grid" id="offerNftGrid"></div>
+            <div class="trade-mini" id="offerNftHint">0 / 5 selected</div>
+          </div>
+
+          <div class="subdao-divider"></div>
+
+          <div class="stats-title" style="margin-bottom:0.6rem;">REQUEST</div>
+
+          <div class="form-row">
+            <div class="form-col">
+              <span class="label">Request SOL (optional)</span>
+              <input class="trade-input" id="wantSol" inputmode="decimal" placeholder="e.g. 1.5" />
+            </div>
+
+            <div class="form-col">
+              <span class="label">Request Token (optional) — mint + amount</span>
+              <input class="trade-input" id="wantTokenMint" placeholder="Token mint address (SPL)" />
+              <div style="height:8px;"></div>
+              <input class="trade-input" id="wantTokenAmount" inputmode="decimal" placeholder="Amount (e.g. 420)" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-col">
+              <span class="label">Request Collection (optional)</span>
+              <input class="trade-input" id="wantCollectionId" placeholder="Collection mint / ID" />
+            </div>
+            <div class="form-col">
+              <span class="label">Trait filter (optional) — trait type + value</span>
+              <input class="trade-input" id="wantTraitType" placeholder="Trait type (e.g. Mouth)" />
+              <div style="height:8px;"></div>
+              <input class="trade-input" id="wantTraitValue" placeholder="Trait value (e.g. Blunt)" />
+            </div>
+          </div>
+
+          <div class="form-row" style="align-items:center;">
+            <div class="form-col" style="min-width:260px;">
+              <span class="label">Bundle toggle</span>
+              <button class="action-btn" id="bundleToggleBtn" onclick="toggleBundleMode()" style="width:100%;">BUNDLE: OFF (single request)</button>
+              <div class="trade-mini">Off = you must request exactly 1 thing (SOL OR Token OR Collection). On = you can combine.</div>
+            </div>
+
+            <div class="form-col">
+              <span class="label">Note (optional)</span>
+              <input class="trade-input" id="tradeNote" maxlength="120" placeholder="Short note (e.g. 'OG beanie only')"/>
+              <div class="trade-mini">Max 120 chars.</div>
+            </div>
+          </div>
+
+          <div style="margin-top: 14px; display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap;">
+            <button class="disconnect-btn" style="border-color:rgba(255,255,255,0.12);" onclick="hideTradeModal()">Cancel</button>
+            <button class="action-btn" onclick="submitTrade()">Create Listing</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+<footer>
     <p>&copy; 2026 Long Neck Legends &bull; Diamond Hands Only</p>
   </footer>
 
@@ -1384,9 +1668,29 @@
     }
 
     function toggleProfilePanel(){
+      // If you're on Trade (or any other view), clicking Profile should switch you back to Profile and open the panel.
+      if (session.currentView !== "profile") {
+        session.profilePanelOpen = true;
+        applyProfilePanelUI();
+        switchView("profile");
+        return;
+      }
+
+      // If you're already on Profile, then it's a true toggle (open/close panel)
       session.profilePanelOpen = !session.profilePanelOpen;
       applyProfilePanelUI();
+      switchView("profile");
     }
+
+    function openTrade(){
+      // Switching to Trade closes the profile panel so the Profile button doesn't stay lit.
+      session.profilePanelOpen = false;
+      applyProfilePanelUI();
+      switchView("trade");
+      renderTradeView();
+      refreshTrades(); // fire and forget
+    }
+
 
     async function connectWallet() {
       console.log("Connect clicked");
@@ -1443,6 +1747,8 @@
       document.getElementById("loadingSection").style.display = "none";
       document.getElementById("dashboard").classList.remove("show");
       document.getElementById("view-profile").classList.remove("show");
+        var vt = document.getElementById("view-trade");
+        if (vt) vt.classList.remove("show");
 
       // ✅ reset toggle state (button unlit + panel hidden)
       session.profilePanelOpen = false;
@@ -1456,12 +1762,21 @@
       session.currentView = viewName;
 
       var tabProfile = document.getElementById("tabProfile");
-      // keep this in sync with toggle
+      var tabTrade = document.getElementById("tabTrade");
+
+      // Profile tab is a toggle-button (lights up only when the panel is open)
       if (tabProfile) tabProfile.classList.toggle("active", viewName === "profile" && !!session.profilePanelOpen);
 
+      // Trade tab is a normal tab (lights up when you're in Trade view)
+      if (tabTrade) tabTrade.classList.toggle("active", viewName === "trade");
+
       var vp = document.getElementById("view-profile");
+      var vt = document.getElementById("view-trade");
+
       if (vp) vp.classList.toggle("show", viewName === "profile");
+      if (vt) vt.classList.toggle("show", viewName === "trade");
     }
+
 
     async function loadDashboard() {
       try {
@@ -1675,7 +1990,7 @@
 
       view.innerHTML +=
         '<div class="perks-card">' +
-          '<div class="stats-title">SUBDAO PERKS</div>' +
+          '<div class="stats-title">SUBDAOs</div>' +
           '<div class="perks-grid subdao-grid">' + subdaoPerksHTML + '</div>' +
         '</div>';
 
@@ -1709,7 +2024,397 @@
       applyProfilePanelUI();
     }
 
-    function editUsername(){
+    
+    // -----------------------------
+    // TRADES (Listing Board MVP)
+    // -----------------------------
+    var TRADE_API = {
+      list: "/api/trades/list",
+      create: "/api/trades/create",
+      close: "/api/trades/close"
+    };
+
+    // in-memory cache for current session
+    session.trades = [];
+    session.tradeBundleMode = false;
+    session.tradeOfferNftMints = [];
+
+    function renderTradeView(){
+      var view = document.getElementById("view-trade");
+      if (!view) return;
+
+      view.innerHTML = ''
+        + '<div class="trade-head">'
+        + '  <div>'
+        + '    <div class="trade-title">TRADES</div>'
+        + '    <div class="trade-sub">Listing board — negotiate in Discord. No auto-swap. Stay safe.</div>'
+        + '  </div>'
+        + '  <button class="trade-plus" title="Create Trade" onclick="showTradeModal()">+</button>'
+        + '</div>'
+        + '<div class="trade-card">'
+        + '  <div class="trade-filters">'
+        + '    <input class="trade-input" id="tradeSearch" placeholder="Search by wallet / mint / token / trait..." oninput="applyTradeFilters()" />'
+        + '    <button class="tiny-btn" onclick="refreshTrades()">Refresh</button>'
+        + '  </div>'
+        + '  <div id="tradeTableWrap"></div>'
+        + '</div>';
+
+      drawTradeTable(session.trades || []);
+    }
+
+    function applyTradeFilters(){
+      var q = (document.getElementById("tradeSearch") && document.getElementById("tradeSearch").value) ? document.getElementById("tradeSearch").value.trim().toLowerCase() : "";
+      if (!q) { drawTradeTable(session.trades || []); return; }
+      var filtered = (session.trades || []).filter(function(t){
+        var hay = JSON.stringify(t || {}).toLowerCase();
+        return hay.indexOf(q) !== -1;
+      });
+      drawTradeTable(filtered);
+    }
+
+    function drawTradeTable(trades){
+      var wrap = document.getElementById("tradeTableWrap");
+      if (!wrap) return;
+
+      if (!trades || trades.length === 0){
+        wrap.innerHTML = '<div class="trade-mini">No listings yet. Hit the <strong>+</strong> to be the first savage in the bazaar.</div>';
+        return;
+      }
+
+      var rows = trades.map(function(t){
+        var offerBits = [];
+        if (t.offer && t.offer.nfts && t.offer.nfts.length){
+          offerBits.push('<span class="trade-pill good">NFT x' + t.offer.nfts.length + '</span>');
+        }
+        if (t.offer && t.offer.sol){
+          offerBits.push('<span class="trade-pill good">SOL ' + escapeHtml(String(t.offer.sol)) + '</span>');
+        }
+        if (t.offer && t.offer.token && t.offer.token.mint){
+          offerBits.push('<span class="trade-pill good">TOKEN</span><span class="trade-mini">' + escapeHtml(shortAddr(t.offer.token.mint)) + ' • ' + escapeHtml(String(t.offer.token.amount || "")) + '</span>');
+        }
+
+        var wantBits = [];
+        if (t.want && t.want.sol){
+          wantBits.push('<span class="trade-pill warn">SOL ' + escapeHtml(String(t.want.sol)) + '</span>');
+        }
+        if (t.want && t.want.token && t.want.token.mint){
+          wantBits.push('<span class="trade-pill warn">TOKEN</span><span class="trade-mini">' + escapeHtml(shortAddr(t.want.token.mint)) + ' • ' + escapeHtml(String(t.want.token.amount || "")) + '</span>');
+        }
+        if (t.want && t.want.collection && t.want.collection.id){
+          var traitLine = "";
+          if (t.want.collection.traitType && t.want.collection.traitValue){
+            traitLine = ' • ' + escapeHtml(t.want.collection.traitType) + ': ' + escapeHtml(t.want.collection.traitValue);
+          }
+          wantBits.push('<span class="trade-pill warn">COLLECTION</span><span class="trade-mini">' + escapeHtml(shortAddr(t.want.collection.id)) + traitLine + '</span>');
+        }
+
+        var bundle = t.bundle ? '<span class="trade-pill bad">BUNDLE</span>' : '';
+        var note = t.note ? ('<div class="trade-mini">' + escapeHtml(t.note) + '</div>') : '';
+        var who = t.owner ? escapeHtml(shortAddr(t.owner)) : '—';
+        var when = t.createdAt ? escapeHtml(new Date(t.createdAt).toLocaleString()) : '';
+
+        var actions = ''
+          + '<div class="trade-actions">'
+          + '  <button class="tiny-btn" onclick="copyTrade(' + "'" + escapeAttr(t.id || "") + "'" + ')">Copy ID</button>'
+          + (t.owner && walletPublicKey && (t.owner === walletPublicKey.toBase58())
+              ? '  <button class="tiny-btn danger" onclick="closeTrade(' + "'" + escapeAttr(t.id || "") + "'" + ')">Close</button>'
+              : '')
+          + '</div>';
+
+        return ''
+          + '<tr>'
+          + '  <td><div>' + who + '</div><div class="trade-mini">' + when + '</div>' + note + '</td>'
+          + '  <td>' + bundle + (offerBits.join(" ") || '<span class="trade-mini">—</span>') + '</td>'
+          + '  <td>' + (wantBits.join(" ") || '<span class="trade-mini">—</span>') + '</td>'
+          + '  <td style="white-space:nowrap;">' + actions + '</td>'
+          + '</tr>';
+      }).join("");
+
+      wrap.innerHTML = ''
+        + '<table class="trade-table">'
+        + '  <thead><tr><th>Owner</th><th>Offer</th><th>Request</th><th></th></tr></thead>'
+        + '  <tbody>' + rows + '</tbody>'
+        + '</table>'
+        + '<div class="trade-mini" style="margin-top:10px;">Tip: Do the deal in Discord DMs or a trade channel. Never send first if you don’t trust the vibe.</div>';
+    }
+
+    function copyTrade(id){
+      if (!id) return;
+      try {
+        navigator.clipboard.writeText(id);
+        alert("Copied trade ID: " + id);
+      } catch(e){
+        alert("Trade ID: " + id);
+      }
+    }
+
+    async function refreshTrades(){
+      try{
+        var res = await fetch(TRADE_API.list, { method:"GET" });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        var json = await res.json();
+        session.trades = Array.isArray(json && json.trades) ? json.trades : [];
+        // newest first
+        session.trades.sort(function(a,b){ return (b.createdAt||0) - (a.createdAt||0); });
+        applyTradeFilters();
+      }catch(err){
+        console.warn("Trades list failed:", err);
+        // fallback: local cache (so Trade still works in pure-static mode)
+        try{
+          var local = JSON.parse(localStorage.getItem("lnl_trades_local") || "[]");
+          session.trades = Array.isArray(local) ? local : [];
+          applyTradeFilters();
+        }catch(e){}
+      }
+    }
+
+    async function closeTrade(id){
+      if (!id) return;
+      if (!confirm("Close this listing?")) return;
+
+      // optimistic UI
+      session.trades = (session.trades || []).filter(function(t){ return t.id !== id; });
+      applyTradeFilters();
+
+      try{
+        await fetch(TRADE_API.close, {
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          body: JSON.stringify({ id: id })
+        });
+      }catch(err){
+        console.warn("Close trade failed:", err);
+      }
+    }
+
+    function showTradeModal(){
+      if (!walletPublicKey){
+        alert("Connect your wallet first.");
+        return;
+      }
+      session.tradeOfferNftMints = [];
+      session.tradeBundleMode = false;
+
+      // reset inputs
+      setVal("offerSol","");
+      setVal("offerTokenMint","");
+      setVal("offerTokenAmount","");
+      setVal("wantSol","");
+      setVal("wantTokenMint","");
+      setVal("wantTokenAmount","");
+      setVal("wantCollectionId","");
+      setVal("wantTraitType","");
+      setVal("wantTraitValue","");
+      setVal("tradeNote","");
+
+      var btn = document.getElementById("bundleToggleBtn");
+      if (btn) btn.textContent = "BUNDLE: OFF (single request)";
+
+      buildOfferNftGrid();
+
+      var bd = document.getElementById("tradeModalBackdrop");
+      if (bd) bd.classList.add("show");
+    }
+    function hideTradeModal(){
+      var bd = document.getElementById("tradeModalBackdrop");
+      if (bd) bd.classList.remove("show");
+    }
+    function closeTradeModal(e){
+      if (e && e.target && e.target.id === "tradeModalBackdrop") hideTradeModal();
+    }
+
+    function toggleBundleMode(){
+      session.tradeBundleMode = !session.tradeBundleMode;
+      var btn = document.getElementById("bundleToggleBtn");
+      if (btn) btn.textContent = session.tradeBundleMode ? "BUNDLE: ON (combo request)" : "BUNDLE: OFF (single request)";
+    }
+
+    function buildOfferNftGrid(){
+      var grid = document.getElementById("offerNftGrid");
+      if (!grid) return;
+
+      var nfts = session.loadedNFTs || [];
+      if (!nfts.length){
+        grid.innerHTML = '<div class="trade-mini">No NFTs loaded yet.</div>';
+        return;
+      }
+
+      grid.innerHTML = nfts.map(function(n){
+        var img = n.image ? ('<img src="' + n.image + '" alt="' + escapeHtml(n.name) + '" loading="lazy">') : '<div style="aspect-ratio:1;background:#1e1e3a;display:flex;align-items:center;justify-content:center;color:#555;font-size:0.8rem;">No Image</div>';
+        var mint = n.mint || "";
+        return ''
+          + '<div class="select-nft" id="pick_' + escapeAttr(mint) + '" onclick="toggleOfferNft(' + "'" + escapeAttr(mint) + "'" + ')">'
+          + '  <div class="chk"></div>'
+          +    img
+          + '  <div class="nm">' + escapeHtml(n.name) + '</div>'
+          + '</div>';
+      }).join("");
+
+      updateOfferNftHint();
+    }
+
+    function toggleOfferNft(mint){
+      if (!mint) return;
+
+      var list = session.tradeOfferNftMints || [];
+      var idx = list.indexOf(mint);
+
+      if (idx >= 0){
+        list.splice(idx, 1);
+      } else {
+        if (list.length >= 5){
+          alert("Max 5 NFTs.");
+          return;
+        }
+        list.push(mint);
+      }
+      session.tradeOfferNftMints = list;
+
+      var el = document.getElementById("pick_" + mint);
+      if (el) el.classList.toggle("selected", idx < 0);
+
+      updateOfferNftHint();
+    }
+
+    function updateOfferNftHint(){
+      var hint = document.getElementById("offerNftHint");
+      if (hint) hint.textContent = (session.tradeOfferNftMints.length || 0) + " / 5 selected";
+    }
+
+    function setVal(id,v){
+      var el = document.getElementById(id);
+      if (el) el.value = v;
+    }
+    function getVal(id){
+      var el = document.getElementById(id);
+      return el ? String(el.value || "").trim() : "";
+    }
+
+    function parseNum(s){
+      var n = parseFloat(String(s||"").replace(/,/g,""));
+      return isFinite(n) ? n : 0;
+    }
+
+    function buildTradePayload(){
+      var owner = walletPublicKey ? walletPublicKey.toBase58() : "";
+      var offer = { nfts: [], sol: 0, token: null };
+      var want  = { sol: 0, token: null, collection: null };
+
+      // Offer NFTs from selection
+      var mints = session.tradeOfferNftMints || [];
+      var nftsByMint = {};
+      (session.loadedNFTs || []).forEach(function(n){ if (n && n.mint) nftsByMint[n.mint] = n; });
+      offer.nfts = mints.map(function(m){
+        var n = nftsByMint[m] || {};
+        return { mint: m, name: n.name || "NFT", image: n.image || "" };
+      });
+
+      // Offer SOL / Token
+      offer.sol = parseNum(getVal("offerSol"));
+      var otm = getVal("offerTokenMint");
+      var ota = parseNum(getVal("offerTokenAmount"));
+      if (otm) offer.token = { mint: otm, amount: ota };
+
+      // Want SOL / Token / Collection(+trait)
+      want.sol = parseNum(getVal("wantSol"));
+      var wtm = getVal("wantTokenMint");
+      var wta = parseNum(getVal("wantTokenAmount"));
+      if (wtm) want.token = { mint: wtm, amount: wta };
+
+      var cid = getVal("wantCollectionId");
+      if (cid){
+        var tt = getVal("wantTraitType");
+        var tv = getVal("wantTraitValue");
+        want.collection = { id: cid, traitType: tt, traitValue: tv };
+      }
+
+      var note = getVal("tradeNote");
+
+      return {
+        id: "t_" + Math.random().toString(36).slice(2) + Date.now().toString(36),
+        createdAt: Date.now(),
+        owner: owner,
+        bundle: !!session.tradeBundleMode,
+        offer: offer,
+        want: want,
+        note: note
+      };
+    }
+
+    function validateTrade(t){
+      // Basic required: at least 1 thing in OFFER
+      var hasOffer =
+        (t.offer && t.offer.nfts && t.offer.nfts.length) ||
+        (t.offer && t.offer.sol && t.offer.sol > 0) ||
+        (t.offer && t.offer.token && t.offer.token.mint);
+
+      if (!hasOffer) return "Add at least 1 thing to OFFER (NFTs, SOL, or Token).";
+
+      // Request rules
+      var wantCount = 0;
+      if (t.want && t.want.sol && t.want.sol > 0) wantCount++;
+      if (t.want && t.want.token && t.want.token.mint) wantCount++;
+      if (t.want && t.want.collection && t.want.collection.id) wantCount++;
+
+      if (!t.bundle && wantCount !== 1) return "With BUNDLE OFF, you must request exactly 1 thing (SOL OR Token OR Collection).";
+      if (t.bundle && wantCount < 1) return "With BUNDLE ON, request at least 1 thing.";
+
+      // Constraints
+      if (t.offer && t.offer.nfts && t.offer.nfts.length > 5) return "Max 5 NFTs in offer.";
+      if (t.offer && t.offer.token && !t.offer.token.mint) return "Offer token mint is required.";
+      if (t.want && t.want.token && !t.want.token.mint) return "Request token mint is required.";
+      if (t.note && t.note.length > 120) return "Note too long.";
+
+      return "";
+    }
+
+    async function submitTrade(){
+      if (!walletPublicKey) { alert("Connect wallet first."); return; }
+
+      var trade = buildTradePayload();
+      var err = validateTrade(trade);
+      if (err) { alert(err); return; }
+
+      // optimistic UI
+      session.trades = [trade].concat(session.trades || []);
+      applyTradeFilters();
+      hideTradeModal();
+
+      // Try server first
+      try{
+        var res = await fetch(TRADE_API.create, {
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          body: JSON.stringify(trade)
+        });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        var json = await res.json();
+        if (json && json.trade && json.trade.id) {
+          // replace optimistic id if server changed it
+          session.trades = (session.trades || []).map(function(t){ return (t.id === trade.id) ? json.trade : t; });
+          applyTradeFilters();
+        }
+        return;
+      }catch(e){
+        console.warn("Create trade failed (server). Falling back to local cache:", e);
+      }
+
+      // fallback local for pure-static mode
+      try{
+        var local = JSON.parse(localStorage.getItem("lnl_trades_local") || "[]");
+        if (!Array.isArray(local)) local = [];
+        local.unshift(trade);
+        local = local.slice(0, 200);
+        localStorage.setItem("lnl_trades_local", JSON.stringify(local));
+      }catch(e){}
+    }
+
+    // small helper for escaping IDs inside attributes
+    function escapeAttr(s){
+      return String(s || "").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+    }
+
+function editUsername(){
       var current = session.profile.username || "";
       var input = prompt("Set your Profile Username (max 24 chars):", current);
       if (input === null) return;
