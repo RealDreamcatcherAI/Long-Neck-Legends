@@ -1622,12 +1622,6 @@
              + (s.unlocked ? '' : '<div style="color:#555;font-size:0.7rem;letter-spacing:1px;margin-top:-6px;margin-bottom:10px;">Requires: ' + escapeHtml(req) + '</div>');
       }).join('');
 
-      view.innerHTML +=
-        '<div class="stats-card">' +
-          '<div class="stats-title">SUBDAO STATUS</div>' +
-          subdaoRows +
-        '</div>';
-
       var tierOrder = TIERS.map(function(t) { return t.id; });
       var currentTierIdx = tierOrder.indexOf(tier.id);
 
