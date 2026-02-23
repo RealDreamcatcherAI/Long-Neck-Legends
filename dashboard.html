@@ -880,6 +880,61 @@
       .perks-grid { grid-template-columns: 1fr 1fr; }
       .gallery-grid { grid-template-columns: repeat(2, 1fr); }
     }
+  
+    /* ---- TRAITS / SUBDAO ---- */
+    .subdao-divider{
+      margin-top: 1.2rem;
+      padding-top: 1.2rem;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .trait-pills{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top: 0.6rem;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(0,0,0,0.22);
+      color:#bfc2ff;
+      font-size:0.7rem;
+      letter-spacing:0.6px;
+      text-transform: uppercase;
+      cursor: default;
+      user-select:none;
+    }
+    .pill.on{
+      border-color: rgba(0,255,136,0.35);
+      background: rgba(0,255,136,0.06);
+      color: #00ff88;
+      box-shadow: 0 0 18px rgba(0,255,136,0.08);
+    }
+    .pill.off{ opacity: 0.45; }
+    .trait-table{
+      width:100%;
+      border-collapse: collapse;
+      margin-top: 0.8rem;
+      font-size: 0.8rem;
+    }
+    .trait-table th, .trait-table td{
+      padding: 10px 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      text-align: left;
+      vertical-align: top;
+    }
+    .trait-table th{
+      font-family: 'Bebas Neue', sans-serif;
+      letter-spacing: 2px;
+      color:#777;
+      font-size: 0.95rem;
+    }
+    .trait-muted{ color:#666; font-size:0.78rem; }
+
   </style>
 </head>
 
@@ -976,6 +1031,29 @@
     </div>
   </div>
 
+
+  <!-- TRAITS MODAL -->
+  <div class="modal-backdrop" id="traitsModalBackdrop" onclick="closeTraitsModal(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <div class="modal-title">Trait Data</div>
+        <button class="modal-close" onclick="hideTraitsModal()">✕</button>
+      </div>
+      <div class="modal-body" id="traitsModalBody">
+        <div class="modal-note">This is pulled live from your NFTs metadata. SubDAO unlocks are based on holding at least 1 matching trait.</div>
+        <div id="subdaoPills" class="trait-pills"></div>
+        <table class="trait-table" id="traitsTable">
+          <thead>
+            <tr><th>Trait</th><th>Count</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="trait-muted">Tip: If something looks missing, it usually means the NFT metadata doesn’t include that attribute field.</div>
+      </div>
+    </div>
+  </div>
+
+
   <footer>
     <p>&copy; 2026 Long Neck Legends &bull; Diamond Hands Only</p>
   </footer>
@@ -1015,6 +1093,67 @@
       { icon: "\u{1F988}", name: "Shark Council", desc: "Direct input on project direction, partnerships, and roadmap decisions.", reqTier: "shark" },
       { icon: "\u{1F40B}", name: "Lifetime Perks", desc: "Permanent max discount, first priority on all future drops, and custom merch.", reqTier: "whale" }
     ];
+
+
+    // ---- SUBDAO (Trait-based) ----
+    var SUBDAOS = [
+      { id:"talltoker",  name:"Tall Toker",     icon:"🚬", reqValues:["Gold Pipe Beak","Blunt Beak"], desc:"Hold at least 1 LNL with Gold Pipe Beak or Blunt Beak." },
+      { id:"jeeterbeater", name:"Jeeter Beater", icon:"🥊", reqValues:["Boxing Gloves"], desc:"Hold at least 1 LNL with Boxing Gloves." },
+      { id:"hoodiegang", name:"Hoodie Gang",    icon:"🧥", reqValues:["Hoodie"], desc:"Hold at least 1 LNL with Hoodie." },
+      { id:"headphones", name:"HeadPhones",     icon:"🎧", reqValues:["Headphones"], desc:"Hold at least 1 LNL with Headphones." },
+      { id:"royalty",    name:"Royalty",        icon:"👑", reqValues:["Golden Crown","Hippie Crown","Gold Grill Beak"], desc:"Hold at least 1 LNL with Golden Crown, Hippie Crown, or Gold Grill Beak." },
+      { id:"wizzy",      name:"Wizzy",          icon:"🧙", reqValues:["Wizard Hat"], desc:"Hold at least 1 LNL with Wizard Hat." },
+      { id:"bob",        name:"BoB",            icon:"🧢", reqValues:["Beanie"], desc:"Hold at least 1 LNL with Beanie." },
+      { id:"frobros",    name:"Fro Bros",       icon:"🦱", reqValues:["Afro"], desc:"Hold at least 1 LNL with Afro." },
+      { id:"goldenticket", name:"Golden Ticket", icon:"🎟️", reqValues:["Golden Ticket"], desc:"Hold at least 1 LNL with Golden Ticket." }
+    ];
+
+    function normStr(s){
+      return String(s || "").trim().toLowerCase();
+    }
+
+    function buildTraitValueSet(nfts){
+      var set = {};
+      (nfts || []).forEach(function(nft){
+        var attrs = nft && nft.attributes ? nft.attributes : [];
+        if (!Array.isArray(attrs)) return;
+        attrs.forEach(function(a){
+          if (!a) return;
+          var v = a.value != null ? String(a.value) : "";
+          if (!v) return;
+          set[normStr(v)] = true;
+        });
+      });
+      return set;
+    }
+
+    function getSubdaoMatches(nfts){
+      var values = buildTraitValueSet(nfts);
+      return SUBDAOS.map(function(d){
+        var hit = "";
+        for (var i=0;i<d.reqValues.length;i++){
+          if (values[normStr(d.reqValues[i])]) { hit = d.reqValues[i]; break; }
+        }
+        return { id:d.id, name:d.name, icon:d.icon, unlocked: !!hit, hit: hit, reqValues: d.reqValues, desc: d.desc };
+      });
+    }
+
+    function buildTraitCounts(nfts){
+      var counts = {};
+      (nfts || []).forEach(function(nft){
+        var attrs = nft && nft.attributes ? nft.attributes : [];
+        if (!Array.isArray(attrs)) return;
+        attrs.forEach(function(a){
+          if (!a) return;
+          var v = a.value != null ? String(a.value) : "";
+          if (!v) return;
+          var key = v.trim();
+          counts[key] = (counts[key] || 0) + 1;
+        });
+      });
+      return counts;
+    }
+
 
     var walletProvider = null;
     var walletPublicKey = null;
@@ -1189,6 +1328,7 @@
         return (sym === "LNL") || (lname.indexOf("long neck") !== -1);
       });
 
+      
       return picked.map(function(a) {
         var name = (a.content && a.content.metadata && a.content.metadata.name) ||
                    (a.content && a.content.json && a.content.json.name) || "LNL";
@@ -1196,8 +1336,34 @@
                     (a.content && a.content.files && a.content.files[0] && a.content.files[0].uri) ||
                     (a.content && a.content.json && a.content.json.image) || "";
         var mint = a.id || "";
-        return { name: name, image: image, mint: mint, owner: ownerAddress };
+
+        // traits/attributes can appear in a few places depending on indexer
+        var attrs =
+          (a.content && a.content.metadata && a.content.metadata.attributes) ||
+          (a.content && a.content.json && a.content.json.attributes) ||
+          (a.content && a.content.metadata && a.content.metadata.traits) ||
+          [];
+
+        // normalize to [{trait_type, value}]
+        var norm = [];
+        if (Array.isArray(attrs)) {
+          norm = attrs.map(function(x){
+            if (!x) return null;
+            if (typeof x === "string") return { trait_type: "Trait", value: x };
+            var tt = x.trait_type || x.traitType || x.type || x.name || "Trait";
+            var vv = x.value != null ? x.value : (x.val != null ? x.val : "");
+            return { trait_type: String(tt || "Trait"), value: String(vv || "") };
+          }).filter(Boolean);
+        } else if (attrs && typeof attrs === "object") {
+          // some formats are {trait_type: value, ...}
+          Object.keys(attrs).forEach(function(k){
+            norm.push({ trait_type: String(k), value: String(attrs[k]) });
+          });
+        }
+
+        return { name: name, image: image, mint: mint, owner: ownerAddress, attributes: norm };
       });
+
     }
 
     function applyProfilePanelUI(){
@@ -1445,6 +1611,17 @@
           nextTierRow +
         '</div>';
 
+      // ---- SUBDAO STATUS (Trait-based) ----
+      var subdao = getSubdaoMatches(nfts);
+      var subdaoRows = subdao.map(function(s){
+        var req = s.reqValues.join(' / ');
+        return '<div class="stat-row">'
+             + '<span class="stat-label">' + s.icon + ' ' + s.name + '</span>'
+             + '<span class="stat-value ' + (s.unlocked ? 'green' : '') + '">' + (s.unlocked ? 'UNLOCKED' : 'LOCKED') + '</span>'
+             + '</div>'
+             + (s.unlocked ? '' : '<div style="color:#555;font-size:0.7rem;letter-spacing:1px;margin-top:-6px;margin-bottom:10px;">Requires: ' + escapeHtml(req) + '</div>');
+      }).join('');
+
       var tierOrder = TIERS.map(function(t) { return t.id; });
       var currentTierIdx = tierOrder.indexOf(tier.id);
 
@@ -1471,6 +1648,26 @@
         '<div class="perks-card">' +
           '<div class="stats-title">HOLDER PERKS</div>' +
           '<div class="perks-grid">' + perksHTML + '</div>' +
+        '</div>';
+
+
+      var subdaoPerksHTML = getSubdaoMatches(nfts).map(function(s){
+        var req = s.reqValues.join(" / ");
+        var reqLine = s.unlocked ? ("Unlocked via: " + s.hit) : ("Requires: " + req);
+        return '' +
+          '<div class="perk ' + (s.unlocked ? "unlocked" : "locked") + '">' +
+            '<div class="perk-status ' + (s.unlocked ? "on" : "off") + '"></div>' +
+            '<div class="perk-icon">' + s.icon + '</div>' +
+            '<div class="perk-name">' + escapeHtml(s.name) + '</div>' +
+            '<div class="perk-desc">' + escapeHtml(s.desc) + '</div>' +
+            '<div class="perk-req ' + (s.unlocked ? "met" : "") + '">' + (s.unlocked ? "\u2713 UNLOCKED" : escapeHtml(reqLine)) + '</div>' +
+          '</div>';
+      }).join("");
+
+      view.innerHTML +=
+        '<div class="perks-card">' +
+          '<div class="stats-title">SUBDAO PERKS</div>' +
+          '<div class="perks-grid">' + subdaoPerksHTML + '</div>' +
         '</div>';
 
       var galleryHTML = nfts.map(function(nft) {
@@ -1732,6 +1929,41 @@
         alert("Auth failed. Please try again.");
       }
     });
+  
+    function openTraitsModal(){
+      if (!session.loadedNFTs || session.loadedNFTs.length === 0) return alert("No NFTs loaded yet.");
+      var sub = getSubdaoMatches(session.loadedNFTs);
+
+      var pills = document.getElementById("subdaoPills");
+      if (pills){
+        pills.innerHTML = sub.map(function(s){
+          return '<span class="pill ' + (s.unlocked ? 'on' : 'off') + '">'
+               + (s.unlocked ? '✓' : '•') + ' ' + s.icon + ' ' + escapeHtml(s.name)
+               + '</span>';
+        }).join("");
+      }
+
+      var counts = buildTraitCounts(session.loadedNFTs);
+      var rows = Object.keys(counts).sort(function(a,b){ return counts[b]-counts[a]; }).slice(0, 80);
+      var tbody = document.querySelector("#traitsTable tbody");
+      if (tbody){
+        tbody.innerHTML = rows.map(function(k){
+          return '<tr><td>' + escapeHtml(k) + '</td><td>' + counts[k] + '</td></tr>';
+        }).join("");
+        if (rows.length === 0) tbody.innerHTML = '<tr><td colspan="2" class="trait-muted">No trait data found in metadata.</td></tr>';
+      }
+
+      document.getElementById("traitsModalBackdrop").classList.add("show");
+    }
+
+    function hideTraitsModal(){
+      document.getElementById("traitsModalBackdrop").classList.remove("show");
+    }
+
+    function closeTraitsModal(e){
+      if (e && e.target && e.target.id === "traitsModalBackdrop") hideTraitsModal();
+    }
+
   </script>
 </body>
 </html>
