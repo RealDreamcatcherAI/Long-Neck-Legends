@@ -282,6 +282,11 @@ a.plink:hover{
       grid-template-columns: 1fr 1fr;
       gap: 1.5rem;
     }
+    #view-chat.show {
+      display: flex;
+      flex-direction: column;
+      grid-template-columns: unset;
+    }
     @media (max-width: 800px) {
       .view.show { grid-template-columns: 1fr; }
       .dashboard{ padding: 1.4rem 1rem 3rem; }
@@ -954,6 +959,7 @@ a.plink:hover{
     .trait-muted{ color:#666; font-size:0.78rem; }
 
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 
 <body>
@@ -975,6 +981,7 @@ a.plink:hover{
     <div class="dash-nav">
       <div class="dash-tabs">
         <button class="dash-tab" id="tabProfile" onclick="toggleProfilePanel()">Profile</button>
+        <button class="dash-tab" id="tabChat" onclick="switchView('chat')">💬 Chat</button>
       </div>
 
       <div class="dash-right">
@@ -1002,6 +1009,7 @@ a.plink:hover{
   <!-- DASHBOARD WRAP -->
   <div class="dashboard" id="dashboard">
     <div class="view show" id="view-profile"></div>
+    <div class="view" id="view-chat"></div>
   </div>
 
   <!-- PFP MODAL -->
@@ -1072,12 +1080,39 @@ a.plink:hover{
   </div>
 
 
+
+  <!-- USERNAME MODAL (mobile-safe, replaces prompt) -->
+  <div class="modal-backdrop" id="usernameModalBackdrop" onclick="closeUsernameModal(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <div class="modal-title">Set Profile Username</div>
+        <button class="modal-close" onclick="hideUsernameModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-note">This username is saved to this wallet on this device. Max 24 characters.</div>
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:10px;">
+          <input id="usernameInput" type="text" inputmode="text" autocomplete="off" autocapitalize="words" spellcheck="false"
+                 placeholder="Your name..." maxlength="24"
+                 style="flex:1; min-width:200px; padding:12px 12px; border-radius:12px; border:1px solid rgba(255,255,255,0.10); background:rgba(0,0,0,0.22); color:#e0e0ff; outline:none; font-family:'Space Grotesk',sans-serif;">
+          <button class="action-btn" style="min-width:160px;" onclick="saveUsernameFromModal()">Save</button>
+        </div>
+
+        <div style="margin-top:14px; display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap;">
+          <button class="disconnect-btn" style="border-color:rgba(255,255,255,0.12);" onclick="clearUsername()">Clear</button>
+          <button class="disconnect-btn" onclick="hideUsernameModal()">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
   <footer>
     <p>&copy; 2026 Long Neck Legends &bull; Diamond Hands Only</p>
   </footer>
 
   <script>
-    window.addEventListener('load', function() { document.body.classList.add('loaded'); });
+    window.addEventListener('load', function() { document.body.classList.add('loaded'); applyAuthFromUrl(); });
 
     var CONFIG = {
       COLLECTION_MINT: "8Rt3Ayqth4DAiPnW9MDFi63TiQJHmohfTWLMQFHi4KZH",
@@ -1398,22 +1433,16 @@ a.plink:hover{
     }
 
     async function connectWallet() {
-      console.log("Connect clicked");
       var provider = detectWalletProvider();
-      console.log("Provider:", provider);
       if (!provider || typeof provider.connect !== "function") {
-        alert("No compatible Solana wallet found. Install Phantom, Solflare, or Backpack.");
+        alert("No Solana wallet found.\n\nInstall Phantom, Solflare, or Backpack and refresh the page.");
         return;
       }
       try {
-        if (provider.isConnected && typeof provider.disconnect === "function") {
-          try { await provider.disconnect(); } catch (e) {}
-        }
-
         var resp = await provider.connect({ onlyIfTrusted: false });
         walletProvider = provider;
         walletPublicKey = resp.publicKey || provider.publicKey;
-        if (!walletPublicKey) throw new Error("Wallet connected but no publicKey found.");
+        if (!walletPublicKey) throw new Error("Wallet connected but no public key returned. Try unlocking your wallet first.");
 
         var addr = walletPublicKey.toBase58();
         document.getElementById("walletDisplay").textContent = shortAddr(addr);
@@ -1428,18 +1457,22 @@ a.plink:hover{
         loadProfileFromStorage();
         loadSecondWalletFromStorage();
 
-        // ✅ default OFF every connect
         session.profilePanelOpen = false;
         applyProfilePanelUI();
 
         await loadDashboard();
       } catch (err) {
         console.error("Connect error:", err);
-        alert("Connection error: " + (err.message || err));
+        if (err.code === 4001 || (err.message && err.message.toLowerCase().includes("user rejected"))) {
+          // User cancelled — no alert needed
+        } else {
+          alert("Connection failed: " + (err.message || err));
+        }
       }
     }
 
     function disconnectWallet() {
+      stopChatPoll();
       try { if (walletProvider && walletProvider.disconnect) walletProvider.disconnect(); } catch (e) {}
       walletProvider = null;
       walletPublicKey = null;
@@ -1452,11 +1485,13 @@ a.plink:hover{
       document.getElementById("loadingSection").style.display = "none";
       document.getElementById("dashboard").classList.remove("show");
       document.getElementById("view-profile").classList.remove("show");
+      document.getElementById("view-chat").classList.remove("show");
 
-      // ✅ reset toggle state (button unlit + panel hidden)
       session.profilePanelOpen = false;
       var tabProfile = document.getElementById("tabProfile");
       if (tabProfile) tabProfile.classList.remove("active");
+      var tabChat = document.getElementById("tabChat");
+      if (tabChat) tabChat.classList.remove("active");
 
       session.currentView = "profile";
     }
@@ -1464,12 +1499,29 @@ a.plink:hover{
     function switchView(viewName){
       session.currentView = viewName;
 
-      var tabProfile = document.getElementById("tabProfile");
-      // keep this in sync with toggle
-      if (tabProfile) tabProfile.classList.toggle("active", viewName === "profile" && !!session.profilePanelOpen);
-
+      // Hide all views
       var vp = document.getElementById("view-profile");
-      if (vp) vp.classList.toggle("show", viewName === "profile");
+      var vc = document.getElementById("view-chat");
+      if (vp) vp.classList.remove("show");
+      if (vc) vc.classList.remove("show");
+
+      // Deactivate all tabs
+      var tabProfile = document.getElementById("tabProfile");
+      var tabChat    = document.getElementById("tabChat");
+      if (tabProfile) tabProfile.classList.remove("active");
+      if (tabChat)    tabChat.classList.remove("active");
+
+      if (viewName === "profile") {
+        stopChatPoll();
+        if (vp) vp.classList.add("show");
+        if (tabProfile) tabProfile.classList.toggle("active", !!session.profilePanelOpen);
+      }
+
+      if (viewName === "chat") {
+        if (vc) vc.classList.add("show");
+        if (tabChat) tabChat.classList.add("active");
+        renderChatUI();
+      }
     }
 
     async function loadDashboard() {
@@ -1595,7 +1647,7 @@ a.plink:hover{
           '<div class="stats-title">PROFILE</div>' +
           '<div class="actions-grid">' +
             '<button class="action-btn" onclick="openPfpModal()">Edit PFP</button>' +
-            '<button class="action-btn" onclick="editUsername()">Edit Username</button>' +
+            '<button class="action-btn" onclick="openUsernameModal()">Edit Username</button>' +
             '<button class="action-btn" onclick="connectX()">Connect X</button>' +
             '<button class="action-btn" onclick="connectDiscord()">Connect Discord</button>' +
             '<button class="action-btn" onclick="openSecondWalletModal()">Link 2nd Wallet</button>' +
@@ -1725,6 +1777,44 @@ a.plink:hover{
       saveProfileToStorage();
       refreshBanner();
     }
+
+
+    function openUsernameModal(){
+      if (!walletPublicKey) return alert("Connect wallet first.");
+      var input = document.getElementById("usernameInput");
+      if (input){
+        input.value = session.profile.username || "";
+        // focus for mobile keyboard
+        setTimeout(function(){ try{ input.focus(); input.setSelectionRange(input.value.length, input.value.length);}catch(e){} }, 50);
+      }
+      document.getElementById("usernameModalBackdrop").classList.add("show");
+    }
+
+    function hideUsernameModal(){
+      document.getElementById("usernameModalBackdrop").classList.remove("show");
+    }
+
+    function closeUsernameModal(e){
+      if (e && e.target && e.target.id === "usernameModalBackdrop") hideUsernameModal();
+    }
+
+    function saveUsernameFromModal(){
+      var input = document.getElementById("usernameInput");
+      var val = input ? input.value : "";
+      session.profile.username = sanitizeName(val);
+      saveProfileToStorage();
+      refreshBanner();
+      hideUsernameModal();
+    }
+
+    function clearUsername(){
+      session.profile.username = "";
+      saveProfileToStorage();
+      refreshBanner();
+      var input = document.getElementById("usernameInput");
+      if (input) input.value = "";
+    }
+
 
     function linkLedger(){
       var current = session.profile.ledger || "";
@@ -1895,6 +1985,64 @@ a.plink:hover{
       loadDashboard();
     }
 
+
+    function isMobileDevice(){
+      // Conservative check: treat small screens OR mobile UA as mobile
+      try{
+        var ua = (navigator.userAgent || "").toLowerCase();
+        var small = window.matchMedia && window.matchMedia("(max-width: 820px)").matches;
+        var touch = ("ontouchstart" in window) || (navigator.maxTouchPoints > 0);
+        var mobileUA = /iphone|ipad|ipod|android|mobile|silk|kindle|webos|blackberry|opera mini/.test(ua);
+        return mobileUA || (small && touch);
+      }catch(e){
+        return false;
+      }
+    }
+
+    function startAuthFlow(url, title){
+      // Mobile browsers commonly block popups and postMessage callbacks.
+      // On mobile we navigate in the same tab so it always works.
+      if (isMobileDevice()){
+        window.location.href = url;
+        return null;
+      }
+      return openAuthPopup(url, title);
+    }
+
+    function applyAuthFromUrl(){
+      // Support mobile callbacks that redirect back with query params.
+      // We accept a few common shapes: ?x=handle, ?x_username=handle, ?discord=username, ?discord_username=u&discord_discriminator=1234
+      try{
+        var p = new URLSearchParams(window.location.search || "");
+        var xh = p.get("x") || p.get("x_username") || p.get("xHandle") || p.get("xhandle");
+        var du = p.get("discord") || p.get("discord_username") || p.get("discordUser") || p.get("discorduser");
+        var dd = p.get("discord_discriminator") || p.get("discordDiscriminator") || p.get("disc");
+        var didSomething = false;
+
+        if (xh){
+          session.profile.x = normalizeHandle(xh);
+          didSomething = true;
+        }
+        if (du){
+          var full = du;
+          if (dd && dd !== "0") full = du + "#" + dd;
+          session.profile.discord = full;
+          didSomething = true;
+        }
+
+        if (didSomething){
+          saveProfileToStorage();
+          refreshBanner();
+
+          // Clean the URL so refresh doesn't re-apply
+          if (window.history && window.history.replaceState){
+            var clean = window.location.pathname + window.location.hash;
+            window.history.replaceState({}, document.title, clean);
+          }
+        }
+      }catch(e){}
+    }
+
     function openAuthPopup(url, title){
       var w = 520, h = 720;
       var y = window.top.outerHeight / 2 + window.top.screenY - (h / 2);
@@ -1911,13 +2059,13 @@ a.plink:hover{
     function connectX(){
       if (!walletPublicKey) return alert("Connect wallet first.");
       var url = "/api/auth/x/start?wallet=" + encodeURIComponent(walletPublicKey.toBase58());
-      openAuthPopup(url, "Connect X");
+      startAuthFlow(url, "Connect X");
     }
 
     function connectDiscord(){
       if (!walletPublicKey) return alert("Connect wallet first.");
       var url = "/api/auth/discord/start?wallet=" + encodeURIComponent(walletPublicKey.toBase58());
-      openAuthPopup(url, "Connect Discord");
+      startAuthFlow(url, "Connect Discord");
     }
 
     window.addEventListener("message", function(ev){
@@ -1979,6 +2127,351 @@ a.plink:hover{
 
     function closeTraitsModal(e){
       if (e && e.target && e.target.id === "traitsModalBackdrop") hideTraitsModal();
+    }
+
+    /* ================================================================
+       CHAT — Supabase real-time
+       Table: chat_messages (id, wallet, username, text, created_at)
+       Messages are shared live across all connected wallets.
+    ================================================================ */
+
+    var SUPA_URL = 'https://hypqndasopdkrqvkllvc.supabase.co';
+    var SUPA_KEY = 'sb_publishable_DwaaLS_hFJAOZ6M9VmYKYA_AQvyfgv1';
+    var supaClient  = null;
+    var chatChannel = null;   // real-time subscription
+    var chatMsgs    = [];     // [{id, wallet, username, text, created_at}]
+
+    // Auto-refresh fallback (in case real-time misses / tab sleeps)
+    var chatRefreshTimer = null;
+    var CHAT_REFRESH_MS  = 8000; // 8s feels "live" without spamming
+
+    function getSupaClient() {
+      if (!supaClient) {
+        supaClient = supabase.createClient(SUPA_URL, SUPA_KEY);
+      }
+      return supaClient;
+    }
+
+    // Deterministic color per wallet so each user always looks the same
+    function walletColor(addr) {
+      var palette = ['#00d4ff','#7b68ee','#00ff88','#f5a623','#ff6b9d','#4ecdc4','#ffd93d','#ff8c42'];
+      var hash = 0;
+      for (var i = 0; i < (addr || '').length; i++) {
+        hash = ((hash << 5) - hash) + addr.charCodeAt(i);
+        hash |= 0;
+      }
+      return palette[Math.abs(hash) % palette.length];
+    }
+
+    // Called when leaving chat tab or disconnecting
+    function stopChatPoll() {
+      // stop fallback refresh timer
+      if (chatRefreshTimer) {
+        try { clearInterval(chatRefreshTimer); } catch(e) {}
+        chatRefreshTimer = null;
+      }
+
+      // stop real-time subscription
+      if (chatChannel) {
+        try { getSupaClient().removeChannel(chatChannel); } catch(e) {}
+        chatChannel = null;
+      }
+    }
+    function renderChatUI() {
+      var view = document.getElementById('view-chat');
+      if (!view) return;
+
+      view.innerHTML =
+        // ── Header ──
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.6rem;">' +
+          '<div>' +
+            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.5rem;letter-spacing:3px;color:#e0e0ff;">🦒 HOLDER CHAT</div>' +
+            '<div style="font-size:0.7rem;color:#444;letter-spacing:1px;margin-top:2px;">Live · Open to all connected wallets</div>' +
+          '</div>' +
+          '<div style="display:flex;align-items:center;gap:0.7rem;">' +
+            '<div id="chatLiveDot" style="display:flex;align-items:center;gap:5px;font-size:0.7rem;color:#555;">' +
+              '<div style="width:7px;height:7px;border-radius:50%;background:#555;"></div>Connecting…' +
+            '</div>' +
+            '<button onclick="switchView(\'profile\')" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#888;padding:7px 14px;border-radius:7px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;transition:all 0.2s;" onmouseover="this.style.borderColor=\'rgba(0,212,255,0.4)\';this.style.color=\'#00d4ff\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,0.1)\';this.style.color=\'#888\'">← Home</button>' +
+          '</div>' +
+        '</div>' +
+
+        // ── Messages ──
+        '<div id="chatBox" style="height:440px;overflow-y:auto;background:#06060f;border:1px solid #161628;border-radius:12px;padding:16px;margin-bottom:12px;scroll-behavior:smooth;">' +
+          '<div id="chatInner"></div>' +
+        '</div>' +
+
+        // ── Input ──
+        '<div style="display:flex;gap:8px;align-items:center;">' +
+          '<div id="chatInputWrap" style="flex:1;display:flex;align-items:center;gap:8px;background:#0d0d1e;border:1px solid #1a1a30;border-radius:10px;padding:0 12px;transition:border-color 0.2s;">' +
+            '<span id="chatWalletTag" style="font-size:0.78rem;font-weight:700;flex-shrink:0;white-space:nowrap;"></span>' +
+            '<input id="chatInput" style="flex:1;background:transparent;border:none;outline:none;color:#e0e0ff;font-family:\'Space Grotesk\',sans-serif;font-size:0.88rem;padding:12px 0;" placeholder="Say something legend…" maxlength="400" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();sendChatMessage();}" />' +
+            '<span id="chatCount" style="font-size:0.62rem;color:#252540;flex-shrink:0;min-width:28px;text-align:right;"></span>' +
+          '</div>' +
+          '<button id="chatSendBtn" onclick="sendChatMessage()" style="background:linear-gradient(135deg,rgba(0,212,255,0.18),rgba(123,104,238,0.18));border:1px solid rgba(0,212,255,0.35);color:#00d4ff;padding:12px 22px;border-radius:10px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.8rem;letter-spacing:1.5px;text-transform:uppercase;transition:all 0.2s;white-space:nowrap;">Send</button>' +
+        '</div>';
+
+      // Wallet tag
+      if (walletPublicKey) {
+        var addr = walletPublicKey.toBase58();
+        var tag  = document.getElementById('chatWalletTag');
+        tag.textContent = addr.slice(0,4) + '…' + addr.slice(-4);
+        tag.style.color = walletColor(addr);
+      }
+
+      // Focus ring
+      var wrap = document.getElementById('chatInputWrap');
+      var inp  = document.getElementById('chatInput');
+      inp.addEventListener('focus', function(){ wrap.style.borderColor = 'rgba(0,212,255,0.45)'; });
+      inp.addEventListener('blur',  function(){ wrap.style.borderColor = '#1a1a30'; });
+      inp.addEventListener('input', function(){
+        var left = 400 - inp.value.length;
+        var c = document.getElementById('chatCount');
+        c.textContent = left < 80 ? left : '';
+        c.style.color = left < 30 ? '#ff3c5c' : '#252540';
+      });
+
+      // Load history then subscribe
+      chatMsgs = [];
+      loadChatHistory();
+    }
+
+    
+    // Pull any new messages since the newest one we have.
+    // This runs on an interval as a safety net (real-time should still do the heavy lifting).
+    async function refreshChatFromServer() {
+      try {
+        // only refresh if we're actually on the chat tab and the UI exists
+        if (!session || session.currentView !== 'chat') return;
+        if (!document.getElementById('chatInner')) return;
+
+        var sb = getSupaClient();
+
+        var last = (chatMsgs && chatMsgs.length) ? chatMsgs[chatMsgs.length - 1] : null;
+        var q = sb
+          .from('chat_messages')
+          .select('id, wallet, username, text, created_at')
+          .order('created_at', { ascending: true })
+          .limit(200);
+
+        // Incremental fetch: only grab messages newer than what we have.
+        if (last && last.created_at) {
+          q = q.gt('created_at', last.created_at);
+        }
+
+        var res = await q;
+        if (res.error) throw res.error;
+
+        var incoming = res.data || [];
+        if (!incoming.length) return;
+
+        // Merge de-duped by id
+        var existing = {};
+        for (var i = 0; i < chatMsgs.length; i++) existing[chatMsgs[i].id] = true;
+
+        for (var j = 0; j < incoming.length; j++) {
+          if (!existing[incoming[j].id]) chatMsgs.push(incoming[j]);
+        }
+
+        // Keep sorted (in case clocks are funky)
+        chatMsgs.sort(function(a,b){
+          return new Date(a.created_at) - new Date(b.created_at);
+        });
+
+        paintMessages();
+        scrollToBottom(false);
+      } catch(e) {
+        // quiet failure — this is just a fallback
+        console.warn('Chat auto-refresh error:', e && (e.message || e));
+      }
+    }
+
+    function startChatAutoRefresh() {
+      // reset any existing timer
+      if (chatRefreshTimer) {
+        try { clearInterval(chatRefreshTimer); } catch(e) {}
+        chatRefreshTimer = null;
+      }
+
+      // immediate refresh in case we missed messages while tab was inactive
+      refreshChatFromServer();
+
+      chatRefreshTimer = setInterval(function(){
+        refreshChatFromServer();
+      }, CHAT_REFRESH_MS);
+
+      // when user comes back to the tab, refresh immediately
+      try {
+        if (!window.__lnlChatVisHooked) {
+          window.__lnlChatVisHooked = true;
+          document.addEventListener('visibilitychange', function(){
+            if (!document.hidden) refreshChatFromServer();
+          });
+          window.addEventListener('focus', function(){ refreshChatFromServer(); });
+        }
+      } catch(e) {}
+    }
+
+    async function loadChatHistory() {
+      setLiveDot(false);
+      try {
+        var sb = getSupaClient();
+        var res = await sb
+          .from('chat_messages')
+          .select('id, wallet, username, text, created_at')
+          .order('created_at', { ascending: true })
+          .limit(200);
+
+        if (res.error) throw res.error;
+        chatMsgs = res.data || [];
+        paintMessages();
+        scrollToBottom(true);
+      } catch(e) {
+        console.error('Chat history error:', e);
+        document.getElementById('chatInner').innerHTML =
+          '<div style="color:#ff3c5c;font-size:0.78rem;text-align:center;padding:2rem;">Could not load messages. Check Supabase config.</div>';
+      }
+      subscribeLive();
+    }
+
+    function subscribeLive() {
+      // Tear down any existing subscription first
+      stopChatPoll();
+
+      var sb = getSupaClient();
+      chatChannel = sb
+        .channel('chat_messages_live')
+        .on('postgres_changes', {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'chat_messages'
+        }, function(payload) {
+          var row = payload.new;
+          // Avoid duplicates (our own optimistic message already added)
+          var exists = chatMsgs.some(function(m){ return m.id === row.id; });
+          if (!exists) {
+            chatMsgs.push(row);
+            paintMessages();
+            scrollToBottom(false);
+          }
+        })
+        .subscribe(function(status) {
+          setLiveDot(status === 'SUBSCRIBED');
+        });
+
+      // Safety-net refresh (keeps chat updated even if real-time drops)
+      startChatAutoRefresh();
+    }
+
+    function setLiveDot(live) {
+      var el = document.getElementById('chatLiveDot');
+      if (!el) return;
+      if (live) {
+        el.innerHTML = '<div style="width:7px;height:7px;border-radius:50%;background:#00ff88;box-shadow:0 0 6px rgba(0,255,136,0.7);"></div>Live';
+        el.style.color = '#555';
+      } else {
+        el.innerHTML = '<div style="width:7px;height:7px;border-radius:50%;background:#555;"></div>Connecting…';
+      }
+    }
+
+    function paintMessages() {
+      var inner = document.getElementById('chatInner');
+      if (!inner) return;
+
+      if (chatMsgs.length === 0) {
+        inner.innerHTML =
+          '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:340px;gap:0.7rem;">' +
+            '<div style="font-size:2.5rem;">🦒</div>' +
+            '<div style="color:#252540;font-size:0.78rem;letter-spacing:2px;text-transform:uppercase;">No messages yet</div>' +
+            '<div style="color:#1a1a30;font-size:0.7rem;">Be the first legend</div>' +
+          '</div>';
+        return;
+      }
+
+      var myWallet  = walletPublicKey ? walletPublicKey.toBase58() : null;
+      var prevWallet = null;
+      var html = '';
+
+      chatMsgs.forEach(function(m, i) {
+        var isMe  = m.wallet === myWallet;
+        var color = walletColor(m.wallet);
+
+        // Display name: use stored username if present, else shorten wallet
+        var name = m.username
+          ? m.username
+          : (m.wallet.slice(0,4) + '…' + m.wallet.slice(-4));
+
+        var newSender = m.wallet !== prevWallet;
+        prevWallet = m.wallet;
+
+        var t = new Date(m.created_at);
+        var timeStr = t.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+
+        if (newSender) {
+          if (i > 0) html += '<div style="height:12px;"></div>';
+          html +=
+            '<div style="display:flex;align-items:baseline;gap:7px;margin-bottom:3px;">' +
+              '<span style="font-weight:700;font-size:0.8rem;color:' + color + ';">' + escapeHtml(name) + '</span>' +
+              '<span style="font-size:0.6rem;color:#252540;">' + timeStr + '</span>' +
+              (isMe ? '<span style="font-size:0.55rem;letter-spacing:1px;color:#1e1e3a;text-transform:uppercase;">you</span>' : '') +
+            '</div>';
+        }
+
+        html += '<div style="font-size:0.87rem;color:#c8c8e8;line-height:1.6;word-break:break-word;padding:1px 0;">' + escapeHtml(m.text) + '</div>';
+      });
+
+      inner.innerHTML = html;
+    }
+
+    function scrollToBottom(force) {
+      var box = document.getElementById('chatBox');
+      if (!box) return;
+      var nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 120;
+      if (force || nearBottom) box.scrollTop = box.scrollHeight;
+    }
+
+    async function sendChatMessage() {
+      if (!walletPublicKey) { alert('Connect your wallet first.'); return; }
+      var inp = document.getElementById('chatInput');
+      var btn = document.getElementById('chatSendBtn');
+      if (!inp) return;
+
+      var text = inp.value.trim();
+      if (!text) return;
+
+      inp.value = '';
+      inp.dispatchEvent(new Event('input'));
+      btn.disabled = true;
+      btn.textContent = '…';
+
+      var wallet   = walletPublicKey.toBase58();
+      var username = session.profile.username || null;
+
+      try {
+        var sb  = getSupaClient();
+        var res = await sb.from('chat_messages').insert({
+          wallet:   wallet,
+          username: username,
+          text:     text
+        }).select().single();
+
+        if (res.error) throw res.error;
+
+        // Optimistic: add immediately so sender doesn't wait for real-time echo
+        var exists = chatMsgs.some(function(m){ return m.id === res.data.id; });
+        if (!exists) {
+          chatMsgs.push(res.data);
+          paintMessages();
+          scrollToBottom(true);
+        }
+      } catch(e) {
+        console.error('Send error:', e);
+        alert('Failed to send: ' + (e.message || e));
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Send';
+      inp.focus();
     }
 
   </script>
