@@ -1,0 +1,2741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="icon" type="image/png" sizes="32x32" href="https://i.imgur.com/jpGdtHJ.jpeg">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LNL Holder Dashboard | Profile</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Orbitron:wght@400;700;900&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Space Grotesk', sans-serif;
+      background: #0a0a1a;
+      color: #e0e0ff;
+      overflow-x: hidden;
+      opacity: 0;
+      transition: opacity 0.8s ease;
+    }
+    body.loaded { opacity: 1; }
+
+    /* ---- TOP NAV (SITE) ---- */
+    nav {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      padding: 1rem 0;
+      background: rgba(10,10,26,0.9);
+      backdrop-filter: blur(10px);
+      z-index: 1000;
+      text-align: center;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    nav a {
+      color: #e0e0ff;
+      margin: 0 1.5rem;
+      text-decoration: none;
+      font-weight: 600;
+      position: relative;
+      font-size: 0.9rem;
+    }
+    nav a::after {
+      content: '';
+      position: absolute;
+      bottom: -5px;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background: #00d4ff;
+      transition: 0.3s;
+    }
+    nav a:hover::after { width: 100%; }
+
+    /* ---- HERO ---- */
+    .hero {
+      margin-top: 60px;
+      padding: 4rem 2rem 2.2rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: 'HOLDER';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(120px, 20vw, 400px);
+      color: rgba(0,212,255,0.03);
+      pointer-events: none;
+      white-space: nowrap;
+      letter-spacing: 20px;
+    }
+    .hero h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(1.6rem, 4vw, 2.8rem);
+      font-weight: 900;
+      letter-spacing: 3px;
+      margin-bottom: 0.5rem;
+    }
+    .hero h1 span { color: #00d4ff; text-shadow: 0 0 30px rgba(0,212,255,0.4); }
+    .hero-sub {
+      color: #888;
+      font-size: 0.95rem;
+    }
+
+    /* ---- DASH NAV (DASHBOARD-ONLY) ---- */
+    .dash-nav-wrap{
+      position: sticky;
+      top: 60px; /* below site nav */
+      z-index: 900;
+      background: rgba(10,10,26,0.92);
+      backdrop-filter: blur(10px);
+      border-top: 1px solid rgba(255,255,255,0.04);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      display: none;
+    }
+    .dash-nav-wrap.show { display: block; }
+
+    .dash-nav{
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0.9rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .dash-tabs{
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .dash-tab{
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #bfc2ff;
+      padding: 8px 14px;
+      font-size: 0.78rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: all 0.2s;
+      font-weight: 700;
+      font-family: 'Space Grotesk', sans-serif;
+    }
+    .dash-tab:hover{
+      border-color: rgba(0,212,255,0.45);
+      color: #e0e0ff;
+      box-shadow: 0 0 18px rgba(0,212,255,0.12);
+      transform: translateY(-1px);
+    }
+    .dash-tab.active{
+      border-color: rgba(0,212,255,0.65);
+      color: #00d4ff;
+      box-shadow: 0 0 22px rgba(0,212,255,0.16);
+    }
+
+    .dash-right{
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0.7rem;
+      flex-wrap: wrap;
+    }
+
+    /* --- DASH NAV mobile-safe polish (max width like cards) --- */
+    .dash-nav{
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0.9rem 2rem;
+    }
+
+    .dash-tabs{ flex: 1 1 auto; min-width: 0; }
+    .dash-right{ flex: 0 0 auto; }
+
+    .wallet-chip{ max-width: 240px; }
+    .wallet-addr{ overflow: hidden; text-overflow: ellipsis; }
+
+    @media (max-width: 800px){
+      .dash-nav{ padding: 0.8rem 1rem; }
+      .dash-right{ gap: 0.5rem; }
+      .wallet-chip{ max-width: 170px; }
+    }
+
+    @media (max-width: 420px){
+      .dash-nav{ flex-wrap: wrap; row-gap: 0.6rem; }
+      .dash-right{ width: 100%; justify-content: flex-end; }
+      .wallet-chip{ max-width: 100%; }
+    }
+
+    .wallet-chip{
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(17,17,37,0.55);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .wallet-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #00ff88;
+      box-shadow: 0 0 8px rgba(0,255,136,0.6);
+      flex: 0 0 auto;
+    }
+    .wallet-addr {
+      color: #888;
+      font-size: 0.78rem;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+    .wallet-addr strong { color: #e0e0ff; }
+
+    .disconnect-btn {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.10);
+      color: #7a7aa6;
+      padding: 8px 12px;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1.8px;
+      cursor: pointer;
+      font-family: 'Space Grotesk', sans-serif;
+      transition: all 0.2s;
+      border-radius: 8px;
+      font-weight: 700;
+    }
+    .disconnect-btn:hover { border-color: #ff3c5c; color: #ff3c5c; box-shadow: 0 0 18px rgba(255,60,92,0.14); }
+
+    @media (max-width: 700px){
+      .dash-nav{ padding: 0.8rem 1rem; }
+      nav a { margin: 0 0.8rem; font-size: 0.75rem; }
+      .wallet-chip{ max-width: 100%; }
+    }
+
+    /* ---- CONNECT SECTION ---- */
+    .connect-section {
+      text-align: center;
+      padding: 4rem 2rem;
+    }
+    .connect-btn {
+      background: linear-gradient(135deg, #00d4ff 0%, #7b68ee 100%);
+      color: #000;
+      border: none;
+      padding: 16px 48px;
+      font-weight: 700;
+      font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      cursor: pointer;
+      font-family: 'Space Grotesk', sans-serif;
+      border-radius: 4px;
+      transition: all 0.3s;
+      box-shadow: 0 4px 30px rgba(0,212,255,0.3);
+    }
+    .connect-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 40px rgba(0,212,255,0.5);
+    }
+    .connect-prompt {
+      color: #555;
+      margin-top: 1rem;
+      font-size: 0.8rem;
+      letter-spacing: 1px;
+    }
+
+    /* ---- DASHBOARD GRID / VIEWS ---- */
+    .dashboard {
+      display: none;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1.8rem 2rem 4rem;
+      gap: 1.5rem;
+    }
+    .dashboard.show { display: block; }
+
+    .view{ display: none; }
+    .view.show{
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+    #view-chat.show {
+      grid-template-columns: 1fr;
+    }
+    @media (max-width: 800px) {
+      .view.show { grid-template-columns: 1fr; }
+      .dashboard{ padding: 1.4rem 1rem 3rem; }
+    }
+
+    /* ---- TIER CARD ---- */
+    .tier-card {
+      grid-column: 1 / -1;
+      background: linear-gradient(135deg, #111125 0%, #0d0d20 100%);
+      border: 1px solid #1e1e3a;
+      border-radius: 16px;
+      padding: 2.3rem;
+      display: flex;
+      align-items: center;
+      gap: 2.2rem;
+      position: relative;
+      overflow: hidden;
+      min-height: 180px;
+    }
+    .tier-card::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 400px;
+      height: 400px;
+      border-radius: 50%;
+      opacity: 0.08;
+      pointer-events: none;
+    }
+    .tier-card.tier-neck::before { background: radial-gradient(circle, #00d4ff, transparent); }
+    .tier-card.tier-longneck::before { background: radial-gradient(circle, #7b68ee, transparent); }
+    .tier-card.tier-legend::before { background: radial-gradient(circle, #ffd700, transparent); }
+    .tier-card.tier-og::before { background: radial-gradient(circle, #ffd700, transparent); }
+    .tier-card.tier-sardine::before { background: radial-gradient(circle, #ff3c5c, transparent); }
+    .tier-card.tier-barracuda::before { background: radial-gradient(circle, #ff3c5c, transparent); }
+    .tier-card.tier-shark::before { background: radial-gradient(circle, #00ffcc, transparent); }
+    .tier-card.tier-whale::before { background: radial-gradient(circle, #00ffcc, transparent); }
+
+    @media (max-width: 600px) {
+      .tier-card { flex-direction: column; text-align: center; padding: 2rem 1.5rem; }
+    }
+
+    .tier-badge {
+      width: 130px;
+      height: 130px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      position: relative;
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 900;
+      font-size: 1.8rem;
+      background: rgba(255,255,255,0.03);
+      overflow: hidden;
+    }
+    .tier-badge::after {
+      content: '';
+      position: absolute;
+      inset: -3px;
+      border-radius: 50%;
+      border: 2px solid;
+      animation: tierPulse 2s ease-in-out infinite;
+      pointer-events: none;
+    }
+    @keyframes tierPulse {
+      0%, 100% { opacity: 0.4; transform: scale(1); }
+      50% { opacity: 0.8; transform: scale(1.05); }
+    }
+
+    .tier-badge img{
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      filter: saturate(1.05) contrast(1.05);
+    }
+
+    .tier-neck .tier-badge { color: #00d4ff; }
+    .tier-neck .tier-badge::after { border-color: #00d4ff; }
+    .tier-longneck .tier-badge { color: #7b68ee; }
+    .tier-longneck .tier-badge::after { border-color: #7b68ee; }
+    .tier-legend .tier-badge { color: #ffd700; }
+    .tier-legend .tier-badge::after { border-color: #ffd700; }
+    .tier-og .tier-badge { color: #ffd700; }
+    .tier-og .tier-badge::after { border-color: #ffd700; }
+    .tier-sardine .tier-badge { color: #ff3c5c; }
+    .tier-sardine .tier-badge::after { border-color: #ff3c5c; }
+    .tier-barracuda .tier-badge { color: #ff3c5c; }
+    .tier-barracuda .tier-badge::after { border-color: #ff3c5c; }
+    .tier-shark .tier-badge { color: #00ffcc; }
+    .tier-shark .tier-badge::after { border-color: #00ffcc; }
+    .tier-whale .tier-badge { color: #00ffcc; }
+    .tier-whale .tier-badge::after { border-color: #00ffcc; }
+
+    .tier-info { flex: 1; min-width: 240px; }
+    .tier-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      color: #555;
+      margin-bottom: 0.3rem;
+    }
+    .tier-name {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2.8rem;
+      letter-spacing: 4px;
+      line-height: 1;
+      margin-bottom: 0.3rem;
+    }
+    .tier-neck .tier-name { color: #00d4ff; }
+    .tier-longneck .tier-name { color: #7b68ee; }
+    .tier-legend .tier-name { color: #ffd700; }
+    .tier-og .tier-name { color: #ffd700; }
+    .tier-sardine .tier-name { color: #ff3c5c; }
+    .tier-barracuda .tier-name { color: #ff3c5c; }
+    .tier-shark .tier-name { color: #00ffcc; }
+    .tier-whale .tier-name { color: #00ffcc; }
+
+    .tier-nfts-held {
+      color: #888;
+      font-size: 0.85rem;
+      margin-bottom: 1rem;
+    }
+    .tier-nfts-held strong { color: #e0e0ff; font-weight: 700; }
+
+    .tier-progress-wrap { max-width: 320px; }
+    .tier-progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.7rem;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+      gap: 12px;
+    }
+    .tier-progress-bar {
+      height: 6px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .tier-progress-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .tier-neck .tier-progress-fill { background: #00d4ff; box-shadow: 0 0 10px rgba(0,212,255,0.5); }
+    .tier-longneck .tier-progress-fill { background: #7b68ee; box-shadow: 0 0 10px rgba(123,104,238,0.5); }
+    .tier-legend .tier-progress-fill { background: #ffd700; box-shadow: 0 0 10px rgba(255,215,0,0.5); }
+    .tier-og .tier-progress-fill { background: #ffd700; box-shadow: 0 0 10px rgba(255,215,0,0.5); }
+    .tier-sardine .tier-progress-fill { background: #ff3c5c; box-shadow: 0 0 10px rgba(255,60,92,0.5); }
+    .tier-barracuda .tier-progress-fill { background: #ff3c5c; box-shadow: 0 0 10px rgba(255,60,92,0.5); }
+    .tier-shark .tier-progress-fill { background: #00ffcc; box-shadow: 0 0 10px rgba(0,255,204,0.5); }
+    .tier-whale .tier-progress-fill { background: #00ffcc; box-shadow: 0 0 10px rgba(0,255,204,0.5); }
+
+    /* ---- Profile Name (right side of tier card) ---- */
+    .profile-name-box{
+      flex: 0 0 320px;
+      max-width: 360px;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      text-align: right;
+    }
+    .profile-name-inner{
+      width: 100%;
+      padding: 0.6rem 0.8rem;
+      border-radius: 14px;
+      background: rgba(0,0,0,0.18);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .profile-name-label{
+      font-size: 0.65rem;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: #555;
+      margin-bottom: 0.35rem;
+    }
+    .profile-name{
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 900;
+      letter-spacing: 1px;
+      font-size: 1.15rem;
+      color: #e0e0ff;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .profile-links{
+      margin-top: 0.45rem;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .plink{
+      font-size: 0.7rem;
+      color: #888;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.02);
+      padding: 6px 10px;
+      border-radius: 999px;
+      text-decoration: none;
+      transition: all 0.2s;
+      letter-spacing: 1px;
+    }
+    .plink:hover{
+      border-color: rgba(0,212,255,0.4);
+      color: #00d4ff;
+      box-shadow: 0 0 18px rgba(0,212,255,0.12);
+    }
+
+    @media (max-width: 900px){
+      .profile-name-box{ flex: 1 1 auto; max-width: 100%; justify-content: center; text-align: center; }
+      .profile-links{ justify-content: center; }
+      .profile-name-inner{ margin-top: 0.5rem; }
+    }
+
+    /* ---- STATS CARD ---- */
+    .stats-card {
+      background: #111125;
+      border: 1px solid #1e1e3a;
+      border-radius: 14px;
+      padding: 2rem;
+    }
+    .stats-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.3rem;
+      letter-spacing: 3px;
+      color: #555;
+      margin-bottom: 1.2rem;
+    }
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.7rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .stat-row:last-child { border-bottom: none; }
+    .stat-label { color: #888; font-size: 0.8rem; }
+    .stat-value { font-weight: 700; font-size: 1.1rem; }
+    .stat-value.cyan { color: #00d4ff; }
+    .stat-value.purple { color: #7b68ee; }
+    .stat-value.gold { color: #ffd700; }
+    .stat-value.green { color: #00ff88; }
+
+    /* ---- POINTS DISPLAY ---- */
+    .points-display { text-align: center; padding: 1.5rem 0; }
+    .points-number {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 3.5rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, #00d4ff, #7b68ee);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+    }
+    .points-label {
+      font-size: 0.7rem;
+      letter-spacing: 3px;
+      color: #555;
+      text-transform: uppercase;
+      margin-top: 0.3rem;
+    }
+
+    /* ---- PROFILE ACTIONS ---- */
+    .profile-actions{
+      grid-column: 1 / -1;
+      background: #111125;
+      border: 1px solid #1e1e3a;
+      border-radius: 14px;
+      padding: 1.6rem 2rem;
+    }
+    .profile-actions.is-hidden { display: none; }
+    .actions-grid{
+      display: grid;
+      grid-template-columns: repeat(6, minmax(140px, 1fr));
+      gap: 0.8rem;
+      margin-top: 0.9rem;
+    }
+    @media (max-width: 1100px){
+      .actions-grid{ grid-template-columns: repeat(3, minmax(140px, 1fr)); }
+    }
+    @media (max-width: 600px){
+      .actions-grid{ grid-template-columns: repeat(2, minmax(140px, 1fr)); }
+      .points-number { font-size: 2.5rem; }
+    }
+    .action-btn{
+      background: rgba(0,0,0,0.22);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #cfd2ff;
+      padding: 12px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 800;
+      font-size: 0.74rem;
+      letter-spacing: 1.6px;
+      text-transform: uppercase;
+      font-family: 'Space Grotesk', sans-serif;
+      text-align: center;
+    }
+    .action-btn:hover{
+      border-color: rgba(0,212,255,0.45);
+      box-shadow: 0 0 22px rgba(0,212,255,0.12);
+      transform: translateY(-1px);
+      color: #e0e0ff;
+    }
+    .action-btn.danger:hover{
+      border-color: rgba(255,60,92,0.6);
+      box-shadow: 0 0 22px rgba(255,60,92,0.10);
+      color: #ff7a90;
+    }
+
+    /* ---- PERKS CARD ---- */
+    .perks-card {
+      grid-column: 1 / -1;
+      background: #111125;
+      border: 1px solid #1e1e3a;
+      border-radius: 14px;
+      padding: 2rem;
+    }
+    .perks-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .perk {
+      background: rgba(0,0,0,0.3);
+      border: 1px solid #1e1e3a;
+      border-radius: 10px;
+      padding: 1.2rem;
+      position: relative;
+      transition: all 0.3s;
+    }
+    .perk.unlocked { border-color: rgba(0,212,255,0.3); background: rgba(0,212,255,0.04); }
+    .perk.locked { opacity: 0.4; }
+    .perk-icon { font-size: 1.8rem; margin-bottom: 0.6rem; }
+    .perk-name { font-weight: 700; font-size: 0.85rem; margin-bottom: 0.3rem; letter-spacing: 0.5px; }
+    .perk-desc { color: #666; font-size: 0.72rem; line-height: 1.5; }
+    .perk-req { font-size: 0.65rem; color: #555; text-transform: uppercase; letter-spacing: 1px; margin-top: 0.6rem; }
+    .perk-req.met { color: #00ff88; }
+    .perk-status {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    .perk-status.on { background: #00ff88; box-shadow: 0 0 8px rgba(0,255,136,0.6); }
+    .perk-status.off { background: #333; }
+
+    /* ---- NFT GALLERY ---- */
+    .gallery-card {
+      grid-column: 1 / -1;
+      background: #111125;
+      border: 1px solid #1e1e3a;
+      border-radius: 14px;
+      padding: 2rem;
+    }
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .nft-tile {
+      background: #0a0a1a;
+      border: 1px solid #1e1e3a;
+      border-radius: 10px;
+      overflow: hidden;
+      transition: all 0.3s;
+      cursor: pointer;
+    }
+    .nft-tile:hover {
+      transform: translateY(-4px);
+      border-color: rgba(0,212,255,0.4);
+      box-shadow: 0 8px 30px rgba(0,212,255,0.15);
+    }
+    .nft-tile img {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      display: block;
+    }
+    .nft-tile-info { padding: 0.7rem; }
+    .nft-tile-name {
+      font-weight: 700;
+      font-size: 0.75rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .nft-tile-id { color: #555; font-size: 0.65rem; margin-top: 2px; }
+
+    /* ---- SHARE CARD ---- */
+    .share-section { grid-column: 1 / -1; text-align: center; padding: 1rem 0; }
+    .share-btn {
+      background: transparent;
+      border: 1px solid #1e1e3a;
+      color: #888;
+      padding: 10px 28px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      cursor: pointer;
+      font-family: 'Space Grotesk', sans-serif;
+      transition: all 0.2s;
+      border-radius: 4px;
+    }
+    .share-btn:hover {
+      border-color: #00d4ff;
+      color: #00d4ff;
+      box-shadow: 0 0 20px rgba(0,212,255,0.15);
+    }
+
+    /* ---- NO NFTS STATE ---- */
+    .no-nfts {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 3rem 2rem;
+      background: #111125;
+      border: 1px solid #1e1e3a;
+      border-radius: 14px;
+    }
+    .no-nfts h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2rem;
+      letter-spacing: 3px;
+      margin-bottom: 0.5rem;
+    }
+    .no-nfts p { color: #666; margin-bottom: 1.5rem; font-size: 0.9rem; }
+    .no-nfts a {
+      display: inline-block;
+      background: linear-gradient(135deg, #00d4ff, #7b68ee);
+      color: #000;
+      text-decoration: none;
+      padding: 12px 36px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+    .no-nfts a:hover { box-shadow: 0 4px 30px rgba(0,212,255,0.4); transform: translateY(-2px); }
+
+    /* ---- LOADING ---- */
+    .loading-spinner {
+      display: inline-block;
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(0,212,255,0.15);
+      border-top-color: #00d4ff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 1rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text {
+      color: #555;
+      font-size: 0.8rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    /* ---- MODALS ---- */
+    .modal-backdrop{
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      padding: 1.2rem;
+    }
+    .modal-backdrop.show{ display: flex; }
+
+    .modal{
+      width: min(920px, 100%);
+      max-height: 85vh; 
+      background: linear-gradient(135deg, #111125 0%, #0d0d20 100%);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 18px 70px rgba(0,0,0,0.55);
+    }
+    .modal-head{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.2rem;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      background: rgba(0,0,0,0.18);
+    }
+    .modal-title{
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 900;
+      letter-spacing: 2px;
+      font-size: 0.95rem;
+      color: #e0e0ff;
+      text-transform: uppercase;
+    }
+    .modal-close{
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.12);
+      color: #9a9abd;
+      padding: 8px 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 900;
+      transition: all 0.2s;
+    }
+    .modal-close:hover{
+      border-color: rgba(255,60,92,0.55);
+      color: #ff3c5c;
+      box-shadow: 0 0 16px rgba(255,60,92,0.12);
+    }
+    .modal-body{
+      padding: 1.2rem;
+      max-height: min(70vh, 640px);
+      overflow: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .pfp-grid{
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 0.9rem;
+    }
+    .pfp-tile{
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(0,0,0,0.22);
+      border-radius: 14px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+    .pfp-tile:hover{
+      border-color: rgba(0,212,255,0.45);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(0,212,255,0.10);
+    }
+    .pfp-tile img{
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      display: block;
+    }
+    .pfp-tile .pfp-name{
+      padding: 0.6rem 0.7rem;
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.4px;
+      color: #e0e0ff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .pfp-selected{
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #00ff88;
+      box-shadow: 0 0 10px rgba(0,255,136,0.55);
+      display: none;
+    }
+    .pfp-tile.selected .pfp-selected{ display: block; }
+
+    .modal-note{
+      color: #666;
+      font-size: 0.8rem;
+      margin-bottom: 0.9rem;
+      letter-spacing: 0.4px;
+    }
+
+    /* ---- FOOTER ---- */
+    footer {
+      text-align: center;
+      padding: 3rem 2rem;
+      border-top: 1px solid #1e1e3a;
+      color: #333;
+      font-size: 0.7rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    /* ---- SCROLLBAR ---- */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0a0a1a; }
+    ::-webkit-scrollbar-thumb { background: #1e1e3a; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #00d4ff; }
+
+    @media (max-width: 600px) {
+      .perks-grid { grid-template-columns: 1fr 1fr; }
+      .gallery-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* ================================================================
+       LEADERBOARD + PROOF SUBMISSION STYLES
+    ================================================================ */
+    #view-leaderboard.show { grid-template-columns: 1fr; }
+
+    /* ── Season banner ── */
+    .lb-season-banner {
+      background: linear-gradient(135deg, rgba(0,212,255,0.07) 0%, rgba(123,104,238,0.07) 100%);
+      border: 1px solid rgba(0,212,255,0.18);
+      border-radius: 14px;
+      padding: 1.2rem 1.6rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.8rem;
+      margin-bottom: 1.4rem;
+    }
+    .lb-season-label {
+      font-size: 0.65rem;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: #555;
+      margin-bottom: 0.2rem;
+    }
+    .lb-season-name {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 900;
+      font-size: 1rem;
+      color: #00d4ff;
+      letter-spacing: 2px;
+    }
+    .lb-season-timer {
+      font-size: 0.75rem;
+      color: #666;
+      margin-top: 0.3rem;
+    }
+    .lb-season-timer strong { color: #aaa; }
+
+    .lb-rule-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(0,212,255,0.06);
+      border: 1px solid rgba(0,212,255,0.2);
+      border-radius: 999px;
+      padding: 7px 16px;
+      font-size: 0.72rem;
+      color: #00d4ff;
+      letter-spacing: 1px;
+      font-weight: 700;
+    }
+
+    /* ── Scoring key pills ── */
+    .lb-scoring {
+      display: flex;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.6rem;
+    }
+    .lb-score-pill {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 0.72rem;
+      color: #666;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .lb-score-pill .pill-pts { font-family:'Orbitron',sans-serif; font-weight:900; color:#00d4ff; font-size:0.85rem; }
+    .lb-score-pill .pill-cap { font-size:0.62rem; color:#444; }
+
+    /* ── Leaderboard table ── */
+    .lb-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .lb-table th {
+      text-align: left;
+      font-size: 0.62rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #3a3a5c;
+      padding: 0 0.8rem 0.9rem;
+      border-bottom: 1px solid #1e1e3a;
+    }
+    .lb-table th.right { text-align: right; }
+    .lb-table td {
+      padding: 0.85rem 0.8rem;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      font-size: 0.85rem;
+      vertical-align: middle;
+    }
+    .lb-table tr:last-child td { border-bottom: none; }
+    .lb-table tbody tr:hover td { background: rgba(255,255,255,0.018); }
+
+    .lb-rank {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 900;
+      font-size: 0.78rem;
+      width: 36px;
+      color: #333;
+    }
+    .lb-rank.gold   { color: #ffd700; text-shadow: 0 0 14px rgba(255,215,0,0.5); }
+    .lb-rank.silver { color: #c0c0c0; }
+    .lb-rank.bronze { color: #cd7f32; }
+
+    .lb-user { display: flex; align-items: center; gap: 0.7rem; }
+    .lb-avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg,#1a1a3a,#0d0d20);
+      flex-shrink: 0;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.08);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem; color: #444; font-weight: 700;
+    }
+    .lb-avatar img { width:100%; height:100%; object-fit:cover; }
+    .lb-name  { font-weight: 700; font-size: 0.83rem; color: #e0e0ff; }
+    .lb-handle { font-size: 0.68rem; color: #444; margin-top: 2px; font-family: monospace; }
+
+    .lb-breakdown { display: flex; gap: 0.45rem; flex-wrap: wrap; }
+    .lb-chip {
+      font-size: 0.63rem;
+      padding: 3px 8px;
+      border-radius: 5px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      color: #555;
+      white-space: nowrap;
+    }
+    .lb-chip.active { color: #bbb; background: rgba(0,212,255,0.06); border-color: rgba(0,212,255,0.18); }
+
+    .lb-total {
+      text-align: right;
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 900;
+      font-size: 1.05rem;
+      color: #00d4ff;
+    }
+    .lb-total.top { color: #ffd700; text-shadow: 0 0 18px rgba(255,215,0,0.4); }
+
+    .lb-you-row td { background: rgba(0,212,255,0.04) !important; }
+    .lb-you-badge {
+      display: inline-block;
+      background: rgba(0,212,255,0.15);
+      border: 1px solid rgba(0,212,255,0.3);
+      border-radius: 4px;
+      font-size: 0.55rem;
+      letter-spacing: 1.5px;
+      color: #00d4ff;
+      padding: 2px 5px;
+      margin-left: 6px;
+      vertical-align: middle;
+      text-transform: uppercase;
+    }
+
+    .lb-empty {
+      text-align: center;
+      padding: 4rem 1rem;
+      color: #333;
+      font-size: 0.82rem;
+      letter-spacing: 1px;
+      line-height: 2;
+    }
+
+    /* ── Submit proof form ── */
+    .proof-form-card {
+      background: #111125;
+      border: 1px solid #1e1e3a;
+      border-radius: 14px;
+      padding: 2rem;
+      margin-bottom: 0;
+    }
+    .proof-form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-top: 1.2rem;
+    }
+    @media(max-width:600px){ .proof-form-grid { grid-template-columns: 1fr; } }
+    .proof-form-grid .full { grid-column: 1 / -1; }
+
+    .pf-label {
+      display: block;
+      font-size: 0.65rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #555;
+      margin-bottom: 0.45rem;
+      font-weight: 700;
+    }
+    .pf-input, .pf-select {
+      width: 100%;
+      padding: 10px 13px;
+      background: #0a0a1a;
+      border: 1px solid #1e1e3a;
+      border-radius: 8px;
+      color: #e0e0ff;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.88rem;
+      transition: border-color 0.2s;
+      outline: none;
+      -webkit-appearance: none;
+    }
+    .pf-input:focus, .pf-select:focus { border-color: rgba(0,212,255,0.45); }
+    .pf-input::placeholder { color: #333; }
+    .pf-input.error { border-color: rgba(255,60,92,0.55); }
+
+    .pf-file-label {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 10px 13px;
+      background: #0a0a1a;
+      border: 1px dashed #1e1e3a;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.82rem;
+      color: #555;
+      transition: all 0.2s;
+    }
+    .pf-file-label:hover { border-color: rgba(0,212,255,0.3); color: #888; }
+    .pf-file-label.has-file { border-color: rgba(0,212,255,0.3); color: #00d4ff; }
+    .pf-file-input { display: none; }
+
+    .pf-submit-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.8rem;
+      margin-top: 1.2rem;
+    }
+    .pf-rate-note { font-size: 0.7rem; color: #444; letter-spacing: 0.5px; }
+    .pf-msg { font-size: 0.78rem; margin-top: 0.8rem; padding: 0.6rem 1rem; border-radius: 8px; display: none; }
+    .pf-msg.ok  { display:block; background:rgba(0,255,136,0.07); border:1px solid rgba(0,255,136,0.2); color:#00ff88; }
+    .pf-msg.err { display:block; background:rgba(255,60,92,0.07); border:1px solid rgba(255,60,92,0.2); color:#ff3c5c; }
+
+    /* ── My submissions list ── */
+    .my-subs-card {
+      background: #111125;
+      border: 1px solid #1e1e3a;
+      border-radius: 14px;
+      padding: 2rem;
+    }
+    .sub-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.9rem;
+      padding: 0.9rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .sub-row:last-child { border-bottom: none; }
+    .sub-status-dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 5px;
+    }
+    .sub-status-dot.pending  { background: #f5a623; box-shadow: 0 0 8px rgba(245,166,35,0.5); }
+    .sub-status-dot.approved { background: #00ff88; box-shadow: 0 0 8px rgba(0,255,136,0.5); }
+    .sub-status-dot.rejected { background: #ff3c5c; box-shadow: 0 0 8px rgba(255,60,92,0.4); }
+    .sub-body { flex: 1; min-width: 0; }
+    .sub-url {
+      font-size: 0.8rem;
+      color: #00d4ff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-decoration: none;
+    }
+    .sub-url:hover { text-decoration: underline; }
+    .sub-meta { font-size: 0.68rem; color: #444; margin-top: 3px; }
+    .sub-status-label {
+      font-size: 0.65rem;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .sub-status-label.pending  { color: #f5a623; }
+    .sub-status-label.approved { color: #00ff88; }
+    .sub-status-label.rejected { color: #ff3c5c; }
+    .sub-pts {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 900;
+      font-size: 0.85rem;
+      color: #00d4ff;
+      flex-shrink: 0;
+    }
+
+    /* ── Misc ── */
+    .lb-action-btn {
+      background: transparent;
+      border: 1px solid rgba(0,212,255,0.25);
+      color: #00d4ff;
+      font-size: 0.7rem;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 8px 18px;
+      border-radius: 7px;
+      cursor: pointer;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      transition: all 0.2s;
+    }
+    .lb-action-btn:hover:not(:disabled) { background: rgba(0,212,255,0.08); box-shadow: 0 0 18px rgba(0,212,255,0.12); }
+    .lb-action-btn:disabled { opacity: 0.38; cursor: default; }
+    .lb-action-btn.secondary {
+      border-color: rgba(255,255,255,0.1);
+      color: #666;
+    }
+    .lb-action-btn.secondary:hover:not(:disabled) { border-color: rgba(255,255,255,0.2); color: #aaa; background: transparent; box-shadow: none; }
+
+    .lb-spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid rgba(0,212,255,0.15);
+      border-top-color: #00d4ff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+  </style>
+</head>
+
+<body>
+  <nav>
+    <a href="https://longnecklegends.xyz/">Home</a>
+    <a href="/starternecks.html">Starter Necks</a>
+    <a href="/music.html">Music</a>
+    <a href="/hotsaucemint.html">Hot Sauce</a>
+    <a href="/store.html">Store</a>
+  </nav>
+
+  <section class="hero">
+    <h1>HOLDER <span>DASHBOARD</span></h1>
+    <p class="hero-sub">Customize your profile, connect your wallets and socials to see your tier, points, and perks</p>
+  </section>
+
+  <!-- DASHBOARD-ONLY NAV BAR -->
+  <div class="dash-nav-wrap" id="dashNavWrap">
+    <div class="dash-nav">
+      <div class="dash-tabs">
+        <button class="dash-tab" id="tabProfile" onclick="toggleProfilePanel()">Profile</button>
+        <button class="dash-tab" id="tabChat" onclick="switchView('chat')">Chat</button>
+        <button class="dash-tab" id="tabLeaderboard" onclick="switchView('leaderboard')">Leaderboard</button>
+      </div>
+
+      <div class="dash-right">
+        <div class="wallet-chip" id="walletChip" style="display:none;">
+          <div class="wallet-dot"></div>
+          <span class="wallet-addr"><strong id="walletDisplay">—</strong></span>
+        </div>
+        <button class="disconnect-btn" id="disconnectBtn" style="display:none;" onclick="disconnectWallet()">Disconnect</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONNECT PROMPT -->
+  <div class="connect-section" id="connectSection">
+    <button class="connect-btn" onclick="connectWallet()">CONNECT WALLET</button>
+    <p class="connect-prompt">Phantom &bull; Solflare &bull; Backpack</p>
+  </div>
+
+  <!-- LOADING -->
+  <div class="connect-section" id="loadingSection" style="display:none;">
+    <div class="loading-spinner"></div>
+    <p class="loading-text">Scanning your wallet...</p>
+  </div>
+
+  <!-- DASHBOARD WRAP -->
+  <div class="dashboard" id="dashboard">
+    <div class="view show" id="view-profile"></div>
+    <div class="view" id="view-chat"></div>
+    <div class="view" id="view-leaderboard"></div>
+  </div>
+
+  <!-- PFP MODAL -->
+  <div class="modal-backdrop" id="pfpModalBackdrop" onclick="closePfpModal(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <div class="modal-title">Select Your LNL PFP</div>
+        <button class="modal-close" onclick="hidePfpModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-note">Pick one of your Long Neck Legends. This sets your Profile PFP for this wallet on this device.</div>
+        <div class="pfp-grid" id="pfpGrid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECOND WALLET MODAL -->
+  <div class="modal-backdrop" id="secondWalletModalBackdrop" onclick="closeSecondWalletModal(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <div class="modal-title">Link 2nd Wallet</div>
+        <button class="modal-close" onclick="hideSecondWalletModal()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="modal-note">
+          Connect a second wallet to combine your LNL holdings across wallets. (Main wallet stays connected.)
+        </div>
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
+          <button class="action-btn" style="flex:1; min-width:180px;" onclick="connectSecondWallet('phantom')">Phantom</button>
+          <button class="action-btn" style="flex:1; min-width:180px;" onclick="connectSecondWallet('solflare')">Solflare</button>
+          <button class="action-btn" style="flex:1; min-width:180px;" onclick="connectSecondWallet('magiceden')">Magic Eden</button>
+        </div>
+
+        <div id="secondWalletStatus" style="color:#666; font-size:0.82rem; line-height:1.5;">
+          No second wallet linked yet.
+        </div>
+
+        <div style="margin-top:14px; display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap;">
+          <button class="disconnect-btn" style="border-color:rgba(255,255,255,0.12);" onclick="unlinkSecondWallet()">Unlink</button>
+          <button class="disconnect-btn" onclick="hideSecondWalletModal()">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>&copy; 2026 Long Neck Legends &bull; Diamond Hands Only</p>
+  </footer>
+
+  <script>
+    window.addEventListener('load', function() { document.body.classList.add('loaded'); });
+
+    var CONFIG = {
+      COLLECTION_MINT: "8Rt3Ayqth4DAiPnW9MDFi63TiQJHmohfTWLMQFHi4KZH",
+      RPC_URL: "https://mainnet.helius-rpc.com/?api-key=44cfd082-9089-430d-8de3-cd310c478b1c",
+      MAGIC_EDEN_LINK: "https://magiceden.us/marketplace/long_neck_legends",
+      // Leaderboard: official X account whose timeline is scanned
+      OFFICIAL_X_HANDLE: "LongNeckLegends",
+      // Only posts containing this marker count toward the leaderboard
+      MARKER: "#stickyourneckout",
+      // Backend proxy endpoint — set this to your server route
+      // GET /api/leaderboard  →  { posts: [...], scores: [...] }
+      LEADERBOARD_API: "/api/leaderboard"
+    };
+
+    var TIERS = [
+      { id: "civilian", name: "CIVILIAN", min: 0, icon: "\u{1F464}", pointsMultiplier: 0, discount: 0, raffleMultiplier: 0, cssClass: "" },
+      { id: "neck", name: "NECK", min: 1, icon: "\u{1F995}", pointsMultiplier: 1, discount: 10, raffleMultiplier: 1, cssClass: "tier-neck" },
+      { id: "longneck", name: "LONG NECK", min: 5, icon: "\u{1F525}", pointsMultiplier: 1.5, discount: 15, raffleMultiplier: 2, cssClass: "tier-longneck" },
+      { id: "legend", name: "LEGEND", min: 10, icon: "\u{2B50}", pointsMultiplier: 2.5, discount: 20, raffleMultiplier: 3, cssClass: "tier-legend" },
+      { id: "og", name: "OG LEGEND", min: 20, icon: "\u{1F451}", pointsMultiplier: 4, discount: 25, raffleMultiplier: 5, cssClass: "tier-og" },
+      { id: "sardine", name: "SARDINE", min: 30, icon: "\u{1F41F}", pointsMultiplier: 6, discount: 30, raffleMultiplier: 6, cssClass: "tier-sardine" },
+      { id: "barracuda", name: "BARRACUDA", min: 50, icon: "\u{1F52A}", pointsMultiplier: 7, discount: 35, raffleMultiplier: 7, cssClass: "tier-barracuda" },
+      { id: "shark", name: "SHARK", min: 75, icon: "\u{1F988}", pointsMultiplier: 8, discount: 35, raffleMultiplier: 8, cssClass: "tier-shark" },
+      { id: "whale", name: "WHALE", min: 100, icon: "\u{1F40B}", pointsMultiplier: 10, discount: 40, raffleMultiplier: 10, cssClass: "tier-whale" }
+    ];
+
+    var PERKS = [
+      { icon: "\u{1F995}", name: "Store Discount", desc: "Get a discount on all LNL Store purchases paid in SOL.", reqTier: "neck", dynamic: true },
+      { icon: "\u{1F995}", name: "Raffle Entries", desc: "Earn entries into exclusive drops, giveaways, and raffles.", reqTier: "neck", dynamic: true },
+      { icon: "\u{1F995}", name: "IRL Access", desc: "Entry to LNL events, listening parties, and tastings.", reqTier: "neck" },
+      { icon: "\u{1F525}", name: "Exclusive Merch", desc: "Unlock holder-only merch that never hits the public store.", reqTier: "longneck" },
+      { icon: "\u{2B50}", name: "Exclusive Merch", desc: "Vote on the next apparel drop. Your neck, your choice.", reqTier: "legend" },
+      { icon: "\u{2B50}", name: "Flavor Voting", desc: "Vote on the next hot sauce flavor. Your taste, your choice.", reqTier: "legend" },
+      { icon: "\u{1F451}", name: "Early Access", desc: "Get first dibs on new sauce flavors, merch drops, and collections.", reqTier: "og" },
+      { icon: "\u{1F451}", name: "VIP IRL Access", desc: "VIP entry to LNL events, listening parties, and tastings.", reqTier: "og" },
+      { icon: "\u{1F41F}", name: "Diamond Hands Club", desc: "Private group with alpha, airdrops, and direct team access.", reqTier: "sardine" },
+      { icon: "\u{1F52A}", name: "Monthly Airdrop", desc: "Free products, NFTs, and surprises delivered monthly.", reqTier: "barracuda" },
+      { icon: "\u{1F988}", name: "Shark Council", desc: "Direct input on project direction, partnerships, and roadmap decisions.", reqTier: "shark" },
+      { icon: "\u{1F40B}", name: "Lifetime Perks", desc: "Permanent max discount, first priority on all future drops, and custom merch.", reqTier: "whale" }
+    ];
+
+    var walletProvider = null;
+    var walletPublicKey = null;
+
+    var session = {
+      loadedNFTs: [],
+      profile: {
+        username: "",
+        pfpMint: "",
+        pfpImage: "",
+        x: "",
+        discord: "",
+        ledger: ""
+      },
+      secondWallet: { address: "" },
+      currentView: "profile",
+      profilePanelOpen: false
+    };
+
+    function getTier(count) {
+      for (var i = TIERS.length - 1; i >= 0; i--) {
+        if (count >= TIERS[i].min) return TIERS[i];
+      }
+      return TIERS[0];
+    }
+    function getNextTier(tier) {
+      var idx = TIERS.findIndex(function(t) { return t.id === tier.id; });
+      return idx < TIERS.length - 1 ? TIERS[idx + 1] : null;
+    }
+    function calcPoints(count, tier) {
+      return Math.floor(count * 100 * tier.pointsMultiplier);
+    }
+
+    function getProviderByName(name){
+      if (name === "phantom") {
+        if (window.phantom && window.phantom.solana && window.phantom.solana.isPhantom) return window.phantom.solana;
+        if (window.solana && window.solana.isPhantom) return window.solana;
+      }
+      if (name === "solflare") {
+        if (window.solflare && window.solflare.isSolflare) return window.solflare;
+        if (window.solflare && window.solflare.solana) return window.solflare.solana;
+      }
+      if (name === "magiceden") {
+        if (window.magicEden && window.magicEden.solana) return window.magicEden.solana;
+        if (window.solana && window.solana.isMagicEden) return window.solana;
+        if (window.solana && window.solana.isMagicEdenWallet) return window.solana;
+      }
+      return null;
+    }
+
+    function detectWalletProvider() {
+      if (window.phantom && window.phantom.solana && window.phantom.solana.isPhantom) return window.phantom.solana;
+      if (window.backpack && window.backpack.solana) return window.backpack.solana;
+      if (window.solflare && window.solflare.isSolflare) return window.solflare;
+      if (window.solflare && window.solflare.solana) return window.solflare.solana;
+      if (window.solana && window.solana.isPhantom) return window.solana;
+      if (window.solana) return window.solana;
+      return null;
+    }
+
+    function storageKey() {
+      var addr = walletPublicKey ? walletPublicKey.toBase58() : "no_wallet";
+      return "lnl_profile_" + addr;
+    }
+
+    function loadProfileFromStorage() {
+      try {
+        var raw = localStorage.getItem(storageKey());
+        if (!raw) return;
+        var data = JSON.parse(raw);
+        if (data && typeof data === "object") {
+          session.profile.username = data.username || "";
+          session.profile.pfpMint = data.pfpMint || "";
+          session.profile.pfpImage = data.pfpImage || "";
+          session.profile.x = data.x || "";
+          session.profile.discord = data.discord || "";
+          session.profile.ledger = data.ledger || "";
+        }
+      } catch (e) {}
+    }
+
+    function saveProfileToStorage() {
+      try { localStorage.setItem(storageKey(), JSON.stringify(session.profile)); } catch (e) {}
+    }
+
+    function secondWalletStorageKey(){
+      var primary = walletPublicKey ? walletPublicKey.toBase58() : "no_wallet";
+      return "lnl_second_wallet_for_" + primary;
+    }
+
+    function loadSecondWalletFromStorage(){
+      try{
+        var raw = localStorage.getItem(secondWalletStorageKey());
+        if (!raw) return;
+        var data = JSON.parse(raw);
+        if (data && data.address) session.secondWallet.address = data.address;
+      }catch(e){}
+    }
+
+    function saveSecondWalletToStorage(){
+      try{
+        localStorage.setItem(secondWalletStorageKey(), JSON.stringify({ address: session.secondWallet.address || "" }));
+      }catch(e){}
+    }
+
+    function shortAddr(addr){
+      if (!addr) return "—";
+      return addr.slice(0,4) + "..." + addr.slice(-4);
+    }
+
+    function sanitizeName(input){
+      var s = (input || "").trim();
+      s = s.replace(/\s+/g, " ");
+      if (s.length > 24) s = s.slice(0, 24);
+      return s;
+    }
+
+    function normalizeHandle(input){
+      var s = (input || "").trim();
+      if (!s) return "";
+      s = s.replace(/^@+/, "");
+      if (s.length > 30) s = s.slice(0, 30);
+      return s;
+    }
+
+    function normalizeDiscord(input){
+      var s = (input || "").trim();
+      if (!s) return "";
+      s = s.replace(/\s+/g, "");
+      if (s.length > 32) s = s.slice(0, 32);
+      return s;
+    }
+
+    function buildXUrl(handle){
+      var h = normalizeHandle(handle);
+      if (!h) return "";
+      return "https://x.com/" + encodeURIComponent(h);
+    }
+
+    async function fetchAssetsByOwner(ownerAddress){
+      var res = await fetch(CONFIG.RPC_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: "lnl",
+          method: "getAssetsByOwner",
+          params: {
+            ownerAddress: ownerAddress,
+            page: 1,
+            limit: 1000,
+            displayOptions: { showCollectionMetadata: true }
+          }
+        })
+      });
+
+      var json = await res.json();
+      var items = (json && json.result && json.result.items) ? json.result.items : [];
+
+      var lnlAssets = items.filter(function(a) {
+        var groups = a.grouping || [];
+        var g = groups.find(function(x) { return x.group_key === "collection"; });
+        return g && g.group_value === CONFIG.COLLECTION_MINT;
+      });
+
+      var picked = (lnlAssets.length > 0) ? lnlAssets : items.filter(function(a) {
+        var sym = (a.content && a.content.metadata && a.content.metadata.symbol) ||
+                  (a.content && a.content.json && a.content.json.symbol) || "";
+        var name = (a.content && a.content.metadata && a.content.metadata.name) ||
+                   (a.content && a.content.json && a.content.json.name) || "";
+        var lname = String(name || "").toLowerCase();
+        return (sym === "LNL") || (lname.indexOf("long neck") !== -1);
+      });
+
+      return picked.map(function(a) {
+        var name = (a.content && a.content.metadata && a.content.metadata.name) ||
+                   (a.content && a.content.json && a.content.json.name) || "LNL";
+        var image = (a.content && a.content.links && a.content.links.image) ||
+                    (a.content && a.content.files && a.content.files[0] && a.content.files[0].uri) ||
+                    (a.content && a.content.json && a.content.json.image) || "";
+        var mint = a.id || "";
+        return { name: name, image: image, mint: mint, owner: ownerAddress };
+      });
+    }
+
+    function applyProfilePanelUI(){
+      var btn = document.getElementById("tabProfile");
+      var panel = document.getElementById("profilePanel");
+
+      if (btn) btn.classList.toggle("active", !!session.profilePanelOpen);
+      if (panel) panel.classList.toggle("is-hidden", !session.profilePanelOpen);
+    }
+
+    function toggleProfilePanel(){
+      session.profilePanelOpen = !session.profilePanelOpen;
+      applyProfilePanelUI();
+    }
+
+    async function connectWallet() {
+      console.log("Connect clicked");
+      var provider = detectWalletProvider();
+      console.log("Provider:", provider);
+      if (!provider || typeof provider.connect !== "function") {
+        alert("No compatible Solana wallet found. Install Phantom, Solflare, or Backpack.");
+        return;
+      }
+      try {
+        if (provider.isConnected && typeof provider.disconnect === "function") {
+          try { await provider.disconnect(); } catch (e) {}
+        }
+
+        var resp = await provider.connect({ onlyIfTrusted: false });
+        walletProvider = provider;
+        walletPublicKey = resp.publicKey || provider.publicKey;
+        if (!walletPublicKey) throw new Error("Wallet connected but no publicKey found.");
+
+        var addr = walletPublicKey.toBase58();
+        document.getElementById("walletDisplay").textContent = shortAddr(addr);
+
+        document.getElementById("dashNavWrap").classList.add("show");
+        document.getElementById("walletChip").style.display = "flex";
+        document.getElementById("disconnectBtn").style.display = "inline-block";
+
+        document.getElementById("connectSection").style.display = "none";
+        document.getElementById("loadingSection").style.display = "block";
+
+        loadProfileFromStorage();
+        loadSecondWalletFromStorage();
+
+        // ✅ default OFF every connect
+        session.profilePanelOpen = false;
+        applyProfilePanelUI();
+
+        await loadDashboard();
+      } catch (err) {
+        console.error("Connect error:", err);
+        alert("Connection error: " + (err.message || err));
+      }
+    }
+
+    function disconnectWallet() {
+      stopChatPoll();
+      try { if (walletProvider && walletProvider.disconnect) walletProvider.disconnect(); } catch (e) {}
+      walletProvider = null;
+      walletPublicKey = null;
+
+      document.getElementById("dashNavWrap").classList.remove("show");
+      document.getElementById("walletChip").style.display = "none";
+      document.getElementById("disconnectBtn").style.display = "none";
+
+      document.getElementById("connectSection").style.display = "block";
+      document.getElementById("loadingSection").style.display = "none";
+      document.getElementById("dashboard").classList.remove("show");
+      document.getElementById("view-profile").classList.remove("show");
+      var viewChat = document.getElementById("view-chat");
+      if (viewChat) viewChat.classList.remove("show");
+      var viewLb = document.getElementById("view-leaderboard");
+      if (viewLb) viewLb.classList.remove("show");
+
+      // ✅ reset toggle state (button unlit + panel hidden)
+      session.profilePanelOpen = false;
+      var tabProfile = document.getElementById("tabProfile");
+      if (tabProfile) tabProfile.classList.remove("active");
+      var tabChat = document.getElementById("tabChat");
+      if (tabChat) tabChat.classList.remove("active");
+      var tabLb = document.getElementById("tabLeaderboard");
+      if (tabLb) tabLb.classList.remove("active");
+
+      session.currentView = "profile";
+    }
+
+    function switchView(viewName){
+      session.currentView = viewName;
+
+      // hide all views
+      document.getElementById("view-profile").classList.remove("show");
+      document.getElementById("view-chat").classList.remove("show");
+      document.getElementById("view-leaderboard").classList.remove("show");
+
+      // deactivate all tabs
+      document.getElementById("tabProfile").classList.remove("active");
+      document.getElementById("tabChat").classList.remove("active");
+      document.getElementById("tabLeaderboard").classList.remove("active");
+
+      if(viewName === "profile"){
+        stopChatPoll();
+        document.getElementById("view-profile").classList.add("show");
+        // sync with profilePanel toggle state
+        document.getElementById("tabProfile").classList.toggle("active", !!session.profilePanelOpen);
+      }
+
+      if(viewName === "chat"){
+        document.getElementById("view-chat").classList.add("show");
+        document.getElementById("tabChat").classList.add("active");
+        renderChatUI();
+      }
+
+      if(viewName === "leaderboard"){
+        stopChatPoll();
+        document.getElementById("view-leaderboard").classList.add("show");
+        document.getElementById("tabLeaderboard").classList.add("active");
+        renderLeaderboardUI();
+      }
+    }
+
+    /* ── Chat (shared persistent storage) ────────────────────────────
+       Messages are stored under the shared key "lnl_chat_v1" so every
+       connected wallet sees the same history.  Polls every 5 s while
+       the tab is open so new messages from others appear automatically.
+    ──────────────────────────────────────────────────────────────────── */
+    var chatPollTimer = null;
+    var chatLastCount = 0;   // used to detect new messages without full re-render
+
+    function renderChatUI() {
+      var chat = document.getElementById("view-chat");
+
+      chat.innerHTML =
+        '<div style="grid-column:1/-1; display:flex; flex-direction:column; gap:0;">' +
+
+        // ── Header bar ──
+        '<div style="' +
+          'display:flex; align-items:center; justify-content:space-between;' +
+          'margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;' +
+        '">' +
+          '<div>' +
+            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.4rem;letter-spacing:3px;color:#555;">LNL HOLDER CHAT</div>' +
+            '<div style="font-size:0.68rem;color:#333;letter-spacing:1px;margin-top:2px;">Open to all connected wallets</div>' +
+          '</div>' +
+          '<div id="chatOnlineIndicator" style="display:flex;align-items:center;gap:6px;font-size:0.7rem;color:#555;">' +
+            '<div style="width:7px;height:7px;border-radius:50%;background:#00ff88;box-shadow:0 0 6px rgba(0,255,136,0.6);"></div>' +
+            'Live' +
+          '</div>' +
+        '</div>' +
+
+        // ── Message list ──
+        '<div id="chatMessages" style="' +
+          'flex:1;' +
+          'height:420px;' +
+          'overflow-y:auto;' +
+          'background:#07070f;' +
+          'border:1px solid #1a1a30;' +
+          'border-radius:12px;' +
+          'padding:16px 14px;' +
+          'margin-bottom:12px;' +
+          'scroll-behavior:smooth;' +
+        '"></div>' +
+
+        // ── Input row ──
+        '<div style="display:flex;gap:8px;align-items:center;">' +
+          '<div style="' +
+            'flex:1;display:flex;align-items:center;' +
+            'background:#0d0d1e;border:1px solid #1a1a30;border-radius:10px;' +
+            'padding:0 12px;' +
+            'transition:border-color 0.2s;' +
+          '" id="chatInputWrap">' +
+            '<span style="color:#333;font-size:0.85rem;margin-right:8px;flex-shrink:0;" id="chatSenderTag"></span>' +
+            '<input id="chatInput" ' +
+              'style="flex:1;background:transparent;border:none;color:#e0e0ff;font-family:\'Space Grotesk\',sans-serif;font-size:0.88rem;padding:11px 0;outline:none;" ' +
+              'placeholder="Say something legend..." ' +
+              'maxlength="500" ' +
+              'onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();sendChatMessage();}" ' +
+              'oninput="onChatInput(this)" ' +
+            '/>' +
+            '<span id="chatCharCount" style="color:#2a2a4a;font-size:0.65rem;flex-shrink:0;margin-left:6px;"></span>' +
+          '</div>' +
+          '<button id="chatSendBtn" onclick="sendChatMessage()" style="' +
+            'background:linear-gradient(135deg,rgba(0,212,255,0.15),rgba(123,104,238,0.15));' +
+            'border:1px solid rgba(0,212,255,0.3);' +
+            'color:#00d4ff;' +
+            'padding:11px 20px;' +
+            'border-radius:10px;' +
+            'cursor:pointer;' +
+            'font-family:\'Space Grotesk\',sans-serif;' +
+            'font-weight:700;font-size:0.8rem;letter-spacing:1.5px;text-transform:uppercase;' +
+            'transition:all 0.2s;white-space:nowrap;' +
+            'onmouseover="this.style.background=\'rgba(0,212,255,0.2)\'" ' +
+          '">Send</button>' +
+        '</div>' +
+
+        '</div>';
+
+      // Set sender tag
+      var tag = document.getElementById("chatSenderTag");
+      if (walletPublicKey) {
+        var addr = walletPublicKey.toBase58();
+        tag.textContent = addr.slice(0,4) + "…";
+        tag.style.color = walletColor(addr);
+      }
+
+      // Input focus style
+      var wrap = document.getElementById("chatInputWrap");
+      var inp  = document.getElementById("chatInput");
+      inp.addEventListener("focus", function(){ wrap.style.borderColor = "rgba(0,212,255,0.4)"; });
+      inp.addEventListener("blur",  function(){ wrap.style.borderColor = "#1a1a30"; });
+
+      // Initial load then start polling
+      loadChatMessages(true);
+      startChatPoll();
+    }
+
+    function onChatInput(input) {
+      var len = input.value.length;
+      var counter = document.getElementById("chatCharCount");
+      if (counter) {
+        counter.textContent = len > 400 ? (500 - len) + " left" : "";
+        counter.style.color = len > 450 ? "#ff3c5c" : "#2a2a4a";
+      }
+    }
+
+    // Deterministic color per wallet address
+    function walletColor(addr) {
+      var colors = ["#00d4ff","#7b68ee","#00ff88","#f5a623","#ff6b9d","#4ecdc4","#a8e6cf","#ffd93d"];
+      var hash = 0;
+      for (var i = 0; i < addr.length; i++) hash = ((hash << 5) - hash) + addr.charCodeAt(i);
+      return colors[Math.abs(hash) % colors.length];
+    }
+
+    async function loadChatMessages(scrollToBottom) {
+      var box = document.getElementById("chatMessages");
+      if (!box) return;
+
+      var msgs = [];
+      try {
+        var result = await window.storage.get("lnl_chat_v1", true);
+        msgs = result ? JSON.parse(result.value) : [];
+      } catch(e) {
+        // Key doesn't exist yet or parse error — start fresh
+        msgs = [];
+      }
+
+      // Only re-render if message count changed (avoid flicker on poll)
+      if (!scrollToBottom && msgs.length === chatLastCount) return;
+      chatLastCount = msgs.length;
+
+      if (msgs.length === 0) {
+        box.innerHTML =
+          '<div style="' +
+            'display:flex;flex-direction:column;align-items:center;justify-content:center;' +
+            'height:100%;gap:0.6rem;' +
+          '">' +
+            '<div style="font-size:2rem;">🦒</div>' +
+            '<div style="color:#2a2a4a;font-size:0.8rem;letter-spacing:1.5px;text-transform:uppercase;">No messages yet</div>' +
+            '<div style="color:#1e1e3a;font-size:0.72rem;">Be the first legend to say something</div>' +
+          '</div>';
+        return;
+      }
+
+      var myWallet = walletPublicKey ? walletPublicKey.toBase58() : null;
+
+      // Group consecutive messages from same sender
+      var html = "";
+      var prevWallet = null;
+
+      msgs.forEach(function(m, i) {
+        var wallet  = m.wallet || "anon";
+        var isMe    = wallet === myWallet;
+        var display = (isMe && session.profile.username)
+          ? session.profile.username
+          : (wallet.length > 8 ? wallet.slice(0,4) + "…" + wallet.slice(-4) : wallet);
+        var color   = walletColor(wallet);
+        var newSender = wallet !== prevWallet;
+        prevWallet  = wallet;
+
+        var timeStr = "";
+        if (m.time) {
+          var d = new Date(m.time);
+          timeStr = d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+        }
+
+        if (newSender) {
+          if (i > 0) html += '<div style="height:10px;"></div>'; // spacer between groups
+          html +=
+            '<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px;">' +
+              '<span style="font-weight:700;font-size:0.78rem;color:' + color + ';">' + escapeHtml(display) + '</span>' +
+              (timeStr ? '<span style="font-size:0.62rem;color:#252540;">' + timeStr + '</span>' : '') +
+              (isMe ? '<span style="font-size:0.55rem;letter-spacing:1px;color:#1e1e3a;text-transform:uppercase;">you</span>' : '') +
+            '</div>';
+        }
+
+        html +=
+          '<div style="' +
+            'font-size:0.87rem;color:#c8c8e8;line-height:1.55;' +
+            'padding:2px 0 2px ' + (newSender ? '0' : '0') + ';' +
+            'word-break:break-word;' +
+          '">' + escapeHtml(m.text) + '</div>';
+      });
+
+      box.innerHTML = html;
+
+      if (scrollToBottom) {
+        box.scrollTop = box.scrollHeight;
+      } else {
+        // Only scroll if already near bottom (within 80px)
+        var nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+        if (nearBottom) box.scrollTop = box.scrollHeight;
+      }
+    }
+
+    async function sendChatMessage() {
+      if (!walletPublicKey) { alert("Connect your wallet first."); return; }
+
+      var input  = document.getElementById("chatInput");
+      var sendBtn = document.getElementById("chatSendBtn");
+      if (!input) return;
+
+      var text = input.value.trim();
+      if (!text) return;
+      if (text.length > 500) { alert("Message too long (max 500 chars)."); return; }
+
+      input.value = "";
+      onChatInput(input);
+      if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = "…"; }
+
+      var wallet = walletPublicKey.toBase58();
+      var msgs = [];
+
+      try {
+        var existing = await window.storage.get("lnl_chat_v1", true);
+        msgs = existing ? JSON.parse(existing.value) : [];
+      } catch(e) { msgs = []; }
+
+      msgs.push({ wallet: wallet, text: text, time: Date.now() });
+      if (msgs.length > 300) msgs = msgs.slice(msgs.length - 300);
+
+      try {
+        await window.storage.set("lnl_chat_v1", JSON.stringify(msgs), true);
+        chatLastCount = -1; // force re-render on next poll
+        await loadChatMessages(true);
+      } catch(e) {
+        alert("Failed to send message. Please try again.");
+      }
+
+      if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = "Send"; }
+      input.focus();
+    }
+
+    function startChatPoll() {
+      stopChatPoll();
+      chatPollTimer = setInterval(function() {
+        if (document.getElementById("chatMessages")) {
+          loadChatMessages(false);
+        } else {
+          stopChatPoll();
+        }
+      }, 5000);
+    }
+
+    function stopChatPoll() {
+      if (chatPollTimer) { clearInterval(chatPollTimer); chatPollTimer = null; }
+    }
+
+    async function loadDashboard() {
+      try {
+        var primary = walletPublicKey.toBase58();
+        var owners = [primary];
+
+        if (session.secondWallet.address) owners.push(session.secondWallet.address);
+
+        var all = [];
+        for (var i=0; i<owners.length; i++){
+          var arr = await fetchAssetsByOwner(owners[i]);
+          all = all.concat(arr);
+        }
+
+        var seen = {};
+        var merged = [];
+        for (var j=0; j<all.length; j++){
+          var m = all[j].mint;
+          if (!m) continue;
+          if (seen[m]) continue;
+          seen[m] = true;
+          merged.push(all[j]);
+        }
+
+        session.loadedNFTs = merged;
+
+        if (!session.profile.pfpMint && merged.length > 0) {
+          session.profile.pfpMint = merged[0].mint;
+          session.profile.pfpImage = merged[0].image || "";
+          saveProfileToStorage();
+        } else if (session.profile.pfpMint) {
+          var found = merged.find(function(n){ return n.mint === session.profile.pfpMint; });
+          if (found && found.image) {
+            session.profile.pfpImage = found.image;
+            saveProfileToStorage();
+          }
+        }
+
+        document.getElementById("loadingSection").style.display = "none";
+        renderProfileView(merged);
+
+        document.getElementById("dashboard").classList.add("show");
+        switchView("profile");
+
+      } catch (err) {
+        console.error("Dashboard error:", err);
+        document.getElementById("loadingSection").style.display = "none";
+        document.getElementById("connectSection").style.display = "block";
+        alert("Error loading NFTs: " + (err.message || err));
+      }
+    }
+
+    function renderProfileView(nfts) {
+      var view = document.getElementById("view-profile");
+      view.innerHTML = "";
+
+      var count = nfts.length;
+
+      if (count === 0) {
+        view.innerHTML = `
+          <div class="no-nfts">
+            <h2>NO LONG NECK LEGENDS FOUND</h2>
+            <p>You don't hold any LNL NFTs in this wallet. Cop one to unlock holder perks.</p>
+            <a href="${CONFIG.MAGIC_EDEN_LINK}" target="_blank">BUY ON MAGIC EDEN</a>
+          </div>
+        `;
+        applyProfilePanelUI();
+        return;
+      }
+
+      var tier = getTier(count);
+      var nextTier = getNextTier(tier);
+      var points = calcPoints(count, tier);
+
+      var displayName = session.profile.username ? session.profile.username : shortAddr(walletPublicKey.toBase58());
+      var xUrl = session.profile.x ? buildXUrl(session.profile.x) : "";
+      var disc = session.profile.discord ? session.profile.discord : "";
+
+      var progressHTML = "";
+      if (nextTier) {
+        var progress = ((count - tier.min) / (nextTier.min - tier.min)) * 100;
+        progressHTML =
+          '<div class="tier-progress-wrap">' +
+            '<div class="tier-progress-label"><span>' + tier.name + '</span><span>' + nextTier.name + ' (' + nextTier.min + ' NFTs)</span></div>' +
+            '<div class="tier-progress-bar"><div class="tier-progress-fill" style="width:' + Math.min(progress,100) + '%"></div></div>' +
+          '</div>';
+      } else {
+        progressHTML = '<div style="color:#555;font-size:0.75rem;letter-spacing:2px;text-transform:uppercase;">MAX TIER REACHED \u{1F451}</div>';
+      }
+
+      var badgeInner = "";
+      if (session.profile.pfpImage) {
+        badgeInner = '<img src="' + session.profile.pfpImage + '" alt="Selected PFP" loading="lazy">';
+      } else {
+        badgeInner = tier.icon;
+      }
+
+      var linksHTML = '';
+      if (xUrl) linksHTML += '<a class="plink" href="' + xUrl + '" target="_blank">X: @' + normalizeHandle(session.profile.x) + '</a>';
+      if (disc) linksHTML += '<span class="plink" style="cursor:default;">Discord: ' + disc + '</span>';
+      if (session.secondWallet.address) linksHTML += '<span class="plink" style="cursor:default;">2nd Wallet: ' + shortAddr(session.secondWallet.address) + '</span>';
+
+      view.innerHTML +=
+        '<div class="tier-card ' + tier.cssClass + '">' +
+          '<div class="tier-badge" id="pfpBadge">' + badgeInner + '</div>' +
+          '<div class="tier-info">' +
+            '<div class="tier-label">YOUR TIER</div>' +
+            '<div class="tier-name">' + tier.name + '</div>' +
+            '<div class="tier-nfts-held">Holding <strong>' + count + '</strong> Long Neck Legend' + (count !== 1 ? "s" : "") + '</div>' +
+            progressHTML +
+          '</div>' +
+          '<div class="profile-name-box">' +
+            '<div class="profile-name-inner">' +
+              '<div class="profile-name-label">Profile Name</div>' +
+              '<div class="profile-name" id="bannerName">' + escapeHtml(displayName) + '</div>' +
+              '<div class="profile-links" id="bannerLinks">' + linksHTML + '</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+
+      view.innerHTML +=
+        '<div class="profile-actions" id="profilePanel">' +
+          '<div class="stats-title">PROFILE</div>' +
+          '<div class="actions-grid">' +
+            '<button class="action-btn" onclick="openPfpModal()">Edit PFP</button>' +
+            '<button class="action-btn" onclick="editUsername()">Edit Username</button>' +
+            '<button class="action-btn" onclick="connectX()">Connect X</button>' +
+            '<button class="action-btn" onclick="connectDiscord()">Connect Discord</button>' +
+            '<button class="action-btn" onclick="openSecondWalletModal()">Link 2nd Wallet</button>' +
+          '</div>' +
+        '</div>';
+
+      view.innerHTML +=
+        '<div class="stats-card">' +
+          '<div class="stats-title">LEGEND POINTS</div>' +
+          '<div class="points-display">' +
+            '<div class="points-number">' + points.toLocaleString() + '</div>' +
+            '<div class="points-label">Total Points</div>' +
+          '</div>' +
+          '<div class="stat-row"><span class="stat-label">Base (' + count + ' \u00D7 100)</span><span class="stat-value">' + (count*100) + '</span></div>' +
+          '<div class="stat-row"><span class="stat-label">Tier Multiplier</span><span class="stat-value cyan">' + tier.pointsMultiplier + 'x</span></div>' +
+          '<div class="stat-row"><span class="stat-label">Raffle Entries</span><span class="stat-value purple">' + (count * tier.raffleMultiplier) + '</span></div>' +
+        '</div>';
+
+      var nextTierRow = nextTier
+        ? '<div class="stat-row"><span class="stat-label">Next Tier At</span><span class="stat-value gold">' + nextTier.min + ' NFTs</span></div>'
+        : '<div class="stat-row"><span class="stat-label">Status</span><span class="stat-value gold">MAXED \u{1F451}</span></div>';
+
+      view.innerHTML +=
+        '<div class="stats-card">' +
+          '<div class="stats-title">HOLDER STATS</div>' +
+          '<div class="stat-row"><span class="stat-label">NFTs Held</span><span class="stat-value cyan">' + count + '</span></div>' +
+          '<div class="stat-row"><span class="stat-label">Current Tier</span><span class="stat-value">' + tier.name + '</span></div>' +
+          '<div class="stat-row"><span class="stat-label">Store Discount</span><span class="stat-value green">' + tier.discount + '%</span></div>' +
+          '<div class="stat-row"><span class="stat-label">Raffle Multiplier</span><span class="stat-value purple">' + tier.raffleMultiplier + 'x</span></div>' +
+          nextTierRow +
+        '</div>';
+
+      var tierOrder = TIERS.map(function(t) { return t.id; });
+      var currentTierIdx = tierOrder.indexOf(tier.id);
+
+      var perksHTML = PERKS.map(function(perk) {
+        var reqIdx = tierOrder.indexOf(perk.reqTier);
+        var unlocked = currentTierIdx >= reqIdx;
+        var reqTierObj = TIERS.find(function(t) { return t.id === perk.reqTier; });
+        var desc = perk.desc;
+
+        if (perk.dynamic && perk.name === "Store Discount" && unlocked) desc = tier.discount + "% off all LNL Store purchases paid in SOL";
+        if (perk.dynamic && perk.name === "Raffle Entries" && unlocked) desc = tier.raffleMultiplier + "x entries into every raffle and giveaway";
+
+        return '' +
+          '<div class="perk ' + (unlocked ? "unlocked" : "locked") + '">' +
+            '<div class="perk-status ' + (unlocked ? "on" : "off") + '"></div>' +
+            '<div class="perk-icon">' + perk.icon + '</div>' +
+            '<div class="perk-name">' + perk.name + '</div>' +
+            '<div class="perk-desc">' + desc + '</div>' +
+            '<div class="perk-req ' + (unlocked ? "met" : "") + '">' + (unlocked ? "\u2713 UNLOCKED" : "REQUIRES " + reqTierObj.name) + '</div>' +
+          '</div>';
+      }).join("");
+
+      view.innerHTML +=
+        '<div class="perks-card">' +
+          '<div class="stats-title">HOLDER PERKS</div>' +
+          '<div class="perks-grid">' + perksHTML + '</div>' +
+        '</div>';
+
+      var galleryHTML = nfts.map(function(nft) {
+        var img = nft.image
+          ? '<img src="' + nft.image + '" alt="' + escapeHtml(nft.name) + '" loading="lazy">'
+          : '<div style="aspect-ratio:1;background:#1e1e3a;display:flex;align-items:center;justify-content:center;color:#555;font-size:0.8rem;">No Image</div>';
+        var mintShort = nft.mint ? nft.mint.slice(0,4) + "..." + nft.mint.slice(-4) : "";
+        return '' +
+          '<div class="nft-tile" onclick="window.open(\'https://magiceden.us/item-details/' + nft.mint + '\', \'_blank\')">' +
+            img +
+            '<div class="nft-tile-info">' +
+              '<div class="nft-tile-name">' + escapeHtml(nft.name) + '</div>' +
+              '<div class="nft-tile-id">' + mintShort + '</div>' +
+            '</div>' +
+          '</div>';
+      }).join("");
+
+      view.innerHTML +=
+        '<div class="gallery-card">' +
+          '<div class="stats-title">YOUR COLLECTION</div>' +
+          '<div class="gallery-grid">' + galleryHTML + '</div>' +
+        '</div>';
+
+      view.innerHTML +=
+        '<div class="share-section">' +
+          '<button class="share-btn" onclick="window.open(\'' + CONFIG.MAGIC_EDEN_LINK + '\', \'_blank\')">MAGIC EDEN</button>' +
+        '</div>';
+
+      // ✅ always re-apply toggle state after rendering the panel
+      applyProfilePanelUI();
+    }
+
+    function editUsername(){
+      var current = session.profile.username || "";
+      var input = prompt("Set your Profile Username (max 24 chars):", current);
+      if (input === null) return;
+      session.profile.username = sanitizeName(input);
+      saveProfileToStorage();
+      refreshBanner();
+    }
+
+    function linkLedger(){
+      var current = session.profile.ledger || "";
+      var input = prompt("Paste your Ledger public key / label (optional):", current);
+      if (input === null) return;
+      session.profile.ledger = (input || "").trim().slice(0, 42);
+      saveProfileToStorage();
+      refreshBanner();
+    }
+
+    function refreshBanner(){
+      var bn = document.getElementById("bannerName");
+      if (bn) {
+        var displayName = session.profile.username ? session.profile.username : shortAddr(walletPublicKey.toBase58());
+        bn.textContent = displayName;
+      }
+
+      var bl = document.getElementById("bannerLinks");
+      if (bl) {
+        var linksHTML = "";
+        var xUrl = session.profile.x ? buildXUrl(session.profile.x) : "";
+        if (xUrl) linksHTML += '<a class="plink" href="' + xUrl + '" target="_blank">X: @' + normalizeHandle(session.profile.x) + '</a>';
+        if (session.profile.discord) linksHTML += '<span class="plink" style="cursor:default;">Discord: ' + session.profile.discord + '</span>';
+        if (session.secondWallet.address) linksHTML += '<span class="plink" style="cursor:default;">2nd Wallet: ' + shortAddr(session.secondWallet.address) + '</span>';
+        bl.innerHTML = linksHTML;
+      }
+    }
+
+    function openPfpModal(){
+      if (!session.loadedNFTs || session.loadedNFTs.length === 0) return;
+
+      var grid = document.getElementById("pfpGrid");
+      grid.innerHTML = "";
+
+      session.loadedNFTs.forEach(function(nft){
+        var selected = (session.profile.pfpMint && nft.mint === session.profile.pfpMint);
+
+        var tile = document.createElement("div");
+        tile.className = "pfp-tile" + (selected ? " selected" : "");
+        tile.addEventListener("click", function(){ selectPfp(nft.mint); });
+
+        var dot = document.createElement("div");
+        dot.className = "pfp-selected";
+        tile.appendChild(dot);
+
+        if (nft.image) {
+          var img = document.createElement("img");
+          img.src = nft.image;
+          img.alt = nft.name || "LNL";
+          img.loading = "lazy";
+          tile.appendChild(img);
+        } else {
+          var ph = document.createElement("div");
+          ph.style.aspectRatio = "1";
+          ph.style.background = "#1e1e3a";
+          tile.appendChild(ph);
+        }
+
+        var name = document.createElement("div");
+        name.className = "pfp-name";
+        name.textContent = nft.name || "LNL";
+        tile.appendChild(name);
+
+        grid.appendChild(tile);
+      });
+
+      document.getElementById("pfpModalBackdrop").classList.add("show");
+    }
+
+    function hidePfpModal(){
+      document.getElementById("pfpModalBackdrop").classList.remove("show");
+    }
+
+    function closePfpModal(e){
+      if (e && e.target && e.target.id === "pfpModalBackdrop") hidePfpModal();
+    }
+
+    function selectPfp(mint){
+      var found = session.loadedNFTs.find(function(n){ return n.mint === mint; });
+      if (!found) return;
+
+      session.profile.pfpMint = mint;
+      session.profile.pfpImage = found.image || "";
+      saveProfileToStorage();
+
+      var badge = document.getElementById("pfpBadge");
+      if (badge) {
+        badge.innerHTML = session.profile.pfpImage
+          ? '<img src="' + session.profile.pfpImage + '" alt="Selected PFP" loading="lazy">'
+          : badge.innerHTML;
+      }
+
+      hidePfpModal();
+    }
+
+    function escapeHtml(str){
+      return (str || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function openSecondWalletModal(){
+      if (!walletPublicKey) return alert("Connect main wallet first.");
+      var el = document.getElementById("secondWalletStatus");
+      if (el) {
+        el.textContent = session.secondWallet.address
+          ? ("Linked: " + shortAddr(session.secondWallet.address))
+          : "No second wallet linked yet.";
+      }
+      document.getElementById("secondWalletModalBackdrop").classList.add("show");
+    }
+
+    function hideSecondWalletModal(){
+      document.getElementById("secondWalletModalBackdrop").classList.remove("show");
+    }
+
+    function closeSecondWalletModal(e){
+      if (e && e.target && e.target.id === "secondWalletModalBackdrop") hideSecondWalletModal();
+    }
+
+    async function connectSecondWallet(which){
+      try{
+        var provider = getProviderByName(which);
+        if (!provider || typeof provider.connect !== "function") {
+          return alert("Wallet provider not found. Make sure " + which + " is installed & enabled.");
+        }
+
+        var resp = await provider.connect({ onlyIfTrusted: false });
+        var pk = resp && resp.publicKey ? resp.publicKey : provider.publicKey;
+        if (!pk) throw new Error("Connected but no publicKey returned.");
+
+        var addr = (typeof pk.toBase58 === "function") ? pk.toBase58() : String(pk);
+
+        if (walletPublicKey && addr === walletPublicKey.toBase58()){
+          return alert("That’s your main wallet already. Pick a different wallet for the 2nd slot.");
+        }
+
+        session.secondWallet.address = addr;
+        saveSecondWalletToStorage();
+
+        var el = document.getElementById("secondWalletStatus");
+        if (el) el.textContent = "Linked: " + shortAddr(addr) + " — rescanning…";
+
+        document.getElementById("loadingSection").style.display = "block";
+        document.getElementById("dashboard").classList.remove("show");
+        await loadDashboard();
+
+        hideSecondWalletModal();
+        alert("2nd wallet linked: " + shortAddr(addr));
+      } catch (err) {
+        console.error("Second wallet connect error:", err);
+        alert("Failed to link 2nd wallet: " + (err.message || err));
+      }
+    }
+
+    function unlinkSecondWallet(){
+      session.secondWallet.address = "";
+      saveSecondWalletToStorage();
+
+      var el = document.getElementById("secondWalletStatus");
+      if (el) el.textContent = "Second wallet unlinked. Rescanning…";
+
+      document.getElementById("loadingSection").style.display = "block";
+      document.getElementById("dashboard").classList.remove("show");
+      loadDashboard();
+    }
+
+    function openAuthPopup(url, title){
+      var w = 520, h = 720;
+      var y = window.top.outerHeight / 2 + window.top.screenY - (h / 2);
+      var x = window.top.outerWidth  / 2 + window.top.screenX - (w / 2);
+      var popup = window.open(
+        url,
+        title,
+        'toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=yes, resizable=yes, copyhistory=no, width=' + w + ', height=' + h + ', top=' + y + ', left=' + x
+      );
+      if (!popup) alert("Popup blocked. Please allow popups for this site.");
+      return popup;
+    }
+
+    function connectX(){
+      if (!walletPublicKey) return alert("Connect wallet first.");
+      var url = "/api/auth/x/start?wallet=" + encodeURIComponent(walletPublicKey.toBase58());
+      openAuthPopup(url, "Connect X");
+    }
+
+    function connectDiscord(){
+      if (!walletPublicKey) return alert("Connect wallet first.");
+      var url = "/api/auth/discord/start?wallet=" + encodeURIComponent(walletPublicKey.toBase58());
+      openAuthPopup(url, "Connect Discord");
+    }
+
+    window.addEventListener("message", function(ev){
+      if (ev.origin !== window.location.origin) return;
+
+      var data = ev.data || {};
+      if (!data || !data.type) return;
+
+      if (data.type === "x_connected") {
+        session.profile.x = data.username || "";
+        saveProfileToStorage();
+        refreshBanner();
+        alert("X connected: @" + (data.username || "unknown"));
+      }
+
+      if (data.type === "discord_connected") {
+        session.profile.discord = data.username
+          ? (data.username + (data.discriminator ? ("#" + data.discriminator) : ""))
+          : "";
+        saveProfileToStorage();
+        refreshBanner();
+        alert("Discord connected: " + (session.profile.discord || "connected"));
+      }
+
+      if (data.type === "x_error" || data.type === "discord_error") {
+        alert("Auth failed. Please try again.");
+      }
+    });
+
+    /* ================================================================
+       LEADERBOARD — #StickYourNeckOut self-report grinder system
+       Points per approved submission:
+         post  → +2 pts  (a #StickYourNeckOut post)
+         reply → +3 pts  (reply to the LNL account mentioning the tag)
+         quote → +4 pts  (quote tweet with the tag)
+       Seasons: rolling 30-day windows anchored to SEASON_EPOCH_UTC.
+    ================================================================ */
+
+    // ── Season helpers ────────────────────────────────────────────────
+    var SEASON_EPOCH_UTC = new Date("2025-01-01T00:00:00Z").getTime(); // anchor
+    var SEASON_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+    function getCurrentSeasonKey() {
+      var now = Date.now();
+      var n = Math.floor((now - SEASON_EPOCH_UTC) / SEASON_DURATION_MS);
+      return "S" + n;
+    }
+
+    function getSeasonBounds() {
+      var now = Date.now();
+      var n = Math.floor((now - SEASON_EPOCH_UTC) / SEASON_DURATION_MS);
+      var start = new Date(SEASON_EPOCH_UTC + n * SEASON_DURATION_MS);
+      var end   = new Date(SEASON_EPOCH_UTC + (n + 1) * SEASON_DURATION_MS);
+      return { key: "S" + n, n: n + 1, start: start, end: end };
+    }
+
+    function formatCountdown(ms) {
+      if (ms <= 0) return "ending now";
+      var d = Math.floor(ms / 86400000);
+      var h = Math.floor((ms % 86400000) / 3600000);
+      var m = Math.floor((ms % 3600000) / 60000);
+      var parts = [];
+      if (d) parts.push(d + "d");
+      if (h) parts.push(h + "h");
+      if (!d) parts.push(m + "m");
+      return parts.join(" ");
+    }
+
+    function fmtDate(ts) {
+      if (!ts) return "";
+      try {
+        return new Date(ts).toLocaleDateString(undefined, { month:"short", day:"numeric", year:"numeric" });
+      } catch(e) { return ""; }
+    }
+
+    // ── URL validation ────────────────────────────────────────────────
+    // Accepts x.com/twitter.com URLs: /user/status/ID or /i/web/status/ID
+    var TWEET_URL_RE = /^https?:\/\/(www\.)?(x\.com|twitter\.com)\/.+\/status\/(\d+)/i;
+
+    function validateTweetUrl(url) {
+      return TWEET_URL_RE.test((url || "").trim());
+    }
+
+    function extractTweetId(url) {
+      var m = (url || "").match(/\/status\/(\d+)/);
+      return m ? m[1] : null;
+    }
+
+    // ── Points lookup ─────────────────────────────────────────────────
+    var PROOF_POINTS = { post: 2, reply: 3, quote: 4 };
+    var PROOF_LABELS = { post: "Post", reply: "Reply", quote: "Quote" };
+    var PROOF_ICONS  = { post: "📢", reply: "💬", quote: "🔁" };
+    var RATE_LIMIT_PER_DAY = 5;
+
+    // ── API helpers ───────────────────────────────────────────────────
+    async function apiPost(endpoint, body) {
+      var wallet = walletPublicKey ? walletPublicKey.toBase58() : null;
+      var res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-wallet": wallet || ""
+        },
+        body: JSON.stringify(body)
+      });
+      var json = await res.json();
+      if (!res.ok) throw new Error(json.error || ("Request failed: " + res.status));
+      return json;
+    }
+
+    async function apiGet(endpoint) {
+      var wallet = walletPublicKey ? walletPublicKey.toBase58() : null;
+      var res = await fetch(endpoint, {
+        headers: { "x-wallet": wallet || "" }
+      });
+      var json = await res.json();
+      if (!res.ok) throw new Error(json.error || ("Request failed: " + res.status));
+      return json;
+    }
+
+    // ── Leaderboard render entry point ────────────────────────────────
+    async function renderLeaderboardUI() {
+      var view = document.getElementById("view-leaderboard");
+      var bounds = getSeasonBounds();
+      var msLeft = bounds.end.getTime() - Date.now();
+
+      view.innerHTML =
+        '<div class="stats-card" style="grid-column:1/-1;">' +
+          // Season banner
+          '<div class="lb-season-banner">' +
+            '<div>' +
+              '<div class="lb-season-label">Current Season</div>' +
+              '<div class="lb-season-name">Season ' + bounds.n + ' &nbsp;·&nbsp; ' + bounds.key + '</div>' +
+              '<div class="lb-season-timer">' +
+                fmtDate(bounds.start.getTime()) + ' — ' + fmtDate(bounds.end.getTime()) +
+                ' &nbsp;·&nbsp; <strong>' + formatCountdown(msLeft) + '</strong> remaining' +
+              '</div>' +
+            '</div>' +
+            '<div class="lb-rule-badge">Only posts with #StickYourNeckOut count</div>' +
+          '</div>' +
+          // Scoring key
+          '<div class="lb-scoring">' +
+            '<div class="lb-score-pill"><span class="pill-pts">+2</span> Post <span class="pill-cap">unlimited</span></div>' +
+            '<div class="lb-score-pill"><span class="pill-pts">+3</span> Reply <span class="pill-cap">unlimited</span></div>' +
+            '<div class="lb-score-pill"><span class="pill-pts">+4</span> Quote <span class="pill-cap">unlimited</span></div>' +
+          '</div>' +
+          // Leaderboard table area
+          '<div id="lbTableWrap"><div class="lb-empty"><span class="lb-spinner"></span></div></div>' +
+          // Refresh row
+          '<div style="display:flex;justify-content:flex-end;margin-top:1rem;">' +
+            '<button class="lb-action-btn" id="lbRefreshBtn" onclick="refreshLeaderboard()">↻ Refresh</button>' +
+          '</div>' +
+        '</div>' +
+        // Submit proof card
+        '<div class="proof-form-card stats-card" style="grid-column:1/-1;">' +
+          '<div class="stats-title">SUBMIT PROOF</div>' +
+          '<p style="font-size:0.78rem;color:#555;margin-bottom:0.2rem;line-height:1.6;">' +
+            'Post, reply to, or quote-tweet any LNL post with <strong style="color:#00d4ff;">#StickYourNeckOut</strong>. ' +
+            'Paste your tweet URL below and choose the type. An admin will review and approve within 24 hours.' +
+          '</p>' +
+          '<div class="proof-form-grid">' +
+            '<div class="full">' +
+              '<label class="pf-label" for="pfUrl">Tweet / Post URL *</label>' +
+              '<input class="pf-input" id="pfUrl" type="url" placeholder="https://x.com/you/status/123456789" />' +
+            '</div>' +
+            '<div>' +
+              '<label class="pf-label" for="pfType">Engagement Type *</label>' +
+              '<select class="pf-select" id="pfType">' +
+                '<option value="post">📢 Post (+2 pts)</option>' +
+                '<option value="reply">💬 Reply (+3 pts)</option>' +
+                '<option value="quote">🔁 Quote Tweet (+4 pts)</option>' +
+              '</select>' +
+            '</div>' +
+            '<div>' +
+              '<label class="pf-label">Screenshot (Optional)</label>' +
+              '<label class="pf-file-label" id="pfFileLabel" for="pfFile">' +
+                '📎 <span id="pfFileName">Attach screenshot...</span>' +
+              '</label>' +
+              '<input class="pf-file-input" id="pfFile" type="file" accept="image/*" onchange="onFileChange(this)" />' +
+            '</div>' +
+          '</div>' +
+          '<div class="pf-submit-row">' +
+            '<span class="pf-rate-note">Max ' + RATE_LIMIT_PER_DAY + ' submissions per day · Admin review required</span>' +
+            '<button class="lb-action-btn" id="pfSubmitBtn" onclick="submitProof()">Submit Proof</button>' +
+          '</div>' +
+          '<div class="pf-msg" id="pfMsg"></div>' +
+        '</div>' +
+        // My submissions card
+        '<div class="my-subs-card stats-card" style="grid-column:1/-1;">' +
+          '<div class="stats-title" style="margin-bottom:0.4rem;">MY SUBMISSIONS</div>' +
+          '<p style="font-size:0.72rem;color:#444;margin-bottom:1rem;">Current season · Most recent first</p>' +
+          '<div id="mySubsList"><div class="lb-empty"><span class="lb-spinner"></span></div></div>' +
+        '</div>';
+
+      // Load data in parallel
+      refreshLeaderboard();
+      loadMySubmissions();
+    }
+
+    // ── Leaderboard table ─────────────────────────────────────────────
+    async function refreshLeaderboard() {
+      var wrap = document.getElementById("lbTableWrap");
+      var btn  = document.getElementById("lbRefreshBtn");
+      if (!wrap) return;
+      if (btn) btn.disabled = true;
+      wrap.innerHTML = '<div class="lb-empty"><span class="lb-spinner"></span> Loading leaderboard…</div>';
+
+      try {
+        var season = getCurrentSeasonKey();
+        var data = await apiGet("/api/leaderboard?season=" + encodeURIComponent(season));
+        var rows = data.scores || [];
+        renderLeaderboardTable(wrap, rows);
+      } catch (e) {
+        wrap.innerHTML = '<div class="lb-empty">Could not load leaderboard.<br><span style="color:#333;">' + escapeHtml(e.message) + '</span></div>';
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    function renderLeaderboardTable(wrap, rows) {
+      if (!rows.length) {
+        wrap.innerHTML = '<div class="lb-empty">No scores yet this season.<br>Be the first legend to grind! 🦒</div>';
+        return;
+      }
+
+      var myWallet = walletPublicKey ? walletPublicKey.toBase58() : null;
+
+      var html =
+        '<table class="lb-table">' +
+          '<thead><tr>' +
+            '<th style="width:36px;">#</th>' +
+            '<th>Holder</th>' +
+            '<th>Breakdown</th>' +
+            '<th class="right">Pts</th>' +
+          '</tr></thead>' +
+          '<tbody>';
+
+      rows.forEach(function(r, i) {
+        var rank = i + 1;
+        var rankClass = rank === 1 ? "gold" : rank === 2 ? "silver" : rank === 3 ? "bronze" : "";
+        var isMe = myWallet && r.wallet === myWallet;
+        var totalClass = rank === 1 ? "lb-total top" : "lb-total";
+        var rowClass = isMe ? "lb-you-row" : "";
+
+        var displayName = escapeHtml(r.username || shortAddr(r.wallet));
+        var walletShort = escapeHtml(shortAddr(r.wallet));
+
+        var posts   = r.posts   || 0;
+        var replies = r.replies || 0;
+        var quotes  = r.quotes  || 0;
+
+        var breakdown =
+          '<div class="lb-breakdown">' +
+            chipHtml("📢 " + posts   + " post"  + (posts   !== 1 ? "s" : ""), posts   > 0) +
+            chipHtml("💬 " + replies + " repl"  + (replies !== 1 ? "ies" : "y"), replies > 0) +
+            chipHtml("🔁 " + quotes  + " quote" + (quotes  !== 1 ? "s" : ""), quotes  > 0) +
+          '</div>';
+
+        html +=
+          '<tr class="' + rowClass + '">' +
+            '<td class="lb-rank ' + rankClass + '">' + rank + '</td>' +
+            '<td>' +
+              '<div class="lb-user">' +
+                '<div class="lb-avatar">' + walletShort.slice(0, 2) + '</div>' +
+                '<div>' +
+                  '<div class="lb-name">' + displayName + (isMe ? '<span class="lb-you-badge">YOU</span>' : '') + '</div>' +
+                  '<div class="lb-handle">' + walletShort + '</div>' +
+                '</div>' +
+              '</div>' +
+            '</td>' +
+            '<td>' + breakdown + '</td>' +
+            '<td class="' + totalClass + '">' + (r.total || 0) + '</td>' +
+          '</tr>';
+      });
+
+      html += '</tbody></table>';
+      wrap.innerHTML = html;
+    }
+
+    function chipHtml(label, active) {
+      return '<span class="lb-chip' + (active ? " active" : "") + '">' + escapeHtml(label) + '</span>';
+    }
+
+    // ── My submissions ────────────────────────────────────────────────
+    async function loadMySubmissions() {
+      var el = document.getElementById("mySubsList");
+      if (!el) return;
+
+      try {
+        var season = getCurrentSeasonKey();
+        var data = await apiGet("/api/my-submissions?season=" + encodeURIComponent(season));
+        var subs = data.submissions || [];
+        renderMySubmissions(el, subs);
+      } catch (e) {
+        el.innerHTML = '<div class="lb-empty" style="padding:1.5rem 0;">Could not load submissions.<br><span style="color:#333;">' + escapeHtml(e.message) + '</span></div>';
+      }
+    }
+
+    function renderMySubmissions(el, subs) {
+      if (!subs.length) {
+        el.innerHTML = '<div class="lb-empty" style="padding:1.5rem 0;font-size:0.78rem;">No submissions this season yet.<br>Submit your first proof above ↑</div>';
+        return;
+      }
+
+      el.innerHTML = subs.map(function(s) {
+        var typeLabel = PROOF_LABELS[s.type] || s.type;
+        var pts = PROOF_POINTS[s.type] || 0;
+        var urlShort = (s.tweet_url || "").replace(/^https?:\/\/(www\.)?(x\.com|twitter\.com)/, "x.com");
+        var statusClass = s.status || "pending";
+        var meta = typeLabel + " · " + fmtDate(s.submitted_at);
+        if (s.status === "rejected" && s.reject_reason) meta += " · " + escapeHtml(s.reject_reason);
+
+        return '<div class="sub-row">' +
+          '<div class="sub-status-dot ' + statusClass + '"></div>' +
+          '<div class="sub-body">' +
+            '<a class="sub-url" href="' + escapeHtml(s.tweet_url) + '" target="_blank" rel="noopener">' + escapeHtml(urlShort) + '</a>' +
+            '<div class="sub-meta">' + meta + '</div>' +
+          '</div>' +
+          '<div class="sub-status-label ' + statusClass + '">' + statusClass.toUpperCase() + '</div>' +
+          (s.status === "approved" ? '<div class="sub-pts">+' + pts + ' pts</div>' : '') +
+        '</div>';
+      }).join("");
+    }
+
+    // ── Proof submission ──────────────────────────────────────────────
+    function onFileChange(input) {
+      var label = document.getElementById("pfFileLabel");
+      var name  = document.getElementById("pfFileName");
+      if (input.files && input.files[0]) {
+        label.classList.add("has-file");
+        name.textContent = input.files[0].name;
+      } else {
+        label.classList.remove("has-file");
+        name.textContent = "Attach screenshot...";
+      }
+    }
+
+    function showPfMsg(msg, isError) {
+      var el = document.getElementById("pfMsg");
+      if (!el) return;
+      el.textContent = msg;
+      el.className = "pf-msg " + (isError ? "err" : "ok");
+    }
+
+    async function submitProof() {
+      if (!walletPublicKey) { alert("Connect your wallet first."); return; }
+
+      var urlInput  = document.getElementById("pfUrl");
+      var typeInput = document.getElementById("pfType");
+      var fileInput = document.getElementById("pfFile");
+      var submitBtn = document.getElementById("pfSubmitBtn");
+
+      var url  = (urlInput.value || "").trim();
+      var type = typeInput.value;
+
+      // Validate URL
+      urlInput.classList.remove("error");
+      if (!url) {
+        urlInput.classList.add("error");
+        showPfMsg("Please enter the tweet URL.", true);
+        return;
+      }
+      if (!validateTweetUrl(url)) {
+        urlInput.classList.add("error");
+        showPfMsg("URL must be a valid x.com or twitter.com post URL.", true);
+        return;
+      }
+
+      // Encode screenshot as base64 if provided
+      var screenshotB64 = null;
+      if (fileInput.files && fileInput.files[0]) {
+        var file = fileInput.files[0];
+        if (file.size > 5 * 1024 * 1024) {
+          showPfMsg("Screenshot must be under 5MB.", true);
+          return;
+        }
+        screenshotB64 = await new Promise(function(res, rej) {
+          var r = new FileReader();
+          r.onload = function() { res(r.result.split(",")[1]); };
+          r.onerror = function() { rej(new Error("File read failed")); };
+          r.readAsDataURL(file);
+        });
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Submitting…";
+
+      try {
+        await apiPost("/api/submit-proof", {
+          tweet_url:  url,
+          type:       type,
+          screenshot: screenshotB64 || null,
+          season_key: getCurrentSeasonKey()
+        });
+
+        showPfMsg("✓ Submitted! An admin will review within 24 hours.", false);
+        urlInput.value = "";
+        fileInput.value = "";
+        document.getElementById("pfFileLabel").classList.remove("has-file");
+        document.getElementById("pfFileName").textContent = "Attach screenshot...";
+
+        // Reload my submissions
+        loadMySubmissions();
+      } catch (e) {
+        showPfMsg(e.message || "Submission failed. Please try again.", true);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Submit Proof";
+      }
+    }
+  </script>
+</body>
+</html>
