@@ -11,6 +11,18 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
+    /* Keep banner links (like X) white */
+a.plink,
+a.plink:visited,
+a.plink:hover,
+a.plink:active {
+  color: #e0e0ff;          /* your “white” */
+  text-decoration: none;
+}
+a.plink:hover{
+  text-decoration: underline; /* optional */
+}
+    
     body {
       font-family: 'Space Grotesk', sans-serif;
       background: #0a0a1a;
@@ -270,201 +282,17 @@
       grid-template-columns: 1fr 1fr;
       gap: 1.5rem;
     }
+    #view-chat.show {
+      display: flex;
+      flex-direction: column;
+      grid-template-columns: unset;
+    }
     @media (max-width: 800px) {
       .view.show { grid-template-columns: 1fr; }
       .dashboard{ padding: 1.4rem 1rem 3rem; }
     }
 
-    
-    /* ---- TRADES (MVP) ---- */
-    .trade-head{
-      grid-column: 1 / -1;
-      display:flex;
-      align-items:center;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 1.1rem 1.4rem;
-      background: #111125;
-      border: 1px solid #1e1e3a;
-      border-radius: 14px;
-    }
-    .trade-title{
-      font-family: 'Bebas Neue', sans-serif;
-      letter-spacing: 3px;
-      color: #555;
-      font-size: 1.3rem;
-    }
-    .trade-sub{
-      color:#666;
-      font-size: 0.8rem;
-      margin-top: 2px;
-      letter-spacing: 0.4px;
-    }
-    .trade-plus{
-      width: 42px;
-      height: 42px;
-      border-radius: 12px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-weight: 900;
-      font-size: 1.2rem;
-      cursor:pointer;
-      border: 1px solid rgba(255,255,255,0.10);
-      color:#00d4ff;
-      background: rgba(0,0,0,0.22);
-      transition: all 0.2s;
-      flex: 0 0 auto;
-    }
-    .trade-plus:hover{
-      border-color: rgba(0,212,255,0.45);
-      box-shadow: 0 0 22px rgba(0,212,255,0.12);
-      transform: translateY(-1px);
-    }
-
-    .trade-card{
-      grid-column: 1 / -1;
-      background: #111125;
-      border: 1px solid #1e1e3a;
-      border-radius: 14px;
-      padding: 1.6rem 1.6rem;
-    }
-
-    .trade-filters{
-      display:flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-    .trade-input{
-      background: rgba(0,0,0,0.22);
-      border: 1px solid rgba(255,255,255,0.10);
-      color: #e0e0ff;
-      padding: 10px 12px;
-      border-radius: 10px;
-      font-size: 0.82rem;
-      outline: none;
-      min-width: 220px;
-      flex: 1 1 220px;
-    }
-    .trade-input::placeholder{ color:#5f5f88; }
-
-    .trade-table{
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.82rem;
-      margin-top: 10px;
-    }
-    .trade-table th, .trade-table td{
-      padding: 12px 10px;
-      border-bottom: 1px solid rgba(255,255,255,0.06);
-      text-align: left;
-      vertical-align: top;
-    }
-    .trade-table th{
-      font-family: 'Bebas Neue', sans-serif;
-      letter-spacing: 2px;
-      color:#777;
-      font-size: 0.95rem;
-      white-space: nowrap;
-    }
-    .trade-pill{
-      display:inline-flex;
-      align-items:center;
-      gap:6px;
-      padding: 6px 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.10);
-      background: rgba(0,0,0,0.22);
-      color:#bfc2ff;
-      font-size:0.68rem;
-      letter-spacing:0.6px;
-      text-transform: uppercase;
-      margin-right: 6px;
-      margin-bottom: 6px;
-      user-select:none;
-    }
-    .trade-pill.good{ border-color: rgba(0,255,136,0.30); color:#00ff88; background: rgba(0,255,136,0.05); }
-    .trade-pill.warn{ border-color: rgba(255,215,0,0.30); color:#ffd700; background: rgba(255,215,0,0.05); }
-    .trade-pill.bad{ border-color: rgba(255,60,92,0.35); color:#ff7a90; background: rgba(255,60,92,0.06); }
-
-    .trade-mini{
-      color:#666;
-      font-size: 0.75rem;
-      margin-top: 6px;
-      line-height: 1.5;
-    }
-    .trade-actions{
-      display:flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      justify-content:flex-end;
-    }
-    .tiny-btn{
-      padding: 8px 12px;
-      border-radius: 10px;
-      font-size: 0.72rem;
-      letter-spacing: 1.6px;
-      text-transform: uppercase;
-      font-weight: 900;
-      cursor: pointer;
-      border: 1px solid rgba(255,255,255,0.10);
-      background: rgba(0,0,0,0.22);
-      color:#cfd2ff;
-      transition: all 0.2s;
-    }
-    .tiny-btn:hover{ border-color: rgba(0,212,255,0.45); color:#e0e0ff; box-shadow: 0 0 18px rgba(0,212,255,0.10); transform: translateY(-1px); }
-    .tiny-btn.danger:hover{ border-color: rgba(255,60,92,0.55); color:#ff3c5c; box-shadow: 0 0 16px rgba(255,60,92,0.10); }
-
-    .form-row{
-      display:flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-top: 10px;
-    }
-    .form-col{ flex: 1 1 220px; min-width: 220px; }
-    .label{
-      font-size: 0.68rem;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color:#666;
-      margin-bottom: 6px;
-      display:block;
-    }
-    .select-grid{
-      display:grid;
-      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-      gap: 10px;
-      margin-top: 8px;
-    }
-    .select-nft{
-      border: 1px solid rgba(255,255,255,0.08);
-      background: rgba(0,0,0,0.22);
-      border-radius: 14px;
-      overflow:hidden;
-      cursor:pointer;
-      transition: all 0.2s;
-      position: relative;
-    }
-    .select-nft:hover{ border-color: rgba(0,212,255,0.35); transform: translateY(-1px); box-shadow: 0 10px 24px rgba(0,212,255,0.10); }
-    .select-nft img{ width:100%; aspect-ratio:1; object-fit:cover; display:block; }
-    .select-nft .nm{ padding: 8px 10px; font-size: 0.72rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .select-nft .chk{
-      position:absolute;
-      top:10px;
-      right:10px;
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background:#00ff88;
-      box-shadow: 0 0 10px rgba(0,255,136,0.55);
-      display:none;
-    }
-    .select-nft.selected .chk{ display:block; }
-
-
-/* ---- TIER CARD ---- */
+    /* ---- TIER CARD ---- */
     .tier-card {
       grid-column: 1 / -1;
       background: linear-gradient(135deg, #111125 0%, #0d0d20 100%);
@@ -618,68 +446,65 @@
     .tier-shark .tier-progress-fill { background: #00ffcc; box-shadow: 0 0 10px rgba(0,255,204,0.5); }
     .tier-whale .tier-progress-fill { background: #00ffcc; box-shadow: 0 0 10px rgba(0,255,204,0.5); }
 
-    /* ---- Profile Name (right side of tier card) ---- */
-    .profile-name-box{
-      flex: 0 0 320px;
-      max-width: 360px;
-      display: flex;
-      justify-content: flex-end;
-      align-items: center;
-      text-align: right;
-    }
-    .profile-name-inner{
-      width: 100%;
-      padding: 0.6rem 0.8rem;
-      border-radius: 14px;
-      background: rgba(0,0,0,0.18);
-      border: 1px solid rgba(255,255,255,0.06);
-    }
-    .profile-name-label{
-      font-size: 0.65rem;
-      letter-spacing: 2.5px;
-      text-transform: uppercase;
-      color: #555;
-      margin-bottom: 0.35rem;
-    }
-    .profile-name{
-      font-family: 'Orbitron', sans-serif;
-      font-weight: 900;
-      letter-spacing: 1px;
-      font-size: 1.15rem;
-      color: #e0e0ff;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .profile-links{
-      margin-top: 0.45rem;
-      display: flex;
-      justify-content: flex-end;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    .plink{
-      font-size: 0.7rem;
-      color: #888;
-      border: 1px solid rgba(255,255,255,0.08);
-      background: rgba(255,255,255,0.02);
-      padding: 6px 10px;
-      border-radius: 999px;
-      text-decoration: none;
-      transition: all 0.2s;
-      letter-spacing: 1px;
-    }
-    .plink:hover{
-      border-color: rgba(0,212,255,0.4);
-      color: #00d4ff;
-      box-shadow: 0 0 18px rgba(0,212,255,0.12);
-    }
+/* ---- Username + Social Box (right side of tier card) ---- */
+.profile-name-box{
+  flex: 0 0 320px;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;     /* right align */
+  justify-content: center;
+  text-align: right;
+  gap: 0.5rem;
+}
 
-    @media (max-width: 900px){
-      .profile-name-box{ flex: 1 1 auto; max-width: 100%; justify-content: center; text-align: center; }
-      .profile-links{ justify-content: center; }
-      .profile-name-inner{ margin-top: 0.5rem; }
-    }
+.profile-username{
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2.4rem;
+  letter-spacing: 4px;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* username color mimics tier-name color */
+.tier-neck .profile-username { color: #00d4ff; }
+.tier-longneck .profile-username { color: #7b68ee; }
+.tier-legend .profile-username { color: #ffd700; }
+.tier-og .profile-username { color: #ffd700; }
+.tier-sardine .profile-username { color: #ff3c5c; }
+.tier-barracuda .profile-username { color: #ff3c5c; }
+.tier-shark .profile-username { color: #00ffcc; }
+.tier-whale .profile-username { color: #00ffcc; }
+
+.profile-name-inner{
+  width: 100%;
+  padding: 0.7rem 0.8rem;
+  border-radius: 14px;
+  background: rgba(0,0,0,0.18);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.profile-links{
+  display: flex;
+  justify-content: flex-end; /* keep right aligned */
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* responsive: center it on smaller widths */
+@media (max-width: 900px){
+  .profile-name-box{
+    flex: 1 1 auto;
+    max-width: 100%;
+    align-items: center;
+    text-align: center;
+  }
+  .profile-links{ justify-content: center; }
+}
 
     /* ---- STATS CARD ---- */
     .stats-card {
@@ -1134,6 +959,7 @@
     .trait-muted{ color:#666; font-size:0.78rem; }
 
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 
 <body>
@@ -1155,8 +981,8 @@
     <div class="dash-nav">
       <div class="dash-tabs">
         <button class="dash-tab" id="tabProfile" onclick="toggleProfilePanel()">Profile</button>
-              <button class="dash-tab" id="tabTrade" onclick="openTrade()">Trade</button>
-</div>
+        <button class="dash-tab" id="tabChat" onclick="switchView('chat')">💬 Chat</button>
+      </div>
 
       <div class="dash-right">
         <div class="wallet-chip" id="walletChip" style="display:none;">
@@ -1183,7 +1009,7 @@
   <!-- DASHBOARD WRAP -->
   <div class="dashboard" id="dashboard">
     <div class="view show" id="view-profile"></div>
-    <div class="view" id="view-trade"></div>
+    <div class="view" id="view-chat"></div>
   </div>
 
   <!-- PFP MODAL -->
@@ -1254,105 +1080,39 @@
   </div>
 
 
-  
-  <!-- TRADE CREATE MODAL -->
-  <div class="modal-backdrop" id="tradeModalBackdrop" onclick="closeTradeModal(event)">
+
+  <!-- USERNAME MODAL (mobile-safe, replaces prompt) -->
+  <div class="modal-backdrop" id="usernameModalBackdrop" onclick="closeUsernameModal(event)">
     <div class="modal" onclick="event.stopPropagation()">
       <div class="modal-head">
-        <div class="modal-title">Create Trade Listing</div>
-        <button class="modal-close" onclick="hideTradeModal()">✕</button>
+        <div class="modal-title">Set Profile Username</div>
+        <button class="modal-close" onclick="hideUsernameModal()">✕</button>
       </div>
-
       <div class="modal-body">
-        <div class="modal-note">
-          List what you&apos;re offering, then what you want back. This is a <strong>listing board</strong> (no auto-swap). Always verify mints/collections before sending anything.
+        <div class="modal-note">This username is saved to this wallet on this device. Max 24 characters.</div>
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:10px;">
+          <input id="usernameInput" type="text" inputmode="text" autocomplete="off" autocapitalize="words" spellcheck="false"
+                 placeholder="Your name..." maxlength="24"
+                 style="flex:1; min-width:200px; padding:12px 12px; border-radius:12px; border:1px solid rgba(255,255,255,0.10); background:rgba(0,0,0,0.22); color:#e0e0ff; outline:none; font-family:'Space Grotesk',sans-serif;">
+          <button class="action-btn" style="min-width:160px;" onclick="saveUsernameFromModal()">Save</button>
         </div>
 
-        <div class="profile-actions" style="margin:0; padding: 1.2rem 1.2rem;">
-          <div class="stats-title" style="margin-bottom:0.6rem;">OFFER</div>
-
-          <div class="form-row">
-            <div class="form-col">
-              <span class="label">Offer SOL (optional)</span>
-              <input class="trade-input" id="offerSol" inputmode="decimal" placeholder="e.g. 0.25" />
-            </div>
-
-            <div class="form-col">
-              <span class="label">Offer Token (optional) — mint + amount</span>
-              <input class="trade-input" id="offerTokenMint" placeholder="Token mint address (SPL)" />
-              <div style="height:8px;"></div>
-              <input class="trade-input" id="offerTokenAmount" inputmode="decimal" placeholder="Amount (e.g. 1000)" />
-            </div>
-          </div>
-
-          <div style="margin-top: 12px;">
-            <span class="label">Offer NFTs (pick up to 5)</span>
-            <div class="select-grid" id="offerNftGrid"></div>
-            <div class="trade-mini" id="offerNftHint">0 / 5 selected</div>
-          </div>
-
-          <div class="subdao-divider"></div>
-
-          <div class="stats-title" style="margin-bottom:0.6rem;">REQUEST</div>
-
-          <div class="form-row">
-            <div class="form-col">
-              <span class="label">Request SOL (optional)</span>
-              <input class="trade-input" id="wantSol" inputmode="decimal" placeholder="e.g. 1.5" />
-            </div>
-
-            <div class="form-col">
-              <span class="label">Request Token (optional) — mint + amount</span>
-              <input class="trade-input" id="wantTokenMint" placeholder="Token mint address (SPL)" />
-              <div style="height:8px;"></div>
-              <input class="trade-input" id="wantTokenAmount" inputmode="decimal" placeholder="Amount (e.g. 420)" />
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-col">
-              <span class="label">Request Collection (optional)</span>
-              <input class="trade-input" id="wantCollectionId" placeholder="Collection mint / ID" />
-            </div>
-            <div class="form-col">
-              <span class="label">Trait filter (optional) — trait type + value</span>
-              <input class="trade-input" id="wantTraitType" placeholder="Trait type (e.g. Mouth)" />
-              <div style="height:8px;"></div>
-              <input class="trade-input" id="wantTraitValue" placeholder="Trait value (e.g. Blunt)" />
-            </div>
-          </div>
-
-          <div class="form-row" style="align-items:center;">
-            <div class="form-col" style="min-width:260px;">
-              <span class="label">Bundle toggle</span>
-              <button class="action-btn" id="bundleToggleBtn" onclick="toggleBundleMode()" style="width:100%;">BUNDLE: OFF (single request)</button>
-              <div class="trade-mini">Off = you must request exactly 1 thing (SOL OR Token OR Collection). On = you can combine.</div>
-            </div>
-
-            <div class="form-col">
-              <span class="label">Note (optional)</span>
-              <input class="trade-input" id="tradeNote" maxlength="120" placeholder="Short note (e.g. 'OG beanie only')"/>
-              <div class="trade-mini">Max 120 chars.</div>
-            </div>
-          </div>
-
-          <div style="margin-top: 14px; display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap;">
-            <button class="disconnect-btn" style="border-color:rgba(255,255,255,0.12);" onclick="hideTradeModal()">Cancel</button>
-            <button class="action-btn" onclick="submitTrade()">Create Listing</button>
-          </div>
+        <div style="margin-top:14px; display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap;">
+          <button class="disconnect-btn" style="border-color:rgba(255,255,255,0.12);" onclick="clearUsername()">Clear</button>
+          <button class="disconnect-btn" onclick="hideUsernameModal()">Close</button>
         </div>
-
       </div>
     </div>
   </div>
 
 
-<footer>
+  <footer>
     <p>&copy; 2026 Long Neck Legends &bull; Diamond Hands Only</p>
   </footer>
 
   <script>
-    window.addEventListener('load', function() { document.body.classList.add('loaded'); });
+    window.addEventListener('load', function() { document.body.classList.add('loaded'); applyAuthFromUrl(); });
 
     var CONFIG = {
       COLLECTION_MINT: "8Rt3Ayqth4DAiPnW9MDFi63TiQJHmohfTWLMQFHi4KZH",
@@ -1668,47 +1428,21 @@
     }
 
     function toggleProfilePanel(){
-      // If you're on Trade (or any other view), clicking Profile should switch you back to Profile and open the panel.
-      if (session.currentView !== "profile") {
-        session.profilePanelOpen = true;
-        applyProfilePanelUI();
-        switchView("profile");
-        return;
-      }
-
-      // If you're already on Profile, then it's a true toggle (open/close panel)
       session.profilePanelOpen = !session.profilePanelOpen;
       applyProfilePanelUI();
-      switchView("profile");
     }
-
-    function openTrade(){
-      // Switching to Trade closes the profile panel so the Profile button doesn't stay lit.
-      session.profilePanelOpen = false;
-      applyProfilePanelUI();
-      switchView("trade");
-      renderTradeView();
-      refreshTrades(); // fire and forget
-    }
-
 
     async function connectWallet() {
-      console.log("Connect clicked");
       var provider = detectWalletProvider();
-      console.log("Provider:", provider);
       if (!provider || typeof provider.connect !== "function") {
-        alert("No compatible Solana wallet found. Install Phantom, Solflare, or Backpack.");
+        alert("No Solana wallet found.\n\nInstall Phantom, Solflare, or Backpack and refresh the page.");
         return;
       }
       try {
-        if (provider.isConnected && typeof provider.disconnect === "function") {
-          try { await provider.disconnect(); } catch (e) {}
-        }
-
         var resp = await provider.connect({ onlyIfTrusted: false });
         walletProvider = provider;
         walletPublicKey = resp.publicKey || provider.publicKey;
-        if (!walletPublicKey) throw new Error("Wallet connected but no publicKey found.");
+        if (!walletPublicKey) throw new Error("Wallet connected but no public key returned. Try unlocking your wallet first.");
 
         var addr = walletPublicKey.toBase58();
         document.getElementById("walletDisplay").textContent = shortAddr(addr);
@@ -1723,18 +1457,22 @@
         loadProfileFromStorage();
         loadSecondWalletFromStorage();
 
-        // ✅ default OFF every connect
         session.profilePanelOpen = false;
         applyProfilePanelUI();
 
         await loadDashboard();
       } catch (err) {
         console.error("Connect error:", err);
-        alert("Connection error: " + (err.message || err));
+        if (err.code === 4001 || (err.message && err.message.toLowerCase().includes("user rejected"))) {
+          // User cancelled — no alert needed
+        } else {
+          alert("Connection failed: " + (err.message || err));
+        }
       }
     }
 
     function disconnectWallet() {
+      stopChatPoll();
       try { if (walletProvider && walletProvider.disconnect) walletProvider.disconnect(); } catch (e) {}
       walletProvider = null;
       walletPublicKey = null;
@@ -1747,13 +1485,13 @@
       document.getElementById("loadingSection").style.display = "none";
       document.getElementById("dashboard").classList.remove("show");
       document.getElementById("view-profile").classList.remove("show");
-        var vt = document.getElementById("view-trade");
-        if (vt) vt.classList.remove("show");
+      document.getElementById("view-chat").classList.remove("show");
 
-      // ✅ reset toggle state (button unlit + panel hidden)
       session.profilePanelOpen = false;
       var tabProfile = document.getElementById("tabProfile");
       if (tabProfile) tabProfile.classList.remove("active");
+      var tabChat = document.getElementById("tabChat");
+      if (tabChat) tabChat.classList.remove("active");
 
       session.currentView = "profile";
     }
@@ -1761,22 +1499,30 @@
     function switchView(viewName){
       session.currentView = viewName;
 
-      var tabProfile = document.getElementById("tabProfile");
-      var tabTrade = document.getElementById("tabTrade");
-
-      // Profile tab is a toggle-button (lights up only when the panel is open)
-      if (tabProfile) tabProfile.classList.toggle("active", viewName === "profile" && !!session.profilePanelOpen);
-
-      // Trade tab is a normal tab (lights up when you're in Trade view)
-      if (tabTrade) tabTrade.classList.toggle("active", viewName === "trade");
-
+      // Hide all views
       var vp = document.getElementById("view-profile");
-      var vt = document.getElementById("view-trade");
+      var vc = document.getElementById("view-chat");
+      if (vp) vp.classList.remove("show");
+      if (vc) vc.classList.remove("show");
 
-      if (vp) vp.classList.toggle("show", viewName === "profile");
-      if (vt) vt.classList.toggle("show", viewName === "trade");
+      // Deactivate all tabs
+      var tabProfile = document.getElementById("tabProfile");
+      var tabChat    = document.getElementById("tabChat");
+      if (tabProfile) tabProfile.classList.remove("active");
+      if (tabChat)    tabChat.classList.remove("active");
+
+      if (viewName === "profile") {
+        stopChatPoll();
+        if (vp) vp.classList.add("show");
+        if (tabProfile) tabProfile.classList.toggle("active", !!session.profilePanelOpen);
+      }
+
+      if (viewName === "chat") {
+        if (vc) vc.classList.add("show");
+        if (tabChat) tabChat.classList.add("active");
+        renderChatUI();
+      }
     }
-
 
     async function loadDashboard() {
       try {
@@ -1880,29 +1626,28 @@
       if (session.secondWallet.address) linksHTML += '<span class="plink" style="cursor:default;">2nd Wallet: ' + shortAddr(session.secondWallet.address) + '</span>';
 
       view.innerHTML +=
-        '<div class="tier-card ' + tier.cssClass + '">' +
-          '<div class="tier-badge" id="pfpBadge">' + badgeInner + '</div>' +
-          '<div class="tier-info">' +
-            '<div class="tier-label">YOUR TIER</div>' +
-            '<div class="tier-name">' + tier.name + '</div>' +
-            '<div class="tier-nfts-held">Holding <strong>' + count + '</strong> Long Neck Legend' + (count !== 1 ? "s" : "") + '</div>' +
-            progressHTML +
+      '<div class="tier-card ' + tier.cssClass + '">' +
+        '<div class="tier-badge" id="pfpBadge">' + badgeInner + '</div>' +
+        '<div class="tier-info">' +
+          '<div class="tier-label">YOUR TIER</div>' +
+          '<div class="tier-name">' + tier.name + '</div>' +
+          '<div class="tier-nfts-held">Holding <strong>' + count + '</strong> Long Neck Legend' + (count !== 1 ? "s" : "") + '</div>' +
+          progressHTML +
+        '</div>' +
+        '<div class="profile-name-box">' +
+          '<div class="profile-username" id="bannerUsername">' + escapeHtml(displayName) + '</div>' +
+          '<div class="profile-name-inner">' +
+            '<div class="profile-links" id="bannerLinks">' + linksHTML + '</div>' +
           '</div>' +
-          '<div class="profile-name-box">' +
-            '<div class="profile-name-inner">' +
-              '<div class="profile-name-label">Profile Name</div>' +
-              '<div class="profile-name" id="bannerName">' + escapeHtml(displayName) + '</div>' +
-              '<div class="profile-links" id="bannerLinks">' + linksHTML + '</div>' +
-            '</div>' +
-          '</div>' +
-        '</div>';
+        '</div>' +
+      '</div>';
 
       view.innerHTML +=
         '<div class="profile-actions" id="profilePanel">' +
           '<div class="stats-title">PROFILE</div>' +
           '<div class="actions-grid">' +
             '<button class="action-btn" onclick="openPfpModal()">Edit PFP</button>' +
-            '<button class="action-btn" onclick="editUsername()">Edit Username</button>' +
+            '<button class="action-btn" onclick="openUsernameModal()">Edit Username</button>' +
             '<button class="action-btn" onclick="connectX()">Connect X</button>' +
             '<button class="action-btn" onclick="connectDiscord()">Connect Discord</button>' +
             '<button class="action-btn" onclick="openSecondWalletModal()">Link 2nd Wallet</button>' +
@@ -2024,397 +1769,7 @@
       applyProfilePanelUI();
     }
 
-    
-    // -----------------------------
-    // TRADES (Listing Board MVP)
-    // -----------------------------
-    var TRADE_API = {
-      list: "/api/trades/list",
-      create: "/api/trades/create",
-      close: "/api/trades/close"
-    };
-
-    // in-memory cache for current session
-    session.trades = [];
-    session.tradeBundleMode = false;
-    session.tradeOfferNftMints = [];
-
-    function renderTradeView(){
-      var view = document.getElementById("view-trade");
-      if (!view) return;
-
-      view.innerHTML = ''
-        + '<div class="trade-head">'
-        + '  <div>'
-        + '    <div class="trade-title">TRADES</div>'
-        + '    <div class="trade-sub">Listing board — negotiate in Discord. No auto-swap. Stay safe.</div>'
-        + '  </div>'
-        + '  <button class="trade-plus" title="Create Trade" onclick="showTradeModal()">+</button>'
-        + '</div>'
-        + '<div class="trade-card">'
-        + '  <div class="trade-filters">'
-        + '    <input class="trade-input" id="tradeSearch" placeholder="Search by wallet / mint / token / trait..." oninput="applyTradeFilters()" />'
-        + '    <button class="tiny-btn" onclick="refreshTrades()">Refresh</button>'
-        + '  </div>'
-        + '  <div id="tradeTableWrap"></div>'
-        + '</div>';
-
-      drawTradeTable(session.trades || []);
-    }
-
-    function applyTradeFilters(){
-      var q = (document.getElementById("tradeSearch") && document.getElementById("tradeSearch").value) ? document.getElementById("tradeSearch").value.trim().toLowerCase() : "";
-      if (!q) { drawTradeTable(session.trades || []); return; }
-      var filtered = (session.trades || []).filter(function(t){
-        var hay = JSON.stringify(t || {}).toLowerCase();
-        return hay.indexOf(q) !== -1;
-      });
-      drawTradeTable(filtered);
-    }
-
-    function drawTradeTable(trades){
-      var wrap = document.getElementById("tradeTableWrap");
-      if (!wrap) return;
-
-      if (!trades || trades.length === 0){
-        wrap.innerHTML = '<div class="trade-mini">No listings yet. Hit the <strong>+</strong> to be the first savage in the bazaar.</div>';
-        return;
-      }
-
-      var rows = trades.map(function(t){
-        var offerBits = [];
-        if (t.offer && t.offer.nfts && t.offer.nfts.length){
-          offerBits.push('<span class="trade-pill good">NFT x' + t.offer.nfts.length + '</span>');
-        }
-        if (t.offer && t.offer.sol){
-          offerBits.push('<span class="trade-pill good">SOL ' + escapeHtml(String(t.offer.sol)) + '</span>');
-        }
-        if (t.offer && t.offer.token && t.offer.token.mint){
-          offerBits.push('<span class="trade-pill good">TOKEN</span><span class="trade-mini">' + escapeHtml(shortAddr(t.offer.token.mint)) + ' • ' + escapeHtml(String(t.offer.token.amount || "")) + '</span>');
-        }
-
-        var wantBits = [];
-        if (t.want && t.want.sol){
-          wantBits.push('<span class="trade-pill warn">SOL ' + escapeHtml(String(t.want.sol)) + '</span>');
-        }
-        if (t.want && t.want.token && t.want.token.mint){
-          wantBits.push('<span class="trade-pill warn">TOKEN</span><span class="trade-mini">' + escapeHtml(shortAddr(t.want.token.mint)) + ' • ' + escapeHtml(String(t.want.token.amount || "")) + '</span>');
-        }
-        if (t.want && t.want.collection && t.want.collection.id){
-          var traitLine = "";
-          if (t.want.collection.traitType && t.want.collection.traitValue){
-            traitLine = ' • ' + escapeHtml(t.want.collection.traitType) + ': ' + escapeHtml(t.want.collection.traitValue);
-          }
-          wantBits.push('<span class="trade-pill warn">COLLECTION</span><span class="trade-mini">' + escapeHtml(shortAddr(t.want.collection.id)) + traitLine + '</span>');
-        }
-
-        var bundle = t.bundle ? '<span class="trade-pill bad">BUNDLE</span>' : '';
-        var note = t.note ? ('<div class="trade-mini">' + escapeHtml(t.note) + '</div>') : '';
-        var who = t.owner ? escapeHtml(shortAddr(t.owner)) : '—';
-        var when = t.createdAt ? escapeHtml(new Date(t.createdAt).toLocaleString()) : '';
-
-        var actions = ''
-          + '<div class="trade-actions">'
-          + '  <button class="tiny-btn" onclick="copyTrade(' + "'" + escapeAttr(t.id || "") + "'" + ')">Copy ID</button>'
-          + (t.owner && walletPublicKey && (t.owner === walletPublicKey.toBase58())
-              ? '  <button class="tiny-btn danger" onclick="closeTrade(' + "'" + escapeAttr(t.id || "") + "'" + ')">Close</button>'
-              : '')
-          + '</div>';
-
-        return ''
-          + '<tr>'
-          + '  <td><div>' + who + '</div><div class="trade-mini">' + when + '</div>' + note + '</td>'
-          + '  <td>' + bundle + (offerBits.join(" ") || '<span class="trade-mini">—</span>') + '</td>'
-          + '  <td>' + (wantBits.join(" ") || '<span class="trade-mini">—</span>') + '</td>'
-          + '  <td style="white-space:nowrap;">' + actions + '</td>'
-          + '</tr>';
-      }).join("");
-
-      wrap.innerHTML = ''
-        + '<table class="trade-table">'
-        + '  <thead><tr><th>Owner</th><th>Offer</th><th>Request</th><th></th></tr></thead>'
-        + '  <tbody>' + rows + '</tbody>'
-        + '</table>'
-        + '<div class="trade-mini" style="margin-top:10px;">Tip: Do the deal in Discord DMs or a trade channel. Never send first if you don’t trust the vibe.</div>';
-    }
-
-    function copyTrade(id){
-      if (!id) return;
-      try {
-        navigator.clipboard.writeText(id);
-        alert("Copied trade ID: " + id);
-      } catch(e){
-        alert("Trade ID: " + id);
-      }
-    }
-
-    async function refreshTrades(){
-      try{
-        var res = await fetch(TRADE_API.list, { method:"GET" });
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        var json = await res.json();
-        session.trades = Array.isArray(json && json.trades) ? json.trades : [];
-        // newest first
-        session.trades.sort(function(a,b){ return (b.createdAt||0) - (a.createdAt||0); });
-        applyTradeFilters();
-      }catch(err){
-        console.warn("Trades list failed:", err);
-        // fallback: local cache (so Trade still works in pure-static mode)
-        try{
-          var local = JSON.parse(localStorage.getItem("lnl_trades_local") || "[]");
-          session.trades = Array.isArray(local) ? local : [];
-          applyTradeFilters();
-        }catch(e){}
-      }
-    }
-
-    async function closeTrade(id){
-      if (!id) return;
-      if (!confirm("Close this listing?")) return;
-
-      // optimistic UI
-      session.trades = (session.trades || []).filter(function(t){ return t.id !== id; });
-      applyTradeFilters();
-
-      try{
-        await fetch(TRADE_API.close, {
-          method:"POST",
-          headers:{ "Content-Type":"application/json" },
-          body: JSON.stringify({ id: id })
-        });
-      }catch(err){
-        console.warn("Close trade failed:", err);
-      }
-    }
-
-    function showTradeModal(){
-      if (!walletPublicKey){
-        alert("Connect your wallet first.");
-        return;
-      }
-      session.tradeOfferNftMints = [];
-      session.tradeBundleMode = false;
-
-      // reset inputs
-      setVal("offerSol","");
-      setVal("offerTokenMint","");
-      setVal("offerTokenAmount","");
-      setVal("wantSol","");
-      setVal("wantTokenMint","");
-      setVal("wantTokenAmount","");
-      setVal("wantCollectionId","");
-      setVal("wantTraitType","");
-      setVal("wantTraitValue","");
-      setVal("tradeNote","");
-
-      var btn = document.getElementById("bundleToggleBtn");
-      if (btn) btn.textContent = "BUNDLE: OFF (single request)";
-
-      buildOfferNftGrid();
-
-      var bd = document.getElementById("tradeModalBackdrop");
-      if (bd) bd.classList.add("show");
-    }
-    function hideTradeModal(){
-      var bd = document.getElementById("tradeModalBackdrop");
-      if (bd) bd.classList.remove("show");
-    }
-    function closeTradeModal(e){
-      if (e && e.target && e.target.id === "tradeModalBackdrop") hideTradeModal();
-    }
-
-    function toggleBundleMode(){
-      session.tradeBundleMode = !session.tradeBundleMode;
-      var btn = document.getElementById("bundleToggleBtn");
-      if (btn) btn.textContent = session.tradeBundleMode ? "BUNDLE: ON (combo request)" : "BUNDLE: OFF (single request)";
-    }
-
-    function buildOfferNftGrid(){
-      var grid = document.getElementById("offerNftGrid");
-      if (!grid) return;
-
-      var nfts = session.loadedNFTs || [];
-      if (!nfts.length){
-        grid.innerHTML = '<div class="trade-mini">No NFTs loaded yet.</div>';
-        return;
-      }
-
-      grid.innerHTML = nfts.map(function(n){
-        var img = n.image ? ('<img src="' + n.image + '" alt="' + escapeHtml(n.name) + '" loading="lazy">') : '<div style="aspect-ratio:1;background:#1e1e3a;display:flex;align-items:center;justify-content:center;color:#555;font-size:0.8rem;">No Image</div>';
-        var mint = n.mint || "";
-        return ''
-          + '<div class="select-nft" id="pick_' + escapeAttr(mint) + '" onclick="toggleOfferNft(' + "'" + escapeAttr(mint) + "'" + ')">'
-          + '  <div class="chk"></div>'
-          +    img
-          + '  <div class="nm">' + escapeHtml(n.name) + '</div>'
-          + '</div>';
-      }).join("");
-
-      updateOfferNftHint();
-    }
-
-    function toggleOfferNft(mint){
-      if (!mint) return;
-
-      var list = session.tradeOfferNftMints || [];
-      var idx = list.indexOf(mint);
-
-      if (idx >= 0){
-        list.splice(idx, 1);
-      } else {
-        if (list.length >= 5){
-          alert("Max 5 NFTs.");
-          return;
-        }
-        list.push(mint);
-      }
-      session.tradeOfferNftMints = list;
-
-      var el = document.getElementById("pick_" + mint);
-      if (el) el.classList.toggle("selected", idx < 0);
-
-      updateOfferNftHint();
-    }
-
-    function updateOfferNftHint(){
-      var hint = document.getElementById("offerNftHint");
-      if (hint) hint.textContent = (session.tradeOfferNftMints.length || 0) + " / 5 selected";
-    }
-
-    function setVal(id,v){
-      var el = document.getElementById(id);
-      if (el) el.value = v;
-    }
-    function getVal(id){
-      var el = document.getElementById(id);
-      return el ? String(el.value || "").trim() : "";
-    }
-
-    function parseNum(s){
-      var n = parseFloat(String(s||"").replace(/,/g,""));
-      return isFinite(n) ? n : 0;
-    }
-
-    function buildTradePayload(){
-      var owner = walletPublicKey ? walletPublicKey.toBase58() : "";
-      var offer = { nfts: [], sol: 0, token: null };
-      var want  = { sol: 0, token: null, collection: null };
-
-      // Offer NFTs from selection
-      var mints = session.tradeOfferNftMints || [];
-      var nftsByMint = {};
-      (session.loadedNFTs || []).forEach(function(n){ if (n && n.mint) nftsByMint[n.mint] = n; });
-      offer.nfts = mints.map(function(m){
-        var n = nftsByMint[m] || {};
-        return { mint: m, name: n.name || "NFT", image: n.image || "" };
-      });
-
-      // Offer SOL / Token
-      offer.sol = parseNum(getVal("offerSol"));
-      var otm = getVal("offerTokenMint");
-      var ota = parseNum(getVal("offerTokenAmount"));
-      if (otm) offer.token = { mint: otm, amount: ota };
-
-      // Want SOL / Token / Collection(+trait)
-      want.sol = parseNum(getVal("wantSol"));
-      var wtm = getVal("wantTokenMint");
-      var wta = parseNum(getVal("wantTokenAmount"));
-      if (wtm) want.token = { mint: wtm, amount: wta };
-
-      var cid = getVal("wantCollectionId");
-      if (cid){
-        var tt = getVal("wantTraitType");
-        var tv = getVal("wantTraitValue");
-        want.collection = { id: cid, traitType: tt, traitValue: tv };
-      }
-
-      var note = getVal("tradeNote");
-
-      return {
-        id: "t_" + Math.random().toString(36).slice(2) + Date.now().toString(36),
-        createdAt: Date.now(),
-        owner: owner,
-        bundle: !!session.tradeBundleMode,
-        offer: offer,
-        want: want,
-        note: note
-      };
-    }
-
-    function validateTrade(t){
-      // Basic required: at least 1 thing in OFFER
-      var hasOffer =
-        (t.offer && t.offer.nfts && t.offer.nfts.length) ||
-        (t.offer && t.offer.sol && t.offer.sol > 0) ||
-        (t.offer && t.offer.token && t.offer.token.mint);
-
-      if (!hasOffer) return "Add at least 1 thing to OFFER (NFTs, SOL, or Token).";
-
-      // Request rules
-      var wantCount = 0;
-      if (t.want && t.want.sol && t.want.sol > 0) wantCount++;
-      if (t.want && t.want.token && t.want.token.mint) wantCount++;
-      if (t.want && t.want.collection && t.want.collection.id) wantCount++;
-
-      if (!t.bundle && wantCount !== 1) return "With BUNDLE OFF, you must request exactly 1 thing (SOL OR Token OR Collection).";
-      if (t.bundle && wantCount < 1) return "With BUNDLE ON, request at least 1 thing.";
-
-      // Constraints
-      if (t.offer && t.offer.nfts && t.offer.nfts.length > 5) return "Max 5 NFTs in offer.";
-      if (t.offer && t.offer.token && !t.offer.token.mint) return "Offer token mint is required.";
-      if (t.want && t.want.token && !t.want.token.mint) return "Request token mint is required.";
-      if (t.note && t.note.length > 120) return "Note too long.";
-
-      return "";
-    }
-
-    async function submitTrade(){
-      if (!walletPublicKey) { alert("Connect wallet first."); return; }
-
-      var trade = buildTradePayload();
-      var err = validateTrade(trade);
-      if (err) { alert(err); return; }
-
-      // optimistic UI
-      session.trades = [trade].concat(session.trades || []);
-      applyTradeFilters();
-      hideTradeModal();
-
-      // Try server first
-      try{
-        var res = await fetch(TRADE_API.create, {
-          method:"POST",
-          headers:{ "Content-Type":"application/json" },
-          body: JSON.stringify(trade)
-        });
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        var json = await res.json();
-        if (json && json.trade && json.trade.id) {
-          // replace optimistic id if server changed it
-          session.trades = (session.trades || []).map(function(t){ return (t.id === trade.id) ? json.trade : t; });
-          applyTradeFilters();
-        }
-        return;
-      }catch(e){
-        console.warn("Create trade failed (server). Falling back to local cache:", e);
-      }
-
-      // fallback local for pure-static mode
-      try{
-        var local = JSON.parse(localStorage.getItem("lnl_trades_local") || "[]");
-        if (!Array.isArray(local)) local = [];
-        local.unshift(trade);
-        local = local.slice(0, 200);
-        localStorage.setItem("lnl_trades_local", JSON.stringify(local));
-      }catch(e){}
-    }
-
-    // small helper for escaping IDs inside attributes
-    function escapeAttr(s){
-      return String(s || "").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
-    }
-
-function editUsername(){
+    function editUsername(){
       var current = session.profile.username || "";
       var input = prompt("Set your Profile Username (max 24 chars):", current);
       if (input === null) return;
@@ -2422,6 +1777,44 @@ function editUsername(){
       saveProfileToStorage();
       refreshBanner();
     }
+
+
+    function openUsernameModal(){
+      if (!walletPublicKey) return alert("Connect wallet first.");
+      var input = document.getElementById("usernameInput");
+      if (input){
+        input.value = session.profile.username || "";
+        // focus for mobile keyboard
+        setTimeout(function(){ try{ input.focus(); input.setSelectionRange(input.value.length, input.value.length);}catch(e){} }, 50);
+      }
+      document.getElementById("usernameModalBackdrop").classList.add("show");
+    }
+
+    function hideUsernameModal(){
+      document.getElementById("usernameModalBackdrop").classList.remove("show");
+    }
+
+    function closeUsernameModal(e){
+      if (e && e.target && e.target.id === "usernameModalBackdrop") hideUsernameModal();
+    }
+
+    function saveUsernameFromModal(){
+      var input = document.getElementById("usernameInput");
+      var val = input ? input.value : "";
+      session.profile.username = sanitizeName(val);
+      saveProfileToStorage();
+      refreshBanner();
+      hideUsernameModal();
+    }
+
+    function clearUsername(){
+      session.profile.username = "";
+      saveProfileToStorage();
+      refreshBanner();
+      var input = document.getElementById("usernameInput");
+      if (input) input.value = "";
+    }
+
 
     function linkLedger(){
       var current = session.profile.ledger || "";
@@ -2433,11 +1826,11 @@ function editUsername(){
     }
 
     function refreshBanner(){
-      var bn = document.getElementById("bannerName");
-      if (bn) {
-        var displayName = session.profile.username ? session.profile.username : shortAddr(walletPublicKey.toBase58());
-        bn.textContent = displayName;
-      }
+      var bn = document.getElementById("bannerUsername");
+    if (bn) {
+      var displayName = session.profile.username ? session.profile.username : shortAddr(walletPublicKey.toBase58());
+      bn.textContent = displayName;
+    }
 
       var bl = document.getElementById("bannerLinks");
       if (bl) {
@@ -2592,6 +1985,64 @@ function editUsername(){
       loadDashboard();
     }
 
+
+    function isMobileDevice(){
+      // Conservative check: treat small screens OR mobile UA as mobile
+      try{
+        var ua = (navigator.userAgent || "").toLowerCase();
+        var small = window.matchMedia && window.matchMedia("(max-width: 820px)").matches;
+        var touch = ("ontouchstart" in window) || (navigator.maxTouchPoints > 0);
+        var mobileUA = /iphone|ipad|ipod|android|mobile|silk|kindle|webos|blackberry|opera mini/.test(ua);
+        return mobileUA || (small && touch);
+      }catch(e){
+        return false;
+      }
+    }
+
+    function startAuthFlow(url, title){
+      // Mobile browsers commonly block popups and postMessage callbacks.
+      // On mobile we navigate in the same tab so it always works.
+      if (isMobileDevice()){
+        window.location.href = url;
+        return null;
+      }
+      return openAuthPopup(url, title);
+    }
+
+    function applyAuthFromUrl(){
+      // Support mobile callbacks that redirect back with query params.
+      // We accept a few common shapes: ?x=handle, ?x_username=handle, ?discord=username, ?discord_username=u&discord_discriminator=1234
+      try{
+        var p = new URLSearchParams(window.location.search || "");
+        var xh = p.get("x") || p.get("x_username") || p.get("xHandle") || p.get("xhandle");
+        var du = p.get("discord") || p.get("discord_username") || p.get("discordUser") || p.get("discorduser");
+        var dd = p.get("discord_discriminator") || p.get("discordDiscriminator") || p.get("disc");
+        var didSomething = false;
+
+        if (xh){
+          session.profile.x = normalizeHandle(xh);
+          didSomething = true;
+        }
+        if (du){
+          var full = du;
+          if (dd && dd !== "0") full = du + "#" + dd;
+          session.profile.discord = full;
+          didSomething = true;
+        }
+
+        if (didSomething){
+          saveProfileToStorage();
+          refreshBanner();
+
+          // Clean the URL so refresh doesn't re-apply
+          if (window.history && window.history.replaceState){
+            var clean = window.location.pathname + window.location.hash;
+            window.history.replaceState({}, document.title, clean);
+          }
+        }
+      }catch(e){}
+    }
+
     function openAuthPopup(url, title){
       var w = 520, h = 720;
       var y = window.top.outerHeight / 2 + window.top.screenY - (h / 2);
@@ -2608,13 +2059,13 @@ function editUsername(){
     function connectX(){
       if (!walletPublicKey) return alert("Connect wallet first.");
       var url = "/api/auth/x/start?wallet=" + encodeURIComponent(walletPublicKey.toBase58());
-      openAuthPopup(url, "Connect X");
+      startAuthFlow(url, "Connect X");
     }
 
     function connectDiscord(){
       if (!walletPublicKey) return alert("Connect wallet first.");
       var url = "/api/auth/discord/start?wallet=" + encodeURIComponent(walletPublicKey.toBase58());
-      openAuthPopup(url, "Connect Discord");
+      startAuthFlow(url, "Connect Discord");
     }
 
     window.addEventListener("message", function(ev){
@@ -2676,6 +2127,351 @@ function editUsername(){
 
     function closeTraitsModal(e){
       if (e && e.target && e.target.id === "traitsModalBackdrop") hideTraitsModal();
+    }
+
+    /* ================================================================
+       CHAT — Supabase real-time
+       Table: chat_messages (id, wallet, username, text, created_at)
+       Messages are shared live across all connected wallets.
+    ================================================================ */
+
+    var SUPA_URL = 'https://hypqndasopdkrqvkllvc.supabase.co';
+    var SUPA_KEY = 'sb_publishable_DwaaLS_hFJAOZ6M9VmYKYA_AQvyfgv1';
+    var supaClient  = null;
+    var chatChannel = null;   // real-time subscription
+    var chatMsgs    = [];     // [{id, wallet, username, text, created_at}]
+
+    // Auto-refresh fallback (in case real-time misses / tab sleeps)
+    var chatRefreshTimer = null;
+    var CHAT_REFRESH_MS  = 8000; // 8s feels "live" without spamming
+
+    function getSupaClient() {
+      if (!supaClient) {
+        supaClient = supabase.createClient(SUPA_URL, SUPA_KEY);
+      }
+      return supaClient;
+    }
+
+    // Deterministic color per wallet so each user always looks the same
+    function walletColor(addr) {
+      var palette = ['#00d4ff','#7b68ee','#00ff88','#f5a623','#ff6b9d','#4ecdc4','#ffd93d','#ff8c42'];
+      var hash = 0;
+      for (var i = 0; i < (addr || '').length; i++) {
+        hash = ((hash << 5) - hash) + addr.charCodeAt(i);
+        hash |= 0;
+      }
+      return palette[Math.abs(hash) % palette.length];
+    }
+
+    // Called when leaving chat tab or disconnecting
+    function stopChatPoll() {
+      // stop fallback refresh timer
+      if (chatRefreshTimer) {
+        try { clearInterval(chatRefreshTimer); } catch(e) {}
+        chatRefreshTimer = null;
+      }
+
+      // stop real-time subscription
+      if (chatChannel) {
+        try { getSupaClient().removeChannel(chatChannel); } catch(e) {}
+        chatChannel = null;
+      }
+    }
+    function renderChatUI() {
+      var view = document.getElementById('view-chat');
+      if (!view) return;
+
+      view.innerHTML =
+        // ── Header ──
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.6rem;">' +
+          '<div>' +
+            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.5rem;letter-spacing:3px;color:#e0e0ff;">🦒 HOLDER CHAT</div>' +
+            '<div style="font-size:0.7rem;color:#444;letter-spacing:1px;margin-top:2px;">Live · Open to all connected wallets</div>' +
+          '</div>' +
+          '<div style="display:flex;align-items:center;gap:0.7rem;">' +
+            '<div id="chatLiveDot" style="display:flex;align-items:center;gap:5px;font-size:0.7rem;color:#555;">' +
+              '<div style="width:7px;height:7px;border-radius:50%;background:#555;"></div>Connecting…' +
+            '</div>' +
+            '<button onclick="switchView(\'profile\')" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#888;padding:7px 14px;border-radius:7px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;transition:all 0.2s;" onmouseover="this.style.borderColor=\'rgba(0,212,255,0.4)\';this.style.color=\'#00d4ff\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,0.1)\';this.style.color=\'#888\'">← Home</button>' +
+          '</div>' +
+        '</div>' +
+
+        // ── Messages ──
+        '<div id="chatBox" style="height:440px;overflow-y:auto;background:#06060f;border:1px solid #161628;border-radius:12px;padding:16px;margin-bottom:12px;scroll-behavior:smooth;">' +
+          '<div id="chatInner"></div>' +
+        '</div>' +
+
+        // ── Input ──
+        '<div style="display:flex;gap:8px;align-items:center;">' +
+          '<div id="chatInputWrap" style="flex:1;display:flex;align-items:center;gap:8px;background:#0d0d1e;border:1px solid #1a1a30;border-radius:10px;padding:0 12px;transition:border-color 0.2s;">' +
+            '<span id="chatWalletTag" style="font-size:0.78rem;font-weight:700;flex-shrink:0;white-space:nowrap;"></span>' +
+            '<input id="chatInput" style="flex:1;background:transparent;border:none;outline:none;color:#e0e0ff;font-family:\'Space Grotesk\',sans-serif;font-size:0.88rem;padding:12px 0;" placeholder="Say something legend…" maxlength="400" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();sendChatMessage();}" />' +
+            '<span id="chatCount" style="font-size:0.62rem;color:#252540;flex-shrink:0;min-width:28px;text-align:right;"></span>' +
+          '</div>' +
+          '<button id="chatSendBtn" onclick="sendChatMessage()" style="background:linear-gradient(135deg,rgba(0,212,255,0.18),rgba(123,104,238,0.18));border:1px solid rgba(0,212,255,0.35);color:#00d4ff;padding:12px 22px;border-radius:10px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.8rem;letter-spacing:1.5px;text-transform:uppercase;transition:all 0.2s;white-space:nowrap;">Send</button>' +
+        '</div>';
+
+      // Wallet tag
+      if (walletPublicKey) {
+        var addr = walletPublicKey.toBase58();
+        var tag  = document.getElementById('chatWalletTag');
+        tag.textContent = addr.slice(0,4) + '…' + addr.slice(-4);
+        tag.style.color = walletColor(addr);
+      }
+
+      // Focus ring
+      var wrap = document.getElementById('chatInputWrap');
+      var inp  = document.getElementById('chatInput');
+      inp.addEventListener('focus', function(){ wrap.style.borderColor = 'rgba(0,212,255,0.45)'; });
+      inp.addEventListener('blur',  function(){ wrap.style.borderColor = '#1a1a30'; });
+      inp.addEventListener('input', function(){
+        var left = 400 - inp.value.length;
+        var c = document.getElementById('chatCount');
+        c.textContent = left < 80 ? left : '';
+        c.style.color = left < 30 ? '#ff3c5c' : '#252540';
+      });
+
+      // Load history then subscribe
+      chatMsgs = [];
+      loadChatHistory();
+    }
+
+    
+    // Pull any new messages since the newest one we have.
+    // This runs on an interval as a safety net (real-time should still do the heavy lifting).
+    async function refreshChatFromServer() {
+      try {
+        // only refresh if we're actually on the chat tab and the UI exists
+        if (!session || session.currentView !== 'chat') return;
+        if (!document.getElementById('chatInner')) return;
+
+        var sb = getSupaClient();
+
+        var last = (chatMsgs && chatMsgs.length) ? chatMsgs[chatMsgs.length - 1] : null;
+        var q = sb
+          .from('chat_messages')
+          .select('id, wallet, username, text, created_at')
+          .order('created_at', { ascending: true })
+          .limit(200);
+
+        // Incremental fetch: only grab messages newer than what we have.
+        if (last && last.created_at) {
+          q = q.gt('created_at', last.created_at);
+        }
+
+        var res = await q;
+        if (res.error) throw res.error;
+
+        var incoming = res.data || [];
+        if (!incoming.length) return;
+
+        // Merge de-duped by id
+        var existing = {};
+        for (var i = 0; i < chatMsgs.length; i++) existing[chatMsgs[i].id] = true;
+
+        for (var j = 0; j < incoming.length; j++) {
+          if (!existing[incoming[j].id]) chatMsgs.push(incoming[j]);
+        }
+
+        // Keep sorted (in case clocks are funky)
+        chatMsgs.sort(function(a,b){
+          return new Date(a.created_at) - new Date(b.created_at);
+        });
+
+        paintMessages();
+        scrollToBottom(false);
+      } catch(e) {
+        // quiet failure — this is just a fallback
+        console.warn('Chat auto-refresh error:', e && (e.message || e));
+      }
+    }
+
+    function startChatAutoRefresh() {
+      // reset any existing timer
+      if (chatRefreshTimer) {
+        try { clearInterval(chatRefreshTimer); } catch(e) {}
+        chatRefreshTimer = null;
+      }
+
+      // immediate refresh in case we missed messages while tab was inactive
+      refreshChatFromServer();
+
+      chatRefreshTimer = setInterval(function(){
+        refreshChatFromServer();
+      }, CHAT_REFRESH_MS);
+
+      // when user comes back to the tab, refresh immediately
+      try {
+        if (!window.__lnlChatVisHooked) {
+          window.__lnlChatVisHooked = true;
+          document.addEventListener('visibilitychange', function(){
+            if (!document.hidden) refreshChatFromServer();
+          });
+          window.addEventListener('focus', function(){ refreshChatFromServer(); });
+        }
+      } catch(e) {}
+    }
+
+    async function loadChatHistory() {
+      setLiveDot(false);
+      try {
+        var sb = getSupaClient();
+        var res = await sb
+          .from('chat_messages')
+          .select('id, wallet, username, text, created_at')
+          .order('created_at', { ascending: true })
+          .limit(200);
+
+        if (res.error) throw res.error;
+        chatMsgs = res.data || [];
+        paintMessages();
+        scrollToBottom(true);
+      } catch(e) {
+        console.error('Chat history error:', e);
+        document.getElementById('chatInner').innerHTML =
+          '<div style="color:#ff3c5c;font-size:0.78rem;text-align:center;padding:2rem;">Could not load messages. Check Supabase config.</div>';
+      }
+      subscribeLive();
+    }
+
+    function subscribeLive() {
+      // Tear down any existing subscription first
+      stopChatPoll();
+
+      var sb = getSupaClient();
+      chatChannel = sb
+        .channel('chat_messages_live')
+        .on('postgres_changes', {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'chat_messages'
+        }, function(payload) {
+          var row = payload.new;
+          // Avoid duplicates (our own optimistic message already added)
+          var exists = chatMsgs.some(function(m){ return m.id === row.id; });
+          if (!exists) {
+            chatMsgs.push(row);
+            paintMessages();
+            scrollToBottom(false);
+          }
+        })
+        .subscribe(function(status) {
+          setLiveDot(status === 'SUBSCRIBED');
+        });
+
+      // Safety-net refresh (keeps chat updated even if real-time drops)
+      startChatAutoRefresh();
+    }
+
+    function setLiveDot(live) {
+      var el = document.getElementById('chatLiveDot');
+      if (!el) return;
+      if (live) {
+        el.innerHTML = '<div style="width:7px;height:7px;border-radius:50%;background:#00ff88;box-shadow:0 0 6px rgba(0,255,136,0.7);"></div>Live';
+        el.style.color = '#555';
+      } else {
+        el.innerHTML = '<div style="width:7px;height:7px;border-radius:50%;background:#555;"></div>Connecting…';
+      }
+    }
+
+    function paintMessages() {
+      var inner = document.getElementById('chatInner');
+      if (!inner) return;
+
+      if (chatMsgs.length === 0) {
+        inner.innerHTML =
+          '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:340px;gap:0.7rem;">' +
+            '<div style="font-size:2.5rem;">🦒</div>' +
+            '<div style="color:#252540;font-size:0.78rem;letter-spacing:2px;text-transform:uppercase;">No messages yet</div>' +
+            '<div style="color:#1a1a30;font-size:0.7rem;">Be the first legend</div>' +
+          '</div>';
+        return;
+      }
+
+      var myWallet  = walletPublicKey ? walletPublicKey.toBase58() : null;
+      var prevWallet = null;
+      var html = '';
+
+      chatMsgs.forEach(function(m, i) {
+        var isMe  = m.wallet === myWallet;
+        var color = walletColor(m.wallet);
+
+        // Display name: use stored username if present, else shorten wallet
+        var name = m.username
+          ? m.username
+          : (m.wallet.slice(0,4) + '…' + m.wallet.slice(-4));
+
+        var newSender = m.wallet !== prevWallet;
+        prevWallet = m.wallet;
+
+        var t = new Date(m.created_at);
+        var timeStr = t.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+
+        if (newSender) {
+          if (i > 0) html += '<div style="height:12px;"></div>';
+          html +=
+            '<div style="display:flex;align-items:baseline;gap:7px;margin-bottom:3px;">' +
+              '<span style="font-weight:700;font-size:0.8rem;color:' + color + ';">' + escapeHtml(name) + '</span>' +
+              '<span style="font-size:0.6rem;color:#252540;">' + timeStr + '</span>' +
+              (isMe ? '<span style="font-size:0.55rem;letter-spacing:1px;color:#1e1e3a;text-transform:uppercase;">you</span>' : '') +
+            '</div>';
+        }
+
+        html += '<div style="font-size:0.87rem;color:#c8c8e8;line-height:1.6;word-break:break-word;padding:1px 0;">' + escapeHtml(m.text) + '</div>';
+      });
+
+      inner.innerHTML = html;
+    }
+
+    function scrollToBottom(force) {
+      var box = document.getElementById('chatBox');
+      if (!box) return;
+      var nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 120;
+      if (force || nearBottom) box.scrollTop = box.scrollHeight;
+    }
+
+    async function sendChatMessage() {
+      if (!walletPublicKey) { alert('Connect your wallet first.'); return; }
+      var inp = document.getElementById('chatInput');
+      var btn = document.getElementById('chatSendBtn');
+      if (!inp) return;
+
+      var text = inp.value.trim();
+      if (!text) return;
+
+      inp.value = '';
+      inp.dispatchEvent(new Event('input'));
+      btn.disabled = true;
+      btn.textContent = '…';
+
+      var wallet   = walletPublicKey.toBase58();
+      var username = session.profile.username || null;
+
+      try {
+        var sb  = getSupaClient();
+        var res = await sb.from('chat_messages').insert({
+          wallet:   wallet,
+          username: username,
+          text:     text
+        }).select().single();
+
+        if (res.error) throw res.error;
+
+        // Optimistic: add immediately so sender doesn't wait for real-time echo
+        var exists = chatMsgs.some(function(m){ return m.id === res.data.id; });
+        if (!exists) {
+          chatMsgs.push(res.data);
+          paintMessages();
+          scrollToBottom(true);
+        }
+      } catch(e) {
+        console.error('Send error:', e);
+        alert('Failed to send: ' + (e.message || e));
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Send';
+      inp.focus();
     }
 
   </script>
