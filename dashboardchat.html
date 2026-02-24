@@ -2018,6 +2018,10 @@ a.plink:hover{
     var chatChannel = null;   // real-time subscription
     var chatMsgs    = [];     // [{id, wallet, username, text, created_at}]
 
+    // Auto-refresh fallback (in case real-time misses / tab sleeps)
+    var chatRefreshTimer = null;
+    var CHAT_REFRESH_MS  = 8000; // 8s feels "live" without spamming
+
     function getSupaClient() {
       if (!supaClient) {
         supaClient = supabase.createClient(SUPA_URL, SUPA_KEY);
@@ -2038,12 +2042,18 @@ a.plink:hover{
 
     // Called when leaving chat tab or disconnecting
     function stopChatPoll() {
+      // stop fallback refresh timer
+      if (chatRefreshTimer) {
+        try { clearInterval(chatRefreshTimer); } catch(e) {}
+        chatRefreshTimer = null;
+      }
+
+      // stop real-time subscription
       if (chatChannel) {
         try { getSupaClient().removeChannel(chatChannel); } catch(e) {}
         chatChannel = null;
       }
     }
-
     function renderChatUI() {
       var view = document.getElementById('view-chat');
       if (!view) return;
@@ -2103,6 +2113,82 @@ a.plink:hover{
       loadChatHistory();
     }
 
+    
+    // Pull any new messages since the newest one we have.
+    // This runs on an interval as a safety net (real-time should still do the heavy lifting).
+    async function refreshChatFromServer() {
+      try {
+        // only refresh if we're actually on the chat tab and the UI exists
+        if (!session || session.currentView !== 'chat') return;
+        if (!document.getElementById('chatInner')) return;
+
+        var sb = getSupaClient();
+
+        var last = (chatMsgs && chatMsgs.length) ? chatMsgs[chatMsgs.length - 1] : null;
+        var q = sb
+          .from('chat_messages')
+          .select('id, wallet, username, text, created_at')
+          .order('created_at', { ascending: true })
+          .limit(200);
+
+        // Incremental fetch: only grab messages newer than what we have.
+        if (last && last.created_at) {
+          q = q.gt('created_at', last.created_at);
+        }
+
+        var res = await q;
+        if (res.error) throw res.error;
+
+        var incoming = res.data || [];
+        if (!incoming.length) return;
+
+        // Merge de-duped by id
+        var existing = {};
+        for (var i = 0; i < chatMsgs.length; i++) existing[chatMsgs[i].id] = true;
+
+        for (var j = 0; j < incoming.length; j++) {
+          if (!existing[incoming[j].id]) chatMsgs.push(incoming[j]);
+        }
+
+        // Keep sorted (in case clocks are funky)
+        chatMsgs.sort(function(a,b){
+          return new Date(a.created_at) - new Date(b.created_at);
+        });
+
+        paintMessages();
+        scrollToBottom(false);
+      } catch(e) {
+        // quiet failure — this is just a fallback
+        console.warn('Chat auto-refresh error:', e && (e.message || e));
+      }
+    }
+
+    function startChatAutoRefresh() {
+      // reset any existing timer
+      if (chatRefreshTimer) {
+        try { clearInterval(chatRefreshTimer); } catch(e) {}
+        chatRefreshTimer = null;
+      }
+
+      // immediate refresh in case we missed messages while tab was inactive
+      refreshChatFromServer();
+
+      chatRefreshTimer = setInterval(function(){
+        refreshChatFromServer();
+      }, CHAT_REFRESH_MS);
+
+      // when user comes back to the tab, refresh immediately
+      try {
+        if (!window.__lnlChatVisHooked) {
+          window.__lnlChatVisHooked = true;
+          document.addEventListener('visibilitychange', function(){
+            if (!document.hidden) refreshChatFromServer();
+          });
+          window.addEventListener('focus', function(){ refreshChatFromServer(); });
+        }
+      } catch(e) {}
+    }
+
     async function loadChatHistory() {
       setLiveDot(false);
       try {
@@ -2149,6 +2235,9 @@ a.plink:hover{
         .subscribe(function(status) {
           setLiveDot(status === 'SUBSCRIBED');
         });
+
+      // Safety-net refresh (keeps chat updated even if real-time drops)
+      startChatAutoRefresh();
     }
 
     function setLiveDot(live) {
