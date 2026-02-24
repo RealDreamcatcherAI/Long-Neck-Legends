@@ -959,7 +959,7 @@ a.plink:hover{
     .trait-muted{ color:#666; font-size:0.78rem; }
 
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 
 <body>
@@ -2007,27 +2007,25 @@ a.plink:hover{
     }
 
     /* ================================================================
-       CHAT — Real-time shared room via Gun.js (P2P, no backend needed)
-       Every connected wallet sees the same messages.
-       Gun.js peers with public relay servers automatically.
+       CHAT — Supabase real-time
+       Table: chat_messages (id, wallet, username, text, created_at)
+       Messages are shared live across all connected wallets.
     ================================================================ */
 
-    var gun = null;
-    var chatRef = null;
-    var chatPollTimer = null;
-    var chatMessages = [];     // sorted array of message objects
-    var chatRenderedIds = {};  // track which ids we've rendered
+    var SUPA_URL = 'https://hypqndasopdkrqvkllvc.supabase.co';
+    var SUPA_KEY = 'sb_publishable_DwaaLS_hFJAOZ6M9VmYKYA_AQvyfgv1';
+    var supaClient  = null;
+    var chatChannel = null;   // real-time subscription
+    var chatMsgs    = [];     // [{id, wallet, username, text, created_at}]
 
-    function initGun() {
-      if (gun) return;
-      gun = Gun([
-        'https://gun-manhattan.herokuapp.com/gun',
-        'https://gunjs.herokuapp.com/gun'
-      ]);
-      chatRef = gun.get('lnl-holder-chat-v1');
+    function getSupaClient() {
+      if (!supaClient) {
+        supaClient = supabase.createClient(SUPA_URL, SUPA_KEY);
+      }
+      return supaClient;
     }
 
-    // Deterministic color per wallet address so each user has a consistent color
+    // Deterministic color per wallet so each user always looks the same
     function walletColor(addr) {
       var palette = ['#00d4ff','#7b68ee','#00ff88','#f5a623','#ff6b9d','#4ecdc4','#ffd93d','#ff8c42'];
       var hash = 0;
@@ -2038,8 +2036,12 @@ a.plink:hover{
       return palette[Math.abs(hash) % palette.length];
     }
 
+    // Called when leaving chat tab or disconnecting
     function stopChatPoll() {
-      if (chatPollTimer) { clearInterval(chatPollTimer); chatPollTimer = null; }
+      if (chatChannel) {
+        try { getSupaClient().removeChannel(chatChannel); } catch(e) {}
+        chatChannel = null;
+      }
     }
 
     function renderChatUI() {
@@ -2047,167 +2049,173 @@ a.plink:hover{
       if (!view) return;
 
       view.innerHTML =
-        // ── Top bar with Home button ──
+        // ── Header ──
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.6rem;">' +
           '<div>' +
             '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.5rem;letter-spacing:3px;color:#e0e0ff;">🦒 HOLDER CHAT</div>' +
             '<div style="font-size:0.7rem;color:#444;letter-spacing:1px;margin-top:2px;">Live · Open to all connected wallets</div>' +
           '</div>' +
-          '<div style="display:flex;align-items:center;gap:0.6rem;">' +
-            '<div style="display:flex;align-items:center;gap:5px;font-size:0.7rem;color:#555;">' +
-              '<div style="width:7px;height:7px;border-radius:50%;background:#00ff88;box-shadow:0 0 6px rgba(0,255,136,0.7);"></div>' +
-              'Live' +
+          '<div style="display:flex;align-items:center;gap:0.7rem;">' +
+            '<div id="chatLiveDot" style="display:flex;align-items:center;gap:5px;font-size:0.7rem;color:#555;">' +
+              '<div style="width:7px;height:7px;border-radius:50%;background:#555;"></div>Connecting…' +
             '</div>' +
-            '<button onclick="switchView(\'profile\')" style="' +
-              'background:transparent;border:1px solid rgba(255,255,255,0.1);color:#888;' +
-              'padding:7px 14px;border-radius:7px;cursor:pointer;' +
-              'font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;' +
-              'letter-spacing:1.5px;text-transform:uppercase;transition:all 0.2s;' +
-            '" onmouseover="this.style.borderColor=\'rgba(0,212,255,0.4)\';this.style.color=\'#00d4ff\'" ' +
-               'onmouseout="this.style.borderColor=\'rgba(255,255,255,0.1)\';this.style.color=\'#888\'">← Home</button>' +
+            '<button onclick="switchView(\'profile\')" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#888;padding:7px 14px;border-radius:7px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;transition:all 0.2s;" onmouseover="this.style.borderColor=\'rgba(0,212,255,0.4)\';this.style.color=\'#00d4ff\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,0.1)\';this.style.color=\'#888\'">← Home</button>' +
           '</div>' +
         '</div>' +
 
-        // ── Message area ──
-        '<div id="chatBox" style="' +
-          'flex:1;min-height:0;height:420px;' +
-          'overflow-y:auto;' +
-          'background:#06060f;' +
-          'border:1px solid #161628;' +
-          'border-radius:12px;' +
-          'padding:16px;' +
-          'margin-bottom:12px;' +
-          'scroll-behavior:smooth;' +
-        '">' +
-          '<div id="chatInner" style="display:flex;flex-direction:column;gap:0;"></div>' +
+        // ── Messages ──
+        '<div id="chatBox" style="height:440px;overflow-y:auto;background:#06060f;border:1px solid #161628;border-radius:12px;padding:16px;margin-bottom:12px;scroll-behavior:smooth;">' +
+          '<div id="chatInner"></div>' +
         '</div>' +
 
-        // ── Input row ──
+        // ── Input ──
         '<div style="display:flex;gap:8px;align-items:center;">' +
-          '<div id="chatInputWrap" style="' +
-            'flex:1;display:flex;align-items:center;gap:8px;' +
-            'background:#0d0d1e;border:1px solid #1a1a30;border-radius:10px;' +
-            'padding:0 12px;transition:border-color 0.2s;' +
-          '">' +
+          '<div id="chatInputWrap" style="flex:1;display:flex;align-items:center;gap:8px;background:#0d0d1e;border:1px solid #1a1a30;border-radius:10px;padding:0 12px;transition:border-color 0.2s;">' +
             '<span id="chatWalletTag" style="font-size:0.78rem;font-weight:700;flex-shrink:0;white-space:nowrap;"></span>' +
-            '<input id="chatInput" ' +
-              'style="flex:1;background:transparent;border:none;outline:none;color:#e0e0ff;' +
-              'font-family:\'Space Grotesk\',sans-serif;font-size:0.88rem;padding:12px 0;" ' +
-              'placeholder="Say something legend…" maxlength="400" ' +
-              'onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();sendChatMessage();}" />' +
-            '<span id="chatCount" style="font-size:0.62rem;color:#252540;flex-shrink:0;"></span>' +
+            '<input id="chatInput" style="flex:1;background:transparent;border:none;outline:none;color:#e0e0ff;font-family:\'Space Grotesk\',sans-serif;font-size:0.88rem;padding:12px 0;" placeholder="Say something legend…" maxlength="400" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();sendChatMessage();}" />' +
+            '<span id="chatCount" style="font-size:0.62rem;color:#252540;flex-shrink:0;min-width:28px;text-align:right;"></span>' +
           '</div>' +
-          '<button id="chatSendBtn" onclick="sendChatMessage()" style="' +
-            'background:linear-gradient(135deg,rgba(0,212,255,0.18),rgba(123,104,238,0.18));' +
-            'border:1px solid rgba(0,212,255,0.35);color:#00d4ff;' +
-            'padding:12px 20px;border-radius:10px;cursor:pointer;' +
-            'font-family:\'Space Grotesk\',sans-serif;font-weight:700;' +
-            'font-size:0.8rem;letter-spacing:1.5px;text-transform:uppercase;' +
-            'transition:all 0.2s;white-space:nowrap;' +
-          '">Send</button>' +
+          '<button id="chatSendBtn" onclick="sendChatMessage()" style="background:linear-gradient(135deg,rgba(0,212,255,0.18),rgba(123,104,238,0.18));border:1px solid rgba(0,212,255,0.35);color:#00d4ff;padding:12px 22px;border-radius:10px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.8rem;letter-spacing:1.5px;text-transform:uppercase;transition:all 0.2s;white-space:nowrap;">Send</button>' +
         '</div>';
 
-      // Set wallet tag color
-      var tag = document.getElementById('chatWalletTag');
-      if (walletPublicKey && tag) {
+      // Wallet tag
+      if (walletPublicKey) {
         var addr = walletPublicKey.toBase58();
+        var tag  = document.getElementById('chatWalletTag');
         tag.textContent = addr.slice(0,4) + '…' + addr.slice(-4);
         tag.style.color = walletColor(addr);
       }
 
-      // Input focus ring
+      // Focus ring
       var wrap = document.getElementById('chatInputWrap');
       var inp  = document.getElementById('chatInput');
-      if (inp && wrap) {
-        inp.addEventListener('focus', function(){ wrap.style.borderColor = 'rgba(0,212,255,0.45)'; });
-        inp.addEventListener('blur',  function(){ wrap.style.borderColor = '#1a1a30'; });
-        inp.addEventListener('input', function(){
-          var left = 400 - inp.value.length;
-          var counter = document.getElementById('chatCount');
-          if (counter) {
-            counter.textContent = left < 80 ? left + '' : '';
-            counter.style.color = left < 30 ? '#ff3c5c' : '#252540';
+      inp.addEventListener('focus', function(){ wrap.style.borderColor = 'rgba(0,212,255,0.45)'; });
+      inp.addEventListener('blur',  function(){ wrap.style.borderColor = '#1a1a30'; });
+      inp.addEventListener('input', function(){
+        var left = 400 - inp.value.length;
+        var c = document.getElementById('chatCount');
+        c.textContent = left < 80 ? left : '';
+        c.style.color = left < 30 ? '#ff3c5c' : '#252540';
+      });
+
+      // Load history then subscribe
+      chatMsgs = [];
+      loadChatHistory();
+    }
+
+    async function loadChatHistory() {
+      setLiveDot(false);
+      try {
+        var sb = getSupaClient();
+        var res = await sb
+          .from('chat_messages')
+          .select('id, wallet, username, text, created_at')
+          .order('created_at', { ascending: true })
+          .limit(200);
+
+        if (res.error) throw res.error;
+        chatMsgs = res.data || [];
+        paintMessages();
+        scrollToBottom(true);
+      } catch(e) {
+        console.error('Chat history error:', e);
+        document.getElementById('chatInner').innerHTML =
+          '<div style="color:#ff3c5c;font-size:0.78rem;text-align:center;padding:2rem;">Could not load messages. Check Supabase config.</div>';
+      }
+      subscribeLive();
+    }
+
+    function subscribeLive() {
+      // Tear down any existing subscription first
+      stopChatPoll();
+
+      var sb = getSupaClient();
+      chatChannel = sb
+        .channel('chat_messages_live')
+        .on('postgres_changes', {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'chat_messages'
+        }, function(payload) {
+          var row = payload.new;
+          // Avoid duplicates (our own optimistic message already added)
+          var exists = chatMsgs.some(function(m){ return m.id === row.id; });
+          if (!exists) {
+            chatMsgs.push(row);
+            paintMessages();
+            scrollToBottom(false);
           }
+        })
+        .subscribe(function(status) {
+          setLiveDot(status === 'SUBSCRIBED');
         });
+    }
+
+    function setLiveDot(live) {
+      var el = document.getElementById('chatLiveDot');
+      if (!el) return;
+      if (live) {
+        el.innerHTML = '<div style="width:7px;height:7px;border-radius:50%;background:#00ff88;box-shadow:0 0 6px rgba(0,255,136,0.7);"></div>Live';
+        el.style.color = '#555';
+      } else {
+        el.innerHTML = '<div style="width:7px;height:7px;border-radius:50%;background:#555;"></div>Connecting…';
+      }
+    }
+
+    function paintMessages() {
+      var inner = document.getElementById('chatInner');
+      if (!inner) return;
+
+      if (chatMsgs.length === 0) {
+        inner.innerHTML =
+          '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:340px;gap:0.7rem;">' +
+            '<div style="font-size:2.5rem;">🦒</div>' +
+            '<div style="color:#252540;font-size:0.78rem;letter-spacing:2px;text-transform:uppercase;">No messages yet</div>' +
+            '<div style="color:#1a1a30;font-size:0.7rem;">Be the first legend</div>' +
+          '</div>';
+        return;
       }
 
-      // Reset and subscribe
-      chatMessages = [];
-      chatRenderedIds = {};
-      initGun();
-      subscribeChatMessages();
-    }
-
-    function subscribeChatMessages() {
-      if (!chatRef) return;
-
-      chatRef.map().on(function(data, id) {
-        if (!data || !data.text || !data.wallet || !data.time) return;
-        if (chatRenderedIds[id]) return;  // already shown
-
-        chatRenderedIds[id] = true;
-        chatMessages.push({ id: id, wallet: data.wallet, text: data.text, time: data.time });
-        // Keep sorted by time
-        chatMessages.sort(function(a, b) { return a.time - b.time; });
-        // Keep max 200
-        if (chatMessages.length > 200) chatMessages = chatMessages.slice(chatMessages.length - 200);
-
-        renderChatMessages();
-      });
-    }
-
-    function renderChatMessages() {
-      var inner = document.getElementById('chatInner');
-      var box   = document.getElementById('chatBox');
-      if (!inner || !box) return;
-
-      var myWallet = walletPublicKey ? walletPublicKey.toBase58() : null;
+      var myWallet  = walletPublicKey ? walletPublicKey.toBase58() : null;
       var prevWallet = null;
       var html = '';
 
-      chatMessages.forEach(function(m, i) {
-        var isMe   = m.wallet === myWallet;
-        var color  = walletColor(m.wallet);
-        var name   = (isMe && session.profile.username)
-          ? session.profile.username
+      chatMsgs.forEach(function(m, i) {
+        var isMe  = m.wallet === myWallet;
+        var color = walletColor(m.wallet);
+
+        // Display name: use stored username if present, else shorten wallet
+        var name = m.username
+          ? m.username
           : (m.wallet.slice(0,4) + '…' + m.wallet.slice(-4));
+
         var newSender = m.wallet !== prevWallet;
         prevWallet = m.wallet;
 
-        var timeStr = new Date(m.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        var t = new Date(m.created_at);
+        var timeStr = t.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
 
         if (newSender) {
           if (i > 0) html += '<div style="height:12px;"></div>';
           html +=
             '<div style="display:flex;align-items:baseline;gap:7px;margin-bottom:3px;">' +
-              '<span style="font-weight:700;font-size:0.78rem;color:' + color + ';">' + escapeHtml(name) + '</span>' +
+              '<span style="font-weight:700;font-size:0.8rem;color:' + color + ';">' + escapeHtml(name) + '</span>' +
               '<span style="font-size:0.6rem;color:#252540;">' + timeStr + '</span>' +
               (isMe ? '<span style="font-size:0.55rem;letter-spacing:1px;color:#1e1e3a;text-transform:uppercase;">you</span>' : '') +
             '</div>';
         }
 
-        html +=
-          '<div style="font-size:0.87rem;color:#c8c8e8;line-height:1.55;word-break:break-word;padding:1px 0;">' +
-            escapeHtml(m.text) +
-          '</div>';
+        html += '<div style="font-size:0.87rem;color:#c8c8e8;line-height:1.6;word-break:break-word;padding:1px 0;">' + escapeHtml(m.text) + '</div>';
       });
 
-      if (chatMessages.length === 0) {
-        html =
-          '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:0.7rem;">' +
-            '<div style="font-size:2.5rem;">🦒</div>' +
-            '<div style="color:#252540;font-size:0.78rem;letter-spacing:2px;text-transform:uppercase;">No messages yet</div>' +
-            '<div style="color:#1a1a30;font-size:0.7rem;">Be the first legend</div>' +
-          '</div>';
-      }
-
       inner.innerHTML = html;
+    }
 
-      // Auto-scroll if near bottom
-      var nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 100;
-      if (nearBottom || chatMessages.length <= 3) {
-        box.scrollTop = box.scrollHeight;
-      }
+    function scrollToBottom(force) {
+      var box = document.getElementById('chatBox');
+      if (!box) return;
+      var nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 120;
+      if (force || nearBottom) box.scrollTop = box.scrollHeight;
     }
 
     async function sendChatMessage() {
@@ -2218,30 +2226,40 @@ a.plink:hover{
 
       var text = inp.value.trim();
       if (!text) return;
-      if (text.length > 400) { alert('Max 400 characters.'); return; }
 
       inp.value = '';
-      inp.dispatchEvent(new Event('input'));  // reset counter
-      if (btn) { btn.disabled = true; btn.textContent = '…'; }
+      inp.dispatchEvent(new Event('input'));
+      btn.disabled = true;
+      btn.textContent = '…';
 
-      initGun();
+      var wallet   = walletPublicKey.toBase58();
+      var username = session.profile.username || null;
 
-      var wallet = walletPublicKey.toBase58();
-      var msgId  = wallet.slice(0,6) + '_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+      try {
+        var sb  = getSupaClient();
+        var res = await sb.from('chat_messages').insert({
+          wallet:   wallet,
+          username: username,
+          text:     text
+        }).select().single();
 
-      chatRef.get(msgId).put({
-        wallet: wallet,
-        text:   text,
-        time:   Date.now()
-      });
+        if (res.error) throw res.error;
 
-      if (btn) {
-        setTimeout(function() {
-          btn.disabled = false;
-          btn.textContent = 'Send';
-          inp.focus();
-        }, 300);
+        // Optimistic: add immediately so sender doesn't wait for real-time echo
+        var exists = chatMsgs.some(function(m){ return m.id === res.data.id; });
+        if (!exists) {
+          chatMsgs.push(res.data);
+          paintMessages();
+          scrollToBottom(true);
+        }
+      } catch(e) {
+        console.error('Send error:', e);
+        alert('Failed to send: ' + (e.message || e));
       }
+
+      btn.disabled = false;
+      btn.textContent = 'Send';
+      inp.focus();
     }
 
   </script>
