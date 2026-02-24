@@ -973,7 +973,7 @@ a.plink:hover{
 
   <section class="hero">
     <h1>HOLDER <span>DASHBOARD</span></h1>
-    <p class="hero-sub">Customize your profile, connect your wallets and socials to see your tier, points, and perks</p>
+    <p class="hero-sub">Customize your profile, connect your wallet, and manage your Cabbage staking</p>
   </section>
 
   <!-- DASHBOARD-ONLY NAV BAR -->
@@ -1209,10 +1209,6 @@ a.plink:hover{
       var idx = TIERS.findIndex(function(t) { return t.id === tier.id; });
       return idx < TIERS.length - 1 ? TIERS[idx + 1] : null;
     }
-    function calcPoints(count, tier) {
-      return Math.floor(count * 100 * tier.pointsMultiplier);
-    }
-
     function getProviderByName(name){
       if (name === "phantom") {
         if (window.phantom && window.phantom.solana && window.phantom.solana.isPhantom) return window.phantom.solana;
@@ -1568,8 +1564,6 @@ a.plink:hover{
 
       var tier = getTier(count);
       var nextTier = getNextTier(tier);
-      var points = calcPoints(count, tier);
-
       var displayName = session.profile.username ? session.profile.username : shortAddr(walletPublicKey.toBase58());
       var xUrl = session.profile.x ? buildXUrl(session.profile.x) : "";
       var disc = session.profile.discord ? session.profile.discord : "";
@@ -1627,21 +1621,6 @@ a.plink:hover{
           '</div>' +
         '</div>';
 
-      view.innerHTML +=
-        '<div class="stats-card">' +
-          '<div class="stats-title">LEGEND POINTS</div>' +
-          '<div class="points-display">' +
-            '<div class="points-number">' + points.toLocaleString() + '</div>' +
-            '<div class="points-label">Total Points</div>' +
-          '</div>' +
-          '<div class="stat-row"><span class="stat-label">Base (' + count + ' \u00D7 100)</span><span class="stat-value">' + (count*100) + '</span></div>' +
-          '<div class="stat-row"><span class="stat-label">Tier Multiplier</span><span class="stat-value cyan">' + tier.pointsMultiplier + 'x</span></div>' +
-          '<div class="stat-row"><span class="stat-label">Raffle Entries</span><span class="stat-value purple">' + (count * tier.raffleMultiplier) + '</span></div>' +
-        '</div>';
-
-      
-      // ---- CABBAGE (Soft Staking) ----
-      // Earn: 1 cabbage / week / NFT (off-chain, claimed via Supabase Edge Function)
       view.innerHTML +=
         '<div class="stats-card">' +
           '<div class="stats-title">CABBAGE STAKING</div>' +
@@ -2040,7 +2019,7 @@ var nextTierRow = nextTier
     ================================================================ */
 
     var SUPA_URL = 'https://hypqndasopdkrqvkllvc.supabase.co';
-    var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5cHFuZGFzb3Bka3JxdmtsbHZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5NTI1NjEsImV4cCI6MjA4NzUyODU2MX0.jXLaLfFudJf-xytfHAvMe5oV0DVeWi7xNB53Ib0GD_s';
+    var SUPA_KEY = 'sb_publishable_DwaaLS_hFJAOZ6M9VmYKYA_AQvyfgv1';
     var supaClient  = null;
     var chatChannel = null;   // real-time subscription
     var chatMsgs    = [];     // [{id, wallet, username, text, created_at}]
