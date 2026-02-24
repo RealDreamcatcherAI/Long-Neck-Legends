@@ -254,6 +254,135 @@
       letter-spacing: 1px;
     }
 
+    /* ---- WALLET PICKER MODAL ---- */
+    .wallet-picker-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 3000;
+      padding: 1.5rem;
+    }
+    .wallet-picker-backdrop.show { display: flex; }
+
+    .wallet-picker {
+      background: linear-gradient(160deg, #111125 0%, #0c0c1e 100%);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 2rem;
+      width: min(420px, 100%);
+      box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+    }
+    .wallet-picker-title {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 900;
+      font-size: 1rem;
+      letter-spacing: 3px;
+      color: #e0e0ff;
+      text-align: center;
+      margin-bottom: 0.4rem;
+    }
+    .wallet-picker-sub {
+      text-align: center;
+      font-size: 0.72rem;
+      color: #444;
+      letter-spacing: 1px;
+      margin-bottom: 1.8rem;
+    }
+    .wallet-option {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      width: 100%;
+      padding: 1rem 1.2rem;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 0.7rem;
+      font-family: 'Space Grotesk', sans-serif;
+      color: #e0e0ff;
+      text-align: left;
+      position: relative;
+    }
+    .wallet-option:last-child { margin-bottom: 0; }
+    .wallet-option:hover {
+      border-color: rgba(0,212,255,0.4);
+      background: rgba(0,212,255,0.05);
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+    .wallet-option:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .wallet-option-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+    }
+    .wallet-option-info { flex: 1; min-width: 0; }
+    .wallet-option-name {
+      font-weight: 700;
+      font-size: 0.95rem;
+      letter-spacing: 0.5px;
+    }
+    .wallet-option-desc {
+      font-size: 0.68rem;
+      color: #555;
+      margin-top: 2px;
+      letter-spacing: 0.3px;
+    }
+    .wallet-option-badge {
+      font-size: 0.6rem;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #00ff88;
+      background: rgba(0,255,136,0.1);
+      border: 1px solid rgba(0,255,136,0.2);
+      border-radius: 4px;
+      padding: 2px 7px;
+    }
+    .wallet-option-badge.not-found {
+      color: #555;
+      background: transparent;
+      border-color: rgba(255,255,255,0.07);
+    }
+    .wallet-picker-cancel {
+      display: block;
+      width: 100%;
+      margin-top: 1.2rem;
+      padding: 0.7rem;
+      background: transparent;
+      border: none;
+      color: #444;
+      font-size: 0.75rem;
+      letter-spacing: 1px;
+      cursor: pointer;
+      font-family: 'Space Grotesk', sans-serif;
+      transition: color 0.2s;
+      text-align: center;
+    }
+    .wallet-picker-cancel:hover { color: #888; }
+    .wallet-connecting-msg {
+      text-align: center;
+      font-size: 0.8rem;
+      color: #555;
+      margin-top: 1rem;
+      min-height: 1.2rem;
+      letter-spacing: 0.5px;
+    }
+
     /* ---- DASHBOARD GRID / VIEWS ---- */
     .dashboard {
       display: none;
@@ -1251,8 +1380,55 @@
 
   <!-- CONNECT PROMPT -->
   <div class="connect-section" id="connectSection">
-    <button class="connect-btn" onclick="connectWallet()">CONNECT WALLET</button>
-    <p class="connect-prompt">Phantom &bull; Solflare &bull; Backpack</p>
+    <button class="connect-btn" onclick="openWalletPicker()">CONNECT WALLET</button>
+    <p class="connect-prompt">Phantom &bull; Solflare &bull; Backpack &bull; Magic Eden</p>
+  </div>
+
+  <!-- WALLET PICKER MODAL -->
+  <div class="wallet-picker-backdrop" id="walletPickerBackdrop" onclick="closeWalletPickerOnBackdrop(event)">
+    <div class="wallet-picker">
+      <div class="wallet-picker-title">CONNECT WALLET</div>
+      <div class="wallet-picker-sub">Choose your Solana wallet</div>
+
+      <button class="wallet-option" id="wpPhantom" onclick="connectWalletByName('phantom')">
+        <div class="wallet-option-icon" style="background:rgba(171,133,255,0.12);">👻</div>
+        <div class="wallet-option-info">
+          <div class="wallet-option-name">Phantom</div>
+          <div class="wallet-option-desc">Most popular Solana wallet</div>
+        </div>
+        <span class="wallet-option-badge not-found" id="wpPhantomBadge">Checking...</span>
+      </button>
+
+      <button class="wallet-option" id="wpSolflare" onclick="connectWalletByName('solflare')">
+        <div class="wallet-option-icon" style="background:rgba(255,140,0,0.12);">🔥</div>
+        <div class="wallet-option-info">
+          <div class="wallet-option-name">Solflare</div>
+          <div class="wallet-option-desc">Solana's native wallet</div>
+        </div>
+        <span class="wallet-option-badge not-found" id="wpSolflareBadge">Checking...</span>
+      </button>
+
+      <button class="wallet-option" id="wpBackpack" onclick="connectWalletByName('backpack')">
+        <div class="wallet-option-icon" style="background:rgba(0,212,255,0.10);">🎒</div>
+        <div class="wallet-option-info">
+          <div class="wallet-option-name">Backpack</div>
+          <div class="wallet-option-desc">xNFT wallet by Coral</div>
+        </div>
+        <span class="wallet-option-badge not-found" id="wpBackpackBadge">Checking...</span>
+      </button>
+
+      <button class="wallet-option" id="wpMagicEden" onclick="connectWalletByName('magiceden')">
+        <div class="wallet-option-icon" style="background:rgba(230,0,122,0.10);">🪄</div>
+        <div class="wallet-option-info">
+          <div class="wallet-option-name">Magic Eden</div>
+          <div class="wallet-option-desc">Magic Eden wallet</div>
+        </div>
+        <span class="wallet-option-badge not-found" id="wpMagicEdenBadge">Checking...</span>
+      </button>
+
+      <div class="wallet-connecting-msg" id="wpStatusMsg"></div>
+      <button class="wallet-picker-cancel" onclick="closeWalletPicker()">Cancel</button>
+    </div>
   </div>
 
   <!-- LOADING -->
@@ -1392,32 +1568,146 @@
       return Math.floor(count * 100 * tier.pointsMultiplier);
     }
 
-    function getProviderByName(name){
-      if (name === "phantom") {
-        if (window.phantom && window.phantom.solana && window.phantom.solana.isPhantom) return window.phantom.solana;
-        if (window.solana && window.solana.isPhantom) return window.solana;
-      }
-      if (name === "solflare") {
-        if (window.solflare && window.solflare.isSolflare) return window.solflare;
-        if (window.solflare && window.solflare.solana) return window.solflare.solana;
-      }
-      if (name === "magiceden") {
-        if (window.magicEden && window.magicEden.solana) return window.magicEden.solana;
-        if (window.solana && window.solana.isMagicEden) return window.solana;
-        if (window.solana && window.solana.isMagicEdenWallet) return window.solana;
-      }
+    function getProviderByName(name) {
+      try {
+        if (name === "phantom") {
+          if (window.phantom?.solana?.isPhantom) return window.phantom.solana;
+          if (window.solana?.isPhantom) return window.solana;
+        }
+        if (name === "solflare") {
+          if (window.solflare?.isSolflare) return window.solflare;
+        }
+        if (name === "backpack") {
+          if (window.backpack?.solana) return window.backpack.solana;
+          if (window.xnft?.solana) return window.xnft.solana;
+        }
+        if (name === "magiceden") {
+          if (window.magicEden?.solana) return window.magicEden.solana;
+          if (window.solana?.isMagicEden) return window.solana;
+          if (window.solana?.isMagicEdenWallet) return window.solana;
+        }
+      } catch(e) {}
       return null;
     }
 
     function detectWalletProvider() {
-      if (window.phantom && window.phantom.solana && window.phantom.solana.isPhantom) return window.phantom.solana;
-      if (window.backpack && window.backpack.solana) return window.backpack.solana;
-      if (window.solflare && window.solflare.isSolflare) return window.solflare;
-      if (window.solflare && window.solflare.solana) return window.solflare.solana;
-      if (window.solana && window.solana.isPhantom) return window.solana;
-      if (window.solana) return window.solana;
-      return null;
+      return getProviderByName("phantom")
+          || getProviderByName("solflare")
+          || getProviderByName("backpack")
+          || getProviderByName("magiceden")
+          || null;
     }
+
+    // ── Wallet Picker UI ──────────────────────────────────────────────
+    function openWalletPicker() {
+      // Detect which wallets are installed and update badges
+      var wallets = [
+        { key: "phantom",   id: "wpPhantomBadge" },
+        { key: "solflare",  id: "wpSolflareBadge" },
+        { key: "backpack",  id: "wpBackpackBadge" },
+        { key: "magiceden", id: "wpMagicEdenBadge" }
+      ];
+      wallets.forEach(function(w) {
+        var badge = document.getElementById(w.id);
+        if (!badge) return;
+        var found = !!getProviderByName(w.key);
+        badge.textContent  = found ? "Detected" : "Not found";
+        badge.className    = "wallet-option-badge" + (found ? "" : " not-found");
+      });
+
+      document.getElementById("wpStatusMsg").textContent = "";
+      document.getElementById("walletPickerBackdrop").classList.add("show");
+    }
+
+    function closeWalletPicker() {
+      document.getElementById("walletPickerBackdrop").classList.remove("show");
+      document.getElementById("wpStatusMsg").textContent = "";
+      // Re-enable all buttons
+      ["wpPhantom","wpSolflare","wpBackpack","wpMagicEden"].forEach(function(id) {
+        var btn = document.getElementById(id);
+        if (btn) btn.disabled = false;
+      });
+    }
+
+    function closeWalletPickerOnBackdrop(e) {
+      if (e.target === document.getElementById("walletPickerBackdrop")) closeWalletPicker();
+    }
+
+    function setWpStatus(msg) {
+      var el = document.getElementById("wpStatusMsg");
+      if (el) el.textContent = msg;
+    }
+
+    async function connectWalletByName(name) {
+      var provider = getProviderByName(name);
+
+      if (!provider) {
+        var installUrls = {
+          phantom:   "https://phantom.app",
+          solflare:  "https://solflare.com",
+          backpack:  "https://backpack.app",
+          magiceden: "https://wallet.magiceden.io"
+        };
+        var url = installUrls[name] || "#";
+        if (confirm(name.charAt(0).toUpperCase() + name.slice(1) + " wallet not detected.\n\nOpen install page?")) {
+          window.open(url, "_blank");
+        }
+        return;
+      }
+
+      // Disable all buttons while connecting
+      ["wpPhantom","wpSolflare","wpBackpack","wpMagicEden"].forEach(function(id) {
+        var btn = document.getElementById(id);
+        if (btn) btn.disabled = true;
+      });
+      setWpStatus("Opening " + name + "…");
+
+      try {
+        var resp = await provider.connect({ onlyIfTrusted: false });
+        var pubkey = (resp && resp.publicKey) ? resp.publicKey : provider.publicKey;
+
+        if (!pubkey) throw new Error("No public key returned. Try unlocking your wallet first.");
+
+        walletProvider  = provider;
+        walletPublicKey = pubkey;
+
+        var addr = walletPublicKey.toBase58();
+
+        closeWalletPicker();
+
+        document.getElementById("walletDisplay").textContent = shortAddr(addr);
+        document.getElementById("dashNavWrap").classList.add("show");
+        document.getElementById("walletChip").style.display  = "flex";
+        document.getElementById("disconnectBtn").style.display = "inline-block";
+        document.getElementById("connectSection").style.display = "none";
+        document.getElementById("loadingSection").style.display = "block";
+
+        loadProfileFromStorage();
+        loadSecondWalletFromStorage();
+        session.profilePanelOpen = false;
+        applyProfilePanelUI();
+
+        await loadDashboard();
+
+      } catch (err) {
+        console.error("Wallet connect error:", err);
+        var msg = err.message || String(err);
+        // User rejected
+        if (msg.toLowerCase().includes("user rejected") || err.code === 4001) {
+          setWpStatus("Connection cancelled.");
+        } else {
+          setWpStatus("Error: " + msg);
+        }
+        // Re-enable buttons so they can retry
+        ["wpPhantom","wpSolflare","wpBackpack","wpMagicEden"].forEach(function(id) {
+          var btn = document.getElementById(id);
+          if (btn) btn.disabled = false;
+        });
+      }
+    }
+
+    // Keep old connectWallet() as fallback for any lingering calls
+    async function connectWallet() { openWalletPicker(); }
 
     function storageKey() {
       var addr = walletPublicKey ? walletPublicKey.toBase58() : "no_wallet";
@@ -1557,48 +1847,6 @@
       applyProfilePanelUI();
     }
 
-    async function connectWallet() {
-      console.log("Connect clicked");
-      var provider = detectWalletProvider();
-      console.log("Provider:", provider);
-      if (!provider || typeof provider.connect !== "function") {
-        alert("No compatible Solana wallet found. Install Phantom, Solflare, or Backpack.");
-        return;
-      }
-      try {
-        if (provider.isConnected && typeof provider.disconnect === "function") {
-          try { await provider.disconnect(); } catch (e) {}
-        }
-
-        var resp = await provider.connect({ onlyIfTrusted: false });
-        walletProvider = provider;
-        walletPublicKey = resp.publicKey || provider.publicKey;
-        if (!walletPublicKey) throw new Error("Wallet connected but no publicKey found.");
-
-        var addr = walletPublicKey.toBase58();
-        document.getElementById("walletDisplay").textContent = shortAddr(addr);
-
-        document.getElementById("dashNavWrap").classList.add("show");
-        document.getElementById("walletChip").style.display = "flex";
-        document.getElementById("disconnectBtn").style.display = "inline-block";
-
-        document.getElementById("connectSection").style.display = "none";
-        document.getElementById("loadingSection").style.display = "block";
-
-        loadProfileFromStorage();
-        loadSecondWalletFromStorage();
-
-        // ✅ default OFF every connect
-        session.profilePanelOpen = false;
-        applyProfilePanelUI();
-
-        await loadDashboard();
-      } catch (err) {
-        console.error("Connect error:", err);
-        alert("Connection error: " + (err.message || err));
-      }
-    }
-
     function disconnectWallet() {
       stopChatPoll();
       try { if (walletProvider && walletProvider.disconnect) walletProvider.disconnect(); } catch (e) {}
@@ -1631,6 +1879,12 @@
     }
 
     function switchView(viewName){
+      // Holder-only gate for chat
+      if(viewName === "chat" && (!session.loadedNFTs || session.loadedNFTs.length === 0)){
+        alert("Only LNL holders can access chat.");
+        return;
+      }
+
       session.currentView = viewName;
 
       // hide all views
@@ -1685,7 +1939,7 @@
         '">' +
           '<div>' +
             '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.4rem;letter-spacing:3px;color:#555;">LNL HOLDER CHAT</div>' +
-            '<div style="font-size:0.68rem;color:#333;letter-spacing:1px;margin-top:2px;">Open to all connected wallets</div>' +
+            '<div style="font-size:0.68rem;color:#333;letter-spacing:1px;margin-top:2px;">Visible to all connected holders</div>' +
           '</div>' +
           '<div id="chatOnlineIndicator" style="display:flex;align-items:center;gap:6px;font-size:0.7rem;color:#555;">' +
             '<div style="width:7px;height:7px;border-radius:50%;background:#00ff88;box-shadow:0 0 6px rgba(0,255,136,0.6);"></div>' +
@@ -1815,7 +2069,7 @@
       msgs.forEach(function(m, i) {
         var wallet  = m.wallet || "anon";
         var isMe    = wallet === myWallet;
-        var display = (isMe && session.profile.username)
+        var display = session.profile.username && isMe
           ? session.profile.username
           : (wallet.length > 8 ? wallet.slice(0,4) + "…" + wallet.slice(-4) : wallet);
         var color   = walletColor(wallet);
