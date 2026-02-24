@@ -11,6 +11,18 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
+    /* Keep banner links (like X) white */
+a.plink,
+a.plink:visited,
+a.plink:hover,
+a.plink:active {
+  color: #e0e0ff;          /* your “white” */
+  text-decoration: none;
+}
+a.plink:hover{
+  text-decoration: underline; /* optional */
+}
+    
     body {
       font-family: 'Space Grotesk', sans-serif;
       background: #0a0a1a;
@@ -254,135 +266,6 @@
       letter-spacing: 1px;
     }
 
-    /* ---- WALLET PICKER MODAL ---- */
-    .wallet-picker-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.75);
-      backdrop-filter: blur(6px);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 3000;
-      padding: 1.5rem;
-    }
-    .wallet-picker-backdrop.show { display: flex; }
-
-    .wallet-picker {
-      background: linear-gradient(160deg, #111125 0%, #0c0c1e 100%);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 20px;
-      padding: 2rem;
-      width: min(420px, 100%);
-      box-shadow: 0 24px 80px rgba(0,0,0,0.6);
-    }
-    .wallet-picker-title {
-      font-family: 'Orbitron', sans-serif;
-      font-weight: 900;
-      font-size: 1rem;
-      letter-spacing: 3px;
-      color: #e0e0ff;
-      text-align: center;
-      margin-bottom: 0.4rem;
-    }
-    .wallet-picker-sub {
-      text-align: center;
-      font-size: 0.72rem;
-      color: #444;
-      letter-spacing: 1px;
-      margin-bottom: 1.8rem;
-    }
-    .wallet-option {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      width: 100%;
-      padding: 1rem 1.2rem;
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.07);
-      border-radius: 12px;
-      cursor: pointer;
-      transition: all 0.2s;
-      margin-bottom: 0.7rem;
-      font-family: 'Space Grotesk', sans-serif;
-      color: #e0e0ff;
-      text-align: left;
-      position: relative;
-    }
-    .wallet-option:last-child { margin-bottom: 0; }
-    .wallet-option:hover {
-      border-color: rgba(0,212,255,0.4);
-      background: rgba(0,212,255,0.05);
-      transform: translateY(-1px);
-      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-    }
-    .wallet-option:disabled {
-      opacity: 0.35;
-      cursor: not-allowed;
-      transform: none;
-    }
-    .wallet-option-icon {
-      width: 40px;
-      height: 40px;
-      border-radius: 10px;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.4rem;
-    }
-    .wallet-option-info { flex: 1; min-width: 0; }
-    .wallet-option-name {
-      font-weight: 700;
-      font-size: 0.95rem;
-      letter-spacing: 0.5px;
-    }
-    .wallet-option-desc {
-      font-size: 0.68rem;
-      color: #555;
-      margin-top: 2px;
-      letter-spacing: 0.3px;
-    }
-    .wallet-option-badge {
-      font-size: 0.6rem;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      color: #00ff88;
-      background: rgba(0,255,136,0.1);
-      border: 1px solid rgba(0,255,136,0.2);
-      border-radius: 4px;
-      padding: 2px 7px;
-    }
-    .wallet-option-badge.not-found {
-      color: #555;
-      background: transparent;
-      border-color: rgba(255,255,255,0.07);
-    }
-    .wallet-picker-cancel {
-      display: block;
-      width: 100%;
-      margin-top: 1.2rem;
-      padding: 0.7rem;
-      background: transparent;
-      border: none;
-      color: #444;
-      font-size: 0.75rem;
-      letter-spacing: 1px;
-      cursor: pointer;
-      font-family: 'Space Grotesk', sans-serif;
-      transition: color 0.2s;
-      text-align: center;
-    }
-    .wallet-picker-cancel:hover { color: #888; }
-    .wallet-connecting-msg {
-      text-align: center;
-      font-size: 0.8rem;
-      color: #555;
-      margin-top: 1rem;
-      min-height: 1.2rem;
-      letter-spacing: 0.5px;
-    }
-
     /* ---- DASHBOARD GRID / VIEWS ---- */
     .dashboard {
       display: none;
@@ -400,7 +283,9 @@
       gap: 1.5rem;
     }
     #view-chat.show {
-      grid-template-columns: 1fr;
+      display: flex;
+      flex-direction: column;
+      grid-template-columns: unset;
     }
     @media (max-width: 800px) {
       .view.show { grid-template-columns: 1fr; }
@@ -561,68 +446,65 @@
     .tier-shark .tier-progress-fill { background: #00ffcc; box-shadow: 0 0 10px rgba(0,255,204,0.5); }
     .tier-whale .tier-progress-fill { background: #00ffcc; box-shadow: 0 0 10px rgba(0,255,204,0.5); }
 
-    /* ---- Profile Name (right side of tier card) ---- */
-    .profile-name-box{
-      flex: 0 0 320px;
-      max-width: 360px;
-      display: flex;
-      justify-content: flex-end;
-      align-items: center;
-      text-align: right;
-    }
-    .profile-name-inner{
-      width: 100%;
-      padding: 0.6rem 0.8rem;
-      border-radius: 14px;
-      background: rgba(0,0,0,0.18);
-      border: 1px solid rgba(255,255,255,0.06);
-    }
-    .profile-name-label{
-      font-size: 0.65rem;
-      letter-spacing: 2.5px;
-      text-transform: uppercase;
-      color: #555;
-      margin-bottom: 0.35rem;
-    }
-    .profile-name{
-      font-family: 'Orbitron', sans-serif;
-      font-weight: 900;
-      letter-spacing: 1px;
-      font-size: 1.15rem;
-      color: #e0e0ff;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .profile-links{
-      margin-top: 0.45rem;
-      display: flex;
-      justify-content: flex-end;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    .plink{
-      font-size: 0.7rem;
-      color: #888;
-      border: 1px solid rgba(255,255,255,0.08);
-      background: rgba(255,255,255,0.02);
-      padding: 6px 10px;
-      border-radius: 999px;
-      text-decoration: none;
-      transition: all 0.2s;
-      letter-spacing: 1px;
-    }
-    .plink:hover{
-      border-color: rgba(0,212,255,0.4);
-      color: #00d4ff;
-      box-shadow: 0 0 18px rgba(0,212,255,0.12);
-    }
+/* ---- Username + Social Box (right side of tier card) ---- */
+.profile-name-box{
+  flex: 0 0 320px;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;     /* right align */
+  justify-content: center;
+  text-align: right;
+  gap: 0.5rem;
+}
 
-    @media (max-width: 900px){
-      .profile-name-box{ flex: 1 1 auto; max-width: 100%; justify-content: center; text-align: center; }
-      .profile-links{ justify-content: center; }
-      .profile-name-inner{ margin-top: 0.5rem; }
-    }
+.profile-username{
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2.4rem;
+  letter-spacing: 4px;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* username color mimics tier-name color */
+.tier-neck .profile-username { color: #00d4ff; }
+.tier-longneck .profile-username { color: #7b68ee; }
+.tier-legend .profile-username { color: #ffd700; }
+.tier-og .profile-username { color: #ffd700; }
+.tier-sardine .profile-username { color: #ff3c5c; }
+.tier-barracuda .profile-username { color: #ff3c5c; }
+.tier-shark .profile-username { color: #00ffcc; }
+.tier-whale .profile-username { color: #00ffcc; }
+
+.profile-name-inner{
+  width: 100%;
+  padding: 0.7rem 0.8rem;
+  border-radius: 14px;
+  background: rgba(0,0,0,0.18);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.profile-links{
+  display: flex;
+  justify-content: flex-end; /* keep right aligned */
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* responsive: center it on smaller widths */
+@media (max-width: 900px){
+  .profile-name-box{
+    flex: 1 1 auto;
+    max-width: 100%;
+    align-items: center;
+    text-align: center;
+  }
+  .profile-links{ justify-content: center; }
+}
 
     /* ---- STATS CARD ---- */
     .stats-card {
@@ -1012,337 +894,72 @@
       .perks-grid { grid-template-columns: 1fr 1fr; }
       .gallery-grid { grid-template-columns: repeat(2, 1fr); }
     }
-
-    /* ================================================================
-       LEADERBOARD + PROOF SUBMISSION STYLES
-    ================================================================ */
-    #view-leaderboard.show { grid-template-columns: 1fr; }
-
-    /* ── Season banner ── */
-    .lb-season-banner {
-      background: linear-gradient(135deg, rgba(0,212,255,0.07) 0%, rgba(123,104,238,0.07) 100%);
-      border: 1px solid rgba(0,212,255,0.18);
-      border-radius: 14px;
-      padding: 1.2rem 1.6rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 0.8rem;
-      margin-bottom: 1.4rem;
+  
+    /* ---- TRAITS / SUBDAO ---- */
+    .subdao-divider{
+      margin-top: 1.2rem;
+      padding-top: 1.2rem;
+      border-top: 1px solid rgba(255,255,255,0.06);
     }
-    .lb-season-label {
-      font-size: 0.65rem;
-      letter-spacing: 3px;
-      text-transform: uppercase;
-      color: #555;
-      margin-bottom: 0.2rem;
+    .subdao-grid{
+      grid-template-columns: repeat(3, 1fr);
     }
-    .lb-season-name {
-      font-family: 'Orbitron', sans-serif;
-      font-weight: 900;
-      font-size: 1rem;
-      color: #00d4ff;
-      letter-spacing: 2px;
+    @media (max-width: 900px){
+      .subdao-grid{ grid-template-columns: repeat(2, 1fr); }
     }
-    .lb-season-timer {
-      font-size: 0.75rem;
-      color: #666;
-      margin-top: 0.3rem;
+    @media (max-width: 600px){
+      .subdao-grid{ grid-template-columns: 1fr; }
     }
-    .lb-season-timer strong { color: #aaa; }
-
-    .lb-rule-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      background: rgba(0,212,255,0.06);
-      border: 1px solid rgba(0,212,255,0.2);
+    .trait-pills{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top: 0.6rem;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding: 6px 10px;
       border-radius: 999px;
-      padding: 7px 16px;
-      font-size: 0.72rem;
-      color: #00d4ff;
-      letter-spacing: 1px;
-      font-weight: 700;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(0,0,0,0.22);
+      color:#bfc2ff;
+      font-size:0.7rem;
+      letter-spacing:0.6px;
+      text-transform: uppercase;
+      cursor: default;
+      user-select:none;
     }
-
-    /* ── Scoring key pills ── */
-    .lb-scoring {
-      display: flex;
-      gap: 0.6rem;
-      flex-wrap: wrap;
-      margin-bottom: 1.6rem;
+    .pill.on{
+      border-color: rgba(0,255,136,0.35);
+      background: rgba(0,255,136,0.06);
+      color: #00ff88;
+      box-shadow: 0 0 18px rgba(0,255,136,0.08);
     }
-    .lb-score-pill {
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 8px;
-      padding: 8px 14px;
-      font-size: 0.72rem;
-      color: #666;
-      letter-spacing: 0.5px;
-      display: flex;
-      align-items: center;
-      gap: 7px;
-    }
-    .lb-score-pill .pill-pts { font-family:'Orbitron',sans-serif; font-weight:900; color:#00d4ff; font-size:0.85rem; }
-    .lb-score-pill .pill-cap { font-size:0.62rem; color:#444; }
-
-    /* ── Leaderboard table ── */
-    .lb-table {
-      width: 100%;
+    .pill.off{ opacity: 0.45; }
+    .trait-table{
+      width:100%;
       border-collapse: collapse;
-    }
-    .lb-table th {
-      text-align: left;
-      font-size: 0.62rem;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: #3a3a5c;
-      padding: 0 0.8rem 0.9rem;
-      border-bottom: 1px solid #1e1e3a;
-    }
-    .lb-table th.right { text-align: right; }
-    .lb-table td {
-      padding: 0.85rem 0.8rem;
-      border-bottom: 1px solid rgba(255,255,255,0.04);
-      font-size: 0.85rem;
-      vertical-align: middle;
-    }
-    .lb-table tr:last-child td { border-bottom: none; }
-    .lb-table tbody tr:hover td { background: rgba(255,255,255,0.018); }
-
-    .lb-rank {
-      font-family: 'Orbitron', sans-serif;
-      font-weight: 900;
-      font-size: 0.78rem;
-      width: 36px;
-      color: #333;
-    }
-    .lb-rank.gold   { color: #ffd700; text-shadow: 0 0 14px rgba(255,215,0,0.5); }
-    .lb-rank.silver { color: #c0c0c0; }
-    .lb-rank.bronze { color: #cd7f32; }
-
-    .lb-user { display: flex; align-items: center; gap: 0.7rem; }
-    .lb-avatar {
-      width: 36px; height: 36px;
-      border-radius: 50%;
-      background: linear-gradient(135deg,#1a1a3a,#0d0d20);
-      flex-shrink: 0;
-      overflow: hidden;
-      border: 1px solid rgba(255,255,255,0.08);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.75rem; color: #444; font-weight: 700;
-    }
-    .lb-avatar img { width:100%; height:100%; object-fit:cover; }
-    .lb-name  { font-weight: 700; font-size: 0.83rem; color: #e0e0ff; }
-    .lb-handle { font-size: 0.68rem; color: #444; margin-top: 2px; font-family: monospace; }
-
-    .lb-breakdown { display: flex; gap: 0.45rem; flex-wrap: wrap; }
-    .lb-chip {
-      font-size: 0.63rem;
-      padding: 3px 8px;
-      border-radius: 5px;
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.06);
-      color: #555;
-      white-space: nowrap;
-    }
-    .lb-chip.active { color: #bbb; background: rgba(0,212,255,0.06); border-color: rgba(0,212,255,0.18); }
-
-    .lb-total {
-      text-align: right;
-      font-family: 'Orbitron', sans-serif;
-      font-weight: 900;
-      font-size: 1.05rem;
-      color: #00d4ff;
-    }
-    .lb-total.top { color: #ffd700; text-shadow: 0 0 18px rgba(255,215,0,0.4); }
-
-    .lb-you-row td { background: rgba(0,212,255,0.04) !important; }
-    .lb-you-badge {
-      display: inline-block;
-      background: rgba(0,212,255,0.15);
-      border: 1px solid rgba(0,212,255,0.3);
-      border-radius: 4px;
-      font-size: 0.55rem;
-      letter-spacing: 1.5px;
-      color: #00d4ff;
-      padding: 2px 5px;
-      margin-left: 6px;
-      vertical-align: middle;
-      text-transform: uppercase;
-    }
-
-    .lb-empty {
-      text-align: center;
-      padding: 4rem 1rem;
-      color: #333;
-      font-size: 0.82rem;
-      letter-spacing: 1px;
-      line-height: 2;
-    }
-
-    /* ── Submit proof form ── */
-    .proof-form-card {
-      background: #111125;
-      border: 1px solid #1e1e3a;
-      border-radius: 14px;
-      padding: 2rem;
-      margin-bottom: 0;
-    }
-    .proof-form-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1rem;
-      margin-top: 1.2rem;
-    }
-    @media(max-width:600px){ .proof-form-grid { grid-template-columns: 1fr; } }
-    .proof-form-grid .full { grid-column: 1 / -1; }
-
-    .pf-label {
-      display: block;
-      font-size: 0.65rem;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: #555;
-      margin-bottom: 0.45rem;
-      font-weight: 700;
-    }
-    .pf-input, .pf-select {
-      width: 100%;
-      padding: 10px 13px;
-      background: #0a0a1a;
-      border: 1px solid #1e1e3a;
-      border-radius: 8px;
-      color: #e0e0ff;
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 0.88rem;
-      transition: border-color 0.2s;
-      outline: none;
-      -webkit-appearance: none;
-    }
-    .pf-input:focus, .pf-select:focus { border-color: rgba(0,212,255,0.45); }
-    .pf-input::placeholder { color: #333; }
-    .pf-input.error { border-color: rgba(255,60,92,0.55); }
-
-    .pf-file-label {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-      padding: 10px 13px;
-      background: #0a0a1a;
-      border: 1px dashed #1e1e3a;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 0.82rem;
-      color: #555;
-      transition: all 0.2s;
-    }
-    .pf-file-label:hover { border-color: rgba(0,212,255,0.3); color: #888; }
-    .pf-file-label.has-file { border-color: rgba(0,212,255,0.3); color: #00d4ff; }
-    .pf-file-input { display: none; }
-
-    .pf-submit-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 0.8rem;
-      margin-top: 1.2rem;
-    }
-    .pf-rate-note { font-size: 0.7rem; color: #444; letter-spacing: 0.5px; }
-    .pf-msg { font-size: 0.78rem; margin-top: 0.8rem; padding: 0.6rem 1rem; border-radius: 8px; display: none; }
-    .pf-msg.ok  { display:block; background:rgba(0,255,136,0.07); border:1px solid rgba(0,255,136,0.2); color:#00ff88; }
-    .pf-msg.err { display:block; background:rgba(255,60,92,0.07); border:1px solid rgba(255,60,92,0.2); color:#ff3c5c; }
-
-    /* ── My submissions list ── */
-    .my-subs-card {
-      background: #111125;
-      border: 1px solid #1e1e3a;
-      border-radius: 14px;
-      padding: 2rem;
-    }
-    .sub-row {
-      display: flex;
-      align-items: flex-start;
-      gap: 0.9rem;
-      padding: 0.9rem 0;
-      border-bottom: 1px solid rgba(255,255,255,0.04);
-    }
-    .sub-row:last-child { border-bottom: none; }
-    .sub-status-dot {
-      width: 9px; height: 9px;
-      border-radius: 50%;
-      flex-shrink: 0;
-      margin-top: 5px;
-    }
-    .sub-status-dot.pending  { background: #f5a623; box-shadow: 0 0 8px rgba(245,166,35,0.5); }
-    .sub-status-dot.approved { background: #00ff88; box-shadow: 0 0 8px rgba(0,255,136,0.5); }
-    .sub-status-dot.rejected { background: #ff3c5c; box-shadow: 0 0 8px rgba(255,60,92,0.4); }
-    .sub-body { flex: 1; min-width: 0; }
-    .sub-url {
+      margin-top: 0.8rem;
       font-size: 0.8rem;
-      color: #00d4ff;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      text-decoration: none;
     }
-    .sub-url:hover { text-decoration: underline; }
-    .sub-meta { font-size: 0.68rem; color: #444; margin-top: 3px; }
-    .sub-status-label {
-      font-size: 0.65rem;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      font-weight: 700;
-      flex-shrink: 0;
+    .trait-table th, .trait-table td{
+      padding: 10px 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      text-align: left;
+      vertical-align: top;
     }
-    .sub-status-label.pending  { color: #f5a623; }
-    .sub-status-label.approved { color: #00ff88; }
-    .sub-status-label.rejected { color: #ff3c5c; }
-    .sub-pts {
-      font-family: 'Orbitron', sans-serif;
-      font-weight: 900;
-      font-size: 0.85rem;
-      color: #00d4ff;
-      flex-shrink: 0;
+    .trait-table th{
+      font-family: 'Bebas Neue', sans-serif;
+      letter-spacing: 2px;
+      color:#777;
+      font-size: 0.95rem;
     }
+    .trait-muted{ color:#666; font-size:0.78rem; }
 
-    /* ── Misc ── */
-    .lb-action-btn {
-      background: transparent;
-      border: 1px solid rgba(0,212,255,0.25);
-      color: #00d4ff;
-      font-size: 0.7rem;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      padding: 8px 18px;
-      border-radius: 7px;
-      cursor: pointer;
-      font-family: 'Space Grotesk', sans-serif;
-      font-weight: 700;
-      transition: all 0.2s;
-    }
-    .lb-action-btn:hover:not(:disabled) { background: rgba(0,212,255,0.08); box-shadow: 0 0 18px rgba(0,212,255,0.12); }
-    .lb-action-btn:disabled { opacity: 0.38; cursor: default; }
-    .lb-action-btn.secondary {
-      border-color: rgba(255,255,255,0.1);
-      color: #666;
-    }
-    .lb-action-btn.secondary:hover:not(:disabled) { border-color: rgba(255,255,255,0.2); color: #aaa; background: transparent; box-shadow: none; }
-
-    .lb-spinner {
-      display: inline-block;
-      width: 16px; height: 16px;
-      border: 2px solid rgba(0,212,255,0.15);
-      border-top-color: #00d4ff;
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      vertical-align: middle;
-      margin-right: 6px;
-    }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
 </head>
 
 <body>
@@ -1364,8 +981,7 @@
     <div class="dash-nav">
       <div class="dash-tabs">
         <button class="dash-tab" id="tabProfile" onclick="toggleProfilePanel()">Profile</button>
-        <button class="dash-tab" id="tabChat" onclick="switchView('chat')">Chat</button>
-        <button class="dash-tab" id="tabLeaderboard" onclick="switchView('leaderboard')">Leaderboard</button>
+        <button class="dash-tab" id="tabChat" onclick="switchView('chat')">💬 Chat</button>
       </div>
 
       <div class="dash-right">
@@ -1380,55 +996,8 @@
 
   <!-- CONNECT PROMPT -->
   <div class="connect-section" id="connectSection">
-    <button class="connect-btn" onclick="openWalletPicker()">CONNECT WALLET</button>
-    <p class="connect-prompt">Phantom &bull; Solflare &bull; Backpack &bull; Magic Eden</p>
-  </div>
-
-  <!-- WALLET PICKER MODAL -->
-  <div class="wallet-picker-backdrop" id="walletPickerBackdrop" onclick="closeWalletPickerOnBackdrop(event)">
-    <div class="wallet-picker">
-      <div class="wallet-picker-title">CONNECT WALLET</div>
-      <div class="wallet-picker-sub">Choose your Solana wallet</div>
-
-      <button class="wallet-option" id="wpPhantom" onclick="connectWalletByName('phantom')">
-        <div class="wallet-option-icon" style="background:rgba(171,133,255,0.12);">👻</div>
-        <div class="wallet-option-info">
-          <div class="wallet-option-name">Phantom</div>
-          <div class="wallet-option-desc">Most popular Solana wallet</div>
-        </div>
-        <span class="wallet-option-badge not-found" id="wpPhantomBadge">Checking...</span>
-      </button>
-
-      <button class="wallet-option" id="wpSolflare" onclick="connectWalletByName('solflare')">
-        <div class="wallet-option-icon" style="background:rgba(255,140,0,0.12);">🔥</div>
-        <div class="wallet-option-info">
-          <div class="wallet-option-name">Solflare</div>
-          <div class="wallet-option-desc">Solana's native wallet</div>
-        </div>
-        <span class="wallet-option-badge not-found" id="wpSolflareBadge">Checking...</span>
-      </button>
-
-      <button class="wallet-option" id="wpBackpack" onclick="connectWalletByName('backpack')">
-        <div class="wallet-option-icon" style="background:rgba(0,212,255,0.10);">🎒</div>
-        <div class="wallet-option-info">
-          <div class="wallet-option-name">Backpack</div>
-          <div class="wallet-option-desc">xNFT wallet by Coral</div>
-        </div>
-        <span class="wallet-option-badge not-found" id="wpBackpackBadge">Checking...</span>
-      </button>
-
-      <button class="wallet-option" id="wpMagicEden" onclick="connectWalletByName('magiceden')">
-        <div class="wallet-option-icon" style="background:rgba(230,0,122,0.10);">🪄</div>
-        <div class="wallet-option-info">
-          <div class="wallet-option-name">Magic Eden</div>
-          <div class="wallet-option-desc">Magic Eden wallet</div>
-        </div>
-        <span class="wallet-option-badge not-found" id="wpMagicEdenBadge">Checking...</span>
-      </button>
-
-      <div class="wallet-connecting-msg" id="wpStatusMsg"></div>
-      <button class="wallet-picker-cancel" onclick="closeWalletPicker()">Cancel</button>
-    </div>
+    <button class="connect-btn" onclick="connectWallet()">CONNECT WALLET</button>
+    <p class="connect-prompt">Phantom &bull; Solflare &bull; Magic Eden</p>
   </div>
 
   <!-- LOADING -->
@@ -1441,7 +1010,6 @@
   <div class="dashboard" id="dashboard">
     <div class="view show" id="view-profile"></div>
     <div class="view" id="view-chat"></div>
-    <div class="view" id="view-leaderboard"></div>
   </div>
 
   <!-- PFP MODAL -->
@@ -1489,6 +1057,29 @@
     </div>
   </div>
 
+
+  <!-- TRAITS MODAL -->
+  <div class="modal-backdrop" id="traitsModalBackdrop" onclick="closeTraitsModal(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <div class="modal-title">Trait Data</div>
+        <button class="modal-close" onclick="hideTraitsModal()">✕</button>
+      </div>
+      <div class="modal-body" id="traitsModalBody">
+        <div class="modal-note">This is pulled live from your NFTs metadata. SubDAO unlocks are based on holding at least 1 matching trait.</div>
+        <div id="subdaoPills" class="trait-pills"></div>
+        <table class="trait-table" id="traitsTable">
+          <thead>
+            <tr><th>Trait</th><th>Count</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="trait-muted">Tip: If something looks missing, it usually means the NFT metadata doesn’t include that attribute field.</div>
+      </div>
+    </div>
+  </div>
+
+
   <footer>
     <p>&copy; 2026 Long Neck Legends &bull; Diamond Hands Only</p>
   </footer>
@@ -1499,14 +1090,7 @@
     var CONFIG = {
       COLLECTION_MINT: "8Rt3Ayqth4DAiPnW9MDFi63TiQJHmohfTWLMQFHi4KZH",
       RPC_URL: "https://mainnet.helius-rpc.com/?api-key=44cfd082-9089-430d-8de3-cd310c478b1c",
-      MAGIC_EDEN_LINK: "https://magiceden.us/marketplace/long_neck_legends",
-      // Leaderboard: official X account whose timeline is scanned
-      OFFICIAL_X_HANDLE: "LongNeckLegends",
-      // Only posts containing this marker count toward the leaderboard
-      MARKER: "#stickyourneckout",
-      // Backend proxy endpoint — set this to your server route
-      // GET /api/leaderboard  →  { posts: [...], scores: [...] }
-      LEADERBOARD_API: "/api/leaderboard"
+      MAGIC_EDEN_LINK: "https://magiceden.us/marketplace/long_neck_legends"
     };
 
     var TIERS = [
@@ -1535,6 +1119,67 @@
       { icon: "\u{1F988}", name: "Shark Council", desc: "Direct input on project direction, partnerships, and roadmap decisions.", reqTier: "shark" },
       { icon: "\u{1F40B}", name: "Lifetime Perks", desc: "Permanent max discount, first priority on all future drops, and custom merch.", reqTier: "whale" }
     ];
+
+
+    // ---- SUBDAO (Trait-based) ----
+    var SUBDAOS = [
+      { id:"talltoker",  name:"Tall Toker",     icon:"🚬", reqValues:["Gold Pipe Beak","Blunt Beak"], desc:"Hold at least 1 LNL with Gold Pipe Beak or Blunt Beak." },
+      { id:"jeeterbeater", name:"Jeeter Beater", icon:"🥊", reqValues:["Boxing Gloves"], desc:"Hold at least 1 LNL with Boxing Gloves." },
+      { id:"hoodiegang", name:"Hoodie Gang",    icon:"🧥", reqValues:["Hoodie"], desc:"Hold at least 1 LNL with Hoodie." },
+      { id:"headphones", name:"HeadPhones",     icon:"🎧", reqValues:["Headphones"], desc:"Hold at least 1 LNL with Headphones." },
+      { id:"royalty",    name:"Royalty",        icon:"👑", reqValues:["Golden Crown","Hippie Crown","Gold Grill Beak"], desc:"Hold at least 1 LNL with Golden Crown, Hippie Crown, or Gold Grill Beak." },
+      { id:"wizzy",      name:"Wizzy",          icon:"🧙", reqValues:["Wizard Hat"], desc:"Hold at least 1 LNL with Wizard Hat." },
+      { id:"bob",        name:"BoB",            icon:"🧢", reqValues:["Beanie"], desc:"Hold at least 1 LNL with Beanie." },
+      { id:"frobros",    name:"Fro Bros",       icon:"🦱", reqValues:["Afro"], desc:"Hold at least 1 LNL with Afro." },
+      { id:"goldenticket", name:"Golden Ticket", icon:"🎟️", reqValues:["Golden Ticket"], desc:"Hold at least 1 LNL with Golden Ticket." }
+    ];
+
+    function normStr(s){
+      return String(s || "").trim().toLowerCase();
+    }
+
+    function buildTraitValueSet(nfts){
+      var set = {};
+      (nfts || []).forEach(function(nft){
+        var attrs = nft && nft.attributes ? nft.attributes : [];
+        if (!Array.isArray(attrs)) return;
+        attrs.forEach(function(a){
+          if (!a) return;
+          var v = a.value != null ? String(a.value) : "";
+          if (!v) return;
+          set[normStr(v)] = true;
+        });
+      });
+      return set;
+    }
+
+    function getSubdaoMatches(nfts){
+      var values = buildTraitValueSet(nfts);
+      return SUBDAOS.map(function(d){
+        var hit = "";
+        for (var i=0;i<d.reqValues.length;i++){
+          if (values[normStr(d.reqValues[i])]) { hit = d.reqValues[i]; break; }
+        }
+        return { id:d.id, name:d.name, icon:d.icon, unlocked: !!hit, hit: hit, reqValues: d.reqValues, desc: d.desc };
+      });
+    }
+
+    function buildTraitCounts(nfts){
+      var counts = {};
+      (nfts || []).forEach(function(nft){
+        var attrs = nft && nft.attributes ? nft.attributes : [];
+        if (!Array.isArray(attrs)) return;
+        attrs.forEach(function(a){
+          if (!a) return;
+          var v = a.value != null ? String(a.value) : "";
+          if (!v) return;
+          var key = v.trim();
+          counts[key] = (counts[key] || 0) + 1;
+        });
+      });
+      return counts;
+    }
+
 
     var walletProvider = null;
     var walletPublicKey = null;
@@ -1568,146 +1213,32 @@
       return Math.floor(count * 100 * tier.pointsMultiplier);
     }
 
-    function getProviderByName(name) {
-      try {
-        if (name === "phantom") {
-          if (window.phantom?.solana?.isPhantom) return window.phantom.solana;
-          if (window.solana?.isPhantom) return window.solana;
-        }
-        if (name === "solflare") {
-          if (window.solflare?.isSolflare) return window.solflare;
-        }
-        if (name === "backpack") {
-          if (window.backpack?.solana) return window.backpack.solana;
-          if (window.xnft?.solana) return window.xnft.solana;
-        }
-        if (name === "magiceden") {
-          if (window.magicEden?.solana) return window.magicEden.solana;
-          if (window.solana?.isMagicEden) return window.solana;
-          if (window.solana?.isMagicEdenWallet) return window.solana;
-        }
-      } catch(e) {}
+    function getProviderByName(name){
+      if (name === "phantom") {
+        if (window.phantom && window.phantom.solana && window.phantom.solana.isPhantom) return window.phantom.solana;
+        if (window.solana && window.solana.isPhantom) return window.solana;
+      }
+      if (name === "solflare") {
+        if (window.solflare && window.solflare.isSolflare) return window.solflare;
+        if (window.solflare && window.solflare.solana) return window.solflare.solana;
+      }
+      if (name === "magiceden") {
+        if (window.magicEden && window.magicEden.solana) return window.magicEden.solana;
+        if (window.solana && window.solana.isMagicEden) return window.solana;
+        if (window.solana && window.solana.isMagicEdenWallet) return window.solana;
+      }
       return null;
     }
 
     function detectWalletProvider() {
-      return getProviderByName("phantom")
-          || getProviderByName("solflare")
-          || getProviderByName("backpack")
-          || getProviderByName("magiceden")
-          || null;
+      if (window.phantom && window.phantom.solana && window.phantom.solana.isPhantom) return window.phantom.solana;
+      if (window.backpack && window.backpack.solana) return window.backpack.solana;
+      if (window.solflare && window.solflare.isSolflare) return window.solflare;
+      if (window.solflare && window.solflare.solana) return window.solflare.solana;
+      if (window.solana && window.solana.isPhantom) return window.solana;
+      if (window.solana) return window.solana;
+      return null;
     }
-
-    // ── Wallet Picker UI ──────────────────────────────────────────────
-    function openWalletPicker() {
-      // Detect which wallets are installed and update badges
-      var wallets = [
-        { key: "phantom",   id: "wpPhantomBadge" },
-        { key: "solflare",  id: "wpSolflareBadge" },
-        { key: "backpack",  id: "wpBackpackBadge" },
-        { key: "magiceden", id: "wpMagicEdenBadge" }
-      ];
-      wallets.forEach(function(w) {
-        var badge = document.getElementById(w.id);
-        if (!badge) return;
-        var found = !!getProviderByName(w.key);
-        badge.textContent  = found ? "Detected" : "Not found";
-        badge.className    = "wallet-option-badge" + (found ? "" : " not-found");
-      });
-
-      document.getElementById("wpStatusMsg").textContent = "";
-      document.getElementById("walletPickerBackdrop").classList.add("show");
-    }
-
-    function closeWalletPicker() {
-      document.getElementById("walletPickerBackdrop").classList.remove("show");
-      document.getElementById("wpStatusMsg").textContent = "";
-      // Re-enable all buttons
-      ["wpPhantom","wpSolflare","wpBackpack","wpMagicEden"].forEach(function(id) {
-        var btn = document.getElementById(id);
-        if (btn) btn.disabled = false;
-      });
-    }
-
-    function closeWalletPickerOnBackdrop(e) {
-      if (e.target === document.getElementById("walletPickerBackdrop")) closeWalletPicker();
-    }
-
-    function setWpStatus(msg) {
-      var el = document.getElementById("wpStatusMsg");
-      if (el) el.textContent = msg;
-    }
-
-    async function connectWalletByName(name) {
-      var provider = getProviderByName(name);
-
-      if (!provider) {
-        var installUrls = {
-          phantom:   "https://phantom.app",
-          solflare:  "https://solflare.com",
-          backpack:  "https://backpack.app",
-          magiceden: "https://wallet.magiceden.io"
-        };
-        var url = installUrls[name] || "#";
-        if (confirm(name.charAt(0).toUpperCase() + name.slice(1) + " wallet not detected.\n\nOpen install page?")) {
-          window.open(url, "_blank");
-        }
-        return;
-      }
-
-      // Disable all buttons while connecting
-      ["wpPhantom","wpSolflare","wpBackpack","wpMagicEden"].forEach(function(id) {
-        var btn = document.getElementById(id);
-        if (btn) btn.disabled = true;
-      });
-      setWpStatus("Opening " + name + "…");
-
-      try {
-        var resp = await provider.connect({ onlyIfTrusted: false });
-        var pubkey = (resp && resp.publicKey) ? resp.publicKey : provider.publicKey;
-
-        if (!pubkey) throw new Error("No public key returned. Try unlocking your wallet first.");
-
-        walletProvider  = provider;
-        walletPublicKey = pubkey;
-
-        var addr = walletPublicKey.toBase58();
-
-        closeWalletPicker();
-
-        document.getElementById("walletDisplay").textContent = shortAddr(addr);
-        document.getElementById("dashNavWrap").classList.add("show");
-        document.getElementById("walletChip").style.display  = "flex";
-        document.getElementById("disconnectBtn").style.display = "inline-block";
-        document.getElementById("connectSection").style.display = "none";
-        document.getElementById("loadingSection").style.display = "block";
-
-        loadProfileFromStorage();
-        loadSecondWalletFromStorage();
-        session.profilePanelOpen = false;
-        applyProfilePanelUI();
-
-        await loadDashboard();
-
-      } catch (err) {
-        console.error("Wallet connect error:", err);
-        var msg = err.message || String(err);
-        // User rejected
-        if (msg.toLowerCase().includes("user rejected") || err.code === 4001) {
-          setWpStatus("Connection cancelled.");
-        } else {
-          setWpStatus("Error: " + msg);
-        }
-        // Re-enable buttons so they can retry
-        ["wpPhantom","wpSolflare","wpBackpack","wpMagicEden"].forEach(function(id) {
-          var btn = document.getElementById(id);
-          if (btn) btn.disabled = false;
-        });
-      }
-    }
-
-    // Keep old connectWallet() as fallback for any lingering calls
-    async function connectWallet() { openWalletPicker(); }
 
     function storageKey() {
       var addr = walletPublicKey ? walletPublicKey.toBase58() : "no_wallet";
@@ -1823,6 +1354,7 @@
         return (sym === "LNL") || (lname.indexOf("long neck") !== -1);
       });
 
+      
       return picked.map(function(a) {
         var name = (a.content && a.content.metadata && a.content.metadata.name) ||
                    (a.content && a.content.json && a.content.json.name) || "LNL";
@@ -1830,8 +1362,34 @@
                     (a.content && a.content.files && a.content.files[0] && a.content.files[0].uri) ||
                     (a.content && a.content.json && a.content.json.image) || "";
         var mint = a.id || "";
-        return { name: name, image: image, mint: mint, owner: ownerAddress };
+
+        // traits/attributes can appear in a few places depending on indexer
+        var attrs =
+          (a.content && a.content.metadata && a.content.metadata.attributes) ||
+          (a.content && a.content.json && a.content.json.attributes) ||
+          (a.content && a.content.metadata && a.content.metadata.traits) ||
+          [];
+
+        // normalize to [{trait_type, value}]
+        var norm = [];
+        if (Array.isArray(attrs)) {
+          norm = attrs.map(function(x){
+            if (!x) return null;
+            if (typeof x === "string") return { trait_type: "Trait", value: x };
+            var tt = x.trait_type || x.traitType || x.type || x.name || "Trait";
+            var vv = x.value != null ? x.value : (x.val != null ? x.val : "");
+            return { trait_type: String(tt || "Trait"), value: String(vv || "") };
+          }).filter(Boolean);
+        } else if (attrs && typeof attrs === "object") {
+          // some formats are {trait_type: value, ...}
+          Object.keys(attrs).forEach(function(k){
+            norm.push({ trait_type: String(k), value: String(attrs[k]) });
+          });
+        }
+
+        return { name: name, image: image, mint: mint, owner: ownerAddress, attributes: norm };
       });
+
     }
 
     function applyProfilePanelUI(){
@@ -1845,6 +1403,45 @@
     function toggleProfilePanel(){
       session.profilePanelOpen = !session.profilePanelOpen;
       applyProfilePanelUI();
+    }
+
+    async function connectWallet() {
+      var provider = detectWalletProvider();
+      if (!provider || typeof provider.connect !== "function") {
+        alert("No Solana wallet found.\n\nInstall Phantom, Solflare, or Backpack and refresh the page.");
+        return;
+      }
+      try {
+        var resp = await provider.connect({ onlyIfTrusted: false });
+        walletProvider = provider;
+        walletPublicKey = resp.publicKey || provider.publicKey;
+        if (!walletPublicKey) throw new Error("Wallet connected but no public key returned. Try unlocking your wallet first.");
+
+        var addr = walletPublicKey.toBase58();
+        document.getElementById("walletDisplay").textContent = shortAddr(addr);
+
+        document.getElementById("dashNavWrap").classList.add("show");
+        document.getElementById("walletChip").style.display = "flex";
+        document.getElementById("disconnectBtn").style.display = "inline-block";
+
+        document.getElementById("connectSection").style.display = "none";
+        document.getElementById("loadingSection").style.display = "block";
+
+        loadProfileFromStorage();
+        loadSecondWalletFromStorage();
+
+        session.profilePanelOpen = false;
+        applyProfilePanelUI();
+
+        await loadDashboard();
+      } catch (err) {
+        console.error("Connect error:", err);
+        if (err.code === 4001 || (err.message && err.message.toLowerCase().includes("user rejected"))) {
+          // User cancelled — no alert needed
+        } else {
+          alert("Connection failed: " + (err.message || err));
+        }
+      }
     }
 
     function disconnectWallet() {
@@ -1861,307 +1458,43 @@
       document.getElementById("loadingSection").style.display = "none";
       document.getElementById("dashboard").classList.remove("show");
       document.getElementById("view-profile").classList.remove("show");
-      var viewChat = document.getElementById("view-chat");
-      if (viewChat) viewChat.classList.remove("show");
-      var viewLb = document.getElementById("view-leaderboard");
-      if (viewLb) viewLb.classList.remove("show");
+      document.getElementById("view-chat").classList.remove("show");
 
-      // ✅ reset toggle state (button unlit + panel hidden)
       session.profilePanelOpen = false;
       var tabProfile = document.getElementById("tabProfile");
       if (tabProfile) tabProfile.classList.remove("active");
       var tabChat = document.getElementById("tabChat");
       if (tabChat) tabChat.classList.remove("active");
-      var tabLb = document.getElementById("tabLeaderboard");
-      if (tabLb) tabLb.classList.remove("active");
 
       session.currentView = "profile";
     }
 
     function switchView(viewName){
-      // Holder-only gate for chat
-      if(viewName === "chat" && (!session.loadedNFTs || session.loadedNFTs.length === 0)){
-        alert("Only LNL holders can access chat.");
-        return;
-      }
-
       session.currentView = viewName;
 
-      // hide all views
-      document.getElementById("view-profile").classList.remove("show");
-      document.getElementById("view-chat").classList.remove("show");
-      document.getElementById("view-leaderboard").classList.remove("show");
+      // Hide all views
+      var vp = document.getElementById("view-profile");
+      var vc = document.getElementById("view-chat");
+      if (vp) vp.classList.remove("show");
+      if (vc) vc.classList.remove("show");
 
-      // deactivate all tabs
-      document.getElementById("tabProfile").classList.remove("active");
-      document.getElementById("tabChat").classList.remove("active");
-      document.getElementById("tabLeaderboard").classList.remove("active");
+      // Deactivate all tabs
+      var tabProfile = document.getElementById("tabProfile");
+      var tabChat    = document.getElementById("tabChat");
+      if (tabProfile) tabProfile.classList.remove("active");
+      if (tabChat)    tabChat.classList.remove("active");
 
-      if(viewName === "profile"){
+      if (viewName === "profile") {
         stopChatPoll();
-        document.getElementById("view-profile").classList.add("show");
-        // sync with profilePanel toggle state
-        document.getElementById("tabProfile").classList.toggle("active", !!session.profilePanelOpen);
+        if (vp) vp.classList.add("show");
+        if (tabProfile) tabProfile.classList.toggle("active", !!session.profilePanelOpen);
       }
 
-      if(viewName === "chat"){
-        document.getElementById("view-chat").classList.add("show");
-        document.getElementById("tabChat").classList.add("active");
+      if (viewName === "chat") {
+        if (vc) vc.classList.add("show");
+        if (tabChat) tabChat.classList.add("active");
         renderChatUI();
       }
-
-      if(viewName === "leaderboard"){
-        stopChatPoll();
-        document.getElementById("view-leaderboard").classList.add("show");
-        document.getElementById("tabLeaderboard").classList.add("active");
-        renderLeaderboardUI();
-      }
-    }
-
-    /* ── Chat (shared persistent storage) ────────────────────────────
-       Messages are stored under the shared key "lnl_chat_v1" so every
-       connected wallet sees the same history.  Polls every 5 s while
-       the tab is open so new messages from others appear automatically.
-    ──────────────────────────────────────────────────────────────────── */
-    var chatPollTimer = null;
-    var chatLastCount = 0;   // used to detect new messages without full re-render
-
-    function renderChatUI() {
-      var chat = document.getElementById("view-chat");
-
-      chat.innerHTML =
-        '<div style="grid-column:1/-1; display:flex; flex-direction:column; gap:0;">' +
-
-        // ── Header bar ──
-        '<div style="' +
-          'display:flex; align-items:center; justify-content:space-between;' +
-          'margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;' +
-        '">' +
-          '<div>' +
-            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.4rem;letter-spacing:3px;color:#555;">LNL HOLDER CHAT</div>' +
-            '<div style="font-size:0.68rem;color:#333;letter-spacing:1px;margin-top:2px;">Visible to all connected holders</div>' +
-          '</div>' +
-          '<div id="chatOnlineIndicator" style="display:flex;align-items:center;gap:6px;font-size:0.7rem;color:#555;">' +
-            '<div style="width:7px;height:7px;border-radius:50%;background:#00ff88;box-shadow:0 0 6px rgba(0,255,136,0.6);"></div>' +
-            'Live' +
-          '</div>' +
-        '</div>' +
-
-        // ── Message list ──
-        '<div id="chatMessages" style="' +
-          'flex:1;' +
-          'height:420px;' +
-          'overflow-y:auto;' +
-          'background:#07070f;' +
-          'border:1px solid #1a1a30;' +
-          'border-radius:12px;' +
-          'padding:16px 14px;' +
-          'margin-bottom:12px;' +
-          'scroll-behavior:smooth;' +
-        '"></div>' +
-
-        // ── Input row ──
-        '<div style="display:flex;gap:8px;align-items:center;">' +
-          '<div style="' +
-            'flex:1;display:flex;align-items:center;' +
-            'background:#0d0d1e;border:1px solid #1a1a30;border-radius:10px;' +
-            'padding:0 12px;' +
-            'transition:border-color 0.2s;' +
-          '" id="chatInputWrap">' +
-            '<span style="color:#333;font-size:0.85rem;margin-right:8px;flex-shrink:0;" id="chatSenderTag"></span>' +
-            '<input id="chatInput" ' +
-              'style="flex:1;background:transparent;border:none;color:#e0e0ff;font-family:\'Space Grotesk\',sans-serif;font-size:0.88rem;padding:11px 0;outline:none;" ' +
-              'placeholder="Say something legend..." ' +
-              'maxlength="500" ' +
-              'onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();sendChatMessage();}" ' +
-              'oninput="onChatInput(this)" ' +
-            '/>' +
-            '<span id="chatCharCount" style="color:#2a2a4a;font-size:0.65rem;flex-shrink:0;margin-left:6px;"></span>' +
-          '</div>' +
-          '<button id="chatSendBtn" onclick="sendChatMessage()" style="' +
-            'background:linear-gradient(135deg,rgba(0,212,255,0.15),rgba(123,104,238,0.15));' +
-            'border:1px solid rgba(0,212,255,0.3);' +
-            'color:#00d4ff;' +
-            'padding:11px 20px;' +
-            'border-radius:10px;' +
-            'cursor:pointer;' +
-            'font-family:\'Space Grotesk\',sans-serif;' +
-            'font-weight:700;font-size:0.8rem;letter-spacing:1.5px;text-transform:uppercase;' +
-            'transition:all 0.2s;white-space:nowrap;' +
-            'onmouseover="this.style.background=\'rgba(0,212,255,0.2)\'" ' +
-          '">Send</button>' +
-        '</div>' +
-
-        '</div>';
-
-      // Set sender tag
-      var tag = document.getElementById("chatSenderTag");
-      if (walletPublicKey) {
-        var addr = walletPublicKey.toBase58();
-        tag.textContent = addr.slice(0,4) + "…";
-        tag.style.color = walletColor(addr);
-      }
-
-      // Input focus style
-      var wrap = document.getElementById("chatInputWrap");
-      var inp  = document.getElementById("chatInput");
-      inp.addEventListener("focus", function(){ wrap.style.borderColor = "rgba(0,212,255,0.4)"; });
-      inp.addEventListener("blur",  function(){ wrap.style.borderColor = "#1a1a30"; });
-
-      // Initial load then start polling
-      loadChatMessages(true);
-      startChatPoll();
-    }
-
-    function onChatInput(input) {
-      var len = input.value.length;
-      var counter = document.getElementById("chatCharCount");
-      if (counter) {
-        counter.textContent = len > 400 ? (500 - len) + " left" : "";
-        counter.style.color = len > 450 ? "#ff3c5c" : "#2a2a4a";
-      }
-    }
-
-    // Deterministic color per wallet address
-    function walletColor(addr) {
-      var colors = ["#00d4ff","#7b68ee","#00ff88","#f5a623","#ff6b9d","#4ecdc4","#a8e6cf","#ffd93d"];
-      var hash = 0;
-      for (var i = 0; i < addr.length; i++) hash = ((hash << 5) - hash) + addr.charCodeAt(i);
-      return colors[Math.abs(hash) % colors.length];
-    }
-
-    async function loadChatMessages(scrollToBottom) {
-      var box = document.getElementById("chatMessages");
-      if (!box) return;
-
-      var msgs = [];
-      try {
-        var result = await window.storage.get("lnl_chat_v1", true);
-        msgs = result ? JSON.parse(result.value) : [];
-      } catch(e) {
-        // Key doesn't exist yet or parse error — start fresh
-        msgs = [];
-      }
-
-      // Only re-render if message count changed (avoid flicker on poll)
-      if (!scrollToBottom && msgs.length === chatLastCount) return;
-      chatLastCount = msgs.length;
-
-      if (msgs.length === 0) {
-        box.innerHTML =
-          '<div style="' +
-            'display:flex;flex-direction:column;align-items:center;justify-content:center;' +
-            'height:100%;gap:0.6rem;' +
-          '">' +
-            '<div style="font-size:2rem;">🦒</div>' +
-            '<div style="color:#2a2a4a;font-size:0.8rem;letter-spacing:1.5px;text-transform:uppercase;">No messages yet</div>' +
-            '<div style="color:#1e1e3a;font-size:0.72rem;">Be the first legend to say something</div>' +
-          '</div>';
-        return;
-      }
-
-      var myWallet = walletPublicKey ? walletPublicKey.toBase58() : null;
-
-      // Group consecutive messages from same sender
-      var html = "";
-      var prevWallet = null;
-
-      msgs.forEach(function(m, i) {
-        var wallet  = m.wallet || "anon";
-        var isMe    = wallet === myWallet;
-        var display = session.profile.username && isMe
-          ? session.profile.username
-          : (wallet.length > 8 ? wallet.slice(0,4) + "…" + wallet.slice(-4) : wallet);
-        var color   = walletColor(wallet);
-        var newSender = wallet !== prevWallet;
-        prevWallet  = wallet;
-
-        var timeStr = "";
-        if (m.time) {
-          var d = new Date(m.time);
-          timeStr = d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
-        }
-
-        if (newSender) {
-          if (i > 0) html += '<div style="height:10px;"></div>'; // spacer between groups
-          html +=
-            '<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px;">' +
-              '<span style="font-weight:700;font-size:0.78rem;color:' + color + ';">' + escapeHtml(display) + '</span>' +
-              (timeStr ? '<span style="font-size:0.62rem;color:#252540;">' + timeStr + '</span>' : '') +
-              (isMe ? '<span style="font-size:0.55rem;letter-spacing:1px;color:#1e1e3a;text-transform:uppercase;">you</span>' : '') +
-            '</div>';
-        }
-
-        html +=
-          '<div style="' +
-            'font-size:0.87rem;color:#c8c8e8;line-height:1.55;' +
-            'padding:2px 0 2px ' + (newSender ? '0' : '0') + ';' +
-            'word-break:break-word;' +
-          '">' + escapeHtml(m.text) + '</div>';
-      });
-
-      box.innerHTML = html;
-
-      if (scrollToBottom) {
-        box.scrollTop = box.scrollHeight;
-      } else {
-        // Only scroll if already near bottom (within 80px)
-        var nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
-        if (nearBottom) box.scrollTop = box.scrollHeight;
-      }
-    }
-
-    async function sendChatMessage() {
-      if (!walletPublicKey) { alert("Connect your wallet first."); return; }
-
-      var input  = document.getElementById("chatInput");
-      var sendBtn = document.getElementById("chatSendBtn");
-      if (!input) return;
-
-      var text = input.value.trim();
-      if (!text) return;
-      if (text.length > 500) { alert("Message too long (max 500 chars)."); return; }
-
-      input.value = "";
-      onChatInput(input);
-      if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = "…"; }
-
-      var wallet = walletPublicKey.toBase58();
-      var msgs = [];
-
-      try {
-        var existing = await window.storage.get("lnl_chat_v1", true);
-        msgs = existing ? JSON.parse(existing.value) : [];
-      } catch(e) { msgs = []; }
-
-      msgs.push({ wallet: wallet, text: text, time: Date.now() });
-      if (msgs.length > 300) msgs = msgs.slice(msgs.length - 300);
-
-      try {
-        await window.storage.set("lnl_chat_v1", JSON.stringify(msgs), true);
-        chatLastCount = -1; // force re-render on next poll
-        await loadChatMessages(true);
-      } catch(e) {
-        alert("Failed to send message. Please try again.");
-      }
-
-      if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = "Send"; }
-      input.focus();
-    }
-
-    function startChatPoll() {
-      stopChatPoll();
-      chatPollTimer = setInterval(function() {
-        if (document.getElementById("chatMessages")) {
-          loadChatMessages(false);
-        } else {
-          stopChatPoll();
-        }
-      }, 5000);
-    }
-
-    function stopChatPoll() {
-      if (chatPollTimer) { clearInterval(chatPollTimer); chatPollTimer = null; }
     }
 
     async function loadDashboard() {
@@ -2266,22 +1599,21 @@
       if (session.secondWallet.address) linksHTML += '<span class="plink" style="cursor:default;">2nd Wallet: ' + shortAddr(session.secondWallet.address) + '</span>';
 
       view.innerHTML +=
-        '<div class="tier-card ' + tier.cssClass + '">' +
-          '<div class="tier-badge" id="pfpBadge">' + badgeInner + '</div>' +
-          '<div class="tier-info">' +
-            '<div class="tier-label">YOUR TIER</div>' +
-            '<div class="tier-name">' + tier.name + '</div>' +
-            '<div class="tier-nfts-held">Holding <strong>' + count + '</strong> Long Neck Legend' + (count !== 1 ? "s" : "") + '</div>' +
-            progressHTML +
+      '<div class="tier-card ' + tier.cssClass + '">' +
+        '<div class="tier-badge" id="pfpBadge">' + badgeInner + '</div>' +
+        '<div class="tier-info">' +
+          '<div class="tier-label">YOUR TIER</div>' +
+          '<div class="tier-name">' + tier.name + '</div>' +
+          '<div class="tier-nfts-held">Holding <strong>' + count + '</strong> Long Neck Legend' + (count !== 1 ? "s" : "") + '</div>' +
+          progressHTML +
+        '</div>' +
+        '<div class="profile-name-box">' +
+          '<div class="profile-username" id="bannerUsername">' + escapeHtml(displayName) + '</div>' +
+          '<div class="profile-name-inner">' +
+            '<div class="profile-links" id="bannerLinks">' + linksHTML + '</div>' +
           '</div>' +
-          '<div class="profile-name-box">' +
-            '<div class="profile-name-inner">' +
-              '<div class="profile-name-label">Profile Name</div>' +
-              '<div class="profile-name" id="bannerName">' + escapeHtml(displayName) + '</div>' +
-              '<div class="profile-links" id="bannerLinks">' + linksHTML + '</div>' +
-            '</div>' +
-          '</div>' +
-        '</div>';
+        '</div>' +
+      '</div>';
 
       view.innerHTML +=
         '<div class="profile-actions" id="profilePanel">' +
@@ -2321,6 +1653,17 @@
           nextTierRow +
         '</div>';
 
+      // ---- SUBDAO STATUS (Trait-based) ----
+      var subdao = getSubdaoMatches(nfts);
+      var subdaoRows = subdao.map(function(s){
+        var req = s.reqValues.join(' / ');
+        return '<div class="stat-row">'
+             + '<span class="stat-label">' + s.icon + ' ' + s.name + '</span>'
+             + '<span class="stat-value ' + (s.unlocked ? 'green' : '') + '">' + (s.unlocked ? 'UNLOCKED' : 'LOCKED') + '</span>'
+             + '</div>'
+             + (s.unlocked ? '' : '<div style="color:#555;font-size:0.7rem;letter-spacing:1px;margin-top:-6px;margin-bottom:10px;">Requires: ' + escapeHtml(req) + '</div>');
+      }).join('');
+
       var tierOrder = TIERS.map(function(t) { return t.id; });
       var currentTierIdx = tierOrder.indexOf(tier.id);
 
@@ -2347,6 +1690,26 @@
         '<div class="perks-card">' +
           '<div class="stats-title">HOLDER PERKS</div>' +
           '<div class="perks-grid">' + perksHTML + '</div>' +
+        '</div>';
+
+
+      var subdaoPerksHTML = getSubdaoMatches(nfts).map(function(s){
+        var req = s.reqValues.join(" / ");
+        var reqLine = s.unlocked ? ("Unlocked via: " + s.hit) : ("Requires: " + req);
+        return '' +
+          '<div class="perk ' + (s.unlocked ? "unlocked" : "locked") + '">' +
+            '<div class="perk-status ' + (s.unlocked ? "on" : "off") + '"></div>' +
+            '<div class="perk-icon">' + s.icon + '</div>' +
+            '<div class="perk-name">' + escapeHtml(s.name) + '</div>' +
+            '<div class="perk-desc">' + escapeHtml(s.desc) + '</div>' +
+            '<div class="perk-req ' + (s.unlocked ? "met" : "") + '">' + (s.unlocked ? "\u2713 UNLOCKED" : escapeHtml(reqLine)) + '</div>' +
+          '</div>';
+      }).join("");
+
+      view.innerHTML +=
+        '<div class="perks-card">' +
+          '<div class="stats-title">SUBDAOs</div>' +
+          '<div class="perks-grid subdao-grid">' + subdaoPerksHTML + '</div>' +
         '</div>';
 
       var galleryHTML = nfts.map(function(nft) {
@@ -2398,11 +1761,11 @@
     }
 
     function refreshBanner(){
-      var bn = document.getElementById("bannerName");
-      if (bn) {
-        var displayName = session.profile.username ? session.profile.username : shortAddr(walletPublicKey.toBase58());
-        bn.textContent = displayName;
-      }
+      var bn = document.getElementById("bannerUsername");
+    if (bn) {
+      var displayName = session.profile.username ? session.profile.username : shortAddr(walletPublicKey.toBase58());
+      bn.textContent = displayName;
+    }
 
       var bl = document.getElementById("bannerLinks");
       if (bl) {
@@ -2608,388 +1971,279 @@
         alert("Auth failed. Please try again.");
       }
     });
+  
+    function openTraitsModal(){
+      if (!session.loadedNFTs || session.loadedNFTs.length === 0) return alert("No NFTs loaded yet.");
+      var sub = getSubdaoMatches(session.loadedNFTs);
+
+      var pills = document.getElementById("subdaoPills");
+      if (pills){
+        pills.innerHTML = sub.map(function(s){
+          return '<span class="pill ' + (s.unlocked ? 'on' : 'off') + '">'
+               + (s.unlocked ? '✓' : '•') + ' ' + s.icon + ' ' + escapeHtml(s.name)
+               + '</span>';
+        }).join("");
+      }
+
+      var counts = buildTraitCounts(session.loadedNFTs);
+      var rows = Object.keys(counts).sort(function(a,b){ return counts[b]-counts[a]; }).slice(0, 80);
+      var tbody = document.querySelector("#traitsTable tbody");
+      if (tbody){
+        tbody.innerHTML = rows.map(function(k){
+          return '<tr><td>' + escapeHtml(k) + '</td><td>' + counts[k] + '</td></tr>';
+        }).join("");
+        if (rows.length === 0) tbody.innerHTML = '<tr><td colspan="2" class="trait-muted">No trait data found in metadata.</td></tr>';
+      }
+
+      document.getElementById("traitsModalBackdrop").classList.add("show");
+    }
+
+    function hideTraitsModal(){
+      document.getElementById("traitsModalBackdrop").classList.remove("show");
+    }
+
+    function closeTraitsModal(e){
+      if (e && e.target && e.target.id === "traitsModalBackdrop") hideTraitsModal();
+    }
 
     /* ================================================================
-       LEADERBOARD — #StickYourNeckOut self-report grinder system
-       Points per approved submission:
-         post  → +2 pts  (a #StickYourNeckOut post)
-         reply → +3 pts  (reply to the LNL account mentioning the tag)
-         quote → +4 pts  (quote tweet with the tag)
-       Seasons: rolling 30-day windows anchored to SEASON_EPOCH_UTC.
+       CHAT — Real-time shared room via Gun.js (P2P, no backend needed)
+       Every connected wallet sees the same messages.
+       Gun.js peers with public relay servers automatically.
     ================================================================ */
 
-    // ── Season helpers ────────────────────────────────────────────────
-    var SEASON_EPOCH_UTC = new Date("2025-01-01T00:00:00Z").getTime(); // anchor
-    var SEASON_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+    var gun = null;
+    var chatRef = null;
+    var chatPollTimer = null;
+    var chatMessages = [];     // sorted array of message objects
+    var chatRenderedIds = {};  // track which ids we've rendered
 
-    function getCurrentSeasonKey() {
-      var now = Date.now();
-      var n = Math.floor((now - SEASON_EPOCH_UTC) / SEASON_DURATION_MS);
-      return "S" + n;
+    function initGun() {
+      if (gun) return;
+      gun = Gun([
+        'https://gun-manhattan.herokuapp.com/gun',
+        'https://gunjs.herokuapp.com/gun'
+      ]);
+      chatRef = gun.get('lnl-holder-chat-v1');
     }
 
-    function getSeasonBounds() {
-      var now = Date.now();
-      var n = Math.floor((now - SEASON_EPOCH_UTC) / SEASON_DURATION_MS);
-      var start = new Date(SEASON_EPOCH_UTC + n * SEASON_DURATION_MS);
-      var end   = new Date(SEASON_EPOCH_UTC + (n + 1) * SEASON_DURATION_MS);
-      return { key: "S" + n, n: n + 1, start: start, end: end };
+    // Deterministic color per wallet address so each user has a consistent color
+    function walletColor(addr) {
+      var palette = ['#00d4ff','#7b68ee','#00ff88','#f5a623','#ff6b9d','#4ecdc4','#ffd93d','#ff8c42'];
+      var hash = 0;
+      for (var i = 0; i < (addr || '').length; i++) {
+        hash = ((hash << 5) - hash) + addr.charCodeAt(i);
+        hash |= 0;
+      }
+      return palette[Math.abs(hash) % palette.length];
     }
 
-    function formatCountdown(ms) {
-      if (ms <= 0) return "ending now";
-      var d = Math.floor(ms / 86400000);
-      var h = Math.floor((ms % 86400000) / 3600000);
-      var m = Math.floor((ms % 3600000) / 60000);
-      var parts = [];
-      if (d) parts.push(d + "d");
-      if (h) parts.push(h + "h");
-      if (!d) parts.push(m + "m");
-      return parts.join(" ");
+    function stopChatPoll() {
+      if (chatPollTimer) { clearInterval(chatPollTimer); chatPollTimer = null; }
     }
 
-    function fmtDate(ts) {
-      if (!ts) return "";
-      try {
-        return new Date(ts).toLocaleDateString(undefined, { month:"short", day:"numeric", year:"numeric" });
-      } catch(e) { return ""; }
-    }
-
-    // ── URL validation ────────────────────────────────────────────────
-    // Accepts x.com/twitter.com URLs: /user/status/ID or /i/web/status/ID
-    var TWEET_URL_RE = /^https?:\/\/(www\.)?(x\.com|twitter\.com)\/.+\/status\/(\d+)/i;
-
-    function validateTweetUrl(url) {
-      return TWEET_URL_RE.test((url || "").trim());
-    }
-
-    function extractTweetId(url) {
-      var m = (url || "").match(/\/status\/(\d+)/);
-      return m ? m[1] : null;
-    }
-
-    // ── Points lookup ─────────────────────────────────────────────────
-    var PROOF_POINTS = { post: 2, reply: 3, quote: 4 };
-    var PROOF_LABELS = { post: "Post", reply: "Reply", quote: "Quote" };
-    var PROOF_ICONS  = { post: "📢", reply: "💬", quote: "🔁" };
-    var RATE_LIMIT_PER_DAY = 5;
-
-    // ── API helpers ───────────────────────────────────────────────────
-    async function apiPost(endpoint, body) {
-      var wallet = walletPublicKey ? walletPublicKey.toBase58() : null;
-      var res = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-wallet": wallet || ""
-        },
-        body: JSON.stringify(body)
-      });
-      var json = await res.json();
-      if (!res.ok) throw new Error(json.error || ("Request failed: " + res.status));
-      return json;
-    }
-
-    async function apiGet(endpoint) {
-      var wallet = walletPublicKey ? walletPublicKey.toBase58() : null;
-      var res = await fetch(endpoint, {
-        headers: { "x-wallet": wallet || "" }
-      });
-      var json = await res.json();
-      if (!res.ok) throw new Error(json.error || ("Request failed: " + res.status));
-      return json;
-    }
-
-    // ── Leaderboard render entry point ────────────────────────────────
-    async function renderLeaderboardUI() {
-      var view = document.getElementById("view-leaderboard");
-      var bounds = getSeasonBounds();
-      var msLeft = bounds.end.getTime() - Date.now();
+    function renderChatUI() {
+      var view = document.getElementById('view-chat');
+      if (!view) return;
 
       view.innerHTML =
-        '<div class="stats-card" style="grid-column:1/-1;">' +
-          // Season banner
-          '<div class="lb-season-banner">' +
-            '<div>' +
-              '<div class="lb-season-label">Current Season</div>' +
-              '<div class="lb-season-name">Season ' + bounds.n + ' &nbsp;·&nbsp; ' + bounds.key + '</div>' +
-              '<div class="lb-season-timer">' +
-                fmtDate(bounds.start.getTime()) + ' — ' + fmtDate(bounds.end.getTime()) +
-                ' &nbsp;·&nbsp; <strong>' + formatCountdown(msLeft) + '</strong> remaining' +
-              '</div>' +
+        // ── Top bar with Home button ──
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.6rem;">' +
+          '<div>' +
+            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.5rem;letter-spacing:3px;color:#e0e0ff;">🦒 HOLDER CHAT</div>' +
+            '<div style="font-size:0.7rem;color:#444;letter-spacing:1px;margin-top:2px;">Live · Open to all connected wallets</div>' +
+          '</div>' +
+          '<div style="display:flex;align-items:center;gap:0.6rem;">' +
+            '<div style="display:flex;align-items:center;gap:5px;font-size:0.7rem;color:#555;">' +
+              '<div style="width:7px;height:7px;border-radius:50%;background:#00ff88;box-shadow:0 0 6px rgba(0,255,136,0.7);"></div>' +
+              'Live' +
             '</div>' +
-            '<div class="lb-rule-badge">Only posts with #StickYourNeckOut count</div>' +
-          '</div>' +
-          // Scoring key
-          '<div class="lb-scoring">' +
-            '<div class="lb-score-pill"><span class="pill-pts">+2</span> Post <span class="pill-cap">unlimited</span></div>' +
-            '<div class="lb-score-pill"><span class="pill-pts">+3</span> Reply <span class="pill-cap">unlimited</span></div>' +
-            '<div class="lb-score-pill"><span class="pill-pts">+4</span> Quote <span class="pill-cap">unlimited</span></div>' +
-          '</div>' +
-          // Leaderboard table area
-          '<div id="lbTableWrap"><div class="lb-empty"><span class="lb-spinner"></span></div></div>' +
-          // Refresh row
-          '<div style="display:flex;justify-content:flex-end;margin-top:1rem;">' +
-            '<button class="lb-action-btn" id="lbRefreshBtn" onclick="refreshLeaderboard()">↻ Refresh</button>' +
+            '<button onclick="switchView(\'profile\')" style="' +
+              'background:transparent;border:1px solid rgba(255,255,255,0.1);color:#888;' +
+              'padding:7px 14px;border-radius:7px;cursor:pointer;' +
+              'font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;' +
+              'letter-spacing:1.5px;text-transform:uppercase;transition:all 0.2s;' +
+            '" onmouseover="this.style.borderColor=\'rgba(0,212,255,0.4)\';this.style.color=\'#00d4ff\'" ' +
+               'onmouseout="this.style.borderColor=\'rgba(255,255,255,0.1)\';this.style.color=\'#888\'">← Home</button>' +
           '</div>' +
         '</div>' +
-        // Submit proof card
-        '<div class="proof-form-card stats-card" style="grid-column:1/-1;">' +
-          '<div class="stats-title">SUBMIT PROOF</div>' +
-          '<p style="font-size:0.78rem;color:#555;margin-bottom:0.2rem;line-height:1.6;">' +
-            'Post, reply to, or quote-tweet any LNL post with <strong style="color:#00d4ff;">#StickYourNeckOut</strong>. ' +
-            'Paste your tweet URL below and choose the type. An admin will review and approve within 24 hours.' +
-          '</p>' +
-          '<div class="proof-form-grid">' +
-            '<div class="full">' +
-              '<label class="pf-label" for="pfUrl">Tweet / Post URL *</label>' +
-              '<input class="pf-input" id="pfUrl" type="url" placeholder="https://x.com/you/status/123456789" />' +
-            '</div>' +
-            '<div>' +
-              '<label class="pf-label" for="pfType">Engagement Type *</label>' +
-              '<select class="pf-select" id="pfType">' +
-                '<option value="post">📢 Post (+2 pts)</option>' +
-                '<option value="reply">💬 Reply (+3 pts)</option>' +
-                '<option value="quote">🔁 Quote Tweet (+4 pts)</option>' +
-              '</select>' +
-            '</div>' +
-            '<div>' +
-              '<label class="pf-label">Screenshot (Optional)</label>' +
-              '<label class="pf-file-label" id="pfFileLabel" for="pfFile">' +
-                '📎 <span id="pfFileName">Attach screenshot...</span>' +
-              '</label>' +
-              '<input class="pf-file-input" id="pfFile" type="file" accept="image/*" onchange="onFileChange(this)" />' +
-            '</div>' +
-          '</div>' +
-          '<div class="pf-submit-row">' +
-            '<span class="pf-rate-note">Max ' + RATE_LIMIT_PER_DAY + ' submissions per day · Admin review required</span>' +
-            '<button class="lb-action-btn" id="pfSubmitBtn" onclick="submitProof()">Submit Proof</button>' +
-          '</div>' +
-          '<div class="pf-msg" id="pfMsg"></div>' +
+
+        // ── Message area ──
+        '<div id="chatBox" style="' +
+          'flex:1;min-height:0;height:420px;' +
+          'overflow-y:auto;' +
+          'background:#06060f;' +
+          'border:1px solid #161628;' +
+          'border-radius:12px;' +
+          'padding:16px;' +
+          'margin-bottom:12px;' +
+          'scroll-behavior:smooth;' +
+        '">' +
+          '<div id="chatInner" style="display:flex;flex-direction:column;gap:0;"></div>' +
         '</div>' +
-        // My submissions card
-        '<div class="my-subs-card stats-card" style="grid-column:1/-1;">' +
-          '<div class="stats-title" style="margin-bottom:0.4rem;">MY SUBMISSIONS</div>' +
-          '<p style="font-size:0.72rem;color:#444;margin-bottom:1rem;">Current season · Most recent first</p>' +
-          '<div id="mySubsList"><div class="lb-empty"><span class="lb-spinner"></span></div></div>' +
+
+        // ── Input row ──
+        '<div style="display:flex;gap:8px;align-items:center;">' +
+          '<div id="chatInputWrap" style="' +
+            'flex:1;display:flex;align-items:center;gap:8px;' +
+            'background:#0d0d1e;border:1px solid #1a1a30;border-radius:10px;' +
+            'padding:0 12px;transition:border-color 0.2s;' +
+          '">' +
+            '<span id="chatWalletTag" style="font-size:0.78rem;font-weight:700;flex-shrink:0;white-space:nowrap;"></span>' +
+            '<input id="chatInput" ' +
+              'style="flex:1;background:transparent;border:none;outline:none;color:#e0e0ff;' +
+              'font-family:\'Space Grotesk\',sans-serif;font-size:0.88rem;padding:12px 0;" ' +
+              'placeholder="Say something legend…" maxlength="400" ' +
+              'onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();sendChatMessage();}" />' +
+            '<span id="chatCount" style="font-size:0.62rem;color:#252540;flex-shrink:0;"></span>' +
+          '</div>' +
+          '<button id="chatSendBtn" onclick="sendChatMessage()" style="' +
+            'background:linear-gradient(135deg,rgba(0,212,255,0.18),rgba(123,104,238,0.18));' +
+            'border:1px solid rgba(0,212,255,0.35);color:#00d4ff;' +
+            'padding:12px 20px;border-radius:10px;cursor:pointer;' +
+            'font-family:\'Space Grotesk\',sans-serif;font-weight:700;' +
+            'font-size:0.8rem;letter-spacing:1.5px;text-transform:uppercase;' +
+            'transition:all 0.2s;white-space:nowrap;' +
+          '">Send</button>' +
         '</div>';
 
-      // Load data in parallel
-      refreshLeaderboard();
-      loadMySubmissions();
+      // Set wallet tag color
+      var tag = document.getElementById('chatWalletTag');
+      if (walletPublicKey && tag) {
+        var addr = walletPublicKey.toBase58();
+        tag.textContent = addr.slice(0,4) + '…' + addr.slice(-4);
+        tag.style.color = walletColor(addr);
+      }
+
+      // Input focus ring
+      var wrap = document.getElementById('chatInputWrap');
+      var inp  = document.getElementById('chatInput');
+      if (inp && wrap) {
+        inp.addEventListener('focus', function(){ wrap.style.borderColor = 'rgba(0,212,255,0.45)'; });
+        inp.addEventListener('blur',  function(){ wrap.style.borderColor = '#1a1a30'; });
+        inp.addEventListener('input', function(){
+          var left = 400 - inp.value.length;
+          var counter = document.getElementById('chatCount');
+          if (counter) {
+            counter.textContent = left < 80 ? left + '' : '';
+            counter.style.color = left < 30 ? '#ff3c5c' : '#252540';
+          }
+        });
+      }
+
+      // Reset and subscribe
+      chatMessages = [];
+      chatRenderedIds = {};
+      initGun();
+      subscribeChatMessages();
     }
 
-    // ── Leaderboard table ─────────────────────────────────────────────
-    async function refreshLeaderboard() {
-      var wrap = document.getElementById("lbTableWrap");
-      var btn  = document.getElementById("lbRefreshBtn");
-      if (!wrap) return;
-      if (btn) btn.disabled = true;
-      wrap.innerHTML = '<div class="lb-empty"><span class="lb-spinner"></span> Loading leaderboard…</div>';
+    function subscribeChatMessages() {
+      if (!chatRef) return;
 
-      try {
-        var season = getCurrentSeasonKey();
-        var data = await apiGet("/api/leaderboard?season=" + encodeURIComponent(season));
-        var rows = data.scores || [];
-        renderLeaderboardTable(wrap, rows);
-      } catch (e) {
-        wrap.innerHTML = '<div class="lb-empty">Could not load leaderboard.<br><span style="color:#333;">' + escapeHtml(e.message) + '</span></div>';
-      } finally {
-        if (btn) btn.disabled = false;
-      }
+      chatRef.map().on(function(data, id) {
+        if (!data || !data.text || !data.wallet || !data.time) return;
+        if (chatRenderedIds[id]) return;  // already shown
+
+        chatRenderedIds[id] = true;
+        chatMessages.push({ id: id, wallet: data.wallet, text: data.text, time: data.time });
+        // Keep sorted by time
+        chatMessages.sort(function(a, b) { return a.time - b.time; });
+        // Keep max 200
+        if (chatMessages.length > 200) chatMessages = chatMessages.slice(chatMessages.length - 200);
+
+        renderChatMessages();
+      });
     }
 
-    function renderLeaderboardTable(wrap, rows) {
-      if (!rows.length) {
-        wrap.innerHTML = '<div class="lb-empty">No scores yet this season.<br>Be the first legend to grind! 🦒</div>';
-        return;
-      }
+    function renderChatMessages() {
+      var inner = document.getElementById('chatInner');
+      var box   = document.getElementById('chatBox');
+      if (!inner || !box) return;
 
       var myWallet = walletPublicKey ? walletPublicKey.toBase58() : null;
+      var prevWallet = null;
+      var html = '';
 
-      var html =
-        '<table class="lb-table">' +
-          '<thead><tr>' +
-            '<th style="width:36px;">#</th>' +
-            '<th>Holder</th>' +
-            '<th>Breakdown</th>' +
-            '<th class="right">Pts</th>' +
-          '</tr></thead>' +
-          '<tbody>';
+      chatMessages.forEach(function(m, i) {
+        var isMe   = m.wallet === myWallet;
+        var color  = walletColor(m.wallet);
+        var name   = (isMe && session.profile.username)
+          ? session.profile.username
+          : (m.wallet.slice(0,4) + '…' + m.wallet.slice(-4));
+        var newSender = m.wallet !== prevWallet;
+        prevWallet = m.wallet;
 
-      rows.forEach(function(r, i) {
-        var rank = i + 1;
-        var rankClass = rank === 1 ? "gold" : rank === 2 ? "silver" : rank === 3 ? "bronze" : "";
-        var isMe = myWallet && r.wallet === myWallet;
-        var totalClass = rank === 1 ? "lb-total top" : "lb-total";
-        var rowClass = isMe ? "lb-you-row" : "";
+        var timeStr = new Date(m.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
 
-        var displayName = escapeHtml(r.username || shortAddr(r.wallet));
-        var walletShort = escapeHtml(shortAddr(r.wallet));
-
-        var posts   = r.posts   || 0;
-        var replies = r.replies || 0;
-        var quotes  = r.quotes  || 0;
-
-        var breakdown =
-          '<div class="lb-breakdown">' +
-            chipHtml("📢 " + posts   + " post"  + (posts   !== 1 ? "s" : ""), posts   > 0) +
-            chipHtml("💬 " + replies + " repl"  + (replies !== 1 ? "ies" : "y"), replies > 0) +
-            chipHtml("🔁 " + quotes  + " quote" + (quotes  !== 1 ? "s" : ""), quotes  > 0) +
-          '</div>';
+        if (newSender) {
+          if (i > 0) html += '<div style="height:12px;"></div>';
+          html +=
+            '<div style="display:flex;align-items:baseline;gap:7px;margin-bottom:3px;">' +
+              '<span style="font-weight:700;font-size:0.78rem;color:' + color + ';">' + escapeHtml(name) + '</span>' +
+              '<span style="font-size:0.6rem;color:#252540;">' + timeStr + '</span>' +
+              (isMe ? '<span style="font-size:0.55rem;letter-spacing:1px;color:#1e1e3a;text-transform:uppercase;">you</span>' : '') +
+            '</div>';
+        }
 
         html +=
-          '<tr class="' + rowClass + '">' +
-            '<td class="lb-rank ' + rankClass + '">' + rank + '</td>' +
-            '<td>' +
-              '<div class="lb-user">' +
-                '<div class="lb-avatar">' + walletShort.slice(0, 2) + '</div>' +
-                '<div>' +
-                  '<div class="lb-name">' + displayName + (isMe ? '<span class="lb-you-badge">YOU</span>' : '') + '</div>' +
-                  '<div class="lb-handle">' + walletShort + '</div>' +
-                '</div>' +
-              '</div>' +
-            '</td>' +
-            '<td>' + breakdown + '</td>' +
-            '<td class="' + totalClass + '">' + (r.total || 0) + '</td>' +
-          '</tr>';
+          '<div style="font-size:0.87rem;color:#c8c8e8;line-height:1.55;word-break:break-word;padding:1px 0;">' +
+            escapeHtml(m.text) +
+          '</div>';
       });
 
-      html += '</tbody></table>';
-      wrap.innerHTML = html;
-    }
+      if (chatMessages.length === 0) {
+        html =
+          '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:0.7rem;">' +
+            '<div style="font-size:2.5rem;">🦒</div>' +
+            '<div style="color:#252540;font-size:0.78rem;letter-spacing:2px;text-transform:uppercase;">No messages yet</div>' +
+            '<div style="color:#1a1a30;font-size:0.7rem;">Be the first legend</div>' +
+          '</div>';
+      }
 
-    function chipHtml(label, active) {
-      return '<span class="lb-chip' + (active ? " active" : "") + '">' + escapeHtml(label) + '</span>';
-    }
+      inner.innerHTML = html;
 
-    // ── My submissions ────────────────────────────────────────────────
-    async function loadMySubmissions() {
-      var el = document.getElementById("mySubsList");
-      if (!el) return;
-
-      try {
-        var season = getCurrentSeasonKey();
-        var data = await apiGet("/api/my-submissions?season=" + encodeURIComponent(season));
-        var subs = data.submissions || [];
-        renderMySubmissions(el, subs);
-      } catch (e) {
-        el.innerHTML = '<div class="lb-empty" style="padding:1.5rem 0;">Could not load submissions.<br><span style="color:#333;">' + escapeHtml(e.message) + '</span></div>';
+      // Auto-scroll if near bottom
+      var nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 100;
+      if (nearBottom || chatMessages.length <= 3) {
+        box.scrollTop = box.scrollHeight;
       }
     }
 
-    function renderMySubmissions(el, subs) {
-      if (!subs.length) {
-        el.innerHTML = '<div class="lb-empty" style="padding:1.5rem 0;font-size:0.78rem;">No submissions this season yet.<br>Submit your first proof above ↑</div>';
-        return;
-      }
+    async function sendChatMessage() {
+      if (!walletPublicKey) { alert('Connect your wallet first.'); return; }
+      var inp = document.getElementById('chatInput');
+      var btn = document.getElementById('chatSendBtn');
+      if (!inp) return;
 
-      el.innerHTML = subs.map(function(s) {
-        var typeLabel = PROOF_LABELS[s.type] || s.type;
-        var pts = PROOF_POINTS[s.type] || 0;
-        var urlShort = (s.tweet_url || "").replace(/^https?:\/\/(www\.)?(x\.com|twitter\.com)/, "x.com");
-        var statusClass = s.status || "pending";
-        var meta = typeLabel + " · " + fmtDate(s.submitted_at);
-        if (s.status === "rejected" && s.reject_reason) meta += " · " + escapeHtml(s.reject_reason);
+      var text = inp.value.trim();
+      if (!text) return;
+      if (text.length > 400) { alert('Max 400 characters.'); return; }
 
-        return '<div class="sub-row">' +
-          '<div class="sub-status-dot ' + statusClass + '"></div>' +
-          '<div class="sub-body">' +
-            '<a class="sub-url" href="' + escapeHtml(s.tweet_url) + '" target="_blank" rel="noopener">' + escapeHtml(urlShort) + '</a>' +
-            '<div class="sub-meta">' + meta + '</div>' +
-          '</div>' +
-          '<div class="sub-status-label ' + statusClass + '">' + statusClass.toUpperCase() + '</div>' +
-          (s.status === "approved" ? '<div class="sub-pts">+' + pts + ' pts</div>' : '') +
-        '</div>';
-      }).join("");
-    }
+      inp.value = '';
+      inp.dispatchEvent(new Event('input'));  // reset counter
+      if (btn) { btn.disabled = true; btn.textContent = '…'; }
 
-    // ── Proof submission ──────────────────────────────────────────────
-    function onFileChange(input) {
-      var label = document.getElementById("pfFileLabel");
-      var name  = document.getElementById("pfFileName");
-      if (input.files && input.files[0]) {
-        label.classList.add("has-file");
-        name.textContent = input.files[0].name;
-      } else {
-        label.classList.remove("has-file");
-        name.textContent = "Attach screenshot...";
+      initGun();
+
+      var wallet = walletPublicKey.toBase58();
+      var msgId  = wallet.slice(0,6) + '_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+
+      chatRef.get(msgId).put({
+        wallet: wallet,
+        text:   text,
+        time:   Date.now()
+      });
+
+      if (btn) {
+        setTimeout(function() {
+          btn.disabled = false;
+          btn.textContent = 'Send';
+          inp.focus();
+        }, 300);
       }
     }
 
-    function showPfMsg(msg, isError) {
-      var el = document.getElementById("pfMsg");
-      if (!el) return;
-      el.textContent = msg;
-      el.className = "pf-msg " + (isError ? "err" : "ok");
-    }
-
-    async function submitProof() {
-      if (!walletPublicKey) { alert("Connect your wallet first."); return; }
-
-      var urlInput  = document.getElementById("pfUrl");
-      var typeInput = document.getElementById("pfType");
-      var fileInput = document.getElementById("pfFile");
-      var submitBtn = document.getElementById("pfSubmitBtn");
-
-      var url  = (urlInput.value || "").trim();
-      var type = typeInput.value;
-
-      // Validate URL
-      urlInput.classList.remove("error");
-      if (!url) {
-        urlInput.classList.add("error");
-        showPfMsg("Please enter the tweet URL.", true);
-        return;
-      }
-      if (!validateTweetUrl(url)) {
-        urlInput.classList.add("error");
-        showPfMsg("URL must be a valid x.com or twitter.com post URL.", true);
-        return;
-      }
-
-      // Encode screenshot as base64 if provided
-      var screenshotB64 = null;
-      if (fileInput.files && fileInput.files[0]) {
-        var file = fileInput.files[0];
-        if (file.size > 5 * 1024 * 1024) {
-          showPfMsg("Screenshot must be under 5MB.", true);
-          return;
-        }
-        screenshotB64 = await new Promise(function(res, rej) {
-          var r = new FileReader();
-          r.onload = function() { res(r.result.split(",")[1]); };
-          r.onerror = function() { rej(new Error("File read failed")); };
-          r.readAsDataURL(file);
-        });
-      }
-
-      submitBtn.disabled = true;
-      submitBtn.textContent = "Submitting…";
-
-      try {
-        await apiPost("/api/submit-proof", {
-          tweet_url:  url,
-          type:       type,
-          screenshot: screenshotB64 || null,
-          season_key: getCurrentSeasonKey()
-        });
-
-        showPfMsg("✓ Submitted! An admin will review within 24 hours.", false);
-        urlInput.value = "";
-        fileInput.value = "";
-        document.getElementById("pfFileLabel").classList.remove("has-file");
-        document.getElementById("pfFileName").textContent = "Attach screenshot...";
-
-        // Reload my submissions
-        loadMySubmissions();
-      } catch (e) {
-        showPfMsg(e.message || "Submission failed. Please try again.", true);
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = "Submit Proof";
-      }
-    }
   </script>
 </body>
 </html>
