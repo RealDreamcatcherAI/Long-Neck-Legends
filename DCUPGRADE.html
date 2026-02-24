@@ -1627,7 +1627,17 @@ a.plink:hover{
           '</div>' +
         '</div>';
 
-      
+      view.innerHTML +=
+        '<div class="stats-card">' +
+          '<div class="stats-title">LEGEND POINTS</div>' +
+          '<div class="points-display">' +
+            '<div class="points-number">' + points.toLocaleString() + '</div>' +
+            '<div class="points-label">Total Points</div>' +
+          '</div>' +
+          '<div class="stat-row"><span class="stat-label">Base (' + count + ' \u00D7 100)</span><span class="stat-value">' + (count*100) + '</span></div>' +
+          '<div class="stat-row"><span class="stat-label">Tier Multiplier</span><span class="stat-value cyan">' + tier.pointsMultiplier + 'x</span></div>' +
+          '<div class="stat-row"><span class="stat-label">Raffle Entries</span><span class="stat-value purple">' + (count * tier.raffleMultiplier) + '</span></div>' +
+        '</div>';
 
       
       // ---- CABBAGE (Soft Staking) ----
