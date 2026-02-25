@@ -960,6 +960,7 @@ a.plink:hover{
 
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tweetnacl@1.0.3/nacl.min.js"></script>
 </head>
 
 <body>
@@ -1186,6 +1187,7 @@ a.plink:hover{
 
     var session = {
       loadedNFTs: [],
+      profileId: null,
       profile: {
         username: "",
         pfpMint: "",
@@ -1259,6 +1261,8 @@ a.plink:hover{
 
     function saveProfileToStorage() {
       try { localStorage.setItem(storageKey(), JSON.stringify(session.profile)); } catch (e) {}
+      // Also persist to Supabase (debounced) if we have a resolved profileId
+      try { queueSaveProfileToSupabase(); } catch (e) {}
     }
 
     function secondWalletStorageKey(){
@@ -1425,6 +1429,8 @@ a.plink:hover{
 
         loadProfileFromStorage();
         loadSecondWalletFromStorage();
+
+        await hydrateProfileAndWalletsFromSupabase(addr);
 
         session.profilePanelOpen = false;
         applyProfilePanelUI();
@@ -1894,11 +1900,15 @@ var nextTierRow = nextTier
 
     async function connectSecondWallet(which){
       try{
+        if (!walletPublicKey) return alert("Connect main wallet first.");
+        if (!session || !session.profileId) return alert("Profile not ready yet. Disconnect and reconnect your main wallet.");
+
         var provider = getProviderByName(which);
         if (!provider || typeof provider.connect !== "function") {
           return alert("Wallet provider not found. Make sure " + which + " is installed & enabled.");
         }
 
+        // 1) connect the SECOND wallet
         var resp = await provider.connect({ onlyIfTrusted: false });
         var pk = resp && resp.publicKey ? resp.publicKey : provider.publicKey;
         if (!pk) throw new Error("Connected but no publicKey returned.");
@@ -1909,8 +1919,51 @@ var nextTierRow = nextTier
           return alert("That’s your main wallet already. Pick a different wallet for the 2nd slot.");
         }
 
+        // 2) require proof-of-ownership (sign message) so nobody can type/link wallets they don't control
+        if (typeof provider.signMessage !== "function") {
+          return alert("This wallet does not support message signing. Use Phantom/Solflare/Magic Eden wallet with signMessage.");
+        }
+
+        var nonce = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (String(Date.now()) + "_" + Math.random().toString(16).slice(2));
+        var msg =
+          "LNL Link 2nd Wallet Proof\n" +
+          "Profile: " + session.profileId + "\n" +
+          "Primary: " + walletPublicKey.toBase58() + "\n" +
+          "Second: " + addr + "\n" +
+          "Nonce: " + nonce + "\n" +
+          "Time: " + new Date().toISOString();
+
+        var msgBytes = new TextEncoder().encode(msg);
+        var signed = await provider.signMessage(msgBytes, "utf8");
+
+        // Phantom returns { signature: Uint8Array, publicKey: PublicKey }
+        var sigBytes = signed && signed.signature ? signed.signature : signed;
+        if (!sigBytes) throw new Error("No signature returned from wallet.");
+
+        // Verify signature with tweetnacl (loaded in <head>)
+        if (!window.nacl || !window.nacl.sign || !window.nacl.sign.detached || !window.nacl.sign.detached.verify) {
+          throw new Error("Missing tweetnacl. Refresh page (script failed to load).");
+        }
+
+        var pubBytes = null;
+        if (signed && signed.publicKey) {
+          if (typeof signed.publicKey.toBytes === "function") pubBytes = signed.publicKey.toBytes();
+          else if (signed.publicKey instanceof Uint8Array) pubBytes = signed.publicKey;
+        }
+        if (!pubBytes && pk) {
+          if (typeof pk.toBytes === "function") pubBytes = pk.toBytes();
+          else if (pk instanceof Uint8Array) pubBytes = pk;
+        }
+        if (!pubBytes) throw new Error("Could not read wallet public key bytes for verification.");
+
+        var ok = window.nacl.sign.detached.verify(msgBytes, sigBytes, pubBytes);
+        if (!ok) throw new Error("Signature verification failed. Not linking wallet.");
+
+        // 3) store as second wallet (local + Supabase)
         session.secondWallet.address = addr;
         saveSecondWalletToStorage();
+
+        await linkWalletToProfile(addr, session.profileId, false);
 
         var el = document.getElementById("secondWalletStatus");
         if (el) el.textContent = "Linked: " + shortAddr(addr) + " — rescanning…";
@@ -1921,15 +1974,23 @@ var nextTierRow = nextTier
 
         hideSecondWalletModal();
         alert("2nd wallet linked: " + shortAddr(addr));
-      } catch (err) {
+        } catch (err) {
         console.error("Second wallet connect error:", err);
         alert("Failed to link 2nd wallet: " + (err.message || err));
       }
     }
 
     function unlinkSecondWallet(){
+      var prev = session.secondWallet.address || "";
       session.secondWallet.address = "";
       saveSecondWalletToStorage();
+
+      // Remove from Supabase so it won't be remembered (requires DELETE policy on wallet_links)
+      if (prev && session && session.profileId) {
+        unlinkWallet(prev).catch(function(e){
+          console.warn("Failed to unlink 2nd wallet in Supabase (maybe missing DELETE policy):", e);
+        });
+      }
 
       var el = document.getElementById("secondWalletStatus");
       if (el) el.textContent = "Second wallet unlinked. Rescanning…";
@@ -2046,6 +2107,157 @@ var nextTierRow = nextTier
         supaClient = supabase.createClient(SUPA_URL, SUPA_KEY);
       }
       return supaClient;
+    }
+
+    /* ===============================
+       PROFILES + WALLET LINKING (Supabase)
+       - Resolves a stable profile for a wallet (creates if missing)
+       - Persists basic profile fields (username + avatar_url)
+       - Remembers linked wallets via wallet_links
+       =============================== */
+
+    function getDb() { return getSupaClient(); }
+
+    async function resolveProfileForWallet(wallet) {
+      var db = getDb();
+
+      // 1) check link
+      var linkRes = await db
+        .from("wallet_links")
+        .select("profile_id")
+        .eq("wallet", wallet)
+        .maybeSingle();
+
+      if (linkRes.error) throw linkRes.error;
+
+      // 2) if link exists -> load profile
+      if (linkRes.data && linkRes.data.profile_id) {
+        var profRes = await db
+          .from("profiles")
+          .select("id, username, avatar_url, created_at")
+          .eq("id", linkRes.data.profile_id)
+          .single();
+        if (profRes.error) throw profRes.error;
+        return profRes.data;
+      }
+
+      // 3) create profile
+      var newProfRes = await db
+        .from("profiles")
+        .insert({
+          username: (session && session.profile && session.profile.username) ? session.profile.username : null,
+          avatar_url: (session && session.profile && session.profile.pfpImage) ? session.profile.pfpImage : null
+        })
+        .select("id, username, avatar_url, created_at")
+        .single();
+
+      if (newProfRes.error) throw newProfRes.error;
+
+      // 4) link wallet -> profile (wallet is unique)
+      var upRes = await db
+        .from("wallet_links")
+        .upsert({ wallet: wallet, profile_id: newProfRes.data.id, is_primary: true }, { onConflict: "wallet" });
+
+      if (upRes.error) throw upRes.error;
+
+      // 5) re-read link (handles race)
+      var finalLink = await db
+        .from("wallet_links")
+        .select("profile_id")
+        .eq("wallet", wallet)
+        .single();
+      if (finalLink.error) throw finalLink.error;
+
+      var finalProf = await db
+        .from("profiles")
+        .select("id, username, avatar_url, created_at")
+        .eq("id", finalLink.data.profile_id)
+        .single();
+      if (finalProf.error) throw finalProf.error;
+
+      return finalProf.data;
+    }
+
+    async function loadLinkedWallets(profileId) {
+      var db = getDb();
+      var res = await db
+        .from("wallet_links")
+        .select("wallet, is_primary, created_at")
+        .eq("profile_id", profileId)
+        .order("is_primary", { ascending: false });
+
+      if (res.error) throw res.error;
+      return res.data || [];
+    }
+
+    async function linkWalletToProfile(wallet, profileId, isPrimary) {
+      var db = getDb();
+      var res = await db
+        .from("wallet_links")
+        .upsert(
+          { wallet: wallet, profile_id: profileId, is_primary: !!isPrimary },
+          { onConflict: "wallet" }
+        );
+      if (res.error) throw res.error;
+    }
+
+    async function unlinkWallet(wallet) {
+      var db = getDb();
+      // If you don't have DELETE policy, this may fail — we still clear local UI.
+      var res = await db
+        .from("wallet_links")
+        .delete()
+        .eq("wallet", wallet);
+      if (res.error) throw res.error;
+    }
+
+    // Debounced profile saving (keeps your existing localStorage behavior)
+    var _saveProfileTimer = null;
+    function queueSaveProfileToSupabase() {
+      if (!session || !session.profileId) return;
+      if (_saveProfileTimer) clearTimeout(_saveProfileTimer);
+      _saveProfileTimer = setTimeout(function(){
+        saveProfileToSupabase().catch(function(e){ console.warn("Supabase profile save failed:", e); });
+      }, 400);
+    }
+
+    async function saveProfileToSupabase() {
+      if (!session || !session.profileId) return;
+      var db = getDb();
+      // Map existing dashboard profile fields -> DB columns that exist
+      var payload = {
+        username: (session.profile && session.profile.username) ? session.profile.username : null,
+        avatar_url: (session.profile && session.profile.pfpImage) ? session.profile.pfpImage : null
+      };
+      var res = await db
+        .from("profiles")
+        .update(payload)
+        .eq("id", session.profileId);
+      if (res.error) throw res.error;
+    }
+
+    async function hydrateProfileAndWalletsFromSupabase(primaryWallet) {
+      try {
+        var profile = await resolveProfileForWallet(primaryWallet);
+        session.profileId = profile.id;
+
+        // Prefer Supabase values when present
+        if (profile.username) session.profile.username = profile.username;
+        if (profile.avatar_url) session.profile.pfpImage = profile.avatar_url;
+
+        // Pull linked wallets and set 2nd wallet UI value (first non-primary wallet)
+        var wallets = await loadLinkedWallets(profile.id);
+        var second = "";
+        for (var i = 0; i < wallets.length; i++) {
+          if (wallets[i].wallet && wallets[i].wallet !== primaryWallet) { second = wallets[i].wallet; break; }
+        }
+        if (second) {
+          session.secondWallet.address = second;
+          saveSecondWalletToStorage(); // keep your existing local cache
+        }
+      } catch (e) {
+        console.warn("Hydrate profile/wallets failed (Supabase):", e);
+      }
     }
 
 
@@ -2535,8 +2747,3 @@ var nextTierRow = nextTier
   </script>
 </body>
 </html>
-
-  
-
-     
-     
