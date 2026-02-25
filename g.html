@@ -1209,31 +1209,52 @@ a.plink:hover{
       var idx = TIERS.findIndex(function(t) { return t.id === tier.id; });
       return idx < TIERS.length - 1 ? TIERS[idx + 1] : null;
     }
+    
     function getProviderByName(name){
-      if (name === "phantom") {
-        if (window.phantom && window.phantom.solana && window.phantom.solana.isPhantom) return window.phantom.solana;
-        if (window.solana && window.solana.isPhantom) return window.solana;
-      }
-      if (name === "solflare") {
-        if (window.solflare && window.solflare.isSolflare) return window.solflare;
-        if (window.solflare && window.solflare.solana) return window.solflare.solana;
-      }
-      if (name === "magiceden") {
-        if (window.magicEden && window.magicEden.solana) return window.magicEden.solana;
-        if (window.solana && window.solana.isMagicEden) return window.solana;
-        if (window.solana && window.solana.isMagicEdenWallet) return window.solana;
-      }
-      return null;
+    if (name === "phantom") {
+      if (window.phantom && window.phantom.solana && window.phantom.solana.isPhantom) return window.phantom.solana;
+      if (window.solana && window.solana.isPhantom) return window.solana;
+    }
+
+    if (name === "solflare") {
+      // ✅ Solflare Mobile commonly injects the real provider here:
+      if (window.solflare && window.solflare.solana && typeof window.solflare.solana.connect === "function") return window.solflare.solana;
+      // fallback shapes:
+      if (window.solflare && typeof window.solflare.connect === "function") return window.solflare;
+      if (window.solana && (window.solana.isSolflare || window.solana.isSolflareWallet) && typeof window.solana.connect === "function") return window.solana;
+    }
+
+    if (name === "magiceden") {
+      if (window.magicEden && window.magicEden.solana && typeof window.magicEden.solana.connect === "function") return window.magicEden.solana;
+      if (window.solana && (window.solana.isMagicEden || window.solana.isMagicEdenWallet) && typeof window.solana.connect === "function") return window.solana;
+    }
+
+    return null;
     }
 
     function detectWalletProvider() {
-      if (window.phantom && window.phantom.solana && window.phantom.solana.isPhantom) return window.phantom.solana;
-      if (window.backpack && window.backpack.solana) return window.backpack.solana;
-      if (window.solflare && window.solflare.isSolflare) return window.solflare;
-      if (window.solflare && window.solflare.solana) return window.solflare.solana;
-      if (window.solana && window.solana.isPhantom) return window.solana;
-      if (window.solana) return window.solana;
-      return null;
+    // ✅ prioritize “real adapters” that actually have connect()
+    try {
+      // Solflare (mobile/web)
+      if (window.solflare && window.solflare.solana && typeof window.solflare.solana.connect === "function") return window.solflare.solana;
+      if (window.solflare && typeof window.solflare.connect === "function") return window.solflare;
+
+      // Phantom
+      if (window.phantom && window.phantom.solana && window.phantom.solana.isPhantom && typeof window.phantom.solana.connect === "function") return window.phantom.solana;
+      if (window.solana && window.solana.isPhantom && typeof window.solana.connect === "function") return window.solana;
+
+      // Magic Eden
+      if (window.magicEden && window.magicEden.solana && typeof window.magicEden.solana.connect === "function") return window.magicEden.solana;
+      if (window.solana && (window.solana.isMagicEden || window.solana.isMagicEdenWallet) && typeof window.solana.connect === "function") return window.solana;
+
+      // Backpack (some inject window.backpack.solana)
+      if (window.backpack && window.backpack.solana && typeof window.backpack.solana.connect === "function") return window.backpack.solana;
+
+      // Last fallback: any injected solana provider with connect
+      if (window.solana && typeof window.solana.connect === "function") return window.solana;
+    } catch(e) {}
+
+    return null;
     }
 
     function storageKey() {
@@ -1402,43 +1423,54 @@ a.plink:hover{
     }
 
     async function connectWallet() {
-      var provider = detectWalletProvider();
-      if (!provider || typeof provider.connect !== "function") {
-        alert("No Solana wallet found.\n\nInstall Phantom, Solflare, or Backpack and refresh the page.");
-        return;
-      }
-      try {
-        var resp = await provider.connect({ onlyIfTrusted: false });
-        walletProvider = provider;
-        walletPublicKey = resp.publicKey || provider.publicKey;
-        if (!walletPublicKey) throw new Error("Wallet connected but no public key returned. Try unlocking your wallet first.");
+    var provider = detectWalletProvider();
 
-        var addr = walletPublicKey.toBase58();
-        document.getElementById("walletDisplay").textContent = shortAddr(addr);
-
-        document.getElementById("dashNavWrap").classList.add("show");
-        document.getElementById("walletChip").style.display = "flex";
-        document.getElementById("disconnectBtn").style.display = "inline-block";
-
-        document.getElementById("connectSection").style.display = "none";
-        document.getElementById("loadingSection").style.display = "block";
-
-        loadProfileFromStorage();
-        loadSecondWalletFromStorage();
-
-        session.profilePanelOpen = false;
-        applyProfilePanelUI();
-
-        await loadDashboard();
-      } catch (err) {
-        console.error("Connect error:", err);
-        if (err.code === 4001 || (err.message && err.message.toLowerCase().includes("user rejected"))) {
-          // User cancelled — no alert needed
-        } else {
-          alert("Connection failed: " + (err.message || err));
-        }
-      }
+    if (!provider || typeof provider.connect !== "function") {
+      alert("No Solana wallet provider detected.\n\nIf you're on Solflare Mobile, open this page INSIDE Solflare's browser and try again.");
+      return;
     }
+
+    try {
+      // Some wallets (incl. Solflare mobile) can be picky about connect() args.
+      var resp = null;
+
+      try {
+        resp = await provider.connect({ onlyIfTrusted: false });
+      } catch (e1) {
+        // ✅ fallback: call connect with no params
+        resp = await provider.connect();
+      }
+
+      walletProvider = provider;
+      walletPublicKey = (resp && resp.publicKey) ? resp.publicKey : provider.publicKey;
+
+      if (!walletPublicKey) throw new Error("Wallet connected but no public key returned. Unlock wallet and try again.");
+
+      var addr = walletPublicKey.toBase58();
+      document.getElementById("walletDisplay").textContent = shortAddr(addr);
+
+      document.getElementById("dashNavWrap").classList.add("show");
+      document.getElementById("walletChip").style.display = "flex";
+      document.getElementById("disconnectBtn").style.display = "inline-block";
+
+      document.getElementById("connectSection").style.display = "none";
+      document.getElementById("loadingSection").style.display = "block";
+
+      loadProfileFromStorage();
+      loadSecondWalletFromStorage();
+
+      session.profilePanelOpen = false;
+      applyProfilePanelUI();
+
+      await loadDashboard();
+    } catch (err) {
+      console.error("Connect error:", err);
+      var msg = (err && err.message) ? err.message : String(err || "Unknown error");
+      // user rejected
+      if (err && (err.code === 4001 || msg.toLowerCase().includes("user rejected"))) return;
+      alert("Connection failed: " + msg);
+    }
+  }
 
     function disconnectWallet() {
       stopChatPoll();
