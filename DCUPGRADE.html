@@ -1631,7 +1631,7 @@ a.plink:hover{
           '<div style="background:rgba(0,255,136,0.04);border:1px solid rgba(0,255,136,0.12);border-radius:10px;padding:14px 16px;margin:10px 0 14px;">' +
             '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">' +
               '<span style="color:#888;font-size:0.78rem;">NFTs Earning</span>' +
-              '<span style="font-weight:700;font-size:1.05rem;color:#00ff88;" id="cabbageNftCount">' + count + '</span>' +
+              '<span style="font-weight:700;font-size:1.05rem;color:#00ff88;" id="cabbageNftCount">—</span>' +
             '</div>' +
             '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">' +
               '<span style="color:#888;font-size:0.78rem;">Rate Per NFT</span>' +
@@ -1639,7 +1639,7 @@ a.plink:hover{
             '</div>' +
             '<div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid rgba(0,255,136,0.1);padding-top:8px;">' +
               '<span style="color:#888;font-size:0.78rem;font-weight:600;">Total Weekly Earn</span>' +
-              '<span style="font-weight:900;font-size:1.15rem;color:#00ff88;" id="cabbageRate">' + count + ' \uD83E\uDD6C / week</span>' +
+              '<span style="font-weight:900;font-size:1.15rem;color:#00ff88;" id="cabbageRate">—</span>' +
             '</div>' +
           '</div>' +
           '<div class="stat-row"><span class="stat-label">Pending</span><span class="stat-value cyan" id="cabbagePending">—</span></div>' +
@@ -2136,6 +2136,7 @@ var nextTierRow = nextTier
         var balance = Number(data.balance || 0);
         var pending = Number(data.pending || 0);
         var rate = Number(data.rate_per_week || 0);
+        var stakedCount = Number(data.staked_count || 0);
 
         var startedAt = data.started_at || null;
         var lastClaim = data.last_claim_at || null;
@@ -2145,7 +2146,7 @@ var nextTierRow = nextTier
         if (pendEl) pendEl.textContent = (Math.floor(pending * 100) / 100).toLocaleString();
         if (startedEl) startedEl.textContent = startedAt ? fmtDT(startedAt) : 'Not started';
         if (lastEl) lastEl.textContent = lastClaim ? fmtDT(lastClaim) : '—';
-        if (nftCountEl) nftCountEl.textContent = rate.toLocaleString();
+        if (nftCountEl) nftCountEl.textContent = stakedCount.toLocaleString();
 
         // Button rules:
         // - If NOT started: enable Start, disable Claim
