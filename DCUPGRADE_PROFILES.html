@@ -960,6 +960,7 @@ a.plink:hover{
 
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tweetnacl@1.0.3/nacl.min.js"></script>
 </head>
 
 <body>
@@ -1894,16 +1895,17 @@ var nextTierRow = nextTier
     }
 
     function closeSecondWalletModal(e){
-      if (e && e.target && e.target.id === "secondWalletModalBackdrop") hideSecondWalletModal();
-    }
-
-    async function connectSecondWallet(which){
+      if (e && e.target &async function connectSecondWallet(which){
       try{
+        if (!walletPublicKey) return alert("Connect main wallet first.");
+        if (!session || !session.profileId) return alert("Profile not ready yet. Disconnect and reconnect your main wallet.");
+
         var provider = getProviderByName(which);
         if (!provider || typeof provider.connect !== "function") {
           return alert("Wallet provider not found. Make sure " + which + " is installed & enabled.");
         }
 
+        // 1) connect the SECOND wallet
         var resp = await provider.connect({ onlyIfTrusted: false });
         var pk = resp && resp.publicKey ? resp.publicKey : provider.publicKey;
         if (!pk) throw new Error("Connected but no publicKey returned.");
@@ -1914,17 +1916,51 @@ var nextTierRow = nextTier
           return alert("That’s your main wallet already. Pick a different wallet for the 2nd slot.");
         }
 
+        // 2) require proof-of-ownership (sign message) so nobody can type/link wallets they don't control
+        if (typeof provider.signMessage !== "function") {
+          return alert("This wallet does not support message signing. Use Phantom/Solflare/Magic Eden wallet with signMessage.");
+        }
+
+        var nonce = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (String(Date.now()) + "_" + Math.random().toString(16).slice(2));
+        var msg =
+          "LNL Link 2nd Wallet Proof\n" +
+          "Profile: " + session.profileId + "\n" +
+          "Primary: " + walletPublicKey.toBase58() + "\n" +
+          "Second: " + addr + "\n" +
+          "Nonce: " + nonce + "\n" +
+          "Time: " + new Date().toISOString();
+
+        var msgBytes = new TextEncoder().encode(msg);
+        var signed = await provider.signMessage(msgBytes, "utf8");
+
+        // Phantom returns { signature: Uint8Array, publicKey: PublicKey }
+        var sigBytes = signed && signed.signature ? signed.signature : signed;
+        if (!sigBytes) throw new Error("No signature returned from wallet.");
+
+        // Verify signature with tweetnacl (loaded in <head>)
+        if (!window.nacl || !window.nacl.sign || !window.nacl.sign.detached || !window.nacl.sign.detached.verify) {
+          throw new Error("Missing tweetnacl. Refresh page (script failed to load).");
+        }
+
+        var pubBytes = null;
+        if (signed && signed.publicKey) {
+          if (typeof signed.publicKey.toBytes === "function") pubBytes = signed.publicKey.toBytes();
+          else if (signed.publicKey instanceof Uint8Array) pubBytes = signed.publicKey;
+        }
+        if (!pubBytes && pk) {
+          if (typeof pk.toBytes === "function") pubBytes = pk.toBytes();
+          else if (pk instanceof Uint8Array) pubBytes = pk;
+        }
+        if (!pubBytes) throw new Error("Could not read wallet public key bytes for verification.");
+
+        var ok = window.nacl.sign.detached.verify(msgBytes, sigBytes, pubBytes);
+        if (!ok) throw new Error("Signature verification failed. Not linking wallet.");
+
+        // 3) store as second wallet (local + Supabase)
         session.secondWallet.address = addr;
         saveSecondWalletToStorage();
 
-        // Persist 2nd wallet to Supabase so it is remembered across devices
-        try {
-          if (session && session.profileId) {
-            await linkWalletToProfile(addr, session.profileId, false);
-          }
-        } catch (e) {
-          console.warn("Failed to save 2nd wallet to Supabase:", e);
-        }
+        await linkWalletToProfile(addr, session.profileId, false);
 
         var el = document.getElementById("secondWalletStatus");
         if (el) el.textContent = "Linked: " + shortAddr(addr) + " — rescanning…";
@@ -1938,6 +1974,10 @@ var nextTierRow = nextTier
       } catch (err) {
         console.error("Second wallet connect error:", err);
         alert("Failed to link 2nd wallet: " + (err.message || err));
+      }
+    }
+
+       alert("Failed to link 2nd wallet: " + (err.message || err));
       }
     }
 
