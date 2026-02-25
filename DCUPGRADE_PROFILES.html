@@ -1895,7 +1895,10 @@ var nextTierRow = nextTier
     }
 
     function closeSecondWalletModal(e){
-      if (e && e.target &async function connectSecondWallet(which){
+      if (e && e.target && e.target.id === "secondWalletModalBackdrop") hideSecondWalletModal();
+    }
+
+    async function connectSecondWallet(which){
       try{
         if (!walletPublicKey) return alert("Connect main wallet first.");
         if (!session || !session.profileId) return alert("Profile not ready yet. Disconnect and reconnect your main wallet.");
@@ -1971,13 +1974,9 @@ var nextTierRow = nextTier
 
         hideSecondWalletModal();
         alert("2nd wallet linked: " + shortAddr(addr));
-      } catch (err) {
+        } catch (err) {
         console.error("Second wallet connect error:", err);
         alert("Failed to link 2nd wallet: " + (err.message || err));
-      }
-    }
-
-       alert("Failed to link 2nd wallet: " + (err.message || err));
       }
     }
 
