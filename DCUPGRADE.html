@@ -2145,7 +2145,8 @@ var nextTierRow = nextTier
         if (rateEl) rateEl.textContent = rate.toLocaleString() + ' \uD83E\uDD6C / week';
         if (pendEl) pendEl.textContent = (Math.floor(pending * 100) / 100).toLocaleString();
         if (startedEl) startedEl.textContent = startedAt ? fmtDT(startedAt) : 'Not started';
-        if (lastEl) lastEl.textContent = lastClaim ? fmtDT(lastClaim) : '—';
+        var claimIsReal = lastClaim && lastClaim.indexOf('1970') !== 0;
+        if (lastEl) lastEl.textContent = claimIsReal ? fmtDT(lastClaim) : '—';
         if (nftCountEl) nftCountEl.textContent = stakedCount.toLocaleString();
 
         // Button rules:
