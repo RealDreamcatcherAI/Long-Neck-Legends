@@ -2692,11 +2692,15 @@ var nextTierRow = nextTier
         chatRefreshTimer = null;
       }
 
-      // stop real-time subscription
+      // stop real-time subscription and reset supaClient
+      // so the next subscribe gets a clean channel with no name conflicts
       if (chatChannel) {
-        try { getSupaClient().removeChannel(chatChannel); } catch(e) {}
+        try { if (supaClient) supaClient.removeChannel(chatChannel); } catch(e) {}
         chatChannel = null;
       }
+      // Reset so a fresh client is created next time — prevents Supabase
+      // from treating 'chat_messages_live' as already registered
+      supaClient = null;
     }
     function renderChatUI() {
       var view = document.getElementById('view-chat');
