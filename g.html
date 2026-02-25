@@ -973,7 +973,7 @@ a.plink:hover{
 
   <section class="hero">
     <h1>HOLDER <span>DASHBOARD</span></h1>
-    <p class="hero-sub">Customize your profile, connect your wallets and socials to see your tier, points, and perks</p>
+    <p class="hero-sub">Customize your profile, connect your wallet, and manage your Cabbage staking</p>
   </section>
 
   <!-- DASHBOARD-ONLY NAV BAR -->
@@ -1080,39 +1080,12 @@ a.plink:hover{
   </div>
 
 
-
-  <!-- USERNAME MODAL (mobile-safe, replaces prompt) -->
-  <div class="modal-backdrop" id="usernameModalBackdrop" onclick="closeUsernameModal(event)">
-    <div class="modal" onclick="event.stopPropagation()">
-      <div class="modal-head">
-        <div class="modal-title">Set Profile Username</div>
-        <button class="modal-close" onclick="hideUsernameModal()">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="modal-note">This username is saved to this wallet on this device. Max 24 characters.</div>
-
-        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:10px;">
-          <input id="usernameInput" type="text" inputmode="text" autocomplete="off" autocapitalize="words" spellcheck="false"
-                 placeholder="Your name..." maxlength="24"
-                 style="flex:1; min-width:200px; padding:12px 12px; border-radius:12px; border:1px solid rgba(255,255,255,0.10); background:rgba(0,0,0,0.22); color:#e0e0ff; outline:none; font-family:'Space Grotesk',sans-serif;">
-          <button class="action-btn" style="min-width:160px;" onclick="saveUsernameFromModal()">Save</button>
-        </div>
-
-        <div style="margin-top:14px; display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap;">
-          <button class="disconnect-btn" style="border-color:rgba(255,255,255,0.12);" onclick="clearUsername()">Clear</button>
-          <button class="disconnect-btn" onclick="hideUsernameModal()">Close</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-
   <footer>
     <p>&copy; 2026 Long Neck Legends &bull; Diamond Hands Only</p>
   </footer>
 
   <script>
-    window.addEventListener('load', function() { document.body.classList.add('loaded'); applyAuthFromUrl(); });
+    window.addEventListener('load', function() { document.body.classList.add('loaded'); });
 
     var CONFIG = {
       COLLECTION_MINT: "8Rt3Ayqth4DAiPnW9MDFi63TiQJHmohfTWLMQFHi4KZH",
@@ -1236,10 +1209,6 @@ a.plink:hover{
       var idx = TIERS.findIndex(function(t) { return t.id === tier.id; });
       return idx < TIERS.length - 1 ? TIERS[idx + 1] : null;
     }
-    function calcPoints(count, tier) {
-      return Math.floor(count * 100 * tier.pointsMultiplier);
-    }
-
     function getProviderByName(name){
       if (name === "phantom") {
         if (window.phantom && window.phantom.solana && window.phantom.solana.isPhantom) return window.phantom.solana;
@@ -1595,8 +1564,6 @@ a.plink:hover{
 
       var tier = getTier(count);
       var nextTier = getNextTier(tier);
-      var points = calcPoints(count, tier);
-
       var displayName = session.profile.username ? session.profile.username : shortAddr(walletPublicKey.toBase58());
       var xUrl = session.profile.x ? buildXUrl(session.profile.x) : "";
       var disc = session.profile.discord ? session.profile.discord : "";
@@ -1647,7 +1614,7 @@ a.plink:hover{
           '<div class="stats-title">PROFILE</div>' +
           '<div class="actions-grid">' +
             '<button class="action-btn" onclick="openPfpModal()">Edit PFP</button>' +
-            '<button class="action-btn" onclick="openUsernameModal()">Edit Username</button>' +
+            '<button class="action-btn" onclick="editUsername()">Edit Username</button>' +
             '<button class="action-btn" onclick="connectX()">Connect X</button>' +
             '<button class="action-btn" onclick="connectDiscord()">Connect Discord</button>' +
             '<button class="action-btn" onclick="openSecondWalletModal()">Link 2nd Wallet</button>' +
@@ -1656,17 +1623,29 @@ a.plink:hover{
 
       view.innerHTML +=
         '<div class="stats-card">' +
-          '<div class="stats-title">LEGEND POINTS</div>' +
+          '<div class="stats-title">CABBAGE STAKING</div>' +
           '<div class="points-display">' +
-            '<div class="points-number">' + points.toLocaleString() + '</div>' +
-            '<div class="points-label">Total Points</div>' +
+            '<div class="points-number" id="cabbageBalance">—</div>' +
+            '<div class="points-label">Cabbage Balance</div>' +
           '</div>' +
-          '<div class="stat-row"><span class="stat-label">Base (' + count + ' \u00D7 100)</span><span class="stat-value">' + (count*100) + '</span></div>' +
-          '<div class="stat-row"><span class="stat-label">Tier Multiplier</span><span class="stat-value cyan">' + tier.pointsMultiplier + 'x</span></div>' +
-          '<div class="stat-row"><span class="stat-label">Raffle Entries</span><span class="stat-value purple">' + (count * tier.raffleMultiplier) + '</span></div>' +
+          '<div class="stat-row"><span class="stat-label">Earn Rate</span><span class="stat-value green" id="cabbageRate">—</span></div>' +
+          '<div class="stat-row"><span class="stat-label">Pending</span><span class="stat-value cyan" id="cabbagePending">—</span></div>' +
+          '<div class="stat-row"><span class="stat-label">Started</span><span class="stat-value" id="cabbageStarted">—</span></div>' +
+          '<div class="stat-row"><span class="stat-label">Last Claim</span><span class="stat-value" id="cabbageLast">—</span></div>' +
+          '<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:12px;flex-wrap:wrap;">' +
+            '<button class="disconnect-btn" style="border-color:rgba(255,255,255,0.12);" onclick="refreshCabbageUI()">Refresh</button>' +
+            '<button class="disconnect-btn" id="cabbageStartBtn" style="border-color:rgba(0,255,136,0.35);color:#00ff88;" onclick="startCabbage()">Start</button>' +
+            '<button class="disconnect-btn" id="cabbageClaimBtn" style="border-color:rgba(0,212,255,0.35);color:#00d4ff;" onclick="claimCabbage()">Claim</button>' +
+          '</div>' +
+          '<div style="margin-top:10px;color:#555;font-size:0.72rem;letter-spacing:1px;line-height:1.45;">' +
+            'Soft staking: click <strong>Start</strong> once to begin earning. You earn <strong>1 cabbage per week per NFT</strong>. Claim anytime.' +
+          '</div>' +
         '</div>';
 
-      var nextTierRow = nextTier
+      // Populate cabbage values after DOM updates
+      setTimeout(function(){ try { refreshCabbageUI(); } catch(e){} }, 50);
+
+var nextTierRow = nextTier
         ? '<div class="stat-row"><span class="stat-label">Next Tier At</span><span class="stat-value gold">' + nextTier.min + ' NFTs</span></div>'
         : '<div class="stat-row"><span class="stat-label">Status</span><span class="stat-value gold">MAXED \u{1F451}</span></div>';
 
@@ -1777,44 +1756,6 @@ a.plink:hover{
       saveProfileToStorage();
       refreshBanner();
     }
-
-
-    function openUsernameModal(){
-      if (!walletPublicKey) return alert("Connect wallet first.");
-      var input = document.getElementById("usernameInput");
-      if (input){
-        input.value = session.profile.username || "";
-        // focus for mobile keyboard
-        setTimeout(function(){ try{ input.focus(); input.setSelectionRange(input.value.length, input.value.length);}catch(e){} }, 50);
-      }
-      document.getElementById("usernameModalBackdrop").classList.add("show");
-    }
-
-    function hideUsernameModal(){
-      document.getElementById("usernameModalBackdrop").classList.remove("show");
-    }
-
-    function closeUsernameModal(e){
-      if (e && e.target && e.target.id === "usernameModalBackdrop") hideUsernameModal();
-    }
-
-    function saveUsernameFromModal(){
-      var input = document.getElementById("usernameInput");
-      var val = input ? input.value : "";
-      session.profile.username = sanitizeName(val);
-      saveProfileToStorage();
-      refreshBanner();
-      hideUsernameModal();
-    }
-
-    function clearUsername(){
-      session.profile.username = "";
-      saveProfileToStorage();
-      refreshBanner();
-      var input = document.getElementById("usernameInput");
-      if (input) input.value = "";
-    }
-
 
     function linkLedger(){
       var current = session.profile.ledger || "";
@@ -1985,64 +1926,6 @@ a.plink:hover{
       loadDashboard();
     }
 
-
-    function isMobileDevice(){
-      // Conservative check: treat small screens OR mobile UA as mobile
-      try{
-        var ua = (navigator.userAgent || "").toLowerCase();
-        var small = window.matchMedia && window.matchMedia("(max-width: 820px)").matches;
-        var touch = ("ontouchstart" in window) || (navigator.maxTouchPoints > 0);
-        var mobileUA = /iphone|ipad|ipod|android|mobile|silk|kindle|webos|blackberry|opera mini/.test(ua);
-        return mobileUA || (small && touch);
-      }catch(e){
-        return false;
-      }
-    }
-
-    function startAuthFlow(url, title){
-      // Mobile browsers commonly block popups and postMessage callbacks.
-      // On mobile we navigate in the same tab so it always works.
-      if (isMobileDevice()){
-        window.location.href = url;
-        return null;
-      }
-      return openAuthPopup(url, title);
-    }
-
-    function applyAuthFromUrl(){
-      // Support mobile callbacks that redirect back with query params.
-      // We accept a few common shapes: ?x=handle, ?x_username=handle, ?discord=username, ?discord_username=u&discord_discriminator=1234
-      try{
-        var p = new URLSearchParams(window.location.search || "");
-        var xh = p.get("x") || p.get("x_username") || p.get("xHandle") || p.get("xhandle");
-        var du = p.get("discord") || p.get("discord_username") || p.get("discordUser") || p.get("discorduser");
-        var dd = p.get("discord_discriminator") || p.get("discordDiscriminator") || p.get("disc");
-        var didSomething = false;
-
-        if (xh){
-          session.profile.x = normalizeHandle(xh);
-          didSomething = true;
-        }
-        if (du){
-          var full = du;
-          if (dd && dd !== "0") full = du + "#" + dd;
-          session.profile.discord = full;
-          didSomething = true;
-        }
-
-        if (didSomething){
-          saveProfileToStorage();
-          refreshBanner();
-
-          // Clean the URL so refresh doesn't re-apply
-          if (window.history && window.history.replaceState){
-            var clean = window.location.pathname + window.location.hash;
-            window.history.replaceState({}, document.title, clean);
-          }
-        }
-      }catch(e){}
-    }
-
     function openAuthPopup(url, title){
       var w = 520, h = 720;
       var y = window.top.outerHeight / 2 + window.top.screenY - (h / 2);
@@ -2059,13 +1942,13 @@ a.plink:hover{
     function connectX(){
       if (!walletPublicKey) return alert("Connect wallet first.");
       var url = "/api/auth/x/start?wallet=" + encodeURIComponent(walletPublicKey.toBase58());
-      startAuthFlow(url, "Connect X");
+      openAuthPopup(url, "Connect X");
     }
 
     function connectDiscord(){
       if (!walletPublicKey) return alert("Connect wallet first.");
       var url = "/api/auth/discord/start?wallet=" + encodeURIComponent(walletPublicKey.toBase58());
-      startAuthFlow(url, "Connect Discord");
+      openAuthPopup(url, "Connect Discord");
     }
 
     window.addEventListener("message", function(ev){
@@ -2151,6 +2034,164 @@ a.plink:hover{
       }
       return supaClient;
     }
+
+
+    /* ===============================
+       CABBAGE SOFT STAKING (OFF-CHAIN)
+       - Start button: sets first-time staking timestamp (one-time).
+       - Claim button: credits earned cabbage since last claim.
+       Requires Supabase Edge Function: /functions/v1/cabbage
+       =============================== */
+
+    function cabbageEndpoint() {
+      return SUPA_URL.replace(/\/+$/,'') + '/functions/v1/cabbage';
+    }
+
+    function cabbageAuthHeaders() {
+      // Supabase expects apikey + Authorization for Edge Functions when auth is enabled.
+      return {
+        'Content-Type': 'application/json',
+        'apikey': SUPA_KEY,
+        'Authorization': 'Bearer ' + SUPA_KEY
+      };
+    }
+
+    function setBtnState(id, disabled, text) {
+      var b = document.getElementById(id);
+      if (!b) return;
+      b.disabled = !!disabled;
+      b.style.opacity = disabled ? '0.45' : '1';
+      b.style.cursor = disabled ? 'not-allowed' : 'pointer';
+      if (text != null) b.textContent = text;
+    }
+
+    function fmtDT(iso) {
+      if (!iso) return '—';
+      try {
+        var d = new Date(iso);
+        if (isNaN(d.getTime())) return '—';
+        return d.toLocaleString();
+      } catch (e) { return '—'; }
+    }
+
+    async function signCabbageMessage(action) {
+      if (!walletProvider || !walletPublicKey) throw new Error('Wallet not connected');
+      if (!walletProvider.signMessage) throw new Error('Wallet does not support message signing');
+      var wallet = walletPublicKey.toBase58();
+      var ts = new Date().toISOString();
+      var msg = 'LNL Cabbage ' + action.toUpperCase() + '\nWallet: ' + wallet + '\nTime: ' + ts;
+      var msgBytes = new TextEncoder().encode(msg);
+      var sigBytes = await walletProvider.signMessage(msgBytes, 'utf8');
+      // Phantom returns {signature: Uint8Array}; others may return Uint8Array directly.
+      var raw = sigBytes && sigBytes.signature ? sigBytes.signature : sigBytes;
+      var b64 = btoa(String.fromCharCode.apply(null, Array.from(raw)));
+      return { wallet: wallet, message: msg, signature: b64 };
+    }
+
+    async function refreshCabbageUI() {
+      try {
+        if (!walletPublicKey) return;
+        var wallet = walletPublicKey.toBase58();
+
+        var balEl = document.getElementById('cabbageBalance');
+        var rateEl = document.getElementById('cabbageRate');
+        var pendEl = document.getElementById('cabbagePending');
+        var lastEl = document.getElementById('cabbageLast');
+        var startedEl = document.getElementById('cabbageStarted');
+
+        if (balEl) balEl.textContent = '…';
+        if (rateEl) rateEl.textContent = '…';
+        if (pendEl) pendEl.textContent = '…';
+        if (lastEl) lastEl.textContent = '…';
+        if (startedEl) startedEl.textContent = '…';
+
+        // Default UI state while loading
+        setBtnState('cabbageStartBtn', true, 'Start');
+        setBtnState('cabbageClaimBtn', true, 'Claim');
+
+        var res = await fetch(cabbageEndpoint() + '?wallet=' + encodeURIComponent(wallet), {
+          method: 'GET',
+          headers: cabbageAuthHeaders()
+        });
+
+        var data = await res.json().catch(function(){ return {}; });
+        if (!res.ok) {
+          throw new Error(data && data.error ? data.error : ('HTTP ' + res.status));
+        }
+
+        var balance = Number(data.balance || 0);
+        var pending = Number(data.pending || 0);
+        var rate = Number(data.rate_per_week || 0);
+
+        var startedAt = data.started_at || null;
+        var lastClaim = data.last_claim_at || null;
+
+        if (balEl) balEl.textContent = (Math.floor(balance * 100) / 100).toLocaleString();
+        if (rateEl) rateEl.textContent = rate.toLocaleString() + ' / week';
+        if (pendEl) pendEl.textContent = (Math.floor(pending * 100) / 100).toLocaleString();
+        if (startedEl) startedEl.textContent = startedAt ? fmtDT(startedAt) : 'Not started';
+        if (lastEl) lastEl.textContent = lastClaim ? fmtDT(lastClaim) : '—';
+
+        // Button rules:
+        // - If NOT started: enable Start, disable Claim
+        // - If started: disable Start, enable Claim
+        var started = !!startedAt;
+        setBtnState('cabbageStartBtn', started, started ? 'Started' : 'Start');
+        setBtnState('cabbageClaimBtn', !started, 'Claim');
+
+      } catch (e) {
+        console.error('refreshCabbageUI error:', e);
+        // Leave buttons usable for retry
+        setBtnState('cabbageStartBtn', false, 'Start');
+        setBtnState('cabbageClaimBtn', false, 'Claim');
+      }
+    }
+
+    async function startCabbage() {
+      try {
+        setBtnState('cabbageStartBtn', true, 'Starting…');
+        setBtnState('cabbageClaimBtn', true, 'Claim');
+        var payload = await signCabbageMessage('start');
+
+        var res = await fetch(cabbageEndpoint(), {
+          method: 'POST',
+          headers: cabbageAuthHeaders(),
+          body: JSON.stringify({ action: 'start', wallet: payload.wallet, message: payload.message, signature: payload.signature })
+        });
+
+        var data = await res.json().catch(function(){ return {}; });
+        if (!res.ok) throw new Error(data && data.error ? data.error : ('HTTP ' + res.status));
+
+        await refreshCabbageUI();
+      } catch (e) {
+        console.error('startCabbage error:', e);
+        alert('Start failed: ' + (e.message || e));
+        setBtnState('cabbageStartBtn', false, 'Start');
+      }
+    }
+
+    async function claimCabbage() {
+      try {
+        setBtnState('cabbageClaimBtn', true, 'Claiming…');
+        var payload = await signCabbageMessage('claim');
+
+        var res = await fetch(cabbageEndpoint(), {
+          method: 'POST',
+          headers: cabbageAuthHeaders(),
+          body: JSON.stringify({ action: 'claim', wallet: payload.wallet, message: payload.message, signature: payload.signature })
+        });
+
+        var data = await res.json().catch(function(){ return {}; });
+        if (!res.ok) throw new Error(data && data.error ? data.error : ('HTTP ' + res.status));
+
+        await refreshCabbageUI();
+      } catch (e) {
+        console.error('claimCabbage error:', e);
+        alert('Claim failed: ' + (e.message || e));
+        setBtnState('cabbageClaimBtn', false, 'Claim');
+      }
+    }
+
 
     // Deterministic color per wallet so each user always looks the same
     function walletColor(addr) {
