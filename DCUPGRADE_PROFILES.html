@@ -3019,6 +3019,21 @@ var nextTierRow = nextTier
       return data;
     }
 
+    // ── SOL→Cabbage conversion: 1 SOL bet = 100 cabbage payout ──
+    var g_SOL_TO_CABBAGE = 100;
+
+    async function g_creditCabbage(amount) {
+      if (!walletPublicKey) throw new Error('Wallet not connected');
+      var res = await fetch(SUPA_URL.replace(/\/+$/,'') + '/functions/v1/cabbage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY },
+        body: JSON.stringify({ action: 'credit', wallet: walletPublicKey.toBase58(), amount: amount })
+      });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Credit failed');
+      return data;
+    }
+
     // ── Game result helpers ──
     function g_playCoin(nftCount) {
       var chance = g_GAMES.coin.winChance + g_nftBonus(nftCount);
@@ -3071,13 +3086,13 @@ var nextTierRow = nextTier
       if (!el) return;
       if (!g_betHistory.length) { el.innerHTML = '<div style="color:#252540;font-size:0.75rem;text-align:center;padding:1rem;letter-spacing:1px;">No games played yet</div>'; return; }
       el.innerHTML = g_betHistory.slice(0,8).map(function(h) {
-        var sym = h.currency === 'sol' ? '◎' : '🥬';
-        var pnl = h.won ? '+' + (h.payout - h.bet).toFixed(4) : '-' + h.bet.toFixed(4);
+        var betSym = h.currency === 'sol' ? '◎' : '🥬';
+        var pnl = h.won ? '+' + h.payout.toFixed(2) + ' 🥬' : '-' + h.bet.toFixed(4) + ' ' + betSym;
         var col = h.won ? '#00ff88' : '#ff3c5c';
         return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.03);font-size:0.75rem;">'
           + '<span style="color:#555;">' + h.game + '</span>'
-          + '<span>' + h.bet + ' ' + sym + '</span>'
-          + '<span style="color:' + col + ';font-weight:700;">' + pnl + ' ' + sym + '</span>'
+          + '<span>' + h.bet + ' ' + betSym + '</span>'
+          + '<span style="color:' + col + ';font-weight:700;">' + pnl + '</span>'
           + '</div>';
       }).join('');
     }
@@ -3112,7 +3127,7 @@ var nextTierRow = nextTier
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;flex-wrap:wrap;gap:0.6rem;">' +
           '<div>' +
             '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.5rem;letter-spacing:3px;color:#e0e0ff;">🎰 LNL CASINO</div>' +
-            '<div style="font-size:0.7rem;color:#444;letter-spacing:1px;margin-top:2px;">House edge funds the NFT prize pot</div>' +
+            '<div style="font-size:0.7rem;color:#444;letter-spacing:1px;margin-top:2px;">All wins paid in 🥬 Cabbage · SOL bets fill the treasury</div>' +
           '</div>' +
           '<button onclick="switchView(\'profile\')" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#888;padding:7px 14px;border-radius:7px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;" onmouseover="this.style.borderColor=\'rgba(0,212,255,0.4)\';this.style.color=\'#00d4ff\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,0.1)\';this.style.color=\'#888\'">← Home</button>' +
         '</div>' +
@@ -3217,7 +3232,7 @@ var nextTierRow = nextTier
         '<div style="background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.04);border-radius:10px;padding:0.9rem 1.2rem;font-size:0.63rem;color:#2a2a44;letter-spacing:0.8px;text-align:center;line-height:2.2;text-transform:uppercase;">' +
           '◎ SOL Bets → <span style="font-family:monospace;color:#333;">' + g_SOL_TREASURY + '</span><br>' +
           '🏆 NFT Prizes From → <span style="font-family:monospace;color:#333;">' + g_NFT_TREASURY + '</span><br>' +
-          'SOL bets sent on-chain before each game · House profit fills the NFT prize pot · Play responsibly' +
+          'SOL bets sent on-chain to treasury · All wins paid in 🥬 Cabbage (1 ◎ = 100 🥬) · House profit fills the NFT prize pot · Play responsibly' +
         '</div>' +
 
         // ── Winner Modal ──
@@ -3304,18 +3319,26 @@ var nextTierRow = nextTier
 
         var nftCount = session.loadedNFTs ? session.loadedNFTs.length : 0;
         var won = g_playCoin(nftCount);
-        var payout = won ? bet * g_GAMES.coin.payout : 0;
-        var houseProfit = won ? bet - payout : bet;
+        var multiplier = g_GAMES.coin.payout;
+        var cabbagePayout = 0;
 
+        if (won) {
+          cabbagePayout = g_currency === 'sol'
+            ? bet * multiplier * g_SOL_TO_CABBAGE
+            : bet * multiplier;
+          await g_creditCabbage(cabbagePayout);
+        }
+
+        var houseProfit = won ? 0 : bet;
         if (coinEl) coinEl.textContent = won ? '😎' : '💀';
 
         if (won) {
-          g_setResult('g_coinResult', '✅ HEADS! Won ' + payout.toFixed(4) + (g_currency==='sol'?' ◎':' 🥬'), true);
+          g_setResult('g_coinResult', '✅ HEADS! Won ' + cabbagePayout.toFixed(2) + ' 🥬', true);
         } else {
           g_setResult('g_coinResult', '💀 TAILS! Lost ' + bet.toFixed(4) + (g_currency==='sol'?' ◎':' 🥬'), false);
         }
 
-        g_addHistory('🪙 Coin', bet, g_currency, won, payout);
+        g_addHistory('🪙 Coin', bet, g_currency, won, cabbagePayout);
         await g_logBet('🪙 Coin Flip', bet, g_currency, Math.max(0, houseProfit));
         await g_updatePotUI();
         await g_loadGameBalances();
@@ -3346,16 +3369,25 @@ var nextTierRow = nextTier
         var diceNums = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣'];
         if (diceEl) diceEl.textContent = diceNums[result.roll - 1];
 
-        var payout = result.won ? bet * g_GAMES.dice.payout : 0;
-        var houseProfit = result.won ? bet - payout : bet;
+        var multiplier = g_GAMES.dice.payout;
+        var cabbagePayout = 0;
 
         if (result.won) {
-          g_setResult('g_diceResult', '✅ Rolled ' + result.roll + ' (' + choice.toUpperCase() + ')! Won ' + payout.toFixed(4) + (g_currency==='sol'?' ◎':' 🥬'), true);
+          cabbagePayout = g_currency === 'sol'
+            ? bet * multiplier * g_SOL_TO_CABBAGE
+            : bet * multiplier;
+          await g_creditCabbage(cabbagePayout);
+        }
+
+        var houseProfit = result.won ? 0 : bet;
+
+        if (result.won) {
+          g_setResult('g_diceResult', '✅ Rolled ' + result.roll + ' (' + choice.toUpperCase() + ')! Won ' + cabbagePayout.toFixed(2) + ' 🥬', true);
         } else {
           g_setResult('g_diceResult', '❌ Rolled ' + result.roll + ' (' + choice.toUpperCase() + '). Lost ' + bet.toFixed(4) + (g_currency==='sol'?' ◎':' 🥬'), false);
         }
 
-        g_addHistory('🎲 Dice', bet, g_currency, result.won, payout);
+        g_addHistory('🎲 Dice', bet, g_currency, result.won, cabbagePayout);
         await g_logBet('🎲 Dice Roll', bet, g_currency, Math.max(0, houseProfit));
         await g_updatePotUI();
         await g_loadGameBalances();
@@ -3398,17 +3430,26 @@ var nextTierRow = nextTier
           if (el) el.textContent = slotsResult.reels[i];
         }
 
-        var payout = bet * slotsResult.payout;
-        var houseProfit = slotsResult.result === 'loss' ? bet : bet - payout;
+        var won = slotsResult.result !== 'loss';
+        var cabbagePayout = 0;
+
+        if (won) {
+          cabbagePayout = g_currency === 'sol'
+            ? bet * slotsResult.payout * g_SOL_TO_CABBAGE
+            : bet * slotsResult.payout;
+          await g_creditCabbage(cabbagePayout);
+        }
+
+        var houseProfit = won ? 0 : bet;
 
         var msg;
-        if (slotsResult.result === 'jackpot') msg = '🎉 JACKPOT! Won ' + payout.toFixed(4) + (g_currency==='sol'?' ◎':' 🥬');
-        else if (slotsResult.result === 'three') msg = '✅ THREE OF A KIND! Won ' + payout.toFixed(4) + (g_currency==='sol'?' ◎':' 🥬');
-        else if (slotsResult.result === 'two') msg = '✅ PAIR! Won ' + payout.toFixed(4) + (g_currency==='sol'?' ◎':' 🥬');
+        if (slotsResult.result === 'jackpot') msg = '🎉 JACKPOT! Won ' + cabbagePayout.toFixed(2) + ' 🥬';
+        else if (slotsResult.result === 'three') msg = '✅ THREE OF A KIND! Won ' + cabbagePayout.toFixed(2) + ' 🥬';
+        else if (slotsResult.result === 'two') msg = '✅ PAIR! Won ' + cabbagePayout.toFixed(2) + ' 🥬';
         else msg = '❌ No match. Lost ' + bet.toFixed(4) + (g_currency==='sol'?' ◎':' 🥬');
 
-        g_setResult('g_slotsResult', msg, slotsResult.result !== 'loss');
-        g_addHistory('🎰 Slots', bet, g_currency, slotsResult.result !== 'loss', payout);
+        g_setResult('g_slotsResult', msg, won);
+        g_addHistory('🎰 Slots', bet, g_currency, won, cabbagePayout);
         await g_logBet('🎰 Slots', bet, g_currency, Math.max(0, houseProfit));
         await g_updatePotUI();
         await g_loadGameBalances();
