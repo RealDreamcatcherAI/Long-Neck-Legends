@@ -291,6 +291,10 @@ a.plink:hover{
       display: block;
       grid-template-columns: unset;
     }
+    #view-store.show {
+      display: block;
+      grid-template-columns: unset;
+    }
     @media (max-width: 800px) {
       .view.show { grid-template-columns: 1fr; }
       .dashboard{ padding: 1.4rem 1rem 3rem; }
@@ -989,6 +993,7 @@ a.plink:hover{
         <button class="dash-tab" id="tabProfile" onclick="toggleProfilePanel()">Profile</button>
         <button class="dash-tab" id="tabChat" onclick="switchView('chat')">💬 Chat</button>
         <button class="dash-tab" id="tabGames" onclick="switchView('games')">🎰 Casino</button>
+        <button class="dash-tab" id="tabStore" onclick="switchView('store')">🥬 Store</button>
       </div>
 
       <div class="dash-right">
@@ -1018,6 +1023,7 @@ a.plink:hover{
     <div class="view show" id="view-profile"></div>
     <div class="view" id="view-chat"></div>
     <div class="view" id="view-games"></div>
+    <div class="view" id="view-store"></div>
   </div>
 
   <!-- PFP MODAL -->
@@ -1469,6 +1475,7 @@ a.plink:hover{
       document.getElementById("view-profile").classList.remove("show");
       document.getElementById("view-chat").classList.remove("show");
       document.getElementById("view-games").classList.remove("show");
+      document.getElementById("view-store").classList.remove("show");
 
       session.profilePanelOpen = false;
       var tabProfile = document.getElementById("tabProfile");
@@ -1477,6 +1484,8 @@ a.plink:hover{
       if (tabChat) tabChat.classList.remove("active");
       var tabGames = document.getElementById("tabGames");
       if (tabGames) tabGames.classList.remove("active");
+      var tabStore = document.getElementById("tabStore");
+      if (tabStore) tabStore.classList.remove("active");
 
       session.currentView = "profile";
     }
@@ -1488,17 +1497,21 @@ a.plink:hover{
       var vp = document.getElementById("view-profile");
       var vc = document.getElementById("view-chat");
       var vg = document.getElementById("view-games");
+      var vs = document.getElementById("view-store");
       if (vp) vp.classList.remove("show");
       if (vc) vc.classList.remove("show");
       if (vg) vg.classList.remove("show");
+      if (vs) vs.classList.remove("show");
 
       // Deactivate all tabs
       var tabProfile = document.getElementById("tabProfile");
       var tabChat    = document.getElementById("tabChat");
       var tabGames   = document.getElementById("tabGames");
+      var tabStore   = document.getElementById("tabStore");
       if (tabProfile) tabProfile.classList.remove("active");
       if (tabChat)    tabChat.classList.remove("active");
       if (tabGames)   tabGames.classList.remove("active");
+      if (tabStore)   tabStore.classList.remove("active");
 
       if (viewName === "profile") {
         stopChatPoll();
@@ -1517,6 +1530,13 @@ a.plink:hover{
         if (vg) vg.classList.add("show");
         if (tabGames) tabGames.classList.add("active");
         renderGamesUI();
+      }
+
+      if (viewName === "store") {
+        stopChatPoll();
+        if (vs) vs.classList.add("show");
+        if (tabStore) tabStore.classList.add("active");
+        renderStoreUI();
       }
     }
 
@@ -3458,6 +3478,353 @@ var nextTierRow = nextTier
       }
       g_isSpinning = false;
       g_disableGameBtns(false);
+    }
+
+
+    /* ================================================================
+       CABBAGE STORE
+       - Loads items from Supabase store_items table
+       - Community NFT listings from nft_listings table
+       - Purchases deduct cabbage via the spend endpoint
+    ================================================================ */
+
+    var s_items = [];
+    var s_listings = [];
+    var s_filter = 'all';
+    var s_cabBalance = null;
+
+    async function s_fetchCabbageBalance() {
+      if (!walletPublicKey) return 0;
+      try {
+        var res = await fetch(SUPA_URL.replace(/\/+$/,'') + '/functions/v1/cabbage?wallet=' + encodeURIComponent(walletPublicKey.toBase58()), {
+          headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+        });
+        var data = await res.json();
+        return Number(data.balance || 0) + Number(data.pending || 0);
+      } catch(e) { return 0; }
+    }
+
+    async function s_loadItems() {
+      try {
+        var sb = getSupaClient();
+        var res = await sb
+          .from('store_items')
+          .select('*')
+          .eq('active', true)
+          .order('category', { ascending: true })
+          .order('price', { ascending: true });
+        if (res.error) throw res.error;
+        s_items = res.data || [];
+      } catch(e) {
+        console.error('Store items load error:', e);
+        s_items = [];
+      }
+    }
+
+    async function s_loadListings() {
+      try {
+        var sb = getSupaClient();
+        var res = await sb
+          .from('nft_listings')
+          .select('*')
+          .eq('status', 'listed')
+          .order('created_at', { ascending: false });
+        if (res.error) throw res.error;
+        s_listings = res.data || [];
+      } catch(e) {
+        console.error('NFT listings load error:', e);
+        s_listings = [];
+      }
+    }
+
+    async function renderStoreUI() {
+      var view = document.getElementById('view-store');
+      if (!view) return;
+
+      view.innerHTML =
+        '<div style="display:flex;align-items:center;justify-content:center;padding:3rem;color:#252540;font-size:0.8rem;letter-spacing:2px;">Loading store…</div>';
+
+      s_cabBalance = await s_fetchCabbageBalance();
+      await s_loadItems();
+      await s_loadListings();
+
+      s_paintStore();
+    }
+
+    function s_paintStore() {
+      var view = document.getElementById('view-store');
+      if (!view) return;
+
+      var myWallet = walletPublicKey ? walletPublicKey.toBase58() : '';
+      var html = '';
+
+      // ── Header ──
+      html +=
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;flex-wrap:wrap;gap:0.6rem;">' +
+          '<div>' +
+            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.5rem;letter-spacing:3px;color:#e0e0ff;">🥬 CABBAGE STORE</div>' +
+            '<div style="font-size:0.7rem;color:#444;letter-spacing:1px;margin-top:2px;">Spend your cabbage on merch, raffles, and NFTs</div>' +
+          '</div>' +
+          '<div style="display:flex;align-items:center;gap:0.8rem;">' +
+            '<div style="background:rgba(0,255,136,0.06);border:1px solid rgba(0,255,136,0.15);border-radius:10px;padding:8px 14px;display:flex;align-items:center;gap:6px;">' +
+              '<span style="font-size:1.1rem;">🥬</span>' +
+              '<span style="font-weight:700;color:#00ff88;font-size:1rem;" id="s_balDisplay">' + Math.floor(s_cabBalance).toLocaleString() + '</span>' +
+            '</div>' +
+            '<button onclick="switchView(\'profile\')" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#888;padding:7px 14px;border-radius:7px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;transition:all 0.2s;" onmouseover="this.style.borderColor=\'rgba(0,212,255,0.4)\';this.style.color=\'#00d4ff\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,0.1)\';this.style.color=\'#888\'">← Home</button>' +
+          '</div>' +
+        '</div>';
+
+      // ── Filter Tabs ──
+      var filters = [
+        { id:'all', label:'All' },
+        { id:'merch', label:'🛍 Merch' },
+        { id:'digital', label:'✨ Digital' },
+        { id:'raffle', label:'🎟 Raffles' },
+        { id:'nft', label:'🖼 NFT Market' }
+      ];
+      html += '<div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.4rem;">';
+      filters.forEach(function(f) {
+        var active = s_filter === f.id;
+        html += '<button onclick="s_setFilter(\'' + f.id + '\')" style="background:' + (active ? 'rgba(0,212,255,0.08)' : 'transparent') + ';border:1px solid ' + (active ? 'rgba(0,212,255,0.5)' : 'rgba(255,255,255,0.08)') + ';color:' + (active ? '#00d4ff' : '#888') + ';padding:8px 16px;border-radius:8px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;transition:all 0.2s;">' + f.label + '</button>';
+      });
+      html += '</div>';
+
+      // ── List NFT Button ──
+      if (s_filter === 'nft' || s_filter === 'all') {
+        html += '<div style="margin-bottom:1.2rem;">' +
+          '<button onclick="s_openListNftModal()" style="background:linear-gradient(135deg,rgba(0,212,255,0.12),rgba(123,104,238,0.12));border:1px solid rgba(0,212,255,0.3);color:#00d4ff;padding:10px 22px;border-radius:10px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.75rem;letter-spacing:1.5px;text-transform:uppercase;transition:all 0.2s;">+ List My NFT For Sale</button>' +
+        '</div>';
+      }
+
+      // ── Items Grid ──
+      var visibleItems = s_filter === 'all' ? s_items : (s_filter === 'nft' ? [] : s_items.filter(function(i){ return i.category === s_filter; }));
+      var visibleListings = (s_filter === 'all' || s_filter === 'nft') ? s_listings : [];
+
+      if (visibleItems.length === 0 && visibleListings.length === 0) {
+        html += '<div style="text-align:center;padding:3rem;color:#252540;font-size:0.78rem;letter-spacing:2px;">No items in this category yet</div>';
+      }
+
+      html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1.2rem;">';
+
+      // Store items
+      visibleItems.forEach(function(item) {
+        var outOfStock = item.stock !== null && item.stock <= 0;
+        var cantAfford = s_cabBalance < item.price;
+        var stockLabel = item.stock !== null ? (item.stock + ' left') : '∞';
+        var catBadge = item.category === 'merch' ? '🛍' : (item.category === 'digital' ? '✨' : '🎟');
+
+        html +=
+          '<div style="background:#0f0f22;border:1px solid #1e1e3a;border-radius:14px;overflow:hidden;transition:all 0.2s;' + (outOfStock ? 'opacity:0.5;' : '') + '">' +
+            (item.image_url ? '<div style="width:100%;aspect-ratio:1;background:#06060f;overflow:hidden;"><img src="' + escapeHtml(item.image_url) + '" style="width:100%;height:100%;object-fit:cover;" loading="lazy" onerror="this.style.display=\'none\'"></div>' : '<div style="width:100%;aspect-ratio:1;background:#06060f;display:flex;align-items:center;justify-content:center;font-size:3rem;">' + catBadge + '</div>') +
+            '<div style="padding:1rem;">' +
+              '<div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:0.4rem;">' +
+                '<div style="font-weight:700;font-size:0.88rem;color:#e0e0ff;">' + escapeHtml(item.name) + '</div>' +
+                '<div style="font-size:0.6rem;color:#555;letter-spacing:1px;text-transform:uppercase;flex-shrink:0;margin-left:8px;">' + catBadge + ' ' + stockLabel + '</div>' +
+              '</div>' +
+              '<div style="font-size:0.75rem;color:#555;margin-bottom:0.8rem;line-height:1.5;">' + escapeHtml(item.description || '') + '</div>' +
+              '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+                '<div style="font-weight:900;font-size:1rem;color:#00ff88;">' + item.price.toLocaleString() + ' 🥬</div>' +
+                '<button onclick="s_buyItem(' + item.id + ')" ' + (outOfStock || cantAfford ? 'disabled' : '') + ' style="background:' + (outOfStock ? '#1a1a30' : (cantAfford ? '#1a1a30' : 'linear-gradient(135deg,rgba(0,255,136,0.15),rgba(0,212,255,0.15))')) + ';border:1px solid ' + (outOfStock || cantAfford ? 'rgba(255,255,255,0.05)' : 'rgba(0,255,136,0.3)') + ';color:' + (outOfStock ? '#333' : (cantAfford ? '#555' : '#00ff88')) + ';padding:8px 16px;border-radius:8px;cursor:' + (outOfStock || cantAfford ? 'not-allowed' : 'pointer') + ';font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.7rem;letter-spacing:1.5px;text-transform:uppercase;transition:all 0.2s;">' + (outOfStock ? 'SOLD OUT' : (cantAfford ? 'NEED MORE 🥬' : 'BUY')) + '</button>' +
+              '</div>' +
+            '</div>' +
+          '</div>';
+      });
+
+      // NFT listings
+      visibleListings.forEach(function(listing) {
+        var isOwn = listing.seller_wallet === myWallet;
+        var cantAfford = s_cabBalance < listing.price;
+        var sellerShort = listing.seller_wallet.slice(0,4) + '…' + listing.seller_wallet.slice(-4);
+        var sellerLabel = listing.seller_name || sellerShort;
+
+        html +=
+          '<div style="background:#0f0f22;border:1px solid ' + (isOwn ? 'rgba(123,104,238,0.3)' : '#1e1e3a') + ';border-radius:14px;overflow:hidden;transition:all 0.2s;">' +
+            (listing.image_url ? '<div style="width:100%;aspect-ratio:1;background:#06060f;overflow:hidden;"><img src="' + escapeHtml(listing.image_url) + '" style="width:100%;height:100%;object-fit:cover;" loading="lazy" onerror="this.style.display=\'none\'"></div>' : '<div style="width:100%;aspect-ratio:1;background:#06060f;display:flex;align-items:center;justify-content:center;font-size:3rem;">🖼</div>') +
+            '<div style="padding:1rem;">' +
+              '<div style="font-weight:700;font-size:0.88rem;color:#e0e0ff;margin-bottom:0.3rem;">' + escapeHtml(listing.name) + '</div>' +
+              '<div style="font-size:0.68rem;color:#555;margin-bottom:0.8rem;">Listed by <span style="color:#7b68ee;">' + escapeHtml(sellerLabel) + '</span></div>' +
+              '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+                '<div style="font-weight:900;font-size:1rem;color:#00ff88;">' + listing.price.toLocaleString() + ' 🥬</div>' +
+                (isOwn
+                  ? '<button onclick="s_cancelListing(' + listing.id + ')" style="background:transparent;border:1px solid rgba(255,60,92,0.3);color:#ff3c5c;padding:8px 16px;border-radius:8px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.7rem;letter-spacing:1.5px;text-transform:uppercase;">CANCEL</button>'
+                  : '<button onclick="s_buyListing(' + listing.id + ')" ' + (cantAfford ? 'disabled' : '') + ' style="background:' + (cantAfford ? '#1a1a30' : 'linear-gradient(135deg,rgba(0,255,136,0.15),rgba(0,212,255,0.15))') + ';border:1px solid ' + (cantAfford ? 'rgba(255,255,255,0.05)' : 'rgba(0,255,136,0.3)') + ';color:' + (cantAfford ? '#555' : '#00ff88') + ';padding:8px 16px;border-radius:8px;cursor:' + (cantAfford ? 'not-allowed' : 'pointer') + ';font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.7rem;letter-spacing:1.5px;text-transform:uppercase;">' + (cantAfford ? 'NEED MORE 🥬' : 'BUY NFT') + '</button>'
+                ) +
+              '</div>' +
+            '</div>' +
+          '</div>';
+      });
+
+      html += '</div>';
+
+      html += '<div style="margin-top:2rem;text-align:center;font-size:0.63rem;color:#1e1e3a;letter-spacing:1px;text-transform:uppercase;line-height:2;">All purchases are final · Physical items require shipping info · NFT transfers are manual</div>';
+
+      view.innerHTML = html;
+    }
+
+    function s_setFilter(filter) {
+      s_filter = filter;
+      s_paintStore();
+    }
+
+    async function s_buyItem(itemId) {
+      var item = s_items.find(function(i){ return i.id === itemId; });
+      if (!item) return alert('Item not found.');
+      if (!walletPublicKey) return alert('Connect wallet first.');
+
+      var confirmed = confirm('Buy "' + item.name + '" for ' + item.price.toLocaleString() + ' 🥬?');
+      if (!confirmed) return;
+
+      // If merch, collect shipping info
+      var shipping = null;
+      if (item.category === 'merch') {
+        var shipName = prompt('Shipping Name:');
+        if (!shipName) return;
+        var address = prompt('Street Address:');
+        if (!address) return;
+        var city = prompt('City:');
+        if (!city) return;
+        var state = prompt('State / Province:');
+        var zip = prompt('ZIP / Postal Code:');
+        var country = prompt('Country:', 'US');
+        shipping = { name: shipName, address: address, city: city, state: state || '', zip: zip || '', country: country || 'US' };
+      }
+
+      try {
+        await g_spendCabbage(item.price);
+
+        var sb = getSupaClient();
+        var wallet = walletPublicKey.toBase58();
+        var username = (session && session.profile && session.profile.username) || null;
+
+        var orderRes = await sb.from('store_orders').insert({
+          wallet: wallet,
+          username: username,
+          item_id: item.id,
+          item_name: item.name,
+          price_paid: item.price,
+          status: 'pending',
+          shipping: shipping
+        }).select().single();
+
+        if (orderRes.error) throw orderRes.error;
+
+        if (item.stock !== null) {
+          await sb.from('store_items').update({ stock: Math.max(0, item.stock - 1) }).eq('id', item.id);
+        }
+
+        alert('✅ Purchased "' + item.name + '" for ' + item.price.toLocaleString() + ' 🥬!\n\n' + (item.category === 'merch' ? 'We\'ll ship it to you soon.' : (item.category === 'raffle' ? 'You\'re entered! Good luck.' : 'Order confirmed.')));
+
+        s_cabBalance = await s_fetchCabbageBalance();
+        await s_loadItems();
+        s_paintStore();
+
+      } catch(e) {
+        alert('Purchase failed: ' + (e.message || e));
+      }
+    }
+
+    function s_openListNftModal() {
+      if (!walletPublicKey) return alert('Connect wallet first.');
+      if (!session.loadedNFTs || session.loadedNFTs.length === 0) return alert('No NFTs found in your wallet.');
+
+      var options = session.loadedNFTs.map(function(nft, idx) {
+        return (idx + 1) + ') ' + nft.name + ' (' + (nft.mint ? nft.mint.slice(0,6) + '…' : '?') + ')';
+      }).join('\n');
+
+      var choice = prompt('Which NFT do you want to list?\n\n' + options + '\n\nEnter the number:');
+      if (!choice) return;
+      var idx = parseInt(choice) - 1;
+      if (isNaN(idx) || idx < 0 || idx >= session.loadedNFTs.length) return alert('Invalid selection.');
+
+      var nft = session.loadedNFTs[idx];
+      var price = prompt('Set your price in 🥬 Cabbage for "' + nft.name + '":');
+      if (!price) return;
+      var priceNum = parseFloat(price);
+      if (isNaN(priceNum) || priceNum <= 0) return alert('Invalid price.');
+
+      s_createListing(nft, priceNum);
+    }
+
+    async function s_createListing(nft, price) {
+      try {
+        var sb = getSupaClient();
+        var wallet = walletPublicKey.toBase58();
+        var username = (session && session.profile && session.profile.username) || null;
+
+        var res = await sb.from('nft_listings').insert({
+          seller_wallet: wallet,
+          seller_name: username,
+          mint_address: nft.mint,
+          name: nft.name,
+          image_url: nft.image || null,
+          price: price,
+          status: 'listed'
+        }).select().single();
+
+        if (res.error) throw res.error;
+
+        alert('✅ Listed "' + nft.name + '" for ' + price.toLocaleString() + ' 🥬!\n\nBuyers will see it in the NFT Market tab.');
+
+        await s_loadListings();
+        s_paintStore();
+      } catch(e) {
+        alert('Listing failed: ' + (e.message || e));
+      }
+    }
+
+    async function s_cancelListing(listingId) {
+      if (!confirm('Cancel this listing?')) return;
+      try {
+        var sb = getSupaClient();
+        var res = await sb.from('nft_listings').update({ status: 'cancelled' }).eq('id', listingId);
+        if (res.error) throw res.error;
+
+        alert('Listing cancelled.');
+        await s_loadListings();
+        s_paintStore();
+      } catch(e) {
+        alert('Cancel failed: ' + (e.message || e));
+      }
+    }
+
+    async function s_buyListing(listingId) {
+      var listing = s_listings.find(function(l){ return l.id === listingId; });
+      if (!listing) return alert('Listing not found.');
+      if (!walletPublicKey) return alert('Connect wallet first.');
+
+      var confirmed = confirm('Buy "' + listing.name + '" for ' + listing.price.toLocaleString() + ' 🥬?\n\nThe NFT will be transferred to your wallet by the seller.');
+      if (!confirmed) return;
+
+      try {
+        await g_spendCabbage(listing.price);
+
+        var sb = getSupaClient();
+        var buyerWallet = walletPublicKey.toBase58();
+
+        // Credit seller
+        var creditRes = await fetch(SUPA_URL.replace(/\/+$/,'') + '/functions/v1/cabbage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY },
+          body: JSON.stringify({ action: 'credit', wallet: listing.seller_wallet, amount: listing.price })
+        });
+        var creditData = await creditRes.json();
+        if (!creditRes.ok) throw new Error(creditData.error || 'Credit seller failed');
+
+        // Mark sold
+        await sb.from('nft_listings').update({
+          status: 'sold',
+          buyer_wallet: buyerWallet,
+          sold_at: new Date().toISOString()
+        }).eq('id', listingId);
+
+        alert('✅ Purchased "' + listing.name + '" for ' + listing.price.toLocaleString() + ' 🥬!\n\nThe seller has been paid and will transfer the NFT to your wallet:\n' + buyerWallet);
+
+        s_cabBalance = await s_fetchCabbageBalance();
+        await s_loadListings();
+        s_paintStore();
+      } catch(e) {
+        alert('Purchase failed: ' + (e.message || e));
+      }
     }
 
   </script>
