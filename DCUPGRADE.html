@@ -2751,6 +2751,10 @@ var nextTierRow = nextTier
         c.textContent = left < 80 ? left : '';
         c.style.color = left < 30 ? '#ff3c5c' : '#252540';
       });
+
+      // Load history then subscribe to live updates
+      chatMsgs = [];
+      loadChatHistory();
     }
 
     
