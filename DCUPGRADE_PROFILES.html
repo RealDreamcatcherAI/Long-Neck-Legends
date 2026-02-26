@@ -291,10 +291,6 @@ a.plink:hover{
       display: block;
       grid-template-columns: unset;
     }
-    #view-store.show {
-      display: block;
-      grid-template-columns: unset;
-    }
     @media (max-width: 800px) {
       .view.show { grid-template-columns: 1fr; }
       .dashboard{ padding: 1.4rem 1rem 3rem; }
@@ -1022,7 +1018,6 @@ a.plink:hover{
     <div class="view show" id="view-profile"></div>
     <div class="view" id="view-chat"></div>
     <div class="view" id="view-games"></div>
-    <div class="view" id="view-store"></div>
   </div>
 
   <!-- PFP MODAL -->
@@ -1474,7 +1469,6 @@ a.plink:hover{
       document.getElementById("view-profile").classList.remove("show");
       document.getElementById("view-chat").classList.remove("show");
       document.getElementById("view-games").classList.remove("show");
-      document.getElementById("view-store").classList.remove("show");
 
       session.profilePanelOpen = false;
       var tabProfile = document.getElementById("tabProfile");
@@ -1483,8 +1477,6 @@ a.plink:hover{
       if (tabChat) tabChat.classList.remove("active");
       var tabGames = document.getElementById("tabGames");
       if (tabGames) tabGames.classList.remove("active");
-      var tabStore = document.getElementById("tabStore");
-      if (tabStore) tabStore.classList.remove("active");
 
       session.currentView = "profile";
     }
@@ -1496,21 +1488,17 @@ a.plink:hover{
       var vp = document.getElementById("view-profile");
       var vc = document.getElementById("view-chat");
       var vg = document.getElementById("view-games");
-      var vs = document.getElementById("view-store");
       if (vp) vp.classList.remove("show");
       if (vc) vc.classList.remove("show");
       if (vg) vg.classList.remove("show");
-      if (vs) vs.classList.remove("show");
 
       // Deactivate all tabs
       var tabProfile = document.getElementById("tabProfile");
       var tabChat    = document.getElementById("tabChat");
       var tabGames   = document.getElementById("tabGames");
-      var tabStore   = document.getElementById("tabStore");
       if (tabProfile) tabProfile.classList.remove("active");
       if (tabChat)    tabChat.classList.remove("active");
       if (tabGames)   tabGames.classList.remove("active");
-      if (tabStore)   tabStore.classList.remove("active");
 
       if (viewName === "profile") {
         stopChatPoll();
@@ -1529,13 +1517,6 @@ a.plink:hover{
         if (vg) vg.classList.add("show");
         if (tabGames) tabGames.classList.add("active");
         renderGamesUI();
-      }
-
-      if (viewName === "store") {
-        stopChatPoll();
-        if (vs) vs.classList.add("show");
-        if (tabStore) tabStore.classList.add("active");
-        renderStoreUI();
       }
     }
 
@@ -3038,7 +3019,7 @@ var nextTierRow = nextTier
       return data;
     }
 
-    // ── SOL→Cabbage conversion: 1 SOL bet = 100 cabbage payout ──
+    // ── SOL→Cabbage conversion: 1 SOL = 100 cabbage ──
     var g_SOL_TO_CABBAGE = 100;
 
     async function g_creditCabbage(amount) {
@@ -3140,13 +3121,29 @@ var nextTierRow = nextTier
         '.g_reel{font-size:2.2rem;background:#06060f;border:1px solid #161628;border-radius:10px;width:60px;height:60px;display:inline-flex;align-items:center;justify-content:center;}' +
         '.g_pot-bar{height:8px;background:rgba(255,255,255,0.05);border-radius:4px;overflow:hidden;margin-top:5px;}' +
         '.g_pot-fill{height:100%;border-radius:4px;transition:width 1s ease;}' +
+        '@keyframes g_coinFlip{0%{transform:rotateY(0)}100%{transform:rotateY(1800deg)}}' +
+        '@keyframes g_coinLand{0%{transform:scale(1.15)}50%{transform:scale(0.95)}100%{transform:scale(1)}}' +
+        '.g_coin{width:80px;height:80px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;perspective:600px;margin:0 auto;}' +
+        '.g_coin-inner{width:100%;height:100%;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.6rem;font-weight:900;transition:transform 0.1s;}' +
+        '.g_coin-inner.spinning{animation:g_coinFlip 1.2s ease-out forwards;}' +
+        '.g_coin-inner.landed{animation:g_coinLand 0.3s ease-out;}' +
+        '.g_coin-heads{background:linear-gradient(135deg,#ffd700,#f0c000);color:#6b4c00;border:3px solid #e6b800;text-shadow:0 1px 2px rgba(0,0,0,0.2);}' +
+        '.g_coin-tails{background:linear-gradient(135deg,#c0c0c0,#a0a0a0);color:#333;border:3px solid #909090;text-shadow:0 1px 2px rgba(0,0,0,0.15);}' +
+        '.bj_card{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:50px;height:70px;border-radius:6px;font-weight:700;font-size:0.82rem;margin:2px;box-shadow:0 2px 8px rgba(0,0,0,0.3);}' +
+        '.bj_front{background:linear-gradient(135deg,#fafafa,#e8e8e8);border:1px solid #ccc;}' +
+        '.bj_back{background:linear-gradient(135deg,#1a3a6a,#0d2240);border:1px solid #2a4a7a;}' +
+        '.bj_red{color:#cc0000;} .bj_blk{color:#111;}' +
+        '.pk_seat{width:110px;padding:10px;border-radius:12px;text-align:center;font-size:0.68rem;transition:all 0.2s;border:1px solid rgba(255,255,255,0.06);background:rgba(0,0,0,0.3);}' +
+        '.pk_seat.occ{border-color:rgba(0,255,136,0.3);background:rgba(0,255,136,0.04);}' +
+        '.pk_seat.turn{border-color:rgba(255,215,0,0.6);box-shadow:0 0 15px rgba(255,215,0,0.15);}' +
+        '.pk_seat.fold{opacity:0.4;}' +
         '</style>' +
 
         // ── Header ──
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;flex-wrap:wrap;gap:0.6rem;">' +
           '<div>' +
             '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.5rem;letter-spacing:3px;color:#e0e0ff;">🎰 LNL CASINO</div>' +
-            '<div style="font-size:0.7rem;color:#444;letter-spacing:1px;margin-top:2px;">All wins paid in 🥬 Cabbage · SOL bets fill the treasury</div>' +
+            '<div style="font-size:0.7rem;color:#444;letter-spacing:1px;margin-top:2px;">All wins paid in \ud83e\udd6c Cabbage \u00b7 SOL bets fill the treasury</div>' +
           '</div>' +
           '<button onclick="switchView(\'profile\')" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#888;padding:7px 14px;border-radius:7px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;" onmouseover="this.style.borderColor=\'rgba(0,212,255,0.4)\';this.style.color=\'#00d4ff\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,0.1)\';this.style.color=\'#888\'">← Home</button>' +
         '</div>' +
@@ -3200,11 +3197,14 @@ var nextTierRow = nextTier
           // COIN FLIP
           '<div class="g_card" style="margin:0;">' +
             '<div class="g_title">🪙 COIN FLIP</div>' +
-            '<div style="text-align:center;margin:1rem 0;">' +
-              '<div id="g_coinFace" style="font-size:3.5rem;line-height:1;">🪙</div>' +
+            '<div style="text-align:center;margin:0.6rem 0;">' +
+              '<div class="g_coin"><div class="g_coin-inner g_coin-heads" id="g_coinInner">👑</div></div>' +
               '<div style="color:#555;font-size:0.7rem;margin-top:6px;letter-spacing:1px;">43% WIN · 1.80× PAYOUT</div>' +
             '</div>' +
-            '<button class="g_btn g_btn-primary" style="width:100%;" id="g_coinBtn" onclick="g_playCoinGame()">FLIP</button>' +
+            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">' +
+              '<button class="g_btn g_btn-primary" id="g_coinHeadsBtn" onclick="g_playCoinGame(\'heads\')">👑 HEADS</button>' +
+              '<button class="g_btn g_btn-primary" id="g_coinTailsBtn" onclick="g_playCoinGame(\'tails\')">🦒 TAILS</button>' +
+            '</div>' +
             '<div class="g_result" id="g_coinResult" style="display:none;"></div>' +
           '</div>' +
 
@@ -3239,6 +3239,27 @@ var nextTierRow = nextTier
             '<div class="g_result" id="g_slotsResult" style="display:none;"></div>' +
           '</div>' +
 
+          // BLACKJACK
+          '<div class="g_card" style="margin:0;">' +
+            '<div class="g_title">🃏 BLACKJACK</div>' +
+            '<div id="bj_table" style="text-align:center;min-height:165px;">' +
+              '<div style="font-size:0.6rem;color:#555;letter-spacing:1px;margin-bottom:4px;">DEALER</div>' +
+              '<div id="bj_dealerCards" style="display:flex;justify-content:center;gap:3px;min-height:74px;align-items:center;"><span style="color:#252540;font-size:0.75rem;">Press Deal to play</span></div>' +
+              '<div id="bj_dealerScore" style="font-size:0.7rem;color:#888;margin:3px 0;min-height:16px;"></div>' +
+              '<div style="height:1px;background:rgba(255,255,255,0.04);margin:4px 0;"></div>' +
+              '<div id="bj_playerScore" style="font-size:0.7rem;color:#888;margin:3px 0;min-height:16px;"></div>' +
+              '<div id="bj_playerCards" style="display:flex;justify-content:center;gap:3px;min-height:74px;align-items:center;"></div>' +
+              '<div style="font-size:0.6rem;color:#555;letter-spacing:1px;margin-top:4px;">YOU</div>' +
+            '</div>' +
+            '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0.4rem;margin-top:0.5rem;">' +
+              '<button class="g_btn g_btn-primary" id="bj_dealBtn" onclick="bj_deal()">DEAL</button>' +
+              '<button class="g_btn" id="bj_hitBtn" onclick="bj_hit()" disabled>HIT</button>' +
+              '<button class="g_btn" id="bj_standBtn" onclick="bj_stand()" disabled>STAND</button>' +
+              '<button class="g_btn" id="bj_doubleBtn" onclick="bj_double()" disabled>2×</button>' +
+            '</div>' +
+            '<div class="g_result" id="bj_result" style="display:none;"></div>' +
+          '</div>' +
+
         '</div>' +
 
         // ── History ──
@@ -3247,11 +3268,29 @@ var nextTierRow = nextTier
           '<div id="g_historyList"><div style="color:#252540;font-size:0.75rem;text-align:center;padding:1rem;letter-spacing:1px;">No games played yet</div></div>' +
         '</div>' +
 
+        // ── Texas Hold\'em Poker Lobby ──
+        '<div class="g_card">' +
+          '<div class="g_title">🃏 TEXAS HOLD\'EM — LIVE TABLES</div>' +
+          '<div style="font-size:0.72rem;color:#444;margin-bottom:1rem;">Sit down with up to 5 players. Buy in with 🥬. Winner takes the pot.</div>' +
+          '<div id="pk_lobby"><div style="text-align:center;padding:1rem;color:#252540;font-size:0.78rem;">Loading tables…</div></div>' +
+        '</div>' +
+
+        // ── Poker Game Area (hidden until seated) ──
+        '<div id="pk_gameWrap" style="display:none;">' +
+          '<div class="g_card" style="position:relative;min-height:400px;">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.8rem;">' +
+              '<div class="g_title" style="margin:0;" id="pk_tableName">TABLE</div>' +
+              '<button class="g_btn" onclick="pk_leaveTable()">Leave Table</button>' +
+            '</div>' +
+            '<div id="pk_gameArea"></div>' +
+          '</div>' +
+        '</div>' +
+
         // ── Footer ──
         '<div style="background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.04);border-radius:10px;padding:0.9rem 1.2rem;font-size:0.63rem;color:#2a2a44;letter-spacing:0.8px;text-align:center;line-height:2.2;text-transform:uppercase;">' +
           '◎ SOL Bets → <span style="font-family:monospace;color:#333;">' + g_SOL_TREASURY + '</span><br>' +
           '🏆 NFT Prizes From → <span style="font-family:monospace;color:#333;">' + g_NFT_TREASURY + '</span><br>' +
-          'SOL bets sent on-chain to treasury · All wins paid in 🥬 Cabbage (1 ◎ = 100 🥬) · House profit fills the NFT prize pot · Play responsibly' +
+          'SOL bets → treasury · All wins paid in 🥬 (1 ◎ = 100 🥬) · House profit fills NFT prize pot · Play responsibly' +
         '</div>' +
 
         // ── Winner Modal ──
@@ -3271,6 +3310,7 @@ var nextTierRow = nextTier
       g_loadGameBalances();
       g_updatePotUI();
       g_renderHistory();
+      pk_loadLobby();
     }
 
     function g_setCurrency(cur) {
@@ -3300,7 +3340,7 @@ var nextTierRow = nextTier
     }
 
     function g_disableGameBtns(dis) {
-      ['g_coinBtn','g_slotsBtn'].forEach(function(id){
+      ['g_coinHeadsBtn','g_coinTailsBtn','g_slotsBtn','bj_dealBtn'].forEach(function(id){
         var b = document.getElementById(id);
         if (b) b.disabled = dis;
       });
@@ -3321,49 +3361,33 @@ var nextTierRow = nextTier
       }
     }
 
-    async function g_playCoinGame() {
+    async function g_playCoinGame(choice) {
       if (g_isSpinning) return;
       g_isSpinning = true;
       g_disableGameBtns(true);
-      var coinEl = document.getElementById('g_coinFace');
+      var coinEl = document.getElementById('g_coinInner');
       var bet = parseFloat(document.getElementById('g_betInput').value) || g_betAmount;
       g_betAmount = bet;
-
       try {
         await g_runBet(bet, g_currency);
-
-        // Animate
-        if (coinEl) { coinEl.textContent = '🌀'; }
-        await new Promise(function(r){ setTimeout(r, 600); });
-
+        if (coinEl) { coinEl.className = 'g_coin-inner spinning'; coinEl.textContent = ''; }
+        await new Promise(function(r){ setTimeout(r, 1200); });
         var nftCount = session.loadedNFTs ? session.loadedNFTs.length : 0;
-        var won = g_playCoin(nftCount);
+        var won = Math.random() < (g_GAMES.coin.winChance + g_nftBonus(nftCount));
+        var flipResult = won ? choice : (choice === 'heads' ? 'tails' : 'heads');
+        var isH = flipResult === 'heads';
+        if (coinEl) { coinEl.className = 'g_coin-inner landed ' + (isH ? 'g_coin-heads' : 'g_coin-tails'); coinEl.textContent = isH ? '👑' : '🦒'; }
         var multiplier = g_GAMES.coin.payout;
-        var cabbagePayout = 0;
-
-        if (won) {
-          cabbagePayout = g_currency === 'sol'
-            ? bet * multiplier * g_SOL_TO_CABBAGE
-            : bet * multiplier;
-          await g_creditCabbage(cabbagePayout);
-        }
-
-        var houseProfit = won ? 0 : bet;
-        if (coinEl) coinEl.textContent = won ? '😎' : '💀';
-
-        if (won) {
-          g_setResult('g_coinResult', '✅ HEADS! Won ' + cabbagePayout.toFixed(2) + ' 🥬', true);
-        } else {
-          g_setResult('g_coinResult', '💀 TAILS! Lost ' + bet.toFixed(4) + (g_currency==='sol'?' ◎':' 🥬'), false);
-        }
-
-        g_addHistory('🪙 Coin', bet, g_currency, won, cabbagePayout);
-        await g_logBet('🪙 Coin Flip', bet, g_currency, Math.max(0, houseProfit));
-        await g_updatePotUI();
-        await g_loadGameBalances();
+        var cabPay = 0;
+        if (won) { cabPay = g_currency === 'sol' ? bet * multiplier * g_SOL_TO_CABBAGE : bet * multiplier; await g_creditCabbage(cabPay); }
+        if (won) { g_setResult('g_coinResult', '✅ ' + flipResult.toUpperCase() + '! Won ' + cabPay.toFixed(2) + ' 🥬', true); }
+        else { g_setResult('g_coinResult', '💀 ' + flipResult.toUpperCase() + '! Lost ' + bet.toFixed(4) + (g_currency==='sol'?' ◎':' 🥬'), false); }
+        g_addHistory('🪙 Coin', bet, g_currency, won, cabPay);
+        await g_logBet('🪙 Coin Flip', bet, g_currency, won ? 0 : bet);
+        await g_updatePotUI(); await g_loadGameBalances();
       } catch(e) {
         g_setResult('g_coinResult', '⚠ ' + (e.message || 'Error'), false);
-        if (coinEl) coinEl.textContent = '🪙';
+        if (coinEl) { coinEl.className = 'g_coin-inner g_coin-heads'; coinEl.textContent = '👑'; }
       }
       g_isSpinning = false;
       g_disableGameBtns(false);
@@ -3388,26 +3412,16 @@ var nextTierRow = nextTier
         var diceNums = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣'];
         if (diceEl) diceEl.textContent = diceNums[result.roll - 1];
 
-        var multiplier = g_GAMES.dice.payout;
-        var cabbagePayout = 0;
-
+        var cabPay = 0;
+        if (result.won) { cabPay = g_currency === 'sol' ? bet * g_GAMES.dice.payout * g_SOL_TO_CABBAGE : bet * g_GAMES.dice.payout; await g_creditCabbage(cabPay); }
         if (result.won) {
-          cabbagePayout = g_currency === 'sol'
-            ? bet * multiplier * g_SOL_TO_CABBAGE
-            : bet * multiplier;
-          await g_creditCabbage(cabbagePayout);
-        }
-
-        var houseProfit = result.won ? 0 : bet;
-
-        if (result.won) {
-          g_setResult('g_diceResult', '✅ Rolled ' + result.roll + ' (' + choice.toUpperCase() + ')! Won ' + cabbagePayout.toFixed(2) + ' 🥬', true);
+          g_setResult('g_diceResult', '✅ Rolled ' + result.roll + ' (' + choice.toUpperCase() + ')! Won ' + cabPay.toFixed(2) + ' 🥬', true);
         } else {
           g_setResult('g_diceResult', '❌ Rolled ' + result.roll + ' (' + choice.toUpperCase() + '). Lost ' + bet.toFixed(4) + (g_currency==='sol'?' ◎':' 🥬'), false);
         }
 
-        g_addHistory('🎲 Dice', bet, g_currency, result.won, cabbagePayout);
-        await g_logBet('🎲 Dice Roll', bet, g_currency, Math.max(0, houseProfit));
+        g_addHistory('🎲 Dice', bet, g_currency, result.won, cabPay);
+        await g_logBet('🎲 Dice Roll', bet, g_currency, result.won ? 0 : bet);
         await g_updatePotUI();
         await g_loadGameBalances();
       } catch(e) {
@@ -3449,27 +3463,19 @@ var nextTierRow = nextTier
           if (el) el.textContent = slotsResult.reels[i];
         }
 
-        var won = slotsResult.result !== 'loss';
-        var cabbagePayout = 0;
-
-        if (won) {
-          cabbagePayout = g_currency === 'sol'
-            ? bet * slotsResult.payout * g_SOL_TO_CABBAGE
-            : bet * slotsResult.payout;
-          await g_creditCabbage(cabbagePayout);
-        }
-
-        var houseProfit = won ? 0 : bet;
+        var sWon = slotsResult.result !== 'loss';
+        var cabPay = 0;
+        if (sWon) { cabPay = g_currency === 'sol' ? bet * slotsResult.payout * g_SOL_TO_CABBAGE : bet * slotsResult.payout; await g_creditCabbage(cabPay); }
 
         var msg;
-        if (slotsResult.result === 'jackpot') msg = '🎉 JACKPOT! Won ' + cabbagePayout.toFixed(2) + ' 🥬';
-        else if (slotsResult.result === 'three') msg = '✅ THREE OF A KIND! Won ' + cabbagePayout.toFixed(2) + ' 🥬';
-        else if (slotsResult.result === 'two') msg = '✅ PAIR! Won ' + cabbagePayout.toFixed(2) + ' 🥬';
+        if (slotsResult.result === 'jackpot') msg = '🎉 JACKPOT! Won ' + cabPay.toFixed(2) + ' 🥬';
+        else if (slotsResult.result === 'three') msg = '✅ THREE OF A KIND! Won ' + cabPay.toFixed(2) + ' 🥬';
+        else if (slotsResult.result === 'two') msg = '✅ PAIR! Won ' + cabPay.toFixed(2) + ' 🥬';
         else msg = '❌ No match. Lost ' + bet.toFixed(4) + (g_currency==='sol'?' ◎':' 🥬');
 
-        g_setResult('g_slotsResult', msg, won);
-        g_addHistory('🎰 Slots', bet, g_currency, won, cabbagePayout);
-        await g_logBet('🎰 Slots', bet, g_currency, Math.max(0, houseProfit));
+        g_setResult('g_slotsResult', msg, sWon);
+        g_addHistory('🎰 Slots', bet, g_currency, sWon, cabPay);
+        await g_logBet('🎰 Slots', bet, g_currency, sWon ? 0 : bet);
         await g_updatePotUI();
         await g_loadGameBalances();
       } catch(e) {
@@ -3479,353 +3485,356 @@ var nextTierRow = nextTier
       g_disableGameBtns(false);
     }
 
+    /* ================================================================
+       BLACKJACK vs DEALER
+    ================================================================ */
+    var bj_deck=[],bj_pH=[],bj_dH=[],bj_state='idle',bj_bet=0;
+    var BJ_S=['\u2660','\u2665','\u2666','\u2663'];
+    var BJ_SC={'\u2660':'bj_blk','\u2665':'bj_red','\u2666':'bj_red','\u2663':'bj_blk'};
+    var BJ_V=['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+
+    function bj_mkDeck(){var d=[];for(var s=0;s<4;s++)for(var v=0;v<13;v++)d.push({v:BJ_V[v],s:BJ_S[s]});for(var i=d.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=d[i];d[i]=d[j];d[j]=t;}return d;}
+    function bj_cv(c){if(c.v==='A')return 11;if('KQJ'.indexOf(c.v)>=0)return 10;return parseInt(c.v);}
+    function bj_hv(h){var t=0,a=0;for(var i=0;i<h.length;i++){t+=bj_cv(h[i]);if(h[i].v==='A')a++;}while(t>21&&a>0){t-=10;a--;}return t;}
+    function bj_rc(c,hide){
+      if(hide)return'<div class="bj_card bj_back"><div style="font-size:1.1rem;color:#2a4a7a;">🂠</div></div>';
+      var cc=BJ_SC[c.s]||'bj_blk';
+      return'<div class="bj_card bj_front '+cc+'"><div style="font-size:0.65rem;align-self:flex-start;">'+c.v+'</div><div style="font-size:1rem;">'+c.s+'</div><div style="font-size:0.65rem;align-self:flex-end;">'+c.v+'</div></div>';
+    }
+    function bj_paint(show){
+      var dc=document.getElementById('bj_dealerCards'),pc=document.getElementById('bj_playerCards');
+      var ds=document.getElementById('bj_dealerScore'),ps=document.getElementById('bj_playerScore');
+      if(dc){var h='';for(var i=0;i<bj_dH.length;i++)h+=bj_rc(bj_dH[i],i===1&&!show);dc.innerHTML=h;}
+      if(pc){var h2='';for(var j=0;j<bj_pH.length;j++)h2+=bj_rc(bj_pH[j],false);pc.innerHTML=h2;}
+      if(ps)ps.textContent=bj_pH.length?'Hand: '+bj_hv(bj_pH):'';
+      if(ds)ds.textContent=bj_dH.length?(show?'Hand: '+bj_hv(bj_dH):'Showing: '+bj_cv(bj_dH[0])):'';
+    }
+    function bj_btns(){
+      var p=bj_state==='play';
+      var d=document.getElementById('bj_dealBtn'),h=document.getElementById('bj_hitBtn'),s=document.getElementById('bj_standBtn'),db=document.getElementById('bj_doubleBtn');
+      if(d)d.disabled=p;if(h)h.disabled=!p;if(s)s.disabled=!p;if(db)db.disabled=!p||bj_pH.length!==2;
+    }
+    async function bj_deal(){
+      if(bj_state==='play')return;
+      var bet=parseFloat(document.getElementById('g_betInput').value)||g_betAmount;g_betAmount=bet;bj_bet=bet;
+      try{await g_runBet(bet,g_currency);}catch(e){g_setResult('bj_result','⚠ '+(e.message||'Error'),false);return;}
+      var r=document.getElementById('bj_result');if(r)r.style.display='none';
+      bj_deck=bj_mkDeck();bj_pH=[bj_deck.pop(),bj_deck.pop()];bj_dH=[bj_deck.pop(),bj_deck.pop()];
+      bj_state='play';bj_paint(false);bj_btns();
+      if(bj_hv(bj_pH)===21)await bj_stand();
+    }
+    function bj_hit(){if(bj_state!=='play')return;bj_pH.push(bj_deck.pop());bj_paint(false);var db=document.getElementById('bj_doubleBtn');if(db)db.disabled=true;if(bj_hv(bj_pH)>21){bj_state='done';bj_paint(true);bj_end();}}
+    async function bj_double(){
+      if(bj_state!=='play'||bj_pH.length!==2)return;
+      try{await g_runBet(bj_bet,g_currency);bj_bet*=2;}catch(e){g_setResult('bj_result','⚠ '+(e.message||'Error'),false);return;}
+      bj_pH.push(bj_deck.pop());bj_paint(false);
+      if(bj_hv(bj_pH)>21){bj_state='done';bj_paint(true);bj_end();}else await bj_stand();
+    }
+    async function bj_stand(){
+      if(bj_state!=='play')return;bj_state='dealer';bj_btns();bj_paint(true);
+      while(bj_hv(bj_dH)<17){await new Promise(function(r){setTimeout(r,400);});bj_dH.push(bj_deck.pop());bj_paint(true);}
+      bj_state='done';await bj_end();
+    }
+    async function bj_end(){
+      var pV=bj_hv(bj_pH),dV=bj_hv(bj_dH);
+      var pBJ=bj_pH.length===2&&pV===21,dBJ=bj_dH.length===2&&dV===21;
+      var won=false,push=false,cab=0,msg='';
+      if(pV>21){msg='💀 BUST! Lost '+bj_bet.toFixed(4)+(g_currency==='sol'?' ◎':' 🥬');}
+      else if(dV>21){won=true;msg='✅ Dealer busts!';}
+      else if(pBJ&&!dBJ){won=true;msg='🎉 BLACKJACK!';}
+      else if(pBJ&&dBJ){push=true;msg='🤝 Both Blackjack — Push';}
+      else if(dBJ){msg='💀 Dealer Blackjack!';}
+      else if(pV>dV){won=true;msg='✅ You win! '+pV+' vs '+dV;}
+      else if(pV===dV){push=true;msg='🤝 Push — '+pV+' vs '+dV;}
+      else{msg='💀 Dealer wins. '+dV+' vs '+pV;}
+      if(won){var m=pBJ?2.5:2;cab=g_currency==='sol'?bj_bet*m*g_SOL_TO_CABBAGE:bj_bet*m;await g_creditCabbage(cab);msg+=' Won '+cab.toFixed(2)+' 🥬';}
+      else if(push){var ref=g_currency==='sol'?bj_bet*g_SOL_TO_CABBAGE:bj_bet;await g_creditCabbage(ref);msg+=' (refund '+ref.toFixed(2)+' 🥬)';}
+      g_setResult('bj_result',msg,won);
+      g_addHistory('🃏 BJ',bj_bet,g_currency,won,cab);
+      await g_logBet('🃏 Blackjack',bj_bet,g_currency,won?0:bj_bet);
+      await g_updatePotUI();await g_loadGameBalances();
+      bj_state='idle';bj_btns();bj_paint(true);
+    }
 
     /* ================================================================
-       CABBAGE STORE
-       - Loads items from Supabase store_items table
-       - Community NFT listings from nft_listings table
-       - Purchases deduct cabbage via the spend endpoint
+       TEXAS HOLD'EM — MULTIPLAYER VIA SUPABASE REALTIME
     ================================================================ */
+    var pk_tables=[],pk_tid=null,pk_tbl=null,pk_plrs=[],pk_mySeat=-1,pk_ch=null;
+    var PK_SUITS={s:'♠',h:'♥',d:'♦',c:'♣'};
+    var PK_SCOL={s:'#999',h:'#e33',d:'#e33',c:'#999'};
+    var PK_VALS=['2','3','4','5','6','7','8','9','T','J','Q','K','A'];
 
-    var s_items = [];
-    var s_listings = [];
-    var s_filter = 'all';
-    var s_cabBalance = null;
+    function pk_rc(card,hide){
+      if(hide||!card)return'<div class="bj_card bj_back" style="width:38px;height:54px;"><div style="font-size:0.85rem;color:#2a4a7a;">🂠</div></div>';
+      var v=card[0],s=card[1];var dv={'T':'10'}[v]||v;var suit=PK_SUITS[s]||s;var col=PK_SCOL[s]||'#999';
+      return'<div class="bj_card bj_front" style="width:38px;height:54px;color:'+col+';"><div style="font-size:0.55rem;align-self:flex-start;">'+dv+'</div><div style="font-size:0.8rem;">'+suit+'</div></div>';
+    }
+    function pk_fullDeck(){var d=[];'shdc'.split('').forEach(function(s){PK_VALS.forEach(function(v){d.push(v+s);});});return d;}
+    function pk_shuffle(a){var r=a.slice();for(var i=r.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=r[i];r[i]=r[j];r[j]=t;}return r;}
 
-    async function s_fetchCabbageBalance() {
-      if (!walletPublicKey) return 0;
-      try {
-        var res = await fetch(SUPA_URL.replace(/\/+$/,'') + '/functions/v1/cabbage?wallet=' + encodeURIComponent(walletPublicKey.toBase58()), {
-          headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+    async function pk_loadLobby(){
+      var el=document.getElementById('pk_lobby');if(!el)return;
+      try{
+        var sb=getSupaClient();
+        var tR=await sb.from('poker_tables').select('*').order('buy_in',{ascending:true});
+        if(tR.error)throw tR.error;pk_tables=tR.data||[];
+        var ids=pk_tables.map(function(t){return t.id;});
+        if(ids.length===0){el.innerHTML='<div style="color:#333;text-align:center;font-size:0.75rem;">No tables yet</div>';return;}
+        var pR=await sb.from('poker_players').select('table_id,seat').in('table_id',ids).eq('is_active',true);
+        var ps=pR.data||[];
+        var html='';
+        pk_tables.forEach(function(t){
+          var cnt=ps.filter(function(p){return p.table_id===t.id;}).length;
+          html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.06);border-radius:10px;margin-bottom:8px;flex-wrap:wrap;gap:8px;">'
+            +'<div><div style="font-weight:700;color:#e0e0ff;font-size:0.85rem;">'+escapeHtml(t.name)+'</div>'
+            +'<div style="font-size:0.65rem;color:#555;margin-top:2px;">Buy-in: '+t.buy_in+' 🥬 · Blinds: '+t.small_blind+'/'+t.big_blind+'</div></div>'
+            +'<div style="display:flex;align-items:center;gap:10px;">'
+            +'<div style="font-size:0.72rem;color:'+(cnt>=5?'#ff3c5c':(cnt>=2?'#00ff88':'#555'))+';">'+cnt+'/5</div>'
+            +'<button class="g_btn'+(cnt<5?' g_btn-primary':'')+'" onclick="pk_join('+t.id+')" '+(cnt>=5?'disabled':'')+'>'+( cnt>=5?'FULL':'SIT DOWN')+'</button>'
+            +'</div></div>';
         });
-        var data = await res.json();
-        return Number(data.balance || 0) + Number(data.pending || 0);
-      } catch(e) { return 0; }
+        el.innerHTML=html;
+      }catch(e){el.innerHTML='<div style="color:#ff3c5c;font-size:0.75rem;">Failed to load tables</div>';}
     }
 
-    async function s_loadItems() {
-      try {
-        var sb = getSupaClient();
-        var res = await sb
-          .from('store_items')
-          .select('*')
-          .eq('active', true)
-          .order('category', { ascending: true })
-          .order('price', { ascending: true });
-        if (res.error) throw res.error;
-        s_items = res.data || [];
-      } catch(e) {
-        console.error('Store items load error:', e);
-        s_items = [];
+    async function pk_join(tid){
+      if(!walletPublicKey)return alert('Connect wallet first.');
+      var tbl=pk_tables.find(function(t){return t.id===tid;});if(!tbl)return;
+      var bal=await g_fetchCabbageBalance();
+      if(bal<tbl.buy_in)return alert('Need '+tbl.buy_in+' 🥬 to sit. You have '+Math.floor(bal)+'.');
+      try{
+        var sb=getSupaClient();var w=walletPublicKey.toBase58();
+        var ex=await sb.from('poker_players').select('*').eq('table_id',tid).eq('wallet',w).eq('is_active',true).maybeSingle();
+        if(ex.data){pk_tid=tid;pk_mySeat=ex.data.seat;pk_open();return;}
+        var sR=await sb.from('poker_players').select('seat').eq('table_id',tid).eq('is_active',true);
+        var taken=(sR.data||[]).map(function(p){return p.seat;});
+        var open=-1;for(var i=0;i<5;i++){if(taken.indexOf(i)===-1){open=i;break;}}
+        if(open===-1)return alert('Table full.');
+        await g_spendCabbage(tbl.buy_in);
+        var un=(session&&session.profile&&session.profile.username)||null;
+        await sb.from('poker_players').insert({table_id:tid,wallet:w,username:un,seat:open,chips:tbl.buy_in,is_active:true});
+        pk_tid=tid;pk_mySeat=open;pk_open();
+      }catch(e){alert('Join failed: '+(e.message||e));}
+    }
+
+    async function pk_open(){
+      document.getElementById('pk_gameWrap').style.display='block';
+      await pk_refresh();pk_sub();
+    }
+
+    async function pk_refresh(){
+      if(!pk_tid)return;var sb=getSupaClient();
+      var tR=await sb.from('poker_tables').select('*').eq('id',pk_tid).single();
+      if(tR.error)return;pk_tbl=tR.data;
+      var pR=await sb.from('poker_players').select('*').eq('table_id',pk_tid).eq('is_active',true).order('seat',{ascending:true});
+      pk_plrs=pR.data||[];
+      var tn=document.getElementById('pk_tableName');if(tn)tn.textContent='🃏 '+pk_tbl.name;
+      pk_paint();
+    }
+
+    function pk_sub(){pk_unsub();var sb=getSupaClient();
+      pk_ch=sb.channel('pk_'+pk_tid)
+        .on('postgres_changes',{event:'*',schema:'public',table:'poker_tables',filter:'id=eq.'+pk_tid},function(){pk_refresh();})
+        .on('postgres_changes',{event:'*',schema:'public',table:'poker_players',filter:'table_id=eq.'+pk_tid},function(){pk_refresh();})
+        .subscribe();
+    }
+    function pk_unsub(){if(pk_ch){try{getSupaClient().removeChannel(pk_ch);}catch(e){}pk_ch=null;}}
+
+    async function pk_leaveTable(){
+      if(!pk_tid)return;var sb=getSupaClient();var w=walletPublicKey.toBase58();
+      var me=pk_plrs.find(function(p){return p.wallet===w;});
+      if(me&&me.chips>0)await g_creditCabbage(me.chips);
+      await sb.from('poker_players').update({is_active:false,chips:0}).eq('table_id',pk_tid).eq('wallet',w);
+      pk_unsub();pk_tid=null;pk_tbl=null;pk_plrs=[];pk_mySeat=-1;
+      document.getElementById('pk_gameWrap').style.display='none';pk_loadLobby();
+    }
+
+    function pk_paint(){
+      var area=document.getElementById('pk_gameArea');if(!area||!pk_tbl)return;
+      var t=pk_tbl;var myW=walletPublicKey?walletPublicKey.toBase58():'';
+      var comm=[];try{comm=JSON.parse(t.community||'[]');}catch(e){}
+      var isPlay=t.status==='playing';
+      var me=pk_plrs.find(function(p){return p.wallet===myW;});if(me)pk_mySeat=me.seat;
+      var isMyTurn=me&&t.action_seat===me.seat&&isPlay;
+      var active=pk_plrs.filter(function(p){return p.is_active;});
+      var html='';
+
+      // Community cards
+      html+='<div style="text-align:center;margin:0.5rem 0 1rem;"><div style="font-size:0.6rem;color:#555;letter-spacing:2px;margin-bottom:6px;">COMMUNITY</div><div style="display:flex;justify-content:center;gap:3px;min-height:58px;align-items:center;">';
+      if(comm.length>0){comm.forEach(function(c){html+=pk_rc(c,false);});for(var p=comm.length;p<5;p++)html+='<div style="width:38px;height:54px;border:1px dashed rgba(255,255,255,0.06);border-radius:5px;"></div>';}
+      else{for(var e=0;e<5;e++)html+='<div style="width:38px;height:54px;border:1px dashed rgba(255,255,255,0.06);border-radius:5px;"></div>';}
+      html+='</div><div style="font-size:0.9rem;color:#ffd700;font-weight:700;margin-top:8px;">POT: '+(t.pot||0).toLocaleString()+' 🥬</div>';
+      if(isPlay)html+='<div style="font-size:0.62rem;color:#555;margin-top:2px;">'+(t.phase||'').toUpperCase()+' · Current bet: '+(t.current_bet||0)+'</div>';
+      html+='</div>';
+
+      // Seats
+      html+='<div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:0.8rem 0;">';
+      for(var s=0;s<5;s++){
+        var pl=pk_plrs.find(function(p){return p.seat===s;});
+        var isMe=pl&&pl.wallet===myW;var isTurn=t.action_seat===s&&isPlay;var folded=pl&&pl.folded;
+        var cls='pk_seat'+(pl?' occ':'')+(isTurn?' turn':'')+(folded?' fold':'');
+        html+='<div class="'+cls+'">';
+        if(pl){
+          var hole=[];try{hole=JSON.parse(pl.hole_cards||'[]');}catch(e){}
+          var dn=pl.username||(pl.wallet.slice(0,4)+'…');
+          html+='<div style="font-weight:700;font-size:0.7rem;color:'+(isMe?'#00d4ff':'#e0e0ff')+';margin-bottom:3px;">'+escapeHtml(dn)+(isMe?' (you)':'')+'</div>';
+          html+='<div style="display:flex;justify-content:center;gap:2px;margin:3px 0;">';
+          if(hole.length===2&&(isMe||t.phase==='showdown'))html+=pk_rc(hole[0],false)+pk_rc(hole[1],false);
+          else if(isPlay&&!folded)html+=pk_rc(null,true)+pk_rc(null,true);
+          html+='</div>';
+          html+='<div style="font-size:0.62rem;color:#00ff88;">'+pl.chips.toLocaleString()+' 🥬</div>';
+          if(pl.current_bet>0)html+='<div style="font-size:0.58rem;color:#ffd700;">Bet: '+pl.current_bet+'</div>';
+          if(folded)html+='<div style="font-size:0.58rem;color:#ff3c5c;">FOLDED</div>';
+          if(isTurn)html+='<div style="font-size:0.52rem;color:#ffd700;animation:g_pulse 1s infinite;">⏳ YOUR TURN</div>';
+        }else{html+='<div style="color:#252540;font-size:0.68rem;">Empty</div><div style="font-size:0.58rem;color:#333;">Seat '+(s+1)+'</div>';}
+        html+='</div>';
       }
-    }
+      html+='</div>';
 
-    async function s_loadListings() {
-      try {
-        var sb = getSupaClient();
-        var res = await sb
-          .from('nft_listings')
-          .select('*')
-          .eq('status', 'listed')
-          .order('created_at', { ascending: false });
-        if (res.error) throw res.error;
-        s_listings = res.data || [];
-      } catch(e) {
-        console.error('NFT listings load error:', e);
-        s_listings = [];
+      // Action buttons
+      html+='<div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:0.8rem;">';
+      if(!isPlay&&active.length>=2&&me)html+='<button class="g_btn g_btn-primary" onclick="pk_deal()">🃏 DEAL</button>';
+      if(isMyTurn&&!me.folded){
+        var toCall=Math.max(0,(t.current_bet||0)-(me?me.current_bet:0));
+        if(toCall===0)html+='<button class="g_btn g_btn-primary" onclick="pk_act(\'check\')">CHECK</button>';
+        else html+='<button class="g_btn g_btn-primary" onclick="pk_act(\'call\')">CALL '+toCall+'</button>';
+        html+='<button class="g_btn" onclick="pk_doRaise()">RAISE</button>';
+        html+='<button class="g_btn" style="border-color:rgba(255,60,92,0.3);color:#ff3c5c;" onclick="pk_act(\'fold\')">FOLD</button>';
       }
+      if(t.phase==='showdown'&&me)html+='<button class="g_btn g_btn-primary" onclick="pk_deal()">NEXT HAND</button>';
+      html+='</div>';
+      area.innerHTML=html;
     }
 
-    async function renderStoreUI() {
-      var view = document.getElementById('view-store');
-      if (!view) return;
-
-      view.innerHTML =
-        '<div style="display:flex;align-items:center;justify-content:center;padding:3rem;color:#252540;font-size:0.8rem;letter-spacing:2px;">Loading store…</div>';
-
-      s_cabBalance = await s_fetchCabbageBalance();
-      await s_loadItems();
-      await s_loadListings();
-
-      s_paintStore();
+    async function pk_deal(){
+      if(!pk_tid)return;var sb=getSupaClient();var t=pk_tbl;
+      var ap=pk_plrs.filter(function(p){return p.is_active;});if(ap.length<2)return alert('Need 2+ players.');
+      var deck=pk_shuffle(pk_fullDeck());
+      for(var i=0;i<ap.length;i++){var h=[deck.pop(),deck.pop()];await sb.from('poker_players').update({hole_cards:JSON.stringify(h),current_bet:0,total_bet:0,folded:false,all_in:false}).eq('id',ap[i].id);}
+      var ds=((t.dealer_seat||0)+1)%ap.length;
+      var sbP=ap[(ds+1)%ap.length],bbP=ap[(ds+2)%ap.length],act=ap[(ds+3)%ap.length]||ap[0];
+      var sba=Math.min(t.small_blind,sbP.chips),bba=Math.min(t.big_blind,bbP.chips);
+      await sb.from('poker_players').update({current_bet:sba,total_bet:sba,chips:sbP.chips-sba}).eq('id',sbP.id);
+      await sb.from('poker_players').update({current_bet:bba,total_bet:bba,chips:bbP.chips-bba}).eq('id',bbP.id);
+      await sb.from('poker_tables').update({status:'playing',phase:'preflop',community:'[]',pot:sba+bba,current_bet:bba,dealer_seat:ds,action_seat:act.seat,deck:JSON.stringify(deck),hand_num:(t.hand_num||0)+1,updated_at:new Date().toISOString()}).eq('id',pk_tid);
     }
 
-    function s_paintStore() {
-      var view = document.getElementById('view-store');
-      if (!view) return;
+    function pk_doRaise(){var cur=pk_tbl?pk_tbl.current_bet||0:0;var a=prompt('Raise to:',String(cur*2));if(!a)return;var r=parseFloat(a);if(isNaN(r)||r<=cur)return alert('Must raise above '+cur);pk_act('raise',r);}
 
-      var myWallet = walletPublicKey ? walletPublicKey.toBase58() : '';
-      var html = '';
-
-      // ── Header ──
-      html +=
-        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;flex-wrap:wrap;gap:0.6rem;">' +
-          '<div>' +
-            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.5rem;letter-spacing:3px;color:#e0e0ff;">🥬 CABBAGE STORE</div>' +
-            '<div style="font-size:0.7rem;color:#444;letter-spacing:1px;margin-top:2px;">Spend your cabbage on merch, raffles, and NFTs</div>' +
-          '</div>' +
-          '<div style="display:flex;align-items:center;gap:0.8rem;">' +
-            '<div style="background:rgba(0,255,136,0.06);border:1px solid rgba(0,255,136,0.15);border-radius:10px;padding:8px 14px;display:flex;align-items:center;gap:6px;">' +
-              '<span style="font-size:1.1rem;">🥬</span>' +
-              '<span style="font-weight:700;color:#00ff88;font-size:1rem;" id="s_balDisplay">' + Math.floor(s_cabBalance).toLocaleString() + '</span>' +
-            '</div>' +
-            '<button onclick="switchView(\'profile\')" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#888;padding:7px 14px;border-radius:7px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;transition:all 0.2s;" onmouseover="this.style.borderColor=\'rgba(0,212,255,0.4)\';this.style.color=\'#00d4ff\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,0.1)\';this.style.color=\'#888\'">← Home</button>' +
-          '</div>' +
-        '</div>';
-
-      // ── Filter Tabs ──
-      var filters = [
-        { id:'all', label:'All' },
-        { id:'merch', label:'🛍 Merch' },
-        { id:'digital', label:'✨ Digital' },
-        { id:'raffle', label:'🎟 Raffles' },
-        { id:'nft', label:'🖼 NFT Market' }
-      ];
-      html += '<div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.4rem;">';
-      filters.forEach(function(f) {
-        var active = s_filter === f.id;
-        html += '<button onclick="s_setFilter(\'' + f.id + '\')" style="background:' + (active ? 'rgba(0,212,255,0.08)' : 'transparent') + ';border:1px solid ' + (active ? 'rgba(0,212,255,0.5)' : 'rgba(255,255,255,0.08)') + ';color:' + (active ? '#00d4ff' : '#888') + ';padding:8px 16px;border-radius:8px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;transition:all 0.2s;">' + f.label + '</button>';
-      });
-      html += '</div>';
-
-      // ── List NFT Button ──
-      if (s_filter === 'nft' || s_filter === 'all') {
-        html += '<div style="margin-bottom:1.2rem;">' +
-          '<button onclick="s_openListNftModal()" style="background:linear-gradient(135deg,rgba(0,212,255,0.12),rgba(123,104,238,0.12));border:1px solid rgba(0,212,255,0.3);color:#00d4ff;padding:10px 22px;border-radius:10px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.75rem;letter-spacing:1.5px;text-transform:uppercase;transition:all 0.2s;">+ List My NFT For Sale</button>' +
-        '</div>';
-      }
-
-      // ── Items Grid ──
-      var visibleItems = s_filter === 'all' ? s_items : (s_filter === 'nft' ? [] : s_items.filter(function(i){ return i.category === s_filter; }));
-      var visibleListings = (s_filter === 'all' || s_filter === 'nft') ? s_listings : [];
-
-      if (visibleItems.length === 0 && visibleListings.length === 0) {
-        html += '<div style="text-align:center;padding:3rem;color:#252540;font-size:0.78rem;letter-spacing:2px;">No items in this category yet</div>';
-      }
-
-      html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1.2rem;">';
-
-      // Store items
-      visibleItems.forEach(function(item) {
-        var outOfStock = item.stock !== null && item.stock <= 0;
-        var cantAfford = s_cabBalance < item.price;
-        var stockLabel = item.stock !== null ? (item.stock + ' left') : '∞';
-        var catBadge = item.category === 'merch' ? '🛍' : (item.category === 'digital' ? '✨' : '🎟');
-
-        html +=
-          '<div style="background:#0f0f22;border:1px solid #1e1e3a;border-radius:14px;overflow:hidden;transition:all 0.2s;' + (outOfStock ? 'opacity:0.5;' : '') + '">' +
-            (item.image_url ? '<div style="width:100%;aspect-ratio:1;background:#06060f;overflow:hidden;"><img src="' + escapeHtml(item.image_url) + '" style="width:100%;height:100%;object-fit:cover;" loading="lazy" onerror="this.style.display=\'none\'"></div>' : '<div style="width:100%;aspect-ratio:1;background:#06060f;display:flex;align-items:center;justify-content:center;font-size:3rem;">' + catBadge + '</div>') +
-            '<div style="padding:1rem;">' +
-              '<div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:0.4rem;">' +
-                '<div style="font-weight:700;font-size:0.88rem;color:#e0e0ff;">' + escapeHtml(item.name) + '</div>' +
-                '<div style="font-size:0.6rem;color:#555;letter-spacing:1px;text-transform:uppercase;flex-shrink:0;margin-left:8px;">' + catBadge + ' ' + stockLabel + '</div>' +
-              '</div>' +
-              '<div style="font-size:0.75rem;color:#555;margin-bottom:0.8rem;line-height:1.5;">' + escapeHtml(item.description || '') + '</div>' +
-              '<div style="display:flex;justify-content:space-between;align-items:center;">' +
-                '<div style="font-weight:900;font-size:1rem;color:#00ff88;">' + item.price.toLocaleString() + ' 🥬</div>' +
-                '<button onclick="s_buyItem(' + item.id + ')" ' + (outOfStock || cantAfford ? 'disabled' : '') + ' style="background:' + (outOfStock ? '#1a1a30' : (cantAfford ? '#1a1a30' : 'linear-gradient(135deg,rgba(0,255,136,0.15),rgba(0,212,255,0.15))')) + ';border:1px solid ' + (outOfStock || cantAfford ? 'rgba(255,255,255,0.05)' : 'rgba(0,255,136,0.3)') + ';color:' + (outOfStock ? '#333' : (cantAfford ? '#555' : '#00ff88')) + ';padding:8px 16px;border-radius:8px;cursor:' + (outOfStock || cantAfford ? 'not-allowed' : 'pointer') + ';font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.7rem;letter-spacing:1.5px;text-transform:uppercase;transition:all 0.2s;">' + (outOfStock ? 'SOLD OUT' : (cantAfford ? 'NEED MORE 🥬' : 'BUY')) + '</button>' +
-              '</div>' +
-            '</div>' +
-          '</div>';
-      });
-
-      // NFT listings
-      visibleListings.forEach(function(listing) {
-        var isOwn = listing.seller_wallet === myWallet;
-        var cantAfford = s_cabBalance < listing.price;
-        var sellerShort = listing.seller_wallet.slice(0,4) + '…' + listing.seller_wallet.slice(-4);
-        var sellerLabel = listing.seller_name || sellerShort;
-
-        html +=
-          '<div style="background:#0f0f22;border:1px solid ' + (isOwn ? 'rgba(123,104,238,0.3)' : '#1e1e3a') + ';border-radius:14px;overflow:hidden;transition:all 0.2s;">' +
-            (listing.image_url ? '<div style="width:100%;aspect-ratio:1;background:#06060f;overflow:hidden;"><img src="' + escapeHtml(listing.image_url) + '" style="width:100%;height:100%;object-fit:cover;" loading="lazy" onerror="this.style.display=\'none\'"></div>' : '<div style="width:100%;aspect-ratio:1;background:#06060f;display:flex;align-items:center;justify-content:center;font-size:3rem;">🖼</div>') +
-            '<div style="padding:1rem;">' +
-              '<div style="font-weight:700;font-size:0.88rem;color:#e0e0ff;margin-bottom:0.3rem;">' + escapeHtml(listing.name) + '</div>' +
-              '<div style="font-size:0.68rem;color:#555;margin-bottom:0.8rem;">Listed by <span style="color:#7b68ee;">' + escapeHtml(sellerLabel) + '</span></div>' +
-              '<div style="display:flex;justify-content:space-between;align-items:center;">' +
-                '<div style="font-weight:900;font-size:1rem;color:#00ff88;">' + listing.price.toLocaleString() + ' 🥬</div>' +
-                (isOwn
-                  ? '<button onclick="s_cancelListing(' + listing.id + ')" style="background:transparent;border:1px solid rgba(255,60,92,0.3);color:#ff3c5c;padding:8px 16px;border-radius:8px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.7rem;letter-spacing:1.5px;text-transform:uppercase;">CANCEL</button>'
-                  : '<button onclick="s_buyListing(' + listing.id + ')" ' + (cantAfford ? 'disabled' : '') + ' style="background:' + (cantAfford ? '#1a1a30' : 'linear-gradient(135deg,rgba(0,255,136,0.15),rgba(0,212,255,0.15))') + ';border:1px solid ' + (cantAfford ? 'rgba(255,255,255,0.05)' : 'rgba(0,255,136,0.3)') + ';color:' + (cantAfford ? '#555' : '#00ff88') + ';padding:8px 16px;border-radius:8px;cursor:' + (cantAfford ? 'not-allowed' : 'pointer') + ';font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.7rem;letter-spacing:1.5px;text-transform:uppercase;">' + (cantAfford ? 'NEED MORE 🥬' : 'BUY NFT') + '</button>'
-                ) +
-              '</div>' +
-            '</div>' +
-          '</div>';
-      });
-
-      html += '</div>';
-
-      html += '<div style="margin-top:2rem;text-align:center;font-size:0.63rem;color:#1e1e3a;letter-spacing:1px;text-transform:uppercase;line-height:2;">All purchases are final · Physical items require shipping info · NFT transfers are manual</div>';
-
-      view.innerHTML = html;
+    async function pk_act(action,raiseAmt){
+      if(!pk_tid||!pk_tbl)return;var sb=getSupaClient();var w=walletPublicKey.toBase58();
+      var me=pk_plrs.find(function(p){return p.wallet===w;});if(!me||pk_tbl.action_seat!==me.seat)return;
+      var t=pk_tbl;var potAdd=0;
+      if(action==='fold'){await sb.from('poker_players').update({folded:true}).eq('id',me.id);}
+      else if(action==='check'){/* no chips moved */}
+      else if(action==='call'){var tc=Math.min(Math.max(0,(t.current_bet||0)-me.current_bet),me.chips);await sb.from('poker_players').update({chips:me.chips-tc,current_bet:me.current_bet+tc,total_bet:me.total_bet+tc,all_in:me.chips-tc<=0}).eq('id',me.id);potAdd=tc;}
+      else if(action==='raise'){var need=raiseAmt-me.current_bet;var act=Math.min(need,me.chips);await sb.from('poker_players').update({chips:me.chips-act,current_bet:me.current_bet+act,total_bet:me.total_bet+act,all_in:me.chips-act<=0}).eq('id',me.id);potAdd=act;await sb.from('poker_tables').update({current_bet:raiseAmt}).eq('id',pk_tid);}
+      if(potAdd>0)await sb.from('poker_tables').update({pot:(t.pot||0)+potAdd}).eq('id',pk_tid);
+      await pk_advance(me);
     }
 
-    function s_setFilter(filter) {
-      s_filter = filter;
-      s_paintStore();
-    }
-
-    async function s_buyItem(itemId) {
-      var item = s_items.find(function(i){ return i.id === itemId; });
-      if (!item) return alert('Item not found.');
-      if (!walletPublicKey) return alert('Connect wallet first.');
-
-      var confirmed = confirm('Buy "' + item.name + '" for ' + item.price.toLocaleString() + ' 🥬?');
-      if (!confirmed) return;
-
-      // If merch, collect shipping info
-      var shipping = null;
-      if (item.category === 'merch') {
-        var shipName = prompt('Shipping Name:');
-        if (!shipName) return;
-        var address = prompt('Street Address:');
-        if (!address) return;
-        var city = prompt('City:');
-        if (!city) return;
-        var state = prompt('State / Province:');
-        var zip = prompt('ZIP / Postal Code:');
-        var country = prompt('Country:', 'US');
-        shipping = { name: shipName, address: address, city: city, state: state || '', zip: zip || '', country: country || 'US' };
-      }
-
-      try {
-        await g_spendCabbage(item.price);
-
-        var sb = getSupaClient();
-        var wallet = walletPublicKey.toBase58();
-        var username = (session && session.profile && session.profile.username) || null;
-
-        var orderRes = await sb.from('store_orders').insert({
-          wallet: wallet,
-          username: username,
-          item_id: item.id,
-          item_name: item.name,
-          price_paid: item.price,
-          status: 'pending',
-          shipping: shipping
-        }).select().single();
-
-        if (orderRes.error) throw orderRes.error;
-
-        if (item.stock !== null) {
-          await sb.from('store_items').update({ stock: Math.max(0, item.stock - 1) }).eq('id', item.id);
+    async function pk_advance(acted){
+      var sb=getSupaClient();
+      var pR=await sb.from('poker_players').select('*').eq('table_id',pk_tid).eq('is_active',true).order('seat');
+      var plrs=pR.data||[];var nf=plrs.filter(function(p){return !p.folded;});
+      if(nf.length<=1){await pk_award(nf[0]);return;}
+      var tR=await sb.from('poker_tables').select('*').eq('id',pk_tid).single();var t=tR.data;
+      var canAct=plrs.filter(function(p){return !p.folded&&!p.all_in;});
+      var allMatch=canAct.every(function(p){return p.current_bet>=(t.current_bet||0);});
+      // Find next player who needs to act
+      var seats=canAct.map(function(p){return p.seat;}).sort(function(a,b){return a-b;});
+      var ci=seats.indexOf(acted.seat);
+      for(var i=1;i<=seats.length;i++){
+        var ns=seats[(ci+i)%seats.length];
+        var np=canAct.find(function(p){return p.seat===ns;});
+        if(np&&np.current_bet<(t.current_bet||0)){
+          await sb.from('poker_tables').update({action_seat:np.seat,updated_at:new Date().toISOString()}).eq('id',pk_tid);return;
         }
-
-        alert('✅ Purchased "' + item.name + '" for ' + item.price.toLocaleString() + ' 🥬!\n\n' + (item.category === 'merch' ? 'We\'ll ship it to you soon.' : (item.category === 'raffle' ? 'You\'re entered! Good luck.' : 'Order confirmed.')));
-
-        s_cabBalance = await s_fetchCabbageBalance();
-        await s_loadItems();
-        s_paintStore();
-
-      } catch(e) {
-        alert('Purchase failed: ' + (e.message || e));
       }
+      // Everyone matched, advance phase
+      await pk_nextPhase();
     }
 
-    function s_openListNftModal() {
-      if (!walletPublicKey) return alert('Connect wallet first.');
-      if (!session.loadedNFTs || session.loadedNFTs.length === 0) return alert('No NFTs found in your wallet.');
-
-      var options = session.loadedNFTs.map(function(nft, idx) {
-        return (idx + 1) + ') ' + nft.name + ' (' + (nft.mint ? nft.mint.slice(0,6) + '…' : '?') + ')';
-      }).join('\n');
-
-      var choice = prompt('Which NFT do you want to list?\n\n' + options + '\n\nEnter the number:');
-      if (!choice) return;
-      var idx = parseInt(choice) - 1;
-      if (isNaN(idx) || idx < 0 || idx >= session.loadedNFTs.length) return alert('Invalid selection.');
-
-      var nft = session.loadedNFTs[idx];
-      var price = prompt('Set your price in 🥬 Cabbage for "' + nft.name + '":');
-      if (!price) return;
-      var priceNum = parseFloat(price);
-      if (isNaN(priceNum) || priceNum <= 0) return alert('Invalid price.');
-
-      s_createListing(nft, priceNum);
+    async function pk_nextPhase(){
+      var sb=getSupaClient();
+      var tR=await sb.from('poker_tables').select('*').eq('id',pk_tid).single();var t=tR.data;
+      var deck=[];try{deck=JSON.parse(t.deck||'[]');}catch(e){}
+      var comm=[];try{comm=JSON.parse(t.community||'[]');}catch(e){}
+      await sb.from('poker_players').update({current_bet:0}).eq('table_id',pk_tid).eq('is_active',true);
+      var next='';
+      if(t.phase==='preflop'){next='flop';comm.push(deck.pop(),deck.pop(),deck.pop());}
+      else if(t.phase==='flop'){next='turn';comm.push(deck.pop());}
+      else if(t.phase==='turn'){next='river';comm.push(deck.pop());}
+      else{await pk_showdown();return;}
+      var cR=await sb.from('poker_players').select('*').eq('table_id',pk_tid).eq('is_active',true).eq('folded',false).eq('all_in',false).order('seat');
+      var active=cR.data||[];
+      if(active.length<=1){while(comm.length<5&&deck.length>0)comm.push(deck.pop());
+        await sb.from('poker_tables').update({phase:'showdown',community:JSON.stringify(comm),deck:JSON.stringify(deck),current_bet:0,action_seat:-1,updated_at:new Date().toISOString()}).eq('id',pk_tid);
+        setTimeout(pk_showdown,1200);return;}
+      await sb.from('poker_tables').update({phase:next,community:JSON.stringify(comm),deck:JSON.stringify(deck),current_bet:0,action_seat:active[0].seat,updated_at:new Date().toISOString()}).eq('id',pk_tid);
     }
 
-    async function s_createListing(nft, price) {
-      try {
-        var sb = getSupaClient();
-        var wallet = walletPublicKey.toBase58();
-        var username = (session && session.profile && session.profile.username) || null;
-
-        var res = await sb.from('nft_listings').insert({
-          seller_wallet: wallet,
-          seller_name: username,
-          mint_address: nft.mint,
-          name: nft.name,
-          image_url: nft.image || null,
-          price: price,
-          status: 'listed'
-        }).select().single();
-
-        if (res.error) throw res.error;
-
-        alert('✅ Listed "' + nft.name + '" for ' + price.toLocaleString() + ' 🥬!\n\nBuyers will see it in the NFT Market tab.');
-
-        await s_loadListings();
-        s_paintStore();
-      } catch(e) {
-        alert('Listing failed: ' + (e.message || e));
-      }
+    async function pk_showdown(){
+      var sb=getSupaClient();
+      var tR=await sb.from('poker_tables').select('*').eq('id',pk_tid).single();var t=tR.data;
+      var comm=[];try{comm=JSON.parse(t.community||'[]');}catch(e){}
+      var cR=await sb.from('poker_players').select('*').eq('table_id',pk_tid).eq('is_active',true).eq('folded',false);
+      var cont=cR.data||[];
+      if(cont.length<=1){if(cont[0])await pk_award(cont[0]);return;}
+      var best=null,bestS=-1;
+      cont.forEach(function(p){var h=[];try{h=JSON.parse(p.hole_cards||'[]');}catch(e){}var all=h.concat(comm);var sc=pk_score(all);if(sc>bestS){bestS=sc;best=p;}});
+      if(best)await pk_award(best);
     }
 
-    async function s_cancelListing(listingId) {
-      if (!confirm('Cancel this listing?')) return;
-      try {
-        var sb = getSupaClient();
-        var res = await sb.from('nft_listings').update({ status: 'cancelled' }).eq('id', listingId);
-        if (res.error) throw res.error;
-
-        alert('Listing cancelled.');
-        await s_loadListings();
-        s_paintStore();
-      } catch(e) {
-        alert('Cancel failed: ' + (e.message || e));
-      }
+    async function pk_award(winner){
+      var sb=getSupaClient();
+      var tR=await sb.from('poker_tables').select('pot').eq('id',pk_tid).single();
+      var pot=tR.data?tR.data.pot:0;
+      await sb.from('poker_players').update({chips:winner.chips+pot}).eq('id',winner.id);
+      await sb.from('poker_tables').update({status:'between_hands',phase:'showdown',pot:0,current_bet:0,action_seat:-1,updated_at:new Date().toISOString()}).eq('id',pk_tid);
     }
 
-    async function s_buyListing(listingId) {
-      var listing = s_listings.find(function(l){ return l.id === listingId; });
-      if (!listing) return alert('Listing not found.');
-      if (!walletPublicKey) return alert('Connect wallet first.');
-
-      var confirmed = confirm('Buy "' + listing.name + '" for ' + listing.price.toLocaleString() + ' 🥬?\n\nThe NFT will be transferred to your wallet by the seller.');
-      if (!confirmed) return;
-
-      try {
-        await g_spendCabbage(listing.price);
-
-        var sb = getSupaClient();
-        var buyerWallet = walletPublicKey.toBase58();
-
-        // Credit seller
-        var creditRes = await fetch(SUPA_URL.replace(/\/+$/,'') + '/functions/v1/cabbage', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY },
-          body: JSON.stringify({ action: 'credit', wallet: listing.seller_wallet, amount: listing.price })
-        });
-        var creditData = await creditRes.json();
-        if (!creditRes.ok) throw new Error(creditData.error || 'Credit seller failed');
-
-        // Mark sold
-        await sb.from('nft_listings').update({
-          status: 'sold',
-          buyer_wallet: buyerWallet,
-          sold_at: new Date().toISOString()
-        }).eq('id', listingId);
-
-        alert('✅ Purchased "' + listing.name + '" for ' + listing.price.toLocaleString() + ' 🥬!\n\nThe seller has been paid and will transfer the NFT to your wallet:\n' + buyerWallet);
-
-        s_cabBalance = await s_fetchCabbageBalance();
-        await s_loadListings();
-        s_paintStore();
-      } catch(e) {
-        alert('Purchase failed: ' + (e.message || e));
-      }
+    // ── Hand evaluator ──
+    function pk_cn(c){var v={'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'T':10,'J':11,'Q':12,'K':13,'A':14};return v[c[0]]||0;}
+    function pk_eval5(cards){
+      var vals=cards.map(pk_cn).sort(function(a,b){return b-a;});
+      var suits=cards.map(function(c){return c[1];});
+      var flush=suits.every(function(s){return s===suits[0];});
+      var str=vals[0]-vals[1]===1&&vals[1]-vals[2]===1&&vals[2]-vals[3]===1&&vals[3]-vals[4]===1;
+      if(!str&&vals[0]===14&&vals[1]===5&&vals[2]===4&&vals[3]===3&&vals[4]===2){str=true;vals=[5,4,3,2,1];}
+      var ct={};vals.forEach(function(v){ct[v]=(ct[v]||0)+1;});
+      var g=Object.keys(ct).map(function(k){return{v:parseInt(k),c:ct[k]};}).sort(function(a,b){return b.c-a.c||b.v-a.v;});
+      if(flush&&str)return vals[0]===14?9e6:8e6+vals[0];
+      if(g[0].c===4)return 7e6+g[0].v*100+(g[1]?g[1].v:0);
+      if(g[0].c===3&&g.length>=2&&g[1].c===2)return 6e6+g[0].v*100+g[1].v;
+      if(flush)return 5e6+vals[0]*1e4+vals[1]*1e3+vals[2]*100+vals[3]*10+vals[4];
+      if(str)return 4e6+vals[0];
+      if(g[0].c===3)return 3e6+g[0].v*1e4+(g[1]?g[1].v*100:0)+(g[2]?g[2].v:0);
+      if(g[0].c===2&&g.length>=2&&g[1].c===2){var hp=Math.max(g[0].v,g[1].v),lp=Math.min(g[0].v,g[1].v);return 2e6+hp*1e4+lp*100+(g[2]?g[2].v:0);}
+      if(g[0].c===2)return 1e6+g[0].v*1e4+(g[1]?g[1].v*100:0)+(g[2]?g[2].v*10:0)+(g[3]?g[3].v:0);
+      return vals[0]*1e4+vals[1]*1e3+vals[2]*100+vals[3]*10+vals[4];
+    }
+    function pk_score(seven){
+      if(seven.length<5)return 0;var best=0;
+      for(var i=0;i<seven.length;i++)for(var j=i+1;j<seven.length;j++)for(var k=j+1;k<seven.length;k++)for(var l=k+1;l<seven.length;l++)for(var m=l+1;m<seven.length;m++){
+        var sc=pk_eval5([seven[i],seven[j],seven[k],seven[l],seven[m]]);if(sc>best)best=sc;}
+      return best;
     }
 
   </script>
 </body>
 </html>
+
+   
+  
+    
+       
+    
+
+
+    
+       
+
+  
+  
+     
