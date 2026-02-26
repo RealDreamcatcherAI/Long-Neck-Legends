@@ -571,7 +571,8 @@ a.plink:hover{
       border-radius: 14px;
       padding: 1.6rem 2rem;
     }
-    .profile-actions.is-hidden { display: none; }
+    /* profile actions always visible now */
+    .profile-actions.is-hidden { display: block; }
     .actions-grid{
       display: grid;
       grid-template-columns: repeat(6, minmax(140px, 1fr));
@@ -990,7 +991,7 @@ a.plink:hover{
   <div class="dash-nav-wrap" id="dashNavWrap">
     <div class="dash-nav">
       <div class="dash-tabs">
-        <button class="dash-tab" id="tabProfile" onclick="toggleProfilePanel()">Profile</button>
+        <button class="dash-tab" id="tabProfile" onclick="switchView('profile')">Profile</button>
         <button class="dash-tab" id="tabChat" onclick="switchView('chat')">💬 Chat</button>
         <button class="dash-tab" id="tabGames" onclick="switchView('games')">🎰 Casino</button>
       </div>
@@ -1210,7 +1211,7 @@ a.plink:hover{
       },
       secondWallet: { address: "" },
       currentView: "profile",
-      profilePanelOpen: false
+      profilePanelOpen: true
     };
 
     function getTier(count) {
@@ -1405,16 +1406,20 @@ a.plink:hover{
     }
 
     function applyProfilePanelUI(){
+      // Profile actions should always be visible (no more toggle panel)
       var btn = document.getElementById("tabProfile");
       var panel = document.getElementById("profilePanel");
 
-      if (btn) btn.classList.toggle("active", !!session.profilePanelOpen);
-      if (panel) panel.classList.toggle("is-hidden", !session.profilePanelOpen);
+      // Tab highlights when you're on the profile view
+      if (btn) btn.classList.toggle("active", session.currentView === "profile");
+
+      // Never hide the profile actions panel
+      if (panel) panel.classList.remove("is-hidden");
     }
 
+    // Backwards compatible (old onclicks) — just jump to profile now
     function toggleProfilePanel(){
-      session.profilePanelOpen = !session.profilePanelOpen;
-      applyProfilePanelUI();
+      switchView("profile");
     }
 
     async function connectWallet() {
@@ -1444,7 +1449,8 @@ a.plink:hover{
 
         await hydrateProfileAndWalletsFromSupabase(addr);
 
-        session.profilePanelOpen = false;
+        // Profile actions always visible
+        session.profilePanelOpen = true;
         applyProfilePanelUI();
 
         await loadDashboard();
@@ -1515,7 +1521,9 @@ a.plink:hover{
       if (viewName === "profile") {
         stopChatPoll();
         if (vp) vp.classList.add("show");
-        if (tabProfile) tabProfile.classList.toggle("active", !!session.profilePanelOpen);
+        if (tabProfile) tabProfile.classList.add("active");
+        // ensure profile actions are visible
+        applyProfilePanelUI();
       }
 
       if (viewName === "chat") {
@@ -2502,8 +2510,7 @@ var nextTierRow = nextTier
             '<div id="chatLiveDot" style="display:flex;align-items:center;gap:5px;font-size:0.7rem;color:#555;">' +
               '<div style="width:7px;height:7px;border-radius:50%;background:#555;"></div>Connecting…' +
             '</div>' +
-            '<button onclick="switchView(\'profile\')" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#888;padding:7px 14px;border-radius:7px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;transition:all 0.2s;" onmouseover="this.style.borderColor=\'rgba(0,212,255,0.4)\';this.style.color=\'#00d4ff\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,0.1)\';this.style.color=\'#888\'">← Home</button>' +
-          '</div>' +
+                      '</div>' +
         '</div>' +
 
         // ── Messages ──
@@ -3148,8 +3155,7 @@ var nextTierRow = nextTier
             '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.5rem;letter-spacing:3px;color:#e0e0ff;">🎰 LNL CASINO</div>' +
             '<div style="font-size:0.7rem;color:#444;letter-spacing:1px;margin-top:2px;">All wins paid in 🥬 Cabbage · SOL bets fill the treasury</div>' +
           '</div>' +
-          '<button onclick="switchView(\'profile\')" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#888;padding:7px 14px;border-radius:7px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;" onmouseover="this.style.borderColor=\'rgba(0,212,255,0.4)\';this.style.color=\'#00d4ff\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,0.1)\';this.style.color=\'#888\'">← Home</button>' +
-        '</div>' +
+                  '</div>' +
 
         // ── Balance bar ──
         '<div class="g_card" style="display:flex;gap:1.2rem;flex-wrap:wrap;align-items:center;padding:1rem 1.4rem;">' +
@@ -3569,8 +3575,7 @@ var nextTierRow = nextTier
               '<span style="font-size:1.1rem;">🥬</span>' +
               '<span style="font-weight:700;color:#00ff88;font-size:1rem;" id="s_balDisplay">' + Math.floor(s_cabBalance).toLocaleString() + '</span>' +
             '</div>' +
-            '<button onclick="switchView(\'profile\')" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#888;padding:7px 14px;border-radius:7px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;transition:all 0.2s;" onmouseover="this.style.borderColor=\'rgba(0,212,255,0.4)\';this.style.color=\'#00d4ff\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,0.1)\';this.style.color=\'#888\'">← Home</button>' +
-          '</div>' +
+                      '</div>' +
         '</div>';
 
       // ── Filter Tabs ──
