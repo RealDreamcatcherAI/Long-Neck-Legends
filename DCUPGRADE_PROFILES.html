@@ -2476,7 +2476,7 @@ var nextTierRow = nextTier
         // ── Header ──
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.6rem;">' +
           '<div>' +
-            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.5rem;letter-spacing:3px;color:#e0e0ff;">🦒 HOLDER CHAT</div>' +
+            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.5rem;letter-spacing:3px;color:#e0e0ff;">🪶 HOLDER CHAT</div>' +
             '<div style="font-size:0.7rem;color:#444;letter-spacing:1px;margin-top:2px;">Live · Open to all connected wallets</div>' +
           '</div>' +
           '<div style="display:flex;align-items:center;gap:0.7rem;">' +
@@ -2672,7 +2672,7 @@ var nextTierRow = nextTier
       if (chatMsgs.length === 0) {
         inner.innerHTML =
           '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:340px;gap:0.7rem;">' +
-            '<div style="font-size:2.5rem;">🦒</div>' +
+            '<div style="font-size:2.5rem;">🪶</div>' +
             '<div style="color:#252540;font-size:0.78rem;letter-spacing:2px;text-transform:uppercase;">No messages yet</div>' +
             '<div style="color:#1a1a30;font-size:0.7rem;">Be the first legend</div>' +
           '</div>';
@@ -3054,9 +3054,9 @@ var nextTierRow = nextTier
     function g_playSlots(nftCount) {
       var bonus = g_nftBonus(nftCount);
       var r = Math.random() - bonus * 0.5; // small bonus shifts result
-      var symbols = ['🦒','🌿','🎲','💎','🔥','⭐'];
+      var symbols = ['🪶','🌿','🎲','💎','🔥','⭐'];
       if (r < g_GAMES.slots.jackpot.chance) {
-        return { reels: ['🦒','🦒','🦒'], result: 'jackpot', payout: g_GAMES.slots.jackpot.payout };
+        return { reels: ['🪶','🪶','🪶'], result: 'jackpot', payout: g_GAMES.slots.jackpot.payout };
       }
       if (r < g_GAMES.slots.jackpot.chance + g_GAMES.slots.threeKind.chance) {
         var s = symbols[Math.floor(Math.random() * symbols.length)];
@@ -3203,7 +3203,7 @@ var nextTierRow = nextTier
             '</div>' +
             '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">' +
               '<button class="g_btn g_btn-primary" id="g_coinHeadsBtn" onclick="g_playCoinGame(\'heads\')">👑 HEADS</button>' +
-              '<button class="g_btn g_btn-primary" id="g_coinTailsBtn" onclick="g_playCoinGame(\'tails\')">🦒 TAILS</button>' +
+              '<button class="g_btn g_btn-primary" id="g_coinTailsBtn" onclick="g_playCoinGame(\'tails\')">🪶 TAILS</button>' +
             '</div>' +
             '<div class="g_result" id="g_coinResult" style="display:none;"></div>' +
           '</div>' +
@@ -3229,11 +3229,11 @@ var nextTierRow = nextTier
             '<div class="g_title">🎰 SLOTS</div>' +
             '<div style="text-align:center;margin:0.8rem 0;">' +
               '<div style="display:flex;gap:8px;justify-content:center;" id="g_slotReels">' +
-                '<div class="g_reel" id="g_reel0">🦒</div>' +
-                '<div class="g_reel" id="g_reel1">🦒</div>' +
-                '<div class="g_reel" id="g_reel2">🦒</div>' +
+                '<div class="g_reel" id="g_reel0">🪶</div>' +
+                '<div class="g_reel" id="g_reel1">🪶</div>' +
+                '<div class="g_reel" id="g_reel2">🪶</div>' +
               '</div>' +
-              '<div style="color:#555;font-size:0.65rem;margin-top:8px;letter-spacing:0.5px;">🦒🦒🦒 = 15× · 3-kind = 7× · 2-kind = 1.8×</div>' +
+              '<div style="color:#555;font-size:0.65rem;margin-top:8px;letter-spacing:0.5px;">🪶🪶🪶 = 15× · 3-kind = 7× · 2-kind = 1.8×</div>' +
             '</div>' +
             '<button class="g_btn g_btn-primary" style="width:100%;" id="g_slotsBtn" onclick="g_playSlotsGame()">SPIN</button>' +
             '<div class="g_result" id="g_slotsResult" style="display:none;"></div>' +
@@ -3297,7 +3297,7 @@ var nextTierRow = nextTier
         '<div id="g_winnerModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;align-items:center;justify-content:center;padding:2rem;">' +
           '<div id="g_confettiContainer" style="position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:10000;"></div>' +
           '<div style="position:relative;z-index:10001;background:linear-gradient(135deg,#111125,#0d0d20);border:2px solid #ffd700;box-shadow:0 0 60px rgba(255,215,0,0.3);border-radius:20px;padding:2.5rem;max-width:480px;width:100%;text-align:center;">' +
-            '<div style="font-size:4rem;animation:g_pulse 1.5s infinite;">🦒</div>' +
+            '<div style="font-size:4rem;animation:g_pulse 1.5s infinite;">🪶</div>' +
             '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:2rem;letter-spacing:4px;color:#ffd700;margin:0.5rem 0;">YOU WON AN NFT!</div>' +
             '<div style="color:#888;font-size:0.8rem;margin-bottom:1rem;">Airdropping to your wallet</div>' +
             '<div style="font-family:monospace;font-size:0.7rem;color:#555;word-break:break-all;background:rgba(0,0,0,0.3);padding:0.8rem;border-radius:8px;margin-bottom:1.5rem;" id="g_winnerWallet"></div>' +
@@ -3376,7 +3376,7 @@ var nextTierRow = nextTier
         var won = Math.random() < (g_GAMES.coin.winChance + g_nftBonus(nftCount));
         var flipResult = won ? choice : (choice === 'heads' ? 'tails' : 'heads');
         var isH = flipResult === 'heads';
-        if (coinEl) { coinEl.className = 'g_coin-inner landed ' + (isH ? 'g_coin-heads' : 'g_coin-tails'); coinEl.textContent = isH ? '👑' : '🦒'; }
+        if (coinEl) { coinEl.className = 'g_coin-inner landed ' + (isH ? 'g_coin-heads' : 'g_coin-tails'); coinEl.textContent = isH ? '👑' : '🪶'; }
         var multiplier = g_GAMES.coin.payout;
         var cabPay = 0;
         if (won) { cabPay = g_currency === 'sol' ? bet * multiplier * g_SOL_TO_CABBAGE : bet * multiplier; await g_creditCabbage(cabPay); }
@@ -3443,7 +3443,7 @@ var nextTierRow = nextTier
         await g_runBet(bet, g_currency);
 
         // Spin animation
-        var spinSyms = ['🦒','🌿','🎲','💎','🔥','⭐'];
+        var spinSyms = ['🪶','🌿','🎲','💎','🔥','⭐'];
         var si = 0;
         var spinAnim = setInterval(function(){
           for (var i = 0; i < 3; i++) {
@@ -3716,7 +3716,7 @@ var nextTierRow = nextTier
       var sba=Math.min(t.small_blind,sbP.chips),bba=Math.min(t.big_blind,bbP.chips);
       await sb.from('poker_players').update({current_bet:sba,total_bet:sba,chips:sbP.chips-sba}).eq('id',sbP.id);
       await sb.from('poker_players').update({current_bet:bba,total_bet:bba,chips:bbP.chips-bba}).eq('id',bbP.id);
-      await sb.from('poker_tables').update({status:'playing',phase:'preflop',community:'[]',pot:sba+bba,current_bet:bba,dealer_seat:ds,action_seat:act.seat,deck:JSON.stringify(deck),hand_num:(t.hand_num||0)+1,updated_at:new Date().toISOString()}).eq('id',pk_tid);
+      await sb.from('poker_tables').update({status:'playing',phase:'preflop',community:'[]',pot:sba+bba,current_bet:bba,dealer_seat:ds,action_seat:act.seat,round_starter:act.seat,deck:JSON.stringify(deck),hand_num:(t.hand_num||0)+1,updated_at:new Date().toISOString()}).eq('id',pk_tid);
     }
 
     function pk_doRaise(){var cur=pk_tbl?pk_tbl.current_bet||0:0;var a=prompt('Raise to:',String(cur*2));if(!a)return;var r=parseFloat(a);if(isNaN(r)||r<=cur)return alert('Must raise above '+cur);pk_act('raise',r);}
@@ -3728,31 +3728,50 @@ var nextTierRow = nextTier
       if(action==='fold'){await sb.from('poker_players').update({folded:true}).eq('id',me.id);}
       else if(action==='check'){/* no chips moved */}
       else if(action==='call'){var tc=Math.min(Math.max(0,(t.current_bet||0)-me.current_bet),me.chips);await sb.from('poker_players').update({chips:me.chips-tc,current_bet:me.current_bet+tc,total_bet:me.total_bet+tc,all_in:me.chips-tc<=0}).eq('id',me.id);potAdd=tc;}
-      else if(action==='raise'){var need=raiseAmt-me.current_bet;var act=Math.min(need,me.chips);await sb.from('poker_players').update({chips:me.chips-act,current_bet:me.current_bet+act,total_bet:me.total_bet+act,all_in:me.chips-act<=0}).eq('id',me.id);potAdd=act;await sb.from('poker_tables').update({current_bet:raiseAmt}).eq('id',pk_tid);}
+      else if(action==='raise'){var need=raiseAmt-me.current_bet;var act=Math.min(need,me.chips);await sb.from('poker_players').update({chips:me.chips-act,current_bet:me.current_bet+act,total_bet:me.total_bet+act,all_in:me.chips-act<=0}).eq('id',me.id);potAdd=act;await sb.from('poker_tables').update({current_bet:raiseAmt,round_starter:me.seat}).eq('id',pk_tid);}
       if(potAdd>0)await sb.from('poker_tables').update({pot:(t.pot||0)+potAdd}).eq('id',pk_tid);
-      await pk_advance(me);
+      await pk_advance(me,action);
     }
 
-    async function pk_advance(acted){
+    async function pk_advance(acted,action){
       var sb=getSupaClient();
+      // Fresh player data
       var pR=await sb.from('poker_players').select('*').eq('table_id',pk_tid).eq('is_active',true).order('seat');
-      var plrs=pR.data||[];var nf=plrs.filter(function(p){return !p.folded;});
+      var plrs=pR.data||[];
+      var nf=plrs.filter(function(p){return !p.folded;});
+      // Only 1 player left = they win
       if(nf.length<=1){await pk_award(nf[0]);return;}
+      // Fresh table data
       var tR=await sb.from('poker_tables').select('*').eq('id',pk_tid).single();var t=tR.data;
+      // Players who can still act (not folded, not all-in)
       var canAct=plrs.filter(function(p){return !p.folded&&!p.all_in;});
-      var allMatch=canAct.every(function(p){return p.current_bet>=(t.current_bet||0);});
-      // Find next player who needs to act
+      if(canAct.length<=0){await pk_nextPhase();return;}
+      // Find next player clockwise after the one who just acted
       var seats=canAct.map(function(p){return p.seat;}).sort(function(a,b){return a-b;});
       var ci=seats.indexOf(acted.seat);
-      for(var i=1;i<=seats.length;i++){
-        var ns=seats[(ci+i)%seats.length];
-        var np=canAct.find(function(p){return p.seat===ns;});
-        if(np&&np.current_bet<(t.current_bet||0)){
-          await sb.from('poker_tables').update({action_seat:np.seat,updated_at:new Date().toISOString()}).eq('id',pk_tid);return;
+      // If acted player folded/all-in they might not be in canAct, find closest
+      if(ci===-1){
+        for(var x=0;x<5;x++){
+          ci=seats.indexOf((acted.seat+x)%5);
+          if(ci!==-1)break;
         }
+        if(ci===-1)ci=0;
       }
-      // Everyone matched, advance phase
-      await pk_nextPhase();
+      var nextIdx=(ci+1)%seats.length;
+      var nextSeat=seats[nextIdx];
+      var nextPlayer=canAct.find(function(p){return p.seat===nextSeat;});
+      // Check: has the action gone all the way around?
+      // It has if the next player IS the round_starter AND all bets match
+      var rs=t.round_starter;
+      if(rs===undefined||rs===null||rs<0)rs=seats[0];
+      var allBetsMatch=canAct.every(function(p){return p.current_bet>=(t.current_bet||0);});
+      if(nextSeat===rs&&allBetsMatch){
+        // Full rotation complete, advance to next phase
+        await pk_nextPhase();
+        return;
+      }
+      // Give action to the next player
+      await sb.from('poker_tables').update({action_seat:nextSeat,updated_at:new Date().toISOString()}).eq('id',pk_tid);
     }
 
     async function pk_nextPhase(){
@@ -3769,9 +3788,10 @@ var nextTierRow = nextTier
       var cR=await sb.from('poker_players').select('*').eq('table_id',pk_tid).eq('is_active',true).eq('folded',false).eq('all_in',false).order('seat');
       var active=cR.data||[];
       if(active.length<=1){while(comm.length<5&&deck.length>0)comm.push(deck.pop());
-        await sb.from('poker_tables').update({phase:'showdown',community:JSON.stringify(comm),deck:JSON.stringify(deck),current_bet:0,action_seat:-1,updated_at:new Date().toISOString()}).eq('id',pk_tid);
+        await sb.from('poker_tables').update({phase:'showdown',community:JSON.stringify(comm),deck:JSON.stringify(deck),current_bet:0,action_seat:-1,round_starter:-1,updated_at:new Date().toISOString()}).eq('id',pk_tid);
         setTimeout(pk_showdown,1200);return;}
-      await sb.from('poker_tables').update({phase:next,community:JSON.stringify(comm),deck:JSON.stringify(deck),current_bet:0,action_seat:active[0].seat,updated_at:new Date().toISOString()}).eq('id',pk_tid);
+      var firstSeat=active[0].seat;
+      await sb.from('poker_tables').update({phase:next,community:JSON.stringify(comm),deck:JSON.stringify(deck),current_bet:0,action_seat:firstSeat,round_starter:firstSeat,updated_at:new Date().toISOString()}).eq('id',pk_tid);
     }
 
     async function pk_showdown(){
@@ -3824,17 +3844,3 @@ var nextTierRow = nextTier
   </script>
 </body>
 </html>
-
-   
-  
-    
-       
-    
-
-
-    
-       
-
-  
-  
-     
