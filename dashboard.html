@@ -2138,18 +2138,22 @@ var nextTierRow = nextTier
       }
 
       if (data.type === "discord_connected") {
-        session.profile.discord = data.username
-          ? (data.username + (data.discriminator ? ("#" + data.discriminator) : ""))
-          : "";
-        saveProfileToStorage();
-        refreshBanner();
-        alert("Discord connected: " + (session.profile.discord || "connected"));
-      }
+      // Store a display tag (what you show in UI)
+      const tag = data.username
+        ? (data.username + (data.discriminator ? ("#" + data.discriminator) : ""))
+        : (data.discord_tag || "");
 
-      if (data.type === "x_error" || data.type === "discord_error") {
-        alert("Auth failed. Please try again.");
-      }
-    });
+      session.profile.discord = tag;          // keep your existing UI field
+      session.profile.discord_tag = tag;      // ✅ new DB field
+      session.profile.discord_user_id =
+        data.discord_user_id || data.user_id || data.id || "";  // ✅ real ID if provided
+
+      saveProfileToStorage();
+      refreshBanner();
+
+      // Optional: show ID for debugging
+      alert("Discord connected: " + (tag || "connected") + (session.profile.discord_user_id ? (" (ID saved)") : " (NO ID)"));
+    }
   
     function openTraitsModal(){
       if (!session.loadedNFTs || session.loadedNFTs.length === 0) return alert("No NFTs loaded yet.");
@@ -2412,8 +2416,7 @@ async function glitchRelayNow(){
     var newProfRes = await db
       .from("profiles")
       .insert({
-        discord_user_id: session?.profile?.discord_user_id || null,
-        discord_tag: session?.profile?.discord || session?.profile?.discord_tag || null,
+        discord_tag: session?.profile?.discord_tag || session?.profile?.discord || null,
         discord_user_id: session?.profile?.discord_user_id || null,
         username: session?.profile?.username || null,
         x_handle: session?.profile?.x || null,
@@ -2447,6 +2450,7 @@ async function glitchRelayNow(){
     .from("profiles")
     .update({
       discord_user_id: session?.profile?.discord_user_id || null,
+      discord_tag: session?.profile?.discord || null,
       username: session?.profile?.username || null,
       x_handle: session?.profile?.x || null,
       pfp_mint: session?.profile?.pfpMint || null,
