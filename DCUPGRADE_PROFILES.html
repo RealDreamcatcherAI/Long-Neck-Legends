@@ -5760,8 +5760,8 @@ var nextTierRow = nextTier
           presences.forEach(function(p) {
             currentIds[p.peerId] = p;
             if (p.peerId !== voice_myId && !voice_peers[p.peerId]) {
-              // New peer — we initiate the connection
-              voice_connectToPeer(p.peerId, p.name, p.wallet, true);
+              // New peer — we initiate
+              voice_connectToPeer(p.peerId, p.name, p.wallet);
             }
             voice_members[p.peerId] = { name: p.name, wallet: p.wallet, speaking: false };
           });
@@ -5813,19 +5813,21 @@ var nextTierRow = nextTier
     }
 
     // ── Create a peer connection to another user ──
-    async function voice_connectToPeer(peerId, peerName, peerWallet, initiator) {
-      if (voice_peers[peerId]) return;
+    // BOTH sides add tracks first, then onnegotiationneeded fires the offer.
+    // This guarantees the SDP contains tracks in both directions.
+    function voice_createPC(peerId, peerName, peerWallet) {
+      if (voice_peers[peerId]) return voice_peers[peerId];
 
       var pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
       voice_peers[peerId] = pc;
-      voice_members[peerId] = { name: peerName, wallet: peerWallet, speaking: false };
+      voice_members[peerId] = { name: peerName || peerId, wallet: peerWallet || '', speaking: false };
 
-      // Add our audio track
+      // ── Step 1: Add OUR tracks immediately so they're in the SDP ──
       if (voice_stream) {
         voice_stream.getTracks().forEach(function(t) { pc.addTrack(t, voice_stream); });
       }
 
-      // When we get their audio track
+      // ── Step 2: When we receive THEIR track ──
       pc.ontrack = function(event) {
         var audio = document.getElementById('voice_audio_' + peerId);
         if (!audio) {
@@ -5837,9 +5839,10 @@ var nextTierRow = nextTier
         }
         audio.srcObject = event.streams[0];
 
-        // Speaking detection via AudioContext analyser
+        // Speaking detection
         try {
-          var ctx = new AudioContext();
+          var AudioCtx = window.AudioContext || window.webkitAudioContext;
+          var ctx = new AudioCtx();
           var src = ctx.createMediaStreamSource(event.streams[0]);
           var analyser = ctx.createAnalyser();
           analyser.fftSize = 512;
@@ -5858,25 +5861,31 @@ var nextTierRow = nextTier
         } catch(e) {}
       };
 
-      // ICE candidates → send via Supabase
+      // ── Step 3: ICE candidates ──
       pc.onicecandidate = function(event) {
         if (event.candidate) {
           voice_signal(peerId, { type: 'ice', candidate: event.candidate });
         }
       };
 
-      pc.onconnectionstatechange = function() {
-        voice_paintRoom();
-      };
+      pc.onconnectionstatechange = function() { voice_paintRoom(); };
 
-      if (initiator) {
-        // We make the offer
+      return pc;
+    }
+
+    // Initiator: create PC with tracks, then let onnegotiationneeded fire offer
+    async function voice_connectToPeer(peerId, peerName, peerWallet) {
+      if (voice_peers[peerId]) return;
+      var pc = voice_createPC(peerId, peerName, peerWallet);
+
+      // onnegotiationneeded fires after addTrack — this is the correct moment to offer
+      pc.onnegotiationneeded = async function() {
         try {
           var offer = await pc.createOffer();
           await pc.setLocalDescription(offer);
           voice_signal(peerId, { type: 'offer', sdp: pc.localDescription });
         } catch(e) { console.warn('voice offer error:', e); }
-      }
+      };
     }
 
     // ── Handle incoming signal ──
@@ -5884,11 +5893,10 @@ var nextTierRow = nextTier
       var peerId = msg.from;
 
       if (msg.data.type === 'offer') {
-        // Someone is calling us — create peer connection and answer
-        if (!voice_peers[peerId]) {
-          await voice_connectToPeer(peerId, msg.fromName || peerId, msg.fromWallet || '', false);
-        }
-        var pc = voice_peers[peerId];
+        // Create PC and add OUR tracks BEFORE answering —
+        // this is what was broken before: answerer's tracks must be in the PC
+        // prior to createAnswer so the SDP contains both directions.
+        var pc = voice_peers[peerId] || voice_createPC(peerId, msg.fromName, msg.fromWallet);
         try {
           await pc.setRemoteDescription(new RTCSessionDescription(msg.data.sdp));
           var answer = await pc.createAnswer();
@@ -5899,8 +5907,8 @@ var nextTierRow = nextTier
 
       else if (msg.data.type === 'answer') {
         var pc2 = voice_peers[peerId];
-        if (pc2) {
-          try { await pc2.setRemoteDescription(new RTCSessionDescription(msg.data.sdp)); } catch(e) {}
+        if (pc2 && pc2.signalingState !== 'stable') {
+          try { await pc2.setRemoteDescription(new RTCSessionDescription(msg.data.sdp)); } catch(e) { console.warn('voice setRemote answer error:', e); }
         }
       }
 
