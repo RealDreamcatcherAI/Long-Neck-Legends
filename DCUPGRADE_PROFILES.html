@@ -3612,13 +3612,13 @@ var nextTierRow = nextTier
     ================================================================ */
     var pk_tables=[],pk_tid=null,pk_tbl=null,pk_plrs=[],pk_mySeat=-1,pk_ch=null;
     var PK_SUITS={s:'♠',h:'♥',d:'♦',c:'♣'};
-    var PK_SCOL={s:'#1a1a1a',h:'#cc0000',d:'#cc0000',c:'#1a1a1a'};
+    var PK_SCOL={s:'#999',h:'#e33',d:'#e33',c:'#999'};
     var PK_VALS=['2','3','4','5','6','7','8','9','T','J','Q','K','A'];
 
     function pk_rc(card,hide){
       if(hide||!card)return'<div class="bj_card bj_back" style="width:52px;height:74px;"><div style="font-size:1.2rem;color:#2a4a7a;">🂠</div></div>';
-      var v=card[0],s=card[1];var dv={'T':'10'}[v]||v;var suit=PK_SUITS[s]||s;var col=PK_SCOL[s]||'#333';
-      return'<div class="bj_card bj_front" style="width:52px;height:74px;color:'+col+';display:flex;flex-direction:column;justify-content:space-between;padding:2px 3px;"><div style="font-size:0.72rem;font-weight:700;">'+dv+suit+'</div><div style="font-size:1.1rem;text-align:center;">'+suit+'</div><div style="font-size:0.72rem;font-weight:700;text-align:right;transform:rotate(180deg);">'+dv+suit+'</div></div>';
+      var v=card[0],s=card[1];var dv={'T':'10'}[v]||v;var suit=PK_SUITS[s]||s;var col=PK_SCOL[s]||'#999';
+      return'<div class="bj_card bj_front" style="width:52px;height:74px;color:'+col+';"><div style="font-size:0.72rem;align-self:flex-start;margin:2px 0 0 3px;">'+dv+'</div><div style="font-size:1.2rem;">'+suit+'</div><div style="font-size:0.72rem;align-self:flex-end;margin:0 3px 2px 0;">'+dv+'</div></div>';
     }
     function pk_fullDeck(){var d=[];'shdc'.split('').forEach(function(s){PK_VALS.forEach(function(v){d.push(v+s);});});return d;}
     function pk_shuffle(a){var r=a.slice();for(var i=r.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=r[i];r[i]=r[j];r[j]=t;}return r;}
@@ -3715,6 +3715,30 @@ var nextTierRow = nextTier
         }
       }
       await sb.from('poker_players').delete().eq('table_id',pk_tid).eq('wallet',w);
+      // Check how many active players remain after leaving
+      var remR=await sb.from('poker_players').select('id').eq('table_id',pk_tid).eq('is_active',true);
+      var remaining=(remR.data||[]).length;
+      if(remaining===0){
+        // No one left — fully reset the table so it's clean for next session
+        await sb.from('poker_tables').update({
+          status:'waiting',phase:null,community:'[]',pot:0,
+          current_bet:0,action_seat:-1,round_starter:-1,
+          deck:'[]',dealer_seat:null,updated_at:new Date().toISOString()
+        }).eq('id',pk_tid);
+      }else if(remaining===1&&pk_tbl&&pk_tbl.status==='playing'){
+        // Only 1 player left mid-game — award them the pot and reset
+        var lastR=await sb.from('poker_players').select('*').eq('table_id',pk_tid).eq('is_active',true).single();
+        if(lastR.data&&lastR.data.chips!==undefined){
+          var potR=await sb.from('poker_tables').select('pot').eq('id',pk_tid).single();
+          var leftPot=potR.data?potR.data.pot:0;
+          if(leftPot>0)await sb.from('poker_players').update({chips:lastR.data.chips+leftPot}).eq('id',lastR.data.id);
+        }
+        await sb.from('poker_tables').update({
+          status:'waiting',phase:null,community:'[]',pot:0,
+          current_bet:0,action_seat:-1,round_starter:-1,
+          deck:'[]',updated_at:new Date().toISOString()
+        }).eq('id',pk_tid);
+      }
       pk_unsub();pk_tid=null;pk_tbl=null;pk_plrs=[];pk_mySeat=-1;
       document.getElementById('pk_gameWrap').style.display='none';pk_loadLobby();
     }
@@ -3806,43 +3830,44 @@ var nextTierRow = nextTier
       else if(action==='call'){var tc=Math.min(Math.max(0,(t.current_bet||0)-me.current_bet),me.chips);await sb.from('poker_players').update({chips:me.chips-tc,current_bet:me.current_bet+tc,total_bet:me.total_bet+tc,all_in:me.chips-tc<=0}).eq('id',me.id);potAdd=tc;}
       else if(action==='raise'){var need=raiseAmt-me.current_bet;var act=Math.min(need,me.chips);await sb.from('poker_players').update({chips:me.chips-act,current_bet:me.current_bet+act,total_bet:me.total_bet+act,all_in:me.chips-act<=0}).eq('id',me.id);potAdd=act;await sb.from('poker_tables').update({current_bet:raiseAmt,round_starter:me.seat}).eq('id',pk_tid);}
       if(potAdd>0)await sb.from('poker_tables').update({pot:(t.pot||0)+potAdd}).eq('id',pk_tid);
-      await pk_advance(me,action);
+      await pk_advance(me.seat,action);
     }
 
-    async function pk_advance(acted,action){
+    async function pk_advance(actedSeat,action){
       var sb=getSupaClient();
-      // Fresh player data
+      // Always read fresh state from DB after the action was written
       var pR=await sb.from('poker_players').select('*').eq('table_id',pk_tid).eq('is_active',true).order('seat');
       var plrs=pR.data||[];
       var nf=plrs.filter(function(p){return !p.folded;});
-      // Only 1 player left = they win
-      if(nf.length<=1){await pk_award(nf[0]);return;}
+      // Only 1 player left unfold = instant win
+      if(nf.length<=1){if(nf[0])await pk_award(nf[0]);return;}
       // Fresh table data
       var tR=await sb.from('poker_tables').select('*').eq('id',pk_tid).single();var t=tR.data;
-      // Players who can still act (not folded, not all-in)
+      // Who can still act (not folded, not all-in) - uses fresh DB values
       var canAct=plrs.filter(function(p){return !p.folded&&!p.all_in;});
       if(canAct.length<=0){await pk_nextPhase();return;}
-      // Find next player clockwise after the one who just acted
+      // All seats that can still act, sorted
       var seats=canAct.map(function(p){return p.seat;}).sort(function(a,b){return a-b;});
-      var ci=seats.indexOf(acted.seat);
-      // If acted player folded/all-in they might not be in canAct, find closest seat after them
+      // Find acted player's seat in canAct list (may not be there if they just folded/all-in)
+      var ci=seats.indexOf(actedSeat);
       if(ci===-1){
+        // Acted player is no longer in canAct — find the index just before their seat so nextIdx points past them
         ci=seats.length-1;
-        for(var x=0;x<seats.length;x++){if(seats[x]>acted.seat){ci=x-1;break;}}
+        for(var x=0;x<seats.length;x++){if(seats[x]>actedSeat){ci=x-1;break;}}
       }
       var nextIdx=(ci+1)%seats.length;
       var nextSeat=seats[nextIdx];
-      var nextPlayer=canAct.find(function(p){return p.seat===nextSeat;});
-      // Round is over when all bets match AND the acted player was the round_starter (full circle),
-      // OR the next player is the round_starter and acted is not (loop just closed)
+      // Round ends when all bets match AND the full circle is complete:
+      // Either the person who just acted IS the round_starter (they went last),
+      // or the next person up IS the round_starter (we've looped back to them)
       var rs=t.round_starter;
       if(rs===undefined||rs===null||rs<0)rs=seats[0];
       var allBetsMatch=canAct.every(function(p){return p.current_bet>=(t.current_bet||0);});
-      if(allBetsMatch&&(acted.seat===rs||(nextSeat===rs&&acted.seat!==rs))){
+      if(allBetsMatch&&(actedSeat===rs||(nextSeat===rs&&actedSeat!==rs))){
         await pk_nextPhase();
         return;
       }
-      // Give action to the next player
+      // Pass action to next player
       await sb.from('poker_tables').update({action_seat:nextSeat,updated_at:new Date().toISOString()}).eq('id',pk_tid);
     }
 
