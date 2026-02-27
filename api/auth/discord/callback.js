@@ -43,23 +43,28 @@ export default async function handler(req, res) {
   res.end(`
     <script>
       (function(){
-        const payload = {
-          type: "discord_connected",
-          id: ${JSON.stringify(me.id)},
-          username: ${JSON.stringify(me.username)},
-          discriminator: ${JSON.stringify(me.discriminator)},
-          global_name: ${JSON.stringify(me.global_name)},
-          wallet: ${JSON.stringify(wallet)}
-        };
-        if (window.opener) {
-          window.opener.postMessage(payload, ${JSON.stringify(origin)});
-        }
-        window.close();
-      })();
-    </script>
-    <p>Discord connected. You can close this window.</p>
-  `);
-}
+        const discordTag =
+  (me.global_name && String(me.global_name).trim())
+    ? String(me.global_name).trim()
+    : (me.username && me.discriminator && me.discriminator !== "0")
+      ? `${me.username}#${me.discriminator}`
+      : (me.username || "");
+    const payload = {
+      type: "discord_connected",
+
+      // ✅ what your dashboard should store in Supabase
+      discord_user_id: String(me.id),
+      discord_tag: discordTag,
+
+      // ✅ keep old fields too (backwards compatible)
+      id: String(me.id),
+      username: me.username || "",
+      discriminator: me.discriminator || "",
+      global_name: me.global_name || "",
+
+      wallet: wallet
+    };
+    }
 
 function parseCookies(cookieHeader) {
   const out = {};
@@ -69,4 +74,5 @@ function parseCookies(cookieHeader) {
     out[k] = decodeURIComponent(v.join("=") || "");
   });
   return out;
+
 }
