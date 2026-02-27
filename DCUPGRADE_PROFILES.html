@@ -3783,12 +3783,18 @@ var nextTierRow = nextTier
       var ap=pk_plrs.filter(function(p){return p.is_active;});if(ap.length<2)return alert('Need 2+ players.');
       var deck=pk_shuffle(pk_fullDeck());
       for(var i=0;i<ap.length;i++){var h=[deck.pop(),deck.pop()];await sb.from('poker_players').update({hole_cards:JSON.stringify(h),current_bet:0,total_bet:0,folded:false,all_in:false}).eq('id',ap[i].id);}
-      var ds=((t.dealer_seat||0)+1)%ap.length;
-      var sbP=ap[(ds+1)%ap.length],bbP=ap[(ds+2)%ap.length],act=ap[(ds+3)%ap.length]||ap[0];
+      // Find current dealer index in ap[], advance by 1
+      var prevDealerSeat=t.dealer_seat!==undefined&&t.dealer_seat!==null?t.dealer_seat:-1;
+      var prevDI=ap.findIndex(function(p){return p.seat===prevDealerSeat;});
+      var ds=(prevDI<0?0:(prevDI+1))%ap.length;  // ds = index into ap[]
+      var sbP=ap[(ds+1)%ap.length],bbP=ap[(ds+2)%ap.length];
+      // UTG (first to act preflop) is the player after BB; with 2 players UTG = dealer (ds)
+      var actI=ap.length===2?ds:(ds+3)%ap.length;
+      var act=ap[actI];
       var sba=Math.min(t.small_blind,sbP.chips),bba=Math.min(t.big_blind,bbP.chips);
       await sb.from('poker_players').update({current_bet:sba,total_bet:sba,chips:sbP.chips-sba}).eq('id',sbP.id);
       await sb.from('poker_players').update({current_bet:bba,total_bet:bba,chips:bbP.chips-bba}).eq('id',bbP.id);
-      await sb.from('poker_tables').update({status:'playing',phase:'preflop',community:'[]',pot:sba+bba,current_bet:bba,dealer_seat:ds,action_seat:act.seat,round_starter:act.seat,deck:JSON.stringify(deck),hand_num:(t.hand_num||0)+1,updated_at:new Date().toISOString()}).eq('id',pk_tid);
+      await sb.from('poker_tables').update({status:'playing',phase:'preflop',community:'[]',pot:sba+bba,current_bet:bba,dealer_seat:ap[ds].seat,action_seat:act.seat,round_starter:act.seat,deck:JSON.stringify(deck),hand_num:(t.hand_num||0)+1,updated_at:new Date().toISOString()}).eq('id',pk_tid);
     }
 
     function pk_doRaise(){var cur=pk_tbl?pk_tbl.current_bet||0:0;var a=prompt('Raise to:',String(cur*2));if(!a)return;var r=parseFloat(a);if(isNaN(r)||r<=cur)return alert('Must raise above '+cur);pk_act('raise',r);}
@@ -3821,24 +3827,22 @@ var nextTierRow = nextTier
       // Find next player clockwise after the one who just acted
       var seats=canAct.map(function(p){return p.seat;}).sort(function(a,b){return a-b;});
       var ci=seats.indexOf(acted.seat);
-      // If acted player folded/all-in they might not be in canAct, find closest
+      // If acted player folded/all-in they won't be in canAct; find next seat > acted.seat
       if(ci===-1){
-        for(var x=0;x<5;x++){
-          ci=seats.indexOf((acted.seat+x)%5);
-          if(ci!==-1)break;
+        ci=seats.length-1; // default to last so nextIdx wraps to 0
+        for(var x=0;x<seats.length;x++){
+          if(seats[x]>acted.seat){ci=x-1;break;}
         }
-        if(ci===-1)ci=0;
       }
       var nextIdx=(ci+1)%seats.length;
       var nextSeat=seats[nextIdx];
-      var nextPlayer=canAct.find(function(p){return p.seat===nextSeat;});
-      // Check: has the action gone all the way around?
-      // It has if the next player IS the round_starter AND all bets match
+      // Check: has the action completed a full rotation?
       var rs=t.round_starter;
       if(rs===undefined||rs===null||rs<0)rs=seats[0];
       var allBetsMatch=canAct.every(function(p){return p.current_bet>=(t.current_bet||0);});
-      if(nextSeat===rs&&allBetsMatch){
-        // Full rotation complete, advance to next phase
+      // Round ends when: bets all match AND (acted player was round_starter, i.e. full circle done)
+      // OR next player is round_starter but acted is NOT round_starter (they just finished the loop)
+      if(allBetsMatch&&(acted.seat===rs||(nextSeat===rs&&acted.seat!==rs))){
         await pk_nextPhase();
         return;
       }
