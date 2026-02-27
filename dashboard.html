@@ -1699,6 +1699,14 @@ a.plink:hover{
       // Player Progression Card
       view.innerHTML += pp_renderPlayerCard(count, 0);
 
+      // Achievement badges
+      var xp = pp_computeXP(pp_stats);
+      var level = pp_levelFromXP(xp);
+      ach_myBadges = ach_check(pp_stats, count, level, pp_stats._gameWins);
+      ach_save(ach_myBadges); // persist to DB (fire-and-forget)
+      view.innerHTML += ach_renderSection(ach_myBadges);
+      setTimeout(function() { ach_paintGrid(ach_myBadges); }, 20);
+
       view.innerHTML +=
         '<div class="profile-actions" id="profilePanel">' +
           '<div class="stats-title">PROFILE</div>' +
@@ -2589,6 +2597,7 @@ var nextTierRow = nextTier
       // Load history then subscribe
       chatMsgs = [];
       shop_loadAllChatItems();
+      ach_loadAllUsers();
       loadChatHistory();
     }
 
@@ -2757,6 +2766,8 @@ var nextTierRow = nextTier
         var vip = shop_getVIP(m.wallet);
         var nameCol = shop_getNameColor(m.wallet);
         var glow = shop_hasGlow(m.wallet);
+        var achBadge = ach_getTopBadge(m.wallet);
+        var achCount = ach_getBadgeCount(m.wallet);
         if (nameCol) color = nameCol;
 
         // Display name: use stored username if present, else shorten wallet
@@ -2777,6 +2788,8 @@ var nextTierRow = nextTier
               (vip ? '<span style="font-size:0.6rem;background:linear-gradient(135deg,#ffd700,#ff8c00);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:900;">VIP</span>' : '') +
               '<span style="font-weight:700;font-size:0.8rem;color:' + color + ';">' + escapeHtml(name) + '</span>' +
               (badge ? '<span style="font-size:0.7rem;">' + badge + '</span>' : '') +
+              (achBadge ? '<span style="font-size:0.65rem;">' + achBadge + '</span>' : '') +
+              (achCount > 0 ? '<span style="font-size:0.48rem;color:#ffd700;font-weight:700;background:rgba(255,215,0,0.1);padding:1px 4px;border-radius:4px;">' + achCount + '🏅</span>' : '') +
               '<span style="font-size:0.6rem;color:#252540;">' + timeStr + '</span>' +
               (isMe ? '<span style="font-size:0.55rem;letter-spacing:1px;color:#1e1e3a;text-transform:uppercase;">you</span>' : '') +
             '</div>';
@@ -4495,7 +4508,7 @@ var nextTierRow = nextTier
       if (!walletPublicKey) return null;
       var sb = getSupaClient();
       var w = walletPublicKey.toBase58();
-      var stats = { gamesPlayed: 0, gamesWon: 0, gamesLost: 0, totalWagered: 0, totalWon: 0, totalLost: 0, biggestWin: 0, biggestWinGame: '', chatMsgs: 0, totalCabbageEarned: 0, joinDate: null, daysHeld: 0, luckyGame: '', itemsOwned: 0 };
+      var stats = { gamesPlayed: 0, gamesWon: 0, gamesLost: 0, totalWagered: 0, totalWon: 0, totalLost: 0, biggestWin: 0, biggestWinGame: '', chatMsgs: 0, totalCabbageEarned: 0, joinDate: null, daysHeld: 0, luckyGame: '', itemsOwned: 0, solLost: 0, solWagered: 0, winStreak: 0, maxWinStreak: 0, lossStreak: 0, maxLossStreak: 0 };
 
       try {
         // Casino stats from game_bets
@@ -4507,8 +4520,11 @@ var nextTierRow = nextTier
           var hp = Number(b.house_profit || 0);
           var ba = Number(b.bet_amount || 0);
           stats.totalWagered += ba;
+          if (b.currency === 'sol') stats.solWagered += ba;
           if (hp <= 0) {
             stats.gamesWon++;
+            stats.winStreak++; stats.lossStreak = 0;
+            if (stats.winStreak > stats.maxWinStreak) stats.maxWinStreak = stats.winStreak;
             var winAmt = ba + Math.abs(hp);
             stats.totalWon += winAmt;
             if (winAmt > stats.biggestWin) { stats.biggestWin = winAmt; stats.biggestWinGame = b.game || ''; }
@@ -4516,7 +4532,10 @@ var nextTierRow = nextTier
             gameWins[b.game]++;
           } else {
             stats.gamesLost++;
+            stats.lossStreak++; stats.winStreak = 0;
+            if (stats.lossStreak > stats.maxLossStreak) stats.maxLossStreak = stats.lossStreak;
             stats.totalLost += hp;
+            if (b.currency === 'sol') stats.solLost += hp;
           }
         });
         // Find luckiest game
@@ -4546,6 +4565,7 @@ var nextTierRow = nextTier
       } catch(e) { console.warn('pp_fetchStats error:', e); }
 
       pp_stats = stats;
+      pp_stats._gameWins = gameWins || {};
       pp_loaded = true;
       return stats;
     }
@@ -4609,6 +4629,7 @@ var nextTierRow = nextTier
             '<div style="background:rgba(0,255,136,0.06);border:1px solid rgba(0,255,136,0.2);border-radius:8px;padding:5px 10px;font-size:0.62rem;font-weight:700;color:#00ff88;letter-spacing:0.8px;">🥬 ' + cabTitle.name + '</div>' +
             '<div style="background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);border-radius:8px;padding:5px 10px;font-size:0.62rem;font-weight:700;color:#00d4ff;letter-spacing:0.8px;">💬 ' + chatTitle.name + '</div>' +
             (stats.itemsOwned > 0 ? '<div style="background:rgba(255,215,0,0.08);border:1px solid rgba(255,215,0,0.2);border-radius:8px;padding:5px 10px;font-size:0.62rem;font-weight:700;color:#ffd700;letter-spacing:0.8px;">🛒 Collector</div>' : '') +
+            '<div style="background:rgba(255,140,0,0.08);border:1px solid rgba(255,140,0,0.2);border-radius:8px;padding:5px 10px;font-size:0.62rem;font-weight:700;color:#ff8c00;letter-spacing:0.8px;">🏅 ' + ach_myBadges.length + '/' + ACH_LIST.length + '</div>' +
           '</div>' +
 
           // Stats Grid
@@ -4642,6 +4663,256 @@ var nextTierRow = nextTier
         '<div style="font-size:0.58rem;color:#444;letter-spacing:1px;margin-bottom:4px;text-transform:uppercase;">' + label + '</div>' +
         '<div style="font-size:1rem;font-weight:900;color:' + color + ';font-family:\'Space Grotesk\',sans-serif;">' + value + '</div>' +
       '</div>';
+    }
+
+    /* ================================================================
+       ACHIEVEMENT / BADGE SYSTEM
+    ================================================================ */
+    var ach_allUsers = {}; // wallet → [achievement_ids]
+    var ach_myBadges = []; // current user's unlocked achievement ids
+
+    var ACH_LIST = [
+      // Milestones
+      { id: 'first_claim',    icon: '🥬', name: 'First Harvest',      desc: 'Claim cabbage for the first time',        cat: 'milestone', rarity: 'common' },
+      { id: 'first_win',      icon: '🎰', name: 'First Blood',        desc: 'Win your first casino game',              cat: 'milestone', rarity: 'common' },
+      { id: 'first_chat',     icon: '💬', name: 'Hello World',        desc: 'Send your first chat message',            cat: 'milestone', rarity: 'common' },
+      { id: 'first_store',    icon: '🛒', name: 'Big Spender',        desc: 'Buy your first store item',               cat: 'milestone', rarity: 'common' },
+
+      // Casino grind
+      { id: 'play_10',        icon: '🎲', name: 'Getting Started',    desc: 'Play 10 casino games',                    cat: 'casino', rarity: 'common' },
+      { id: 'play_100',       icon: '🃏', name: 'Regular',            desc: 'Play 100 casino games',                   cat: 'casino', rarity: 'uncommon' },
+      { id: 'play_500',       icon: '🔥', name: 'Degen Mode',         desc: 'Play 500 casino games',                   cat: 'casino', rarity: 'rare' },
+      { id: 'play_1000',      icon: '💀', name: 'No Life',            desc: 'Play 1,000 casino games',                 cat: 'casino', rarity: 'legendary' },
+      { id: 'win_10',         icon: '✌️', name: 'Lucky Streak',       desc: 'Win 10 casino games',                     cat: 'casino', rarity: 'common' },
+      { id: 'win_100',        icon: '🏆', name: 'Casino Boss',        desc: 'Win 100 casino games',                    cat: 'casino', rarity: 'rare' },
+      { id: 'streak_5',       icon: '⚡', name: 'Hot Hands',          desc: 'Win 5 games in a row',                    cat: 'casino', rarity: 'uncommon' },
+      { id: 'streak_10',      icon: '🌟', name: 'Unstoppable',        desc: 'Win 10 games in a row',                   cat: 'casino', rarity: 'epic' },
+      { id: 'big_win_1k',     icon: '💰', name: 'Jackpot',            desc: 'Win 1,000+ in a single game',             cat: 'casino', rarity: 'rare' },
+      { id: 'big_win_10k',    icon: '🤑', name: 'Mega Jackpot',       desc: 'Win 10,000+ in a single game',            cat: 'casino', rarity: 'legendary' },
+
+      // Pain badges (losses are flex-worthy too)
+      { id: 'lost_1sol',      icon: '💀', name: 'Paper Hands',        desc: 'Lose 1 SOL total in the casino',          cat: 'pain', rarity: 'uncommon' },
+      { id: 'lost_5sol',      icon: '☠️', name: 'Diamond Degen',      desc: 'Lose 5 SOL total in the casino',          cat: 'pain', rarity: 'rare' },
+      { id: 'lost_10sol',     icon: '🪦', name: 'Rekt Legend',        desc: 'Lose 10 SOL total in the casino',         cat: 'pain', rarity: 'epic' },
+      { id: 'loss_streak_5',  icon: '📉', name: 'Down Bad',           desc: 'Lose 5 games in a row',                   cat: 'pain', rarity: 'uncommon' },
+      { id: 'loss_streak_10', icon: '🕳️', name: 'Rock Bottom',       desc: 'Lose 10 games in a row',                  cat: 'pain', rarity: 'rare' },
+
+      // Holder badges
+      { id: 'hold_1',         icon: '🪶', name: 'Neck Holder',        desc: 'Hold at least 1 LNL NFT',                 cat: 'holder', rarity: 'common' },
+      { id: 'hold_5',         icon: '🦴', name: 'Collector',          desc: 'Hold 5+ LNL NFTs',                        cat: 'holder', rarity: 'uncommon' },
+      { id: 'hold_10',        icon: '⭐', name: 'Legend Status',      desc: 'Hold 10+ LNL NFTs',                       cat: 'holder', rarity: 'rare' },
+      { id: 'hold_20',        icon: '👑', name: 'OG Legend',           desc: 'Hold 20+ LNL NFTs',                       cat: 'holder', rarity: 'epic' },
+      { id: 'hold_50',        icon: '🐋', name: 'Whale',              desc: 'Hold 50+ LNL NFTs',                       cat: 'holder', rarity: 'legendary' },
+      { id: 'og_30d',         icon: '📅', name: 'OG Member',          desc: 'Member for 30+ days',                     cat: 'holder', rarity: 'uncommon' },
+      { id: 'og_90d',         icon: '🏛️', name: 'Veteran',           desc: 'Member for 90+ days',                     cat: 'holder', rarity: 'rare' },
+      { id: 'og_365d',        icon: '🗿', name: 'Ancient One',        desc: 'Member for 1+ year',                      cat: 'holder', rarity: 'legendary' },
+
+      // Social
+      { id: 'chat_50',        icon: '🗣️', name: 'Social Butterfly',  desc: 'Send 50 chat messages',                   cat: 'social', rarity: 'common' },
+      { id: 'chat_500',       icon: '📢', name: 'Megaphone',          desc: 'Send 500 chat messages',                  cat: 'social', rarity: 'uncommon' },
+      { id: 'chat_1000',      icon: '🎙️', name: 'Chat Legend',       desc: 'Send 1,000 chat messages',                cat: 'social', rarity: 'rare' },
+
+      // Cabbage economy
+      { id: 'cab_1k',         icon: '🌱', name: 'Cabbage Sprout',     desc: 'Earn 1,000 total cabbage',                cat: 'economy', rarity: 'common' },
+      { id: 'cab_10k',        icon: '🥬', name: 'Cabbage Farmer',     desc: 'Earn 10,000 total cabbage',               cat: 'economy', rarity: 'uncommon' },
+      { id: 'cab_100k',       icon: '👨‍🌾', name: 'Cabbage King',    desc: 'Earn 100,000 total cabbage',              cat: 'economy', rarity: 'rare' },
+      { id: 'cab_1m',         icon: '🏰', name: 'Cabbage God',        desc: 'Earn 1,000,000 total cabbage',            cat: 'economy', rarity: 'legendary' },
+      { id: 'wager_10k',      icon: '🎰', name: 'High Roller',        desc: 'Wager 10,000+ total',                     cat: 'economy', rarity: 'uncommon' },
+      { id: 'wager_100k',     icon: '💎', name: 'Diamond Roller',     desc: 'Wager 100,000+ total',                    cat: 'economy', rarity: 'rare' },
+
+      // Meta / special
+      { id: 'level_10',       icon: '🔟', name: 'Double Digits',      desc: 'Reach level 10',                          cat: 'meta', rarity: 'uncommon' },
+      { id: 'level_25',       icon: '🌙', name: 'Quarter Century',    desc: 'Reach level 25',                          cat: 'meta', rarity: 'rare' },
+      { id: 'level_50',       icon: '☀️', name: 'Half Century',       desc: 'Reach level 50',                          cat: 'meta', rarity: 'epic' },
+      { id: 'all_games',      icon: '🧠', name: 'Jack of All Trades', desc: 'Play every casino game at least once',    cat: 'meta', rarity: 'uncommon' }
+    ];
+
+    var ACH_RARITY_COLORS = {
+      common:    { bg: 'rgba(150,150,150,0.08)', border: 'rgba(150,150,150,0.2)', text: '#888' },
+      uncommon:  { bg: 'rgba(0,255,136,0.06)',   border: 'rgba(0,255,136,0.2)',   text: '#00ff88' },
+      rare:      { bg: 'rgba(0,212,255,0.08)',   border: 'rgba(0,212,255,0.25)',  text: '#00d4ff' },
+      epic:      { bg: 'rgba(123,104,238,0.08)', border: 'rgba(123,104,238,0.3)', text: '#7b68ee' },
+      legendary: { bg: 'rgba(255,215,0,0.08)',   border: 'rgba(255,215,0,0.25)',  text: '#ffd700' }
+    };
+
+    var ACH_CATS = [
+      { id: 'all',       label: 'All' },
+      { id: 'milestone', label: 'Milestones' },
+      { id: 'casino',    label: 'Casino' },
+      { id: 'pain',      label: 'Pain' },
+      { id: 'holder',    label: 'Holder' },
+      { id: 'social',    label: 'Social' },
+      { id: 'economy',   label: 'Economy' },
+      { id: 'meta',      label: 'Meta' }
+    ];
+    var ach_activeCat = 'all';
+
+    function ach_check(stats, nftCount, level, gamesMap) {
+      if (!stats) return [];
+      var unlocked = [];
+      function u(id) { unlocked.push(id); }
+
+      // Milestones
+      if (stats.joinDate) u('first_claim');
+      if (stats.gamesWon >= 1) u('first_win');
+      if (stats.chatMsgs >= 1) u('first_chat');
+      if (stats.itemsOwned >= 1) u('first_store');
+
+      // Casino grind
+      if (stats.gamesPlayed >= 10)   u('play_10');
+      if (stats.gamesPlayed >= 100)  u('play_100');
+      if (stats.gamesPlayed >= 500)  u('play_500');
+      if (stats.gamesPlayed >= 1000) u('play_1000');
+      if (stats.gamesWon >= 10)  u('win_10');
+      if (stats.gamesWon >= 100) u('win_100');
+      if (stats.maxWinStreak >= 5)  u('streak_5');
+      if (stats.maxWinStreak >= 10) u('streak_10');
+      if (stats.biggestWin >= 1000)  u('big_win_1k');
+      if (stats.biggestWin >= 10000) u('big_win_10k');
+
+      // Pain
+      if (stats.solLost >= 1)  u('lost_1sol');
+      if (stats.solLost >= 5)  u('lost_5sol');
+      if (stats.solLost >= 10) u('lost_10sol');
+      if (stats.maxLossStreak >= 5)  u('loss_streak_5');
+      if (stats.maxLossStreak >= 10) u('loss_streak_10');
+
+      // Holder
+      if (nftCount >= 1)  u('hold_1');
+      if (nftCount >= 5)  u('hold_5');
+      if (nftCount >= 10) u('hold_10');
+      if (nftCount >= 20) u('hold_20');
+      if (nftCount >= 50) u('hold_50');
+      if (stats.daysHeld >= 30)  u('og_30d');
+      if (stats.daysHeld >= 90)  u('og_90d');
+      if (stats.daysHeld >= 365) u('og_365d');
+
+      // Social
+      if (stats.chatMsgs >= 50)   u('chat_50');
+      if (stats.chatMsgs >= 500)  u('chat_500');
+      if (stats.chatMsgs >= 1000) u('chat_1000');
+
+      // Economy
+      if (stats.totalCabbageEarned >= 1000)    u('cab_1k');
+      if (stats.totalCabbageEarned >= 10000)   u('cab_10k');
+      if (stats.totalCabbageEarned >= 100000)  u('cab_100k');
+      if (stats.totalCabbageEarned >= 1000000) u('cab_1m');
+      if (stats.totalWagered >= 10000)  u('wager_10k');
+      if (stats.totalWagered >= 100000) u('wager_100k');
+
+      // Meta
+      if (level >= 10) u('level_10');
+      if (level >= 25) u('level_25');
+      if (level >= 50) u('level_50');
+      // All games: check if at least 5 unique games played (coin, dice, slots, blackjack, plinko, crash, poker)
+      if (gamesMap && Object.keys(gamesMap).length >= 5) u('all_games');
+
+      return unlocked;
+    }
+
+    async function ach_save(unlocked) {
+      if (!walletPublicKey || unlocked.length === 0) return;
+      var sb = getSupaClient();
+      var w = walletPublicKey.toBase58();
+      try {
+        // Upsert all achievements as user_items with ach_ prefix
+        for (var i = 0; i < unlocked.length; i++) {
+          await sb.from('user_items').upsert({
+            wallet: w,
+            item_id: 'ach_' + unlocked[i],
+            data: { unlocked: true },
+            bought_at: new Date().toISOString()
+          }, { onConflict: 'wallet,item_id' });
+        }
+      } catch(e) { /* silent - non-critical */ }
+    }
+
+    // Load ALL users' achievement counts for chat display
+    async function ach_loadAllUsers() {
+      var sb = getSupaClient();
+      try {
+        var res = await sb.from('user_items').select('wallet,item_id').like('item_id', 'ach_%');
+        ach_allUsers = {};
+        (res.data || []).forEach(function(r) {
+          if (!ach_allUsers[r.wallet]) ach_allUsers[r.wallet] = [];
+          ach_allUsers[r.wallet].push(r.item_id.replace('ach_', ''));
+        });
+      } catch(e) { /* silent */ }
+    }
+
+    // Get top rarity badge for a wallet (for chat display)
+    function ach_getTopBadge(wallet) {
+      var ids = ach_allUsers[wallet];
+      if (!ids || ids.length === 0) return '';
+      var order = ['legendary','epic','rare','uncommon','common'];
+      for (var r = 0; r < order.length; r++) {
+        for (var i = 0; i < ids.length; i++) {
+          var ach = ACH_LIST.find(function(a) { return a.id === ids[i]; });
+          if (ach && ach.rarity === order[r]) return ach.icon;
+        }
+      }
+      return '';
+    }
+
+    function ach_getBadgeCount(wallet) {
+      var ids = ach_allUsers[wallet];
+      return ids ? ids.length : 0;
+    }
+
+    function ach_renderSection(unlocked) {
+      var total = ACH_LIST.length;
+      var earned = unlocked.length;
+      var pct = Math.round((earned / total) * 100);
+
+      var html =
+        '<div style="background:linear-gradient(135deg,#0d0d20,#0a0a1a);border:1px solid #1e1e3a;border-radius:16px;padding:1.5rem;margin-bottom:1rem;">' +
+          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">' +
+            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.3rem;letter-spacing:3px;color:#e0e0ff;">🏅 ACHIEVEMENTS</div>' +
+            '<div style="font-size:0.78rem;font-weight:700;color:#ffd700;">' + earned + ' / ' + total + ' <span style="color:#444;font-weight:400;">(' + pct + '%)</span></div>' +
+          '</div>' +
+
+          // Progress bar
+          '<div style="background:rgba(255,255,255,0.04);border-radius:6px;height:6px;margin-bottom:1rem;overflow:hidden;">' +
+            '<div style="height:100%;width:' + pct + '%;background:linear-gradient(90deg,#ffd700,#ff8c00);border-radius:6px;transition:width 0.5s;"></div>' +
+          '</div>' +
+
+          // Category filter
+          '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:1rem;" id="ach_cats"></div>' +
+
+          // Badge grid
+          '<div id="ach_grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;"></div>' +
+        '</div>';
+
+      return html;
+    }
+
+    function ach_paintGrid(unlocked) {
+      var catsEl = document.getElementById('ach_cats');
+      var gridEl = document.getElementById('ach_grid');
+      if (!catsEl || !gridEl) return;
+
+      // Render category tabs
+      var cHTML = '';
+      ACH_CATS.forEach(function(c) {
+        var count = c.id === 'all' ? ACH_LIST.length : ACH_LIST.filter(function(a) { return a.cat === c.id; }).length;
+        cHTML += '<div style="padding:4px 10px;border-radius:6px;border:1px solid ' + (c.id === ach_activeCat ? 'rgba(0,212,255,0.5)' : 'rgba(255,255,255,0.06)') + ';background:' + (c.id === ach_activeCat ? 'rgba(0,212,255,0.08)' : 'rgba(0,0,0,0.2)') + ';color:' + (c.id === ach_activeCat ? '#00d4ff' : '#555') + ';font-size:0.6rem;font-weight:700;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;letter-spacing:0.5px;" onclick="ach_activeCat=\'' + c.id + '\';ach_paintGrid(ach_myBadges);">' + c.label + ' (' + count + ')</div>';
+      });
+      catsEl.innerHTML = cHTML;
+
+      // Render badges
+      var items = ach_activeCat === 'all' ? ACH_LIST : ACH_LIST.filter(function(a) { return a.cat === ach_activeCat; });
+      var gHTML = '';
+      items.forEach(function(ach) {
+        var earned = unlocked.indexOf(ach.id) !== -1;
+        var rc = ACH_RARITY_COLORS[ach.rarity] || ACH_RARITY_COLORS.common;
+        gHTML += '<div style="background:' + (earned ? rc.bg : 'rgba(0,0,0,0.3)') + ';border:1px solid ' + (earned ? rc.border : 'rgba(255,255,255,0.03)') + ';border-radius:10px;padding:10px;text-align:center;opacity:' + (earned ? '1' : '0.35') + ';transition:all 0.2s;' + (earned ? '' : 'filter:grayscale(1);') + '">' +
+          '<div style="font-size:1.5rem;margin-bottom:4px;">' + ach.icon + '</div>' +
+          '<div style="font-size:0.68rem;font-weight:700;color:' + (earned ? '#e0e0ff' : '#444') + ';margin-bottom:2px;">' + ach.name + '</div>' +
+          '<div style="font-size:0.55rem;color:' + (earned ? '#666' : '#333') + ';line-height:1.3;margin-bottom:4px;">' + ach.desc + '</div>' +
+          '<div style="font-size:0.5rem;font-weight:700;color:' + rc.text + ';letter-spacing:1px;text-transform:uppercase;">' + (earned ? '✅ ' : '') + ach.rarity + '</div>' +
+        '</div>';
+      });
+      gridEl.innerHTML = gHTML;
     }
     var shop_items = {};     // wallet → { item_id: {data, bought_at} }
     var shop_allItems = {};  // cache of ALL user items for chat rendering
