@@ -1607,7 +1607,7 @@ a.plink:hover{
 
         document.getElementById("loadingSection").style.display = "none";
         shop_loadMyItems();
-        renderProfileView(merged);
+        await renderProfileView(merged);
 
         document.getElementById("dashboard").classList.add("show");
         switchView("profile");
@@ -1620,7 +1620,7 @@ a.plink:hover{
       }
     }
 
-    function renderProfileView(nfts) {
+    async function renderProfileView(nfts) {
       var view = document.getElementById("view-profile");
       view.innerHTML = "";
 
@@ -1637,6 +1637,9 @@ a.plink:hover{
         applyProfilePanelUI();
         return;
       }
+
+      // Fetch progression stats
+      await pp_fetchStats();
 
       var tier = getTier(count);
       var nextTier = getNextTier(tier);
@@ -1692,6 +1695,9 @@ a.plink:hover{
           '</div>' +
         '</div>' +
       '</div>';
+
+      // Player Progression Card
+      view.innerHTML += pp_renderPlayerCard(count, 0);
 
       view.innerHTML +=
         '<div class="profile-actions" id="profilePanel">' +
@@ -4422,8 +4428,221 @@ var nextTierRow = nextTier
     }
 
     /* ================================================================
-       CABBAGE STORE — burn sinks for the economy
+       PLAYER PROGRESSION SYSTEM
     ================================================================ */
+    var pp_stats = null; // cached stats
+    var pp_loaded = false;
+
+    // XP sources: 1 XP per game played, 3 XP per win, 0.5 XP per chat msg, 0.1 XP per cabbage earned, 2 XP per day held
+    // Level formula: level = floor(sqrt(xp / 10))  → level 1 at 10xp, level 10 at 1000xp, level 50 at 25000xp
+    function pp_levelFromXP(xp) { return Math.max(1, Math.floor(Math.sqrt(xp / 10))); }
+    function pp_xpForLevel(lvl) { return lvl * lvl * 10; }
+
+    // Neck Length titles based on level
+    var PP_NECK_TITLES = [
+      { min: 1,  name: 'Hatchling',     color: '#666' },
+      { min: 3,  name: 'Short Neck',    color: '#888' },
+      { min: 6,  name: 'Neck',          color: '#aaa' },
+      { min: 10, name: 'Long Neck',     color: '#00d4ff' },
+      { min: 15, name: 'Extra Long',    color: '#7b68ee' },
+      { min: 25, name: 'Mega Neck',     color: '#ffd700' },
+      { min: 40, name: 'Ultra Neck',    color: '#ff8c00' },
+      { min: 60, name: 'God Neck',      color: '#ff3c5c' },
+      { min: 99, name: 'Infinite Neck', color: '#00ffcc' }
+    ];
+
+    // Casino titles based on total games
+    var PP_CASINO_TITLES = [
+      { min: 0,   name: 'Spectator' },
+      { min: 5,   name: 'Dabbler' },
+      { min: 25,  name: 'Regular' },
+      { min: 100, name: 'Degenerate' },
+      { min: 250, name: 'High Roller' },
+      { min: 500, name: 'Casino Boss' },
+      { min: 1000,name: 'Legend Degen' }
+    ];
+
+    // Chat titles based on messages
+    var PP_CHAT_TITLES = [
+      { min: 0,   name: 'Lurker' },
+      { min: 10,  name: 'Chatter' },
+      { min: 50,  name: 'Regular' },
+      { min: 200, name: 'Motor Mouth' },
+      { min: 500, name: 'Community Pillar' },
+      { min: 1000,name: 'Chat Legend' }
+    ];
+
+    // Cabbage titles
+    var PP_CABBAGE_TITLES = [
+      { min: 0,      name: 'Broke' },
+      { min: 100,    name: 'Sprout' },
+      { min: 1000,   name: 'Gardener' },
+      { min: 5000,   name: 'Farmer' },
+      { min: 25000,  name: 'Cabbage King' },
+      { min: 100000, name: 'Cabbage God' }
+    ];
+
+    function pp_getTitle(arr, val) {
+      var t = arr[0];
+      for (var i = arr.length - 1; i >= 0; i--) {
+        if (val >= arr[i].min) { t = arr[i]; break; }
+      }
+      return t;
+    }
+
+    async function pp_fetchStats() {
+      if (pp_loaded && pp_stats) return pp_stats;
+      if (!walletPublicKey) return null;
+      var sb = getSupaClient();
+      var w = walletPublicKey.toBase58();
+      var stats = { gamesPlayed: 0, gamesWon: 0, gamesLost: 0, totalWagered: 0, totalWon: 0, totalLost: 0, biggestWin: 0, biggestWinGame: '', chatMsgs: 0, totalCabbageEarned: 0, joinDate: null, daysHeld: 0, luckyGame: '', itemsOwned: 0 };
+
+      try {
+        // Casino stats from game_bets
+        var gR = await sb.from('game_bets').select('bet_amount,house_profit,game,currency').eq('wallet', w);
+        var bets = gR.data || [];
+        var gameWins = {};
+        bets.forEach(function(b) {
+          stats.gamesPlayed++;
+          var hp = Number(b.house_profit || 0);
+          var ba = Number(b.bet_amount || 0);
+          stats.totalWagered += ba;
+          if (hp <= 0) {
+            stats.gamesWon++;
+            var winAmt = ba + Math.abs(hp);
+            stats.totalWon += winAmt;
+            if (winAmt > stats.biggestWin) { stats.biggestWin = winAmt; stats.biggestWinGame = b.game || ''; }
+            if (!gameWins[b.game]) gameWins[b.game] = 0;
+            gameWins[b.game]++;
+          } else {
+            stats.gamesLost++;
+            stats.totalLost += hp;
+          }
+        });
+        // Find luckiest game
+        var maxWins = 0;
+        Object.keys(gameWins).forEach(function(g) {
+          if (gameWins[g] > maxWins) { maxWins = gameWins[g]; stats.luckyGame = g; }
+        });
+
+        // Chat messages count
+        var cR = await sb.from('chat_messages').select('id', { count: 'exact', head: true }).eq('wallet', w);
+        stats.chatMsgs = cR.count || 0;
+
+        // Cabbage account
+        var caR = await sb.from('cabbage_accounts').select('balance,started_at').eq('wallet', w).maybeSingle();
+        if (caR.data) {
+          stats.totalCabbageEarned = Number(caR.data.balance || 0) + stats.totalWagered;
+          if (caR.data.started_at) {
+            stats.joinDate = caR.data.started_at;
+            stats.daysHeld = Math.floor((Date.now() - new Date(caR.data.started_at).getTime()) / 86400000);
+          }
+        }
+
+        // Items owned
+        var iR = await sb.from('user_items').select('id', { count: 'exact', head: true }).eq('wallet', w);
+        stats.itemsOwned = iR.count || 0;
+
+      } catch(e) { console.warn('pp_fetchStats error:', e); }
+
+      pp_stats = stats;
+      pp_loaded = true;
+      return stats;
+    }
+
+    function pp_computeXP(stats) {
+      if (!stats) return 0;
+      return Math.floor(
+        (stats.gamesPlayed * 1) +
+        (stats.gamesWon * 3) +
+        (stats.chatMsgs * 0.5) +
+        (stats.totalCabbageEarned * 0.1) +
+        (stats.daysHeld * 2)
+      );
+    }
+
+    function pp_renderPlayerCard(nftCount, cabbageBalance) {
+      if (!pp_stats) return '';
+      var stats = pp_stats;
+      var xp = pp_computeXP(stats);
+      var level = pp_levelFromXP(xp);
+      var currentLvlXP = pp_xpForLevel(level);
+      var nextLvlXP = pp_xpForLevel(level + 1);
+      var xpProgress = nextLvlXP > currentLvlXP ? ((xp - currentLvlXP) / (nextLvlXP - currentLvlXP)) * 100 : 100;
+
+      var neckTitle = pp_getTitle(PP_NECK_TITLES, level);
+      var casinoTitle = pp_getTitle(PP_CASINO_TITLES, stats.gamesPlayed);
+      var chatTitle = pp_getTitle(PP_CHAT_TITLES, stats.chatMsgs);
+      var cabTitle = pp_getTitle(PP_CABBAGE_TITLES, stats.totalCabbageEarned);
+      var winRate = stats.gamesPlayed > 0 ? Math.round((stats.gamesWon / stats.gamesPlayed) * 100) : 0;
+      var joinStr = stats.joinDate ? new Date(stats.joinDate).toLocaleDateString() : 'N/A';
+
+      var html =
+        '<div style="background:linear-gradient(135deg,#0d0d20 0%,#111130 50%,#0a0a1a 100%);border:1px solid #1e1e3a;border-radius:16px;padding:1.5rem;margin-bottom:1rem;position:relative;overflow:hidden;">' +
+          // Subtle pattern overlay
+          '<div style="position:absolute;top:0;right:0;width:200px;height:200px;background:radial-gradient(circle at top right,rgba(0,212,255,0.04),transparent 70%);pointer-events:none;"></div>' +
+
+          // Top: Level + XP bar
+          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">' +
+            '<div>' +
+              '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.6rem;letter-spacing:4px;color:#e0e0ff;">LEVEL <span style="color:#ffd700;">' + level + '</span></div>' +
+              '<div style="font-size:0.72rem;color:' + neckTitle.color + ';font-weight:700;letter-spacing:2px;text-transform:uppercase;">' + neckTitle.name + '</div>' +
+            '</div>' +
+            '<div style="text-align:right;">' +
+              '<div style="font-size:0.6rem;color:#444;letter-spacing:1px;margin-bottom:3px;">XP</div>' +
+              '<div style="font-size:1rem;font-weight:900;color:#00d4ff;font-family:\'Space Grotesk\',sans-serif;">' + xp.toLocaleString() + '</div>' +
+            '</div>' +
+          '</div>' +
+
+          // XP Progress bar
+          '<div style="background:rgba(255,255,255,0.04);border-radius:6px;height:8px;margin-bottom:1.2rem;overflow:hidden;position:relative;">' +
+            '<div style="position:absolute;top:0;left:0;height:100%;width:' + Math.min(xpProgress, 100) + '%;background:linear-gradient(90deg,#7b68ee,#00d4ff);border-radius:6px;transition:width 0.5s;"></div>' +
+          '</div>' +
+          '<div style="display:flex;justify-content:space-between;margin-top:-8px;margin-bottom:1rem;">' +
+            '<span style="font-size:0.55rem;color:#333;">LVL ' + level + '</span>' +
+            '<span style="font-size:0.55rem;color:#333;">' + (xp - currentLvlXP) + ' / ' + (nextLvlXP - currentLvlXP) + ' XP to LVL ' + (level + 1) + '</span>' +
+          '</div>' +
+
+          // Titles Row
+          '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1.2rem;">' +
+            '<div style="background:rgba(123,104,238,0.1);border:1px solid rgba(123,104,238,0.25);border-radius:8px;padding:5px 10px;font-size:0.62rem;font-weight:700;color:#7b68ee;letter-spacing:0.8px;">🎰 ' + casinoTitle.name + '</div>' +
+            '<div style="background:rgba(0,255,136,0.06);border:1px solid rgba(0,255,136,0.2);border-radius:8px;padding:5px 10px;font-size:0.62rem;font-weight:700;color:#00ff88;letter-spacing:0.8px;">🥬 ' + cabTitle.name + '</div>' +
+            '<div style="background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);border-radius:8px;padding:5px 10px;font-size:0.62rem;font-weight:700;color:#00d4ff;letter-spacing:0.8px;">💬 ' + chatTitle.name + '</div>' +
+            (stats.itemsOwned > 0 ? '<div style="background:rgba(255,215,0,0.08);border:1px solid rgba(255,215,0,0.2);border-radius:8px;padding:5px 10px;font-size:0.62rem;font-weight:700;color:#ffd700;letter-spacing:0.8px;">🛒 Collector</div>' : '') +
+          '</div>' +
+
+          // Stats Grid
+          '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;">' +
+            pp_statCell('🎰 Games Played', stats.gamesPlayed.toLocaleString(), '#e0e0ff') +
+            pp_statCell('🏆 Wins', stats.gamesWon.toLocaleString(), '#00ff88') +
+            pp_statCell('💀 Losses', stats.gamesLost.toLocaleString(), '#ff3c5c') +
+            pp_statCell('📊 Win Rate', winRate + '%', winRate >= 50 ? '#00ff88' : '#ff3c5c') +
+            pp_statCell('💰 Total Wagered', Math.floor(stats.totalWagered).toLocaleString(), '#ffd700') +
+            pp_statCell('🥬 Total Won', Math.floor(stats.totalWon).toLocaleString(), '#00ff88') +
+            pp_statCell('💸 Total Lost', Math.floor(stats.totalLost).toLocaleString(), '#ff3c5c') +
+            pp_statCell('🎯 Biggest Win', Math.floor(stats.biggestWin).toLocaleString(), '#ffd700') +
+            pp_statCell('💬 Messages', stats.chatMsgs.toLocaleString(), '#7b68ee') +
+            pp_statCell('🪶 NFTs Held', nftCount.toString(), '#00d4ff') +
+            pp_statCell('📅 Member Since', joinStr, '#888') +
+            pp_statCell('⏳ Days Active', stats.daysHeld.toString(), '#00d4ff') +
+          '</div>' +
+
+          // Bottom: Lucky game + Store items
+          (stats.luckyGame ? '<div style="margin-top:1rem;font-size:0.65rem;color:#444;text-align:center;letter-spacing:1px;">Luckiest game: <span style="color:#ffd700;font-weight:700;">' + escapeHtml(stats.luckyGame) + '</span></div>' : '') +
+          (stats.biggestWinGame ? '<div style="font-size:0.6rem;color:#333;text-align:center;margin-top:4px;">Biggest win from: ' + escapeHtml(stats.biggestWinGame) + '</div>' : '') +
+
+        '</div>';
+
+      // Separate variable for luckiest game wins
+      return html;
+    }
+
+    function pp_statCell(label, value, color) {
+      return '<div style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.03);border-radius:10px;padding:10px;text-align:center;">' +
+        '<div style="font-size:0.58rem;color:#444;letter-spacing:1px;margin-bottom:4px;text-transform:uppercase;">' + label + '</div>' +
+        '<div style="font-size:1rem;font-weight:900;color:' + color + ';font-family:\'Space Grotesk\',sans-serif;">' + value + '</div>' +
+      '</div>';
+    }
     var shop_items = {};     // wallet → { item_id: {data, bought_at} }
     var shop_allItems = {};  // cache of ALL user items for chat rendering
     var shop_loaded = false;
