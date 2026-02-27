@@ -3612,13 +3612,13 @@ var nextTierRow = nextTier
     ================================================================ */
     var pk_tables=[],pk_tid=null,pk_tbl=null,pk_plrs=[],pk_mySeat=-1,pk_ch=null;
     var PK_SUITS={s:'♠',h:'♥',d:'♦',c:'♣'};
-    var PK_SCOL={s:'#999',h:'#e33',d:'#e33',c:'#999'};
+    var PK_SCOL={s:'#1a1a1a',h:'#cc0000',d:'#cc0000',c:'#1a1a1a'};
     var PK_VALS=['2','3','4','5','6','7','8','9','T','J','Q','K','A'];
 
     function pk_rc(card,hide){
       if(hide||!card)return'<div class="bj_card bj_back" style="width:52px;height:74px;"><div style="font-size:1.2rem;color:#2a4a7a;">🂠</div></div>';
-      var v=card[0],s=card[1];var dv={'T':'10'}[v]||v;var suit=PK_SUITS[s]||s;var col=PK_SCOL[s]||'#999';
-      return'<div class="bj_card bj_front" style="width:52px;height:74px;color:'+col+';"><div style="font-size:0.72rem;align-self:flex-start;margin:2px 0 0 3px;">'+dv+'</div><div style="font-size:1.2rem;">'+suit+'</div><div style="font-size:0.72rem;align-self:flex-end;margin:0 3px 2px 0;">'+dv+'</div></div>';
+      var v=card[0],s=card[1];var dv={'T':'10'}[v]||v;var suit=PK_SUITS[s]||s;var col=PK_SCOL[s]||'#333';
+      return'<div class="bj_card bj_front" style="width:52px;height:74px;color:'+col+';display:flex;flex-direction:column;justify-content:space-between;padding:2px 3px;"><div style="font-size:0.72rem;font-weight:700;">'+dv+suit+'</div><div style="font-size:1.1rem;text-align:center;">'+suit+'</div><div style="font-size:0.72rem;font-weight:700;text-align:right;transform:rotate(180deg);">'+dv+suit+'</div></div>';
     }
     function pk_fullDeck(){var d=[];'shdc'.split('').forEach(function(s){PK_VALS.forEach(function(v){d.push(v+s);});});return d;}
     function pk_shuffle(a){var r=a.slice();for(var i=r.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=r[i];r[i]=r[j];r[j]=t;}return r;}
@@ -3757,7 +3757,8 @@ var nextTierRow = nextTier
           html+='<div style="font-size:0.62rem;color:'+chipCol+';">'+pl.chips.toLocaleString()+' '+sym+'</div>';
           if(pl.current_bet>0)html+='<div style="font-size:0.58rem;color:#ffd700;">Bet: '+pl.current_bet+' '+sym+'</div>';
           if(folded)html+='<div style="font-size:0.58rem;color:#ff3c5c;">FOLDED</div>';
-          if(isTurn)html+='<div style="font-size:0.52rem;color:#ffd700;animation:g_pulse 1s infinite;">⏳ YOUR TURN</div>';
+          if(isTurn&&isMe)html+='<div style="font-size:0.52rem;color:#00ff88;animation:g_pulse 1s infinite;">⭐ YOUR TURN</div>';
+          else if(isTurn&&!isMe)html+='<div style="font-size:0.52rem;color:#ffd700;animation:g_pulse 1s infinite;">⏳ THEIR TURN</div>';
         }else{html+='<div style="color:#252540;font-size:0.68rem;">Empty</div><div style="font-size:0.58rem;color:#333;">Seat '+(s+1)+'</div>';}
         html+='</div>';
       }
@@ -3773,7 +3774,7 @@ var nextTierRow = nextTier
         html+='<button class="g_btn" onclick="pk_doRaise()">RAISE</button>';
         html+='<button class="g_btn" style="border-color:rgba(255,60,92,0.3);color:#ff3c5c;" onclick="pk_act(\'fold\')">FOLD</button>';
       }
-      if(t.phase==='showdown'&&me)html+='<button class="g_btn g_btn-primary" onclick="pk_deal()">NEXT HAND</button>';
+      if(t.status==='between_hands'&&me)html+='<button class="g_btn g_btn-primary" onclick="pk_deal()">NEXT HAND</button>';
       html+='</div>';
       area.innerHTML=html;
     }
@@ -3783,18 +3784,15 @@ var nextTierRow = nextTier
       var ap=pk_plrs.filter(function(p){return p.is_active;});if(ap.length<2)return alert('Need 2+ players.');
       var deck=pk_shuffle(pk_fullDeck());
       for(var i=0;i<ap.length;i++){var h=[deck.pop(),deck.pop()];await sb.from('poker_players').update({hole_cards:JSON.stringify(h),current_bet:0,total_bet:0,folded:false,all_in:false}).eq('id',ap[i].id);}
-      // Find current dealer index in ap[], advance by 1
-      var prevDealerSeat=t.dealer_seat!==undefined&&t.dealer_seat!==null?t.dealer_seat:-1;
-      var prevDI=ap.findIndex(function(p){return p.seat===prevDealerSeat;});
-      var ds=(prevDI<0?0:(prevDI+1))%ap.length;  // ds = index into ap[]
-      var sbP=ap[(ds+1)%ap.length],bbP=ap[(ds+2)%ap.length];
-      // UTG (first to act preflop) is the player after BB; with 2 players UTG = dealer (ds)
-      var actI=ap.length===2?ds:(ds+3)%ap.length;
-      var act=ap[actI];
+      var prevDI=ap.findIndex(function(p){return p.seat===(t.dealer_seat!==null&&t.dealer_seat!==undefined?t.dealer_seat:-1);});
+      var dealerIdx=(prevDI<0?0:(prevDI+1))%ap.length;
+      var sbIdx=(dealerIdx+1)%ap.length,bbIdx=(dealerIdx+2)%ap.length;
+      var utgIdx=ap.length===2?dealerIdx:(dealerIdx+3)%ap.length;
+      var sbP=ap[sbIdx],bbP=ap[bbIdx],act=ap[utgIdx];
       var sba=Math.min(t.small_blind,sbP.chips),bba=Math.min(t.big_blind,bbP.chips);
       await sb.from('poker_players').update({current_bet:sba,total_bet:sba,chips:sbP.chips-sba}).eq('id',sbP.id);
       await sb.from('poker_players').update({current_bet:bba,total_bet:bba,chips:bbP.chips-bba}).eq('id',bbP.id);
-      await sb.from('poker_tables').update({status:'playing',phase:'preflop',community:'[]',pot:sba+bba,current_bet:bba,dealer_seat:ap[ds].seat,action_seat:act.seat,round_starter:act.seat,deck:JSON.stringify(deck),hand_num:(t.hand_num||0)+1,updated_at:new Date().toISOString()}).eq('id',pk_tid);
+      await sb.from('poker_tables').update({status:'playing',phase:'preflop',community:'[]',pot:sba+bba,current_bet:bba,dealer_seat:ap[dealerIdx].seat,action_seat:act.seat,round_starter:act.seat,deck:JSON.stringify(deck),hand_num:(t.hand_num||0)+1,updated_at:new Date().toISOString()}).eq('id',pk_tid);
     }
 
     function pk_doRaise(){var cur=pk_tbl?pk_tbl.current_bet||0:0;var a=prompt('Raise to:',String(cur*2));if(!a)return;var r=parseFloat(a);if(isNaN(r)||r<=cur)return alert('Must raise above '+cur);pk_act('raise',r);}
@@ -3827,21 +3825,19 @@ var nextTierRow = nextTier
       // Find next player clockwise after the one who just acted
       var seats=canAct.map(function(p){return p.seat;}).sort(function(a,b){return a-b;});
       var ci=seats.indexOf(acted.seat);
-      // If acted player folded/all-in they won't be in canAct; find next seat > acted.seat
+      // If acted player folded/all-in they might not be in canAct, find closest seat after them
       if(ci===-1){
-        ci=seats.length-1; // default to last so nextIdx wraps to 0
-        for(var x=0;x<seats.length;x++){
-          if(seats[x]>acted.seat){ci=x-1;break;}
-        }
+        ci=seats.length-1;
+        for(var x=0;x<seats.length;x++){if(seats[x]>acted.seat){ci=x-1;break;}}
       }
       var nextIdx=(ci+1)%seats.length;
       var nextSeat=seats[nextIdx];
-      // Check: has the action completed a full rotation?
+      var nextPlayer=canAct.find(function(p){return p.seat===nextSeat;});
+      // Round is over when all bets match AND the acted player was the round_starter (full circle),
+      // OR the next player is the round_starter and acted is not (loop just closed)
       var rs=t.round_starter;
       if(rs===undefined||rs===null||rs<0)rs=seats[0];
       var allBetsMatch=canAct.every(function(p){return p.current_bet>=(t.current_bet||0);});
-      // Round ends when: bets all match AND (acted player was round_starter, i.e. full circle done)
-      // OR next player is round_starter but acted is NOT round_starter (they just finished the loop)
       if(allBetsMatch&&(acted.seat===rs||(nextSeat===rs&&acted.seat!==rs))){
         await pk_nextPhase();
         return;
