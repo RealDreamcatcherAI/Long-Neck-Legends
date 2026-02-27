@@ -990,6 +990,7 @@ a.plink:hover{
         <button class="dash-tab" id="tabChat" onclick="switchView('chat')">💬 Chat</button>
         <button class="dash-tab" id="tabGames" onclick="switchView('games')">🎰 Casino</button>
         <button class="dash-tab" id="tabMissions" onclick="switchView('missions')">🎯 Missions</button>
+        <button class="dash-tab" id="tabLeaderboard" onclick="switchView('leaderboard')">🏆</button>
       </div>
 
       <div class="dash-right">
@@ -1020,6 +1021,7 @@ a.plink:hover{
     <div class="view" id="view-chat"></div>
     <div class="view" id="view-games"></div>
     <div class="view" id="view-missions"></div>
+    <div class="view" id="view-leaderboard"></div>
   </div>
 
   <!-- PFP MODAL -->
@@ -1472,6 +1474,7 @@ a.plink:hover{
       document.getElementById("view-chat").classList.remove("show");
       document.getElementById("view-games").classList.remove("show");
       var vm = document.getElementById("view-missions"); if (vm) vm.classList.remove("show");
+      var vl = document.getElementById("view-leaderboard"); if (vl) vl.classList.remove("show");
 
       session.profilePanelOpen = false;
       var tabProfile = document.getElementById("tabProfile");
@@ -1481,7 +1484,10 @@ a.plink:hover{
       var tabGames = document.getElementById("tabGames");
       if (tabGames) tabGames.classList.remove("active");
       var tabMissions = document.getElementById("tabMissions");
+      var tabLeaderboard = document.getElementById("tabLeaderboard");
       if (tabMissions) tabMissions.classList.remove("active");
+      var tabLeaderboard = document.getElementById("tabLeaderboard");
+      if (tabLeaderboard) tabLeaderboard.classList.remove("active");
 
       session.currentView = "profile";
     }
@@ -1494,10 +1500,12 @@ a.plink:hover{
       var vc = document.getElementById("view-chat");
       var vg = document.getElementById("view-games");
       var vq = document.getElementById("view-missions");
+      var vl = document.getElementById("view-leaderboard");
       if (vp) vp.classList.remove("show");
       if (vc) vc.classList.remove("show");
       if (vg) vg.classList.remove("show");
       if (vq) vq.classList.remove("show");
+      if (vl) vl.classList.remove("show");
 
       // Deactivate all tabs
       var tabProfile = document.getElementById("tabProfile");
@@ -1508,6 +1516,7 @@ a.plink:hover{
       if (tabChat)    tabChat.classList.remove("active");
       if (tabGames)   tabGames.classList.remove("active");
       if (tabMissions) tabMissions.classList.remove("active");
+      if (tabLeaderboard) tabLeaderboard.classList.remove("active");
 
       if (viewName === "profile") {
         stopChatPoll();
@@ -1533,6 +1542,13 @@ a.plink:hover{
         if (vq) vq.classList.add("show");
         if (tabMissions) tabMissions.classList.add("active");
         renderMissionsUI();
+      }
+
+      if (viewName === "leaderboard") {
+        stopChatPoll();
+        if (vl) vl.classList.add("show");
+        if (tabLeaderboard) tabLeaderboard.classList.add("active");
+        renderLeaderboardUI();
       }
     }
 
@@ -4347,6 +4363,212 @@ var nextTierRow = nextTier
       crash_history.unshift(crash_point);
       if (crash_history.length > 10) crash_history.pop();
       g_disableGameBtns(false);
+    }
+
+    /* ================================================================
+       LEADERBOARDS
+    ================================================================ */
+    var lb_cache = {};
+    var lb_cacheTime = 0;
+    var lb_activeTab = 'cabbage';
+    var LB_TABS = [
+      { id: 'cabbage',  icon: '🥬', label: 'Top Cabbage' },
+      { id: 'winners',  icon: '🎰', label: 'Casino Wins' },
+      { id: 'chatters', icon: '🔥', label: 'Top Chatters' },
+      { id: 'holders',  icon: '🪶', label: 'OG Holders' },
+      { id: 'bigwins',  icon: '💰', label: 'Biggest Wins' }
+    ];
+
+    async function lb_fetchAll() {
+      // Cache for 60s
+      if (lb_cache.cabbage && Date.now() - lb_cacheTime < 60000) return lb_cache;
+      var sb = getSupaClient();
+      try {
+        // Top Cabbage Holders
+        var cR = await sb.from('cabbage_accounts').select('wallet,balance').order('balance', { ascending: false }).limit(20);
+        lb_cache.cabbage = (cR.data || []).filter(function(r) { return r.balance > 0; });
+
+        // Casino total winnings (payout from game_bets where house_profit < 0 means player won)
+        var gR = await sb.from('game_bets').select('wallet,bet_amount,house_profit,game').order('played_at', { ascending: false }).limit(2000);
+        var gData = gR.data || [];
+
+        // Aggregate wins per wallet
+        var winMap = {};
+        var bigWins = [];
+        gData.forEach(function(b) {
+          if (Number(b.house_profit) <= 0) {
+            // Player won — profit is the negative of house_profit
+            var profit = Math.abs(Number(b.house_profit));
+            if (!winMap[b.wallet]) winMap[b.wallet] = { wallet: b.wallet, total: 0, count: 0 };
+            winMap[b.wallet].total += profit;
+            winMap[b.wallet].count++;
+            bigWins.push({ wallet: b.wallet, amount: Number(b.bet_amount) + profit, game: b.game });
+          }
+        });
+        lb_cache.winners = Object.values(winMap).sort(function(a, b) { return b.total - a.total; }).slice(0, 20);
+        lb_cache.bigwins = bigWins.sort(function(a, b) { return b.amount - a.amount; }).slice(0, 20);
+
+        // Most Active Chatters
+        var chR = await sb.from('chat_messages').select('wallet,username').order('created_at', { ascending: false }).limit(2000);
+        var chatMap = {};
+        (chR.data || []).forEach(function(m) {
+          if (!chatMap[m.wallet]) chatMap[m.wallet] = { wallet: m.wallet, username: m.username, count: 0 };
+          chatMap[m.wallet].count++;
+          if (m.username) chatMap[m.wallet].username = m.username;
+        });
+        lb_cache.chatters = Object.values(chatMap).sort(function(a, b) { return b.count - a.count; }).slice(0, 20);
+
+        // OG Holders (earliest stakers)
+        var hR = await sb.from('cabbage_accounts').select('wallet,started_at').not('started_at', 'is', null).order('started_at', { ascending: true }).limit(20);
+        lb_cache.holders = (hR.data || []).filter(function(r) { return r.started_at; });
+
+        lb_cacheTime = Date.now();
+      } catch(e) { console.warn('lb_fetchAll error:', e); }
+      return lb_cache;
+    }
+
+    function lb_shortWallet(w) {
+      if (!w || w.length < 8) return w || '—';
+      return w.slice(0, 4) + '…' + w.slice(-4);
+    }
+
+    function lb_isMe(w) {
+      return walletPublicKey && walletPublicKey.toBase58() === w;
+    }
+
+    function lb_daysSince(iso) {
+      if (!iso) return 0;
+      return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+    }
+
+    async function renderLeaderboardUI() {
+      var view = document.getElementById('view-leaderboard');
+      if (!view) return;
+
+      view.innerHTML =
+        '<style>' +
+        '.lb_tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:1rem;}' +
+        '.lb_tab{padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:rgba(0,0,0,0.2);color:#555;font-size:0.68rem;font-weight:700;cursor:pointer;transition:all 0.2s;font-family:"Space Grotesk",sans-serif;letter-spacing:0.5px;}' +
+        '.lb_tab:hover{border-color:rgba(0,212,255,0.3);color:#888;}' +
+        '.lb_tab.active{border-color:rgba(0,212,255,0.5);color:#00d4ff;background:rgba(0,212,255,0.08);}' +
+        '.lb_table{width:100%;border-collapse:collapse;}' +
+        '.lb_table th{text-align:left;font-size:0.6rem;color:#333;letter-spacing:1.5px;text-transform:uppercase;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.04);}' +
+        '.lb_table td{padding:10px;font-size:0.78rem;border-bottom:1px solid rgba(255,255,255,0.02);}' +
+        '.lb_rank{font-weight:900;width:32px;text-align:center;}' +
+        '.lb_gold{color:#ffd700;}.lb_silver{color:#c0c0c0;}.lb_bronze{color:#cd7f32;}' +
+        '.lb_me{background:rgba(0,212,255,0.06) !important;}' +
+        '.lb_wallet{font-family:monospace;font-size:0.72rem;}' +
+        '.lb_val{text-align:right;font-weight:700;font-family:"Space Grotesk",sans-serif;}' +
+        '.lb_loading{text-align:center;color:#333;padding:3rem;font-size:0.8rem;letter-spacing:1px;}' +
+        '</style>' +
+
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.6rem;">' +
+          '<div>' +
+            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.5rem;letter-spacing:3px;color:#e0e0ff;">🏆 LEADERBOARDS</div>' +
+            '<div style="font-size:0.7rem;color:#444;letter-spacing:1px;margin-top:2px;">See who\'s on top. Compete. Win rewards.</div>' +
+          '</div>' +
+          '<button onclick="switchView(\'profile\')" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#888;padding:7px 14px;border-radius:7px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;" onmouseover="this.style.borderColor=\'rgba(0,212,255,0.4)\';this.style.color=\'#00d4ff\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,0.1)\';this.style.color=\'#888\'">← Home</button>' +
+        '</div>' +
+
+        '<div class="lb_tabs" id="lb_tabs"></div>' +
+        '<div style="background:#0f0f22;border:1px solid #1e1e3a;border-radius:14px;padding:1.2rem;min-height:300px;" id="lb_body">' +
+          '<div class="lb_loading">Loading…</div>' +
+        '</div>' +
+
+        '<div style="background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.04);border-radius:10px;padding:0.9rem 1.2rem;margin-top:1rem;font-size:0.62rem;color:#2a2a44;letter-spacing:0.8px;text-align:center;text-transform:uppercase;">' +
+          'Top players earn rewards · Free mints · Casino credits · Store discounts · Special roles' +
+        '</div>';
+
+      // Render tab buttons
+      var tabsEl = document.getElementById('lb_tabs');
+      var tabsHTML = '';
+      LB_TABS.forEach(function(t) {
+        tabsHTML += '<div class="lb_tab' + (t.id === lb_activeTab ? ' active' : '') + '" onclick="lb_switchTab(\'' + t.id + '\')">' + t.icon + ' ' + t.label + '</div>';
+      });
+      tabsEl.innerHTML = tabsHTML;
+
+      // Fetch and render
+      await lb_fetchAll();
+      lb_renderBoard();
+    }
+
+    function lb_switchTab(tabId) {
+      lb_activeTab = tabId;
+      // Update tab active states
+      var tabs = document.querySelectorAll('.lb_tab');
+      tabs.forEach(function(t) { t.classList.remove('active'); });
+      var idx = LB_TABS.findIndex(function(t) { return t.id === tabId; });
+      if (tabs[idx]) tabs[idx].classList.add('active');
+      lb_renderBoard();
+    }
+
+    function lb_renderBoard() {
+      var body = document.getElementById('lb_body');
+      if (!body) return;
+      var data = lb_cache[lb_activeTab] || [];
+      if (data.length === 0) {
+        body.innerHTML = '<div class="lb_loading">No data yet — keep playing!</div>';
+        return;
+      }
+
+      var html = '<table class="lb_table"><thead><tr><th>#</th><th>Player</th><th style="text-align:right;">';
+
+      if (lb_activeTab === 'cabbage') html += 'Balance</th></tr></thead><tbody>';
+      else if (lb_activeTab === 'winners') html += 'Total Won</th></tr></thead><tbody>';
+      else if (lb_activeTab === 'chatters') html += 'Messages</th></tr></thead><tbody>';
+      else if (lb_activeTab === 'holders') html += 'Holding Since</th></tr></thead><tbody>';
+      else if (lb_activeTab === 'bigwins') html += 'Win Amount</th></tr></thead><tbody>';
+
+      data.forEach(function(row, i) {
+        var rank = i + 1;
+        var rankClass = rank === 1 ? 'lb_gold' : rank === 2 ? 'lb_silver' : rank === 3 ? 'lb_bronze' : '';
+        var medal = rank === 1 ? '👑' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank;
+        var w = row.wallet || '';
+        var meClass = lb_isMe(w) ? ' lb_me' : '';
+        var name = row.username || lb_shortWallet(w);
+
+        html += '<tr class="' + meClass + '">';
+        html += '<td class="lb_rank ' + rankClass + '">' + medal + '</td>';
+        html += '<td>';
+        html += '<span style="color:' + (lb_isMe(w) ? '#00d4ff' : '#c8c8e8') + ';font-weight:' + (lb_isMe(w) ? '700' : '400') + ';">' + escapeHtml(name) + '</span>';
+        if (lb_isMe(w)) html += ' <span style="font-size:0.58rem;color:#00d4ff;opacity:0.6;">(you)</span>';
+        html += '<div class="lb_wallet" style="color:' + walletColor(w) + ';">' + lb_shortWallet(w) + '</div>';
+        html += '</td>';
+        html += '<td class="lb_val">';
+
+        if (lb_activeTab === 'cabbage') {
+          html += '<span style="color:#00ff88;">' + Math.floor(row.balance).toLocaleString() + ' 🥬</span>';
+        } else if (lb_activeTab === 'winners') {
+          html += '<span style="color:#ffd700;">' + row.total.toFixed(2) + ' 🥬</span>';
+          html += '<div style="font-size:0.58rem;color:#555;">' + row.count + ' wins</div>';
+        } else if (lb_activeTab === 'chatters') {
+          html += '<span style="color:#7b68ee;">' + row.count.toLocaleString() + '</span>';
+        } else if (lb_activeTab === 'holders') {
+          var days = lb_daysSince(row.started_at);
+          html += '<span style="color:#00d4ff;">' + days + ' days</span>';
+          html += '<div style="font-size:0.55rem;color:#333;">' + new Date(row.started_at).toLocaleDateString() + '</div>';
+        } else if (lb_activeTab === 'bigwins') {
+          html += '<span style="color:#ffd700;">' + row.amount.toFixed(2) + ' 🥬</span>';
+          html += '<div style="font-size:0.58rem;color:#555;">' + (row.game || '') + '</div>';
+        }
+
+        html += '</td></tr>';
+      });
+
+      html += '</tbody></table>';
+
+      // Find my position
+      var myW = walletPublicKey ? walletPublicKey.toBase58() : '';
+      if (myW) {
+        var myIdx = data.findIndex(function(r) { return r.wallet === myW; });
+        if (myIdx >= 0) {
+          html += '<div style="text-align:center;margin-top:1rem;font-size:0.72rem;color:#00d4ff;font-weight:700;">Your rank: #' + (myIdx + 1) + '</div>';
+        } else {
+          html += '<div style="text-align:center;margin-top:1rem;font-size:0.68rem;color:#333;">You\'re not on this board yet — keep going!</div>';
+        }
+      }
+
+      body.innerHTML = html;
     }
 
     /* ================================================================
