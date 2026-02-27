@@ -1207,6 +1207,8 @@ a.plink:hover{
         pfpImage: "",
         x: "",
         discord: "",
+        discord_user_id: "",
+        discord_tag: "",
         ledger: ""
       },
       secondWallet: { address: "" },
@@ -1267,6 +1269,8 @@ a.plink:hover{
           session.profile.pfpImage = data.pfpImage || "";
           session.profile.x = data.x || "";
           session.profile.discord = data.discord || "";
+          session.profile.discord_tag = session.profile.discord;
+          saveProfileToStorage();
           session.profile.ledger = data.ledger || "";
         }
       } catch (e) {}
@@ -2408,6 +2412,8 @@ async function glitchRelayNow(){
     var newProfRes = await db
       .from("profiles")
       .insert({
+        discord_user_id: session?.profile?.discord_user_id || null,
+        discord_tag: session?.profile?.discord || session?.profile?.discord_tag || null,
         discord_user_id: session?.profile?.discord_user_id || null,
         username: session?.profile?.username || null,
         x_handle: session?.profile?.x || null,
