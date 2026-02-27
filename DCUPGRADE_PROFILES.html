@@ -3585,9 +3585,12 @@ var nextTierRow = nextTier
         var html='';
         pk_tables.forEach(function(t){
           var cnt=ps.filter(function(p){return p.table_id===t.id;}).length;
-          html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.06);border-radius:10px;margin-bottom:8px;flex-wrap:wrap;gap:8px;">'
-            +'<div><div style="font-weight:700;color:#e0e0ff;font-size:0.85rem;">'+escapeHtml(t.name)+'</div>'
-            +'<div style="font-size:0.65rem;color:#555;margin-top:2px;">Buy-in: '+t.buy_in+' 🥬 · Blinds: '+t.small_blind+'/'+t.big_blind+'</div></div>'
+          var isSol=t.currency==='sol';
+          var sym=isSol?'◎':'🥬';
+          var badge=isSol?'<span style="background:linear-gradient(90deg,#9945ff,#00d4ff);color:#fff;padding:2px 6px;border-radius:4px;font-size:0.55rem;font-weight:700;letter-spacing:1px;margin-left:6px;">SOL</span>':'';
+          html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(0,0,0,0.2);border:1px solid '+(isSol?'rgba(153,69,255,0.2)':'rgba(255,255,255,0.06)')+';border-radius:10px;margin-bottom:8px;flex-wrap:wrap;gap:8px;">'
+            +'<div><div style="font-weight:700;color:#e0e0ff;font-size:0.85rem;">'+escapeHtml(t.name)+badge+'</div>'
+            +'<div style="font-size:0.65rem;color:#555;margin-top:2px;">Buy-in: '+t.buy_in+' '+sym+' · Blinds: '+t.small_blind+'/'+t.big_blind+'</div></div>'
             +'<div style="display:flex;align-items:center;gap:10px;">'
             +'<div style="font-size:0.72rem;color:'+(cnt>=5?'#ff3c5c':(cnt>=2?'#00ff88':'#555'))+';">'+cnt+'/5</div>'
             +'<button class="g_btn'+(cnt<5?' g_btn-primary':'')+'" onclick="pk_join('+t.id+')" '+(cnt>=5?'disabled':'')+'>'+( cnt>=5?'FULL':'SIT DOWN')+'</button>'
@@ -3600,20 +3603,25 @@ var nextTierRow = nextTier
     async function pk_join(tid){
       if(!walletPublicKey)return alert('Connect wallet first.');
       var tbl=pk_tables.find(function(t){return t.id===tid;});if(!tbl)return;
-      var bal=await g_fetchCabbageBalance();
-      if(bal<tbl.buy_in)return alert('Need '+tbl.buy_in+' 🥬 to sit. You have '+Math.floor(bal)+'.');
+      var isSol=tbl.currency==='sol';
+      if(isSol){
+        var solBal=await g_fetchSolBalance();
+        if(solBal===null||solBal<tbl.buy_in+0.002)return alert('Need '+(tbl.buy_in+0.002).toFixed(3)+' ◎ (incl. fee). You have '+(solBal||0).toFixed(3)+' ◎.');
+      }else{
+        var cabBal=await g_fetchCabbageBalance();
+        if(cabBal<tbl.buy_in)return alert('Need '+tbl.buy_in+' 🥬 to sit. You have '+Math.floor(cabBal)+'.');
+      }
       try{
         var sb=getSupaClient();var w=walletPublicKey.toBase58();
-        // Check if already seated and active
         var ex=await sb.from('poker_players').select('*').eq('table_id',tid).eq('wallet',w).eq('is_active',true).maybeSingle();
         if(ex.data){pk_tid=tid;pk_mySeat=ex.data.seat;pk_open();return;}
-        // Delete any stale inactive rows for this wallet at this table
         await sb.from('poker_players').delete().eq('table_id',tid).eq('wallet',w);
         var sR=await sb.from('poker_players').select('seat').eq('table_id',tid).eq('is_active',true);
         var taken=(sR.data||[]).map(function(p){return p.seat;});
         var open=-1;for(var i=0;i<5;i++){if(taken.indexOf(i)===-1){open=i;break;}}
         if(open===-1)return alert('Table full.');
-        await g_spendCabbage(tbl.buy_in);
+        if(isSol){await g_sendSolBet(Math.round(tbl.buy_in*1e9));}
+        else{await g_spendCabbage(tbl.buy_in);}
         var un=(session&&session.profile&&session.profile.username)||null;
         await sb.from('poker_players').insert({table_id:tid,wallet:w,username:un,seat:open,chips:tbl.buy_in,is_active:true});
         pk_tid=tid;pk_mySeat=open;pk_open();
@@ -3646,7 +3654,15 @@ var nextTierRow = nextTier
     async function pk_leaveTable(){
       if(!pk_tid)return;var sb=getSupaClient();var w=walletPublicKey.toBase58();
       var me=pk_plrs.find(function(p){return p.wallet===w;});
-      if(me&&me.chips>0)await g_creditCabbage(me.chips);
+      if(me&&me.chips>0){
+        var isSol=pk_tbl&&pk_tbl.currency==='sol';
+        if(isSol){
+          var cabOut=me.chips*g_SOL_TO_CABBAGE;
+          await g_creditCabbage(cabOut);
+        }else{
+          await g_creditCabbage(me.chips);
+        }
+      }
       await sb.from('poker_players').delete().eq('table_id',pk_tid).eq('wallet',w);
       pk_unsub();pk_tid=null;pk_tbl=null;pk_plrs=[];pk_mySeat=-1;
       document.getElementById('pk_gameWrap').style.display='none';pk_loadLobby();
@@ -3655,6 +3671,7 @@ var nextTierRow = nextTier
     function pk_paint(){
       var area=document.getElementById('pk_gameArea');if(!area||!pk_tbl)return;
       var t=pk_tbl;var myW=walletPublicKey?walletPublicKey.toBase58():'';
+      var isSol=t.currency==='sol';var sym=isSol?'◎':'🥬';var chipCol=isSol?'#00d4ff':'#00ff88';
       var comm=[];try{comm=JSON.parse(t.community||'[]');}catch(e){}
       var isPlay=t.status==='playing';
       var me=pk_plrs.find(function(p){return p.wallet===myW;});if(me)pk_mySeat=me.seat;
@@ -3666,8 +3683,9 @@ var nextTierRow = nextTier
       html+='<div style="text-align:center;margin:0.5rem 0 1rem;"><div style="font-size:0.6rem;color:#555;letter-spacing:2px;margin-bottom:6px;">COMMUNITY</div><div style="display:flex;justify-content:center;gap:3px;min-height:58px;align-items:center;">';
       if(comm.length>0){comm.forEach(function(c){html+=pk_rc(c,false);});for(var p=comm.length;p<5;p++)html+='<div style="width:52px;height:74px;border:1px dashed rgba(255,255,255,0.06);border-radius:5px;"></div>';}
       else{for(var e=0;e<5;e++)html+='<div style="width:52px;height:74px;border:1px dashed rgba(255,255,255,0.06);border-radius:5px;"></div>';}
-      html+='</div><div style="font-size:0.9rem;color:#ffd700;font-weight:700;margin-top:8px;">POT: '+(t.pot||0).toLocaleString()+' 🥬</div>';
-      if(isPlay)html+='<div style="font-size:0.62rem;color:#555;margin-top:2px;">'+(t.phase||'').toUpperCase()+' · Current bet: '+(t.current_bet||0)+'</div>';
+      html+='</div><div style="font-size:0.9rem;color:#ffd700;font-weight:700;margin-top:8px;">POT: '+(t.pot||0).toLocaleString()+' '+sym+'</div>';
+      if(isSol)html+='<div style="font-size:0.55rem;color:#9945ff;margin-top:2px;">SOL TABLE · Winnings paid as 🥬 (1 ◎ = '+g_SOL_TO_CABBAGE+' 🥬)</div>';
+      if(isPlay)html+='<div style="font-size:0.62rem;color:#555;margin-top:2px;">'+(t.phase||'').toUpperCase()+' · Current bet: '+(t.current_bet||0)+' '+sym+'</div>';
       html+='</div>';
 
       // Seats
@@ -3685,8 +3703,8 @@ var nextTierRow = nextTier
           if(hole.length===2&&(isMe||t.phase==='showdown'))html+=pk_rc(hole[0],false)+pk_rc(hole[1],false);
           else if(isPlay&&!folded)html+=pk_rc(null,true)+pk_rc(null,true);
           html+='</div>';
-          html+='<div style="font-size:0.62rem;color:#00ff88;">'+pl.chips.toLocaleString()+' 🥬</div>';
-          if(pl.current_bet>0)html+='<div style="font-size:0.58rem;color:#ffd700;">Bet: '+pl.current_bet+'</div>';
+          html+='<div style="font-size:0.62rem;color:'+chipCol+';">'+pl.chips.toLocaleString()+' '+sym+'</div>';
+          if(pl.current_bet>0)html+='<div style="font-size:0.58rem;color:#ffd700;">Bet: '+pl.current_bet+' '+sym+'</div>';
           if(folded)html+='<div style="font-size:0.58rem;color:#ff3c5c;">FOLDED</div>';
           if(isTurn)html+='<div style="font-size:0.52rem;color:#ffd700;animation:g_pulse 1s infinite;">⏳ YOUR TURN</div>';
         }else{html+='<div style="color:#252540;font-size:0.68rem;">Empty</div><div style="font-size:0.58rem;color:#333;">Seat '+(s+1)+'</div>';}
@@ -3700,7 +3718,7 @@ var nextTierRow = nextTier
       if(isMyTurn&&!me.folded){
         var toCall=Math.max(0,(t.current_bet||0)-(me?me.current_bet:0));
         if(toCall===0)html+='<button class="g_btn g_btn-primary" onclick="pk_act(\'check\')">CHECK</button>';
-        else html+='<button class="g_btn g_btn-primary" onclick="pk_act(\'call\')">CALL '+toCall+'</button>';
+        else html+='<button class="g_btn g_btn-primary" onclick="pk_act(\'call\')">CALL '+toCall+' '+sym+'</button>';
         html+='<button class="g_btn" onclick="pk_doRaise()">RAISE</button>';
         html+='<button class="g_btn" style="border-color:rgba(255,60,92,0.3);color:#ff3c5c;" onclick="pk_act(\'fold\')">FOLD</button>';
       }
