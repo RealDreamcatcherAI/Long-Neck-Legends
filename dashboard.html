@@ -1207,8 +1207,6 @@ a.plink:hover{
         pfpImage: "",
         x: "",
         discord: "",
-        discord_user_id: "",
-        discord_tag: "",
         ledger: ""
       },
       secondWallet: { address: "" },
@@ -1269,8 +1267,6 @@ a.plink:hover{
           session.profile.pfpImage = data.pfpImage || "";
           session.profile.x = data.x || "";
           session.profile.discord = data.discord || "";
-          session.profile.discord_tag = session.profile.discord;
-          saveProfileToStorage();
           session.profile.ledger = data.ledger || "";
         }
       } catch (e) {}
@@ -1278,8 +1274,8 @@ a.plink:hover{
 
     function saveProfileToStorage() {
       try { localStorage.setItem(storageKey(), JSON.stringify(session.profile)); } catch (e) {}
+      // Also persist to Supabase (debounced) if we have a resolved profileId
       try { queueSaveProfileToSupabase(); } catch (e) {}
-      try { queueGlitchRelayToSupabase(); } catch(e) {}
     }
 
     function secondWalletStorageKey(){
@@ -1448,7 +1444,6 @@ a.plink:hover{
         loadSecondWalletFromStorage();
 
         await hydrateProfileAndWalletsFromSupabase(addr);
-        queueGlitchRelayToSupabase();
 
         session.profilePanelOpen = false;
         applyProfilePanelUI();
@@ -1525,8 +1520,6 @@ a.plink:hover{
       var tabChat    = document.getElementById("tabChat");
       var tabGames   = document.getElementById("tabGames");
       var tabMissions = document.getElementById("tabMissions");
-      var tabLeaderboard = document.getElementById("tabLeaderboard");
-      var tabStore = document.getElementById("tabStore");
       if (tabProfile) tabProfile.classList.remove("active");
       if (tabChat)    tabChat.classList.remove("active");
       if (tabGames)   tabGames.classList.remove("active");
@@ -2061,7 +2054,6 @@ var nextTierRow = nextTier
         // 3) store as second wallet (local + Supabase)
         session.secondWallet.address = addr;
         saveSecondWalletToStorage();
-        queueGlitchRelayToSupabase();
 
         await linkWalletToProfile(addr, session.profileId, false);
 
@@ -2084,7 +2076,6 @@ var nextTierRow = nextTier
       var prev = session.secondWallet.address || "";
       session.secondWallet.address = "";
       saveSecondWalletToStorage();
-      queueGlitchRelayToSupabase();
 
       // Remove from Supabase so it won't be remembered (requires DELETE policy on wallet_links)
       if (prev && session && session.profileId) {
@@ -2140,22 +2131,18 @@ var nextTierRow = nextTier
       }
 
       if (data.type === "discord_connected") {
-      // Store a display tag (what you show in UI)
-      const tag = data.username
-        ? (data.username + (data.discriminator ? ("#" + data.discriminator) : ""))
-        : (data.discord_tag || "");
+        session.profile.discord = data.username
+          ? (data.username + (data.discriminator ? ("#" + data.discriminator) : ""))
+          : "";
+        saveProfileToStorage();
+        refreshBanner();
+        alert("Discord connected: " + (session.profile.discord || "connected"));
+      }
 
-      session.profile.discord = tag;          // keep your existing UI field
-      session.profile.discord_tag = tag;      // ✅ new DB field
-      session.profile.discord_user_id =
-        data.discord_user_id || data.user_id || data.id || "";  // ✅ real ID if provided
-
-      saveProfileToStorage();
-      refreshBanner();
-
-      // Optional: show ID for debugging
-      alert("Discord connected: " + (tag || "connected") + (session.profile.discord_user_id ? (" (ID saved)") : " (NO ID)"));
-    }
+      if (data.type === "x_error" || data.type === "discord_error") {
+        alert("Auth failed. Please try again.");
+      }
+    });
   
     function openTraitsModal(){
       if (!session.loadedNFTs || session.loadedNFTs.length === 0) return alert("No NFTs loaded yet.");
@@ -2364,118 +2351,7 @@ var nextTierRow = nextTier
         console.warn("Hydrate profile/wallets failed (Supabase):", e);
       }
     }
-    
-// ================================================================
-// GLITCH SUPABASE (separate client — matches your schema exactly)
-// ================================================================
 
-var GLITCH_SUPA_URL = "https://iogvpjjhpigvvlcoqzre.supabase.co";
-var GLITCH_SUPA_KEY = "sb_publishable_-R9L1trnxOvML9WALzJu1A_dX7pWk7M";
-
-var glitchClient = null;
-
-function getGlitchClient() {
-  if (!glitchClient) {
-    glitchClient = supabase.createClient(GLITCH_SUPA_URL, GLITCH_SUPA_KEY);
-  }
-  return glitchClient;
-}
-
-function getGlitchDb(){ return getGlitchClient(); }
-
-// --- Debounced relay ---
-var _glitchRelayTimer = null;
-function queueGlitchRelayToSupabase(){
-  if (_glitchRelayTimer) clearTimeout(_glitchRelayTimer);
-  _glitchRelayTimer = setTimeout(function(){
-    glitchRelayNow().catch(function(e){
-      console.warn("Glitch relay failed:", e);
-    });
-  }, 600);
-}
-
-async function glitchRelayNow(){
-  if (!walletPublicKey) return;
-
-  var primary = walletPublicKey.toBase58();
-  var second  = session?.secondWallet?.address || "";
-
-  var db = getGlitchDb();
-
-  // 1️⃣ Check if primary wallet already linked
-  var linkRes = await db
-    .from("wallet_links")
-    .select("profile_id")
-    .eq("wallet_address", primary)
-    .maybeSingle();
-
-  if (linkRes.error) throw linkRes.error;
-
-  var profileId = linkRes.data?.profile_id || null;
-
-  // 2️⃣ If no profile found, create one
-  if (!profileId){
-    var newProfRes = await db
-      .from("profiles")
-      .insert({
-        discord_tag: session?.profile?.discord_tag || session?.profile?.discord || null,
-        discord_user_id: session?.profile?.discord_user_id || null,
-        username: session?.profile?.username || null,
-        x_handle: session?.profile?.x || null,
-        pfp_mint: session?.profile?.pfpMint || null,
-        pfp_image: session?.profile?.pfpImage || null
-      })
-      .select("id")
-      .single();
-
-    if (newProfRes.error) throw newProfRes.error;
-
-    profileId = newProfRes.data.id;
-
-    // link primary wallet
-    var upPrimary = await db
-      .from("wallet_links")
-      .upsert({
-        wallet_address: primary,
-        profile_id: profileId,
-        label: "primary",
-        verified_at: new Date().toISOString()
-      }, { onConflict: "wallet_address" });
-
-    if (upPrimary.error) throw upPrimary.error;
-  }
-
-  session.glitchProfileId = profileId;
-
-  // 3️⃣ Update profile fields safely
-  var upd = await db
-    .from("profiles")
-    .update({
-      discord_user_id: session?.profile?.discord_user_id || null,
-      discord_tag: session?.profile?.discord || null,
-      username: session?.profile?.username || null,
-      x_handle: session?.profile?.x || null,
-      pfp_mint: session?.profile?.pfpMint || null,
-      pfp_image: session?.profile?.pfpImage || null
-    })
-    .eq("id", profileId);
-
-  if (upd.error) throw upd.error;
-
-  // 4️⃣ Upsert second wallet if exists
-  if (second){
-    var upSecond = await db
-      .from("wallet_links")
-      .upsert({
-        wallet_address: second,
-        profile_id: profileId,
-        label: "secondary",
-        verified_at: new Date().toISOString()
-      }, { onConflict: "wallet_address" });
-
-    if (upSecond.error) throw upSecond.error;
-  }
-}
 
     /* ===============================
        CABBAGE SOFT STAKING (OFF-CHAIN)
