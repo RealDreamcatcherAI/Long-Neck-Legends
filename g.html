@@ -291,10 +291,6 @@ a.plink:hover{
       display: block;
       grid-template-columns: unset;
     }
-    #view-store.show {
-      display: block;
-      grid-template-columns: unset;
-    }
     @media (max-width: 800px) {
       .view.show { grid-template-columns: 1fr; }
       .dashboard{ padding: 1.4rem 1rem 3rem; }
@@ -571,8 +567,7 @@ a.plink:hover{
       border-radius: 14px;
       padding: 1.6rem 2rem;
     }
-    /* profile actions always visible now */
-    .profile-actions.is-hidden { display: block; }
+    .profile-actions.is-hidden { display: none; }
     .actions-grid{
       display: grid;
       grid-template-columns: repeat(6, minmax(140px, 1fr));
@@ -970,7 +965,7 @@ a.plink:hover{
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tweetnacl@1.0.3/nacl.min.js"></script>
-  <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+  <script src="https://unpkg.com/@solana/web3.js@1.95.8/lib/index.iife.min.js" async></script>
 </head>
 
 <body>
@@ -991,9 +986,12 @@ a.plink:hover{
   <div class="dash-nav-wrap" id="dashNavWrap">
     <div class="dash-nav">
       <div class="dash-tabs">
-        <button class="dash-tab" id="tabProfile" onclick="switchView('profile')">Profile</button>
+        <button class="dash-tab" id="tabProfile" onclick="toggleProfilePanel()">Profile</button>
         <button class="dash-tab" id="tabChat" onclick="switchView('chat')">💬 Chat</button>
         <button class="dash-tab" id="tabGames" onclick="switchView('games')">🎰 Casino</button>
+        <button class="dash-tab" id="tabMissions" onclick="switchView('missions')">🎯 Missions</button>
+        <button class="dash-tab" id="tabStore" onclick="switchView('store')">🛒 Store</button>
+        <button class="dash-tab" id="tabLeaderboard" onclick="switchView('leaderboard')">🏆</button>
       </div>
 
       <div class="dash-right">
@@ -1023,6 +1021,8 @@ a.plink:hover{
     <div class="view show" id="view-profile"></div>
     <div class="view" id="view-chat"></div>
     <div class="view" id="view-games"></div>
+    <div class="view" id="view-missions"></div>
+    <div class="view" id="view-leaderboard"></div>
     <div class="view" id="view-store"></div>
   </div>
 
@@ -1211,7 +1211,7 @@ a.plink:hover{
       },
       secondWallet: { address: "" },
       currentView: "profile",
-      profilePanelOpen: true
+      profilePanelOpen: false
     };
 
     function getTier(count) {
@@ -1276,6 +1276,7 @@ a.plink:hover{
       try { localStorage.setItem(storageKey(), JSON.stringify(session.profile)); } catch (e) {}
       // Also persist to Supabase (debounced) if we have a resolved profileId
       try { queueSaveProfileToSupabase(); } catch (e) {}
+      try { queueGlitchRelayToSupabase(); } catch(e) {}
     }
 
     function secondWalletStorageKey(){
@@ -1406,20 +1407,16 @@ a.plink:hover{
     }
 
     function applyProfilePanelUI(){
-      // Profile actions should always be visible (no more toggle panel)
       var btn = document.getElementById("tabProfile");
       var panel = document.getElementById("profilePanel");
 
-      // Tab highlights when you're on the profile view
-      if (btn) btn.classList.toggle("active", session.currentView === "profile");
-
-      // Never hide the profile actions panel
-      if (panel) panel.classList.remove("is-hidden");
+      if (btn) btn.classList.toggle("active", !!session.profilePanelOpen);
+      if (panel) panel.classList.toggle("is-hidden", !session.profilePanelOpen);
     }
 
-    // Backwards compatible (old onclicks) — just jump to profile now
     function toggleProfilePanel(){
-      switchView("profile");
+      session.profilePanelOpen = !session.profilePanelOpen;
+      applyProfilePanelUI();
     }
 
     async function connectWallet() {
@@ -1448,9 +1445,9 @@ a.plink:hover{
         loadSecondWalletFromStorage();
 
         await hydrateProfileAndWalletsFromSupabase(addr);
+        queueGlitchRelayToSupabase();
 
-        // Profile actions always visible
-        session.profilePanelOpen = true;
+        session.profilePanelOpen = false;
         applyProfilePanelUI();
 
         await loadDashboard();
@@ -1480,7 +1477,9 @@ a.plink:hover{
       document.getElementById("view-profile").classList.remove("show");
       document.getElementById("view-chat").classList.remove("show");
       document.getElementById("view-games").classList.remove("show");
-      document.getElementById("view-store").classList.remove("show");
+      var vm = document.getElementById("view-missions"); if (vm) vm.classList.remove("show");
+      var vl = document.getElementById("view-leaderboard"); if (vl) vl.classList.remove("show");
+      var vs = document.getElementById("view-store"); if (vs) vs.classList.remove("show");
 
       session.profilePanelOpen = false;
       var tabProfile = document.getElementById("tabProfile");
@@ -1489,6 +1488,12 @@ a.plink:hover{
       if (tabChat) tabChat.classList.remove("active");
       var tabGames = document.getElementById("tabGames");
       if (tabGames) tabGames.classList.remove("active");
+      var tabMissions = document.getElementById("tabMissions");
+      var tabLeaderboard = document.getElementById("tabLeaderboard");
+      var tabStore = document.getElementById("tabStore");
+      if (tabMissions) tabMissions.classList.remove("active");
+      var tabLeaderboard = document.getElementById("tabLeaderboard");
+      if (tabLeaderboard) tabLeaderboard.classList.remove("active");
       var tabStore = document.getElementById("tabStore");
       if (tabStore) tabStore.classList.remove("active");
 
@@ -1502,28 +1507,32 @@ a.plink:hover{
       var vp = document.getElementById("view-profile");
       var vc = document.getElementById("view-chat");
       var vg = document.getElementById("view-games");
+      var vq = document.getElementById("view-missions");
+      var vl = document.getElementById("view-leaderboard");
       var vs = document.getElementById("view-store");
       if (vp) vp.classList.remove("show");
       if (vc) vc.classList.remove("show");
       if (vg) vg.classList.remove("show");
+      if (vq) vq.classList.remove("show");
+      if (vl) vl.classList.remove("show");
       if (vs) vs.classList.remove("show");
 
       // Deactivate all tabs
       var tabProfile = document.getElementById("tabProfile");
       var tabChat    = document.getElementById("tabChat");
       var tabGames   = document.getElementById("tabGames");
-      var tabStore   = document.getElementById("tabStore");
+      var tabMissions = document.getElementById("tabMissions");
       if (tabProfile) tabProfile.classList.remove("active");
       if (tabChat)    tabChat.classList.remove("active");
       if (tabGames)   tabGames.classList.remove("active");
-      if (tabStore)   tabStore.classList.remove("active");
+      if (tabMissions) tabMissions.classList.remove("active");
+      if (tabLeaderboard) tabLeaderboard.classList.remove("active");
+      if (tabStore) tabStore.classList.remove("active");
 
       if (viewName === "profile") {
         stopChatPoll();
         if (vp) vp.classList.add("show");
-        if (tabProfile) tabProfile.classList.add("active");
-        // ensure profile actions are visible
-        applyProfilePanelUI();
+        if (tabProfile) tabProfile.classList.toggle("active", !!session.profilePanelOpen);
       }
 
       if (viewName === "chat") {
@@ -1537,6 +1546,20 @@ a.plink:hover{
         if (vg) vg.classList.add("show");
         if (tabGames) tabGames.classList.add("active");
         renderGamesUI();
+      }
+
+      if (viewName === "missions") {
+        stopChatPoll();
+        if (vq) vq.classList.add("show");
+        if (tabMissions) tabMissions.classList.add("active");
+        renderMissionsUI();
+      }
+
+      if (viewName === "leaderboard") {
+        stopChatPoll();
+        if (vl) vl.classList.add("show");
+        if (tabLeaderboard) tabLeaderboard.classList.add("active");
+        renderLeaderboardUI();
       }
 
       if (viewName === "store") {
@@ -1585,6 +1608,7 @@ a.plink:hover{
         }
 
         document.getElementById("loadingSection").style.display = "none";
+        shop_loadMyItems();
         renderProfileView(merged);
 
         document.getElementById("dashboard").classList.add("show");
@@ -1641,6 +1665,14 @@ a.plink:hover{
         badgeInner = tier.icon;
       }
 
+      // Store frames
+      var frameStyle = '';
+      if (shop_owns('frame_diamond')) {
+        frameStyle = 'box-shadow:0 0 20px rgba(0,212,255,0.4),0 0 40px rgba(123,104,238,0.2);border:3px solid #00d4ff;animation:g_pulse 2s infinite;';
+      } else if (shop_owns('frame_gold')) {
+        frameStyle = 'box-shadow:0 0 15px rgba(255,215,0,0.3);border:3px solid #ffd700;';
+      }
+
       var linksHTML = '';
       if (xUrl) linksHTML += '<a class="plink" href="' + xUrl + '" target="_blank">X: @' + normalizeHandle(session.profile.x) + '</a>';
       if (disc) linksHTML += '<span class="plink" style="cursor:default;">Discord: ' + disc + '</span>';
@@ -1648,7 +1680,7 @@ a.plink:hover{
 
       view.innerHTML +=
       '<div class="tier-card ' + tier.cssClass + '">' +
-        '<div class="tier-badge" id="pfpBadge">' + badgeInner + '</div>' +
+        '<div class="tier-badge" id="pfpBadge" style="' + frameStyle + '">' + badgeInner + '</div>' +
         '<div class="tier-info">' +
           '<div class="tier-label">YOUR TIER</div>' +
           '<div class="tier-name">' + tier.name + '</div>' +
@@ -2010,6 +2042,7 @@ var nextTierRow = nextTier
         // 3) store as second wallet (local + Supabase)
         session.secondWallet.address = addr;
         saveSecondWalletToStorage();
+        queueGlitchRelayToSupabase();
 
         await linkWalletToProfile(addr, session.profileId, false);
 
@@ -2032,6 +2065,7 @@ var nextTierRow = nextTier
       var prev = session.secondWallet.address || "";
       session.secondWallet.address = "";
       saveSecondWalletToStorage();
+      queueGlitchRelayToSupabase();
 
       // Remove from Supabase so it won't be remembered (requires DELETE policy on wallet_links)
       if (prev && session && session.profileId) {
@@ -2156,6 +2190,116 @@ var nextTierRow = nextTier
       }
       return supaClient;
     }
+
+        // ================================================================
+// GLITCH SUPABASE (separate client — matches your schema exactly)
+// ================================================================
+
+var GLITCH_SUPA_URL = "https://YOUR_PROJECT_REF.supabase.co";
+var GLITCH_SUPA_KEY = "YOUR_ANON_KEY";
+
+var glitchClient = null;
+
+function getGlitchClient() {
+  if (!glitchClient) {
+    glitchClient = supabase.createClient(GLITCH_SUPA_URL, GLITCH_SUPA_KEY);
+  }
+  return glitchClient;
+}
+
+function getGlitchDb(){ return getGlitchClient(); }
+
+// --- Debounced relay ---
+var _glitchRelayTimer = null;
+function queueGlitchRelayToSupabase(){
+  if (_glitchRelayTimer) clearTimeout(_glitchRelayTimer);
+  _glitchRelayTimer = setTimeout(function(){
+    glitchRelayNow().catch(function(e){
+      console.warn("Glitch relay failed:", e);
+    });
+  }, 600);
+}
+
+async function glitchRelayNow(){
+  if (!walletPublicKey) return;
+
+  var primary = walletPublicKey.toBase58();
+  var second  = session?.secondWallet?.address || "";
+
+  var db = getGlitchDb();
+
+  // 1️⃣ Check if primary wallet already linked
+  var linkRes = await db
+    .from("wallet_links")
+    .select("profile_id")
+    .eq("wallet_address", primary)
+    .maybeSingle();
+
+  if (linkRes.error) throw linkRes.error;
+
+  var profileId = linkRes.data?.profile_id || null;
+
+  // 2️⃣ If no profile found, create one
+  if (!profileId){
+    var newProfRes = await db
+      .from("profiles")
+      .insert({
+        discord_user_id: session?.profile?.discord_user_id || null,
+        username: session?.profile?.username || null,
+        x_handle: session?.profile?.x || null,
+        pfp_mint: session?.profile?.pfpMint || null,
+        pfp_image: session?.profile?.pfpImage || null
+      })
+      .select("id")
+      .single();
+
+    if (newProfRes.error) throw newProfRes.error;
+
+    profileId = newProfRes.data.id;
+
+    // link primary wallet
+    var upPrimary = await db
+      .from("wallet_links")
+      .upsert({
+        wallet_address: primary,
+        profile_id: profileId,
+        label: "primary",
+        verified_at: new Date().toISOString()
+      }, { onConflict: "wallet_address" });
+
+    if (upPrimary.error) throw upPrimary.error;
+  }
+
+  session.glitchProfileId = profileId;
+
+  // 3️⃣ Update profile fields safely
+  var upd = await db
+    .from("profiles")
+    .update({
+      discord_user_id: session?.profile?.discord_user_id || null,
+      username: session?.profile?.username || null,
+      x_handle: session?.profile?.x || null,
+      pfp_mint: session?.profile?.pfpMint || null,
+      pfp_image: session?.profile?.pfpImage || null
+    })
+    .eq("id", profileId);
+
+  if (upd.error) throw upd.error;
+
+  // 4️⃣ Upsert second wallet if exists
+  if (second){
+    var upSecond = await db
+      .from("wallet_links")
+      .upsert({
+        wallet_address: second,
+        profile_id: profileId,
+        label: "secondary",
+        verified_at: new Date().toISOString()
+      }, { onConflict: "wallet_address" });
+
+    if (upSecond.error) throw upSecond.error;
+  }
+}
 
     /* ===============================
        PROFILES + WALLET LINKING (Supabase)
@@ -2462,6 +2606,7 @@ var nextTierRow = nextTier
         if (!res.ok) throw new Error(data && data.error ? data.error : ('HTTP ' + res.status));
 
         await refreshCabbageUI();
+        mq_track('claim_staking');
       } catch (e) {
         console.error('claimCabbage error:', e);
         alert('Claim failed: ' + (e.message || e));
@@ -2503,14 +2648,15 @@ var nextTierRow = nextTier
         // ── Header ──
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.6rem;">' +
           '<div>' +
-            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.5rem;letter-spacing:3px;color:#e0e0ff;">🦒 HOLDER CHAT</div>' +
+            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.5rem;letter-spacing:3px;color:#e0e0ff;">🪶 HOLDER CHAT</div>' +
             '<div style="font-size:0.7rem;color:#444;letter-spacing:1px;margin-top:2px;">Live · Open to all connected wallets</div>' +
           '</div>' +
           '<div style="display:flex;align-items:center;gap:0.7rem;">' +
             '<div id="chatLiveDot" style="display:flex;align-items:center;gap:5px;font-size:0.7rem;color:#555;">' +
               '<div style="width:7px;height:7px;border-radius:50%;background:#555;"></div>Connecting…' +
             '</div>' +
-                      '</div>' +
+            '<button onclick="switchView(\'profile\')" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#888;padding:7px 14px;border-radius:7px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;transition:all 0.2s;" onmouseover="this.style.borderColor=\'rgba(0,212,255,0.4)\';this.style.color=\'#00d4ff\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,0.1)\';this.style.color=\'#888\'">← Home</button>' +
+          '</div>' +
         '</div>' +
 
         // ── Messages ──
@@ -2550,6 +2696,7 @@ var nextTierRow = nextTier
 
       // Load history then subscribe
       chatMsgs = [];
+      shop_loadAllChatItems();
       loadChatHistory();
     }
 
@@ -2698,7 +2845,7 @@ var nextTierRow = nextTier
       if (chatMsgs.length === 0) {
         inner.innerHTML =
           '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:340px;gap:0.7rem;">' +
-            '<div style="font-size:2.5rem;">🦒</div>' +
+            '<div style="font-size:2.5rem;">🪶</div>' +
             '<div style="color:#252540;font-size:0.78rem;letter-spacing:2px;text-transform:uppercase;">No messages yet</div>' +
             '<div style="color:#1a1a30;font-size:0.7rem;">Be the first legend</div>' +
           '</div>';
@@ -2712,6 +2859,13 @@ var nextTierRow = nextTier
       chatMsgs.forEach(function(m, i) {
         var isMe  = m.wallet === myWallet;
         var color = walletColor(m.wallet);
+
+        // Store cosmetics
+        var badge = shop_getBadge(m.wallet);
+        var vip = shop_getVIP(m.wallet);
+        var nameCol = shop_getNameColor(m.wallet);
+        var glow = shop_hasGlow(m.wallet);
+        if (nameCol) color = nameCol;
 
         // Display name: use stored username if present, else shorten wallet
         var name = m.username
@@ -2728,13 +2882,16 @@ var nextTierRow = nextTier
           if (i > 0) html += '<div style="height:12px;"></div>';
           html +=
             '<div style="display:flex;align-items:baseline;gap:7px;margin-bottom:3px;">' +
+              (vip ? '<span style="font-size:0.6rem;background:linear-gradient(135deg,#ffd700,#ff8c00);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:900;">VIP</span>' : '') +
               '<span style="font-weight:700;font-size:0.8rem;color:' + color + ';">' + escapeHtml(name) + '</span>' +
+              (badge ? '<span style="font-size:0.7rem;">' + badge + '</span>' : '') +
               '<span style="font-size:0.6rem;color:#252540;">' + timeStr + '</span>' +
               (isMe ? '<span style="font-size:0.55rem;letter-spacing:1px;color:#1e1e3a;text-transform:uppercase;">you</span>' : '') +
             '</div>';
         }
 
-        html += '<div style="font-size:0.87rem;color:#c8c8e8;line-height:1.6;word-break:break-word;padding:1px 0;">' + escapeHtml(m.text) + '</div>';
+        var glowStyle = glow ? 'text-shadow:0 0 8px rgba(0,212,255,0.15);' : '';
+        html += '<div style="font-size:0.87rem;color:#c8c8e8;line-height:1.6;word-break:break-word;padding:1px 0;' + glowStyle + '">' + escapeHtml(m.text) + '</div>';
       });
 
       inner.innerHTML = html;
@@ -2780,6 +2937,7 @@ var nextTierRow = nextTier
           chatMsgs.push(res.data);
           paintMessages();
           scrollToBottom(true);
+          mq_track('chat_msg');
         }
       } catch(e) {
         console.error('Send error:', e);
@@ -2801,8 +2959,8 @@ var nextTierRow = nextTier
 
     var g_SOL_TREASURY = 'ChnzFpK4ty2vpzM48HUrtDVY7tWD8StmYaNxQcKSBuyc';
     var g_NFT_TREASURY = '3HkAeqdaPJHK46TuTmchmK789CZgmKb9vMihoXjzQmth';
-    var g_NFT_POT_THRESHOLD_SOL = 50;
-    var g_NFT_POT_THRESHOLD_CAB = 10000;
+    var g_NFT_POT_THRESHOLD_SOL = 10;
+    var g_NFT_POT_THRESHOLD_CAB = 100000;
 
     // House edges: coin flip 43% win/1.80x, dice 45%/1.75x, slots as below
     var g_GAMES = {
@@ -2817,11 +2975,29 @@ var nextTierRow = nextTier
 
     // NFT bonus: +win% based on LNL held
     function g_nftBonus(count) {
-      if (count >= 20) return 0.04;
-      if (count >= 10) return 0.03;
-      if (count >= 5)  return 0.02;
-      if (count >= 1)  return 0.01;
-      return 0;
+      var bonus = 0;
+      if (count >= 20) bonus = 0.04;
+      else if (count >= 10) bonus = 0.03;
+      else if (count >= 5)  bonus = 0.02;
+      else if (count >= 1)  bonus = 0.01;
+      // Lucky Boost from store
+      if (shop_hasBoost()) bonus += 0.05;
+      return bonus;
+    }
+
+    // Call after each casino bet to decrement boost uses
+    function g_useBoost() {
+      if (!shop_hasBoost()) return;
+      var b = shop_items['lucky_boost'];
+      if (b && b.data && b.data.uses_left > 0) {
+        b.data.uses_left--;
+        // Update server async (fire-and-forget)
+        if (walletPublicKey) {
+          getSupaClient().from('user_items').update({ data: b.data })
+            .eq('wallet', walletPublicKey.toBase58()).eq('item_id', 'lucky_boost')
+            .then(function(){}).catch(function(){});
+        }
+      }
     }
 
     var g_currency    = 'sol';  // 'sol' or 'cabbage'
@@ -2837,12 +3013,18 @@ var nextTierRow = nextTier
     async function g_logBet(game, betAmt, currency, houseProft) {
       try {
         if (!walletPublicKey) return;
-        await g_getSb().from('game_bets').insert({
+        // Get current pot round
+        var sb = g_getSb();
+        var stR = await sb.from('prize_state').select('sol_round,cab_round').eq('id', 1).maybeSingle();
+        var round = 1;
+        if (stR.data) round = currency === 'sol' ? stR.data.sol_round : stR.data.cab_round;
+        await sb.from('game_bets').insert({
           wallet:       walletPublicKey.toBase58(),
           game:         game,
           bet_amount:   betAmt,
           currency:     currency,
           house_profit: houseProft,
+          pot_round:    round,
           played_at:    new Date().toISOString()
         });
       } catch(e) { console.warn('g_logBet error:', e); }
@@ -2850,61 +3032,73 @@ var nextTierRow = nextTier
 
     async function g_fetchPotProgress() {
       try {
-        var res = await g_getSb()
-          .from('game_bets')
-          .select('house_profit, currency')
-          .gt('house_profit', 0);
-        if (res.error || !res.data) return { sol: 0, cabbage: 0 };
-        var sol = 0, cab = 0;
-        res.data.forEach(function(r) {
-          if (r.currency === 'sol') sol += Number(r.house_profit || 0);
-          else cab += Number(r.house_profit || 0);
+        var res = await fetch(SUPA_URL.replace(/\/+$/,'') + '/functions/v1/cabbage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY },
+          body: JSON.stringify({ action: 'pot_status' })
         });
-        return { sol: sol, cabbage: cab };
-      } catch(e) { return { sol: 0, cabbage: 0 }; }
+        var data = await res.json();
+        return {
+          sol: data.sol || 0,
+          cabbage: data.cabbage || 0,
+          sol_threshold: data.sol_threshold || g_NFT_POT_THRESHOLD_SOL,
+          cab_threshold: data.cab_threshold || g_NFT_POT_THRESHOLD_CAB
+        };
+      } catch(e) { return { sol: 0, cabbage: 0, sol_threshold: g_NFT_POT_THRESHOLD_SOL, cab_threshold: g_NFT_POT_THRESHOLD_CAB }; }
     }
 
-    async function g_checkAndTriggerPrize(currency, pot) {
-      var threshold = currency === 'sol' ? g_NFT_POT_THRESHOLD_SOL : g_NFT_POT_THRESHOLD_CAB;
+    async function g_checkAndTriggerPrize(currency, pot, threshold) {
       if (pot < threshold) return;
       if (!walletPublicKey) return;
       try {
-        await g_getSb().from('nft_winners').insert({
-          wallet:   walletPublicKey.toBase58(),
-          username: (session && session.profile && session.profile.username) || null,
-          currency: currency,
-          won_at:   new Date().toISOString(),
-          status:   'pending_airdrop'
+        var res = await fetch(SUPA_URL.replace(/\/+$/,'') + '/functions/v1/cabbage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY },
+          body: JSON.stringify({ action: 'trigger_prize', currency: currency })
         });
-        g_showWinnerModal();
+        var data = await res.json();
+        if (data.ok && data.winner) {
+          g_showWinnerModal(data.winner, data.nft_name || 'LNL NFT', data.tx_sig || '');
+        }
       } catch(e) { console.warn('g_checkAndTriggerPrize error:', e); }
     }
 
     async function g_updatePotUI() {
       try {
         var pot = await g_fetchPotProgress();
-        var solPct = Math.min(100, (pot.sol / g_NFT_POT_THRESHOLD_SOL) * 100);
-        var cabPct = Math.min(100, (pot.cabbage / g_NFT_POT_THRESHOLD_CAB) * 100);
+        var solTh = pot.sol_threshold || g_NFT_POT_THRESHOLD_SOL;
+        var cabTh = pot.cab_threshold || g_NFT_POT_THRESHOLD_CAB;
+        var solPct = Math.min(100, (pot.sol / solTh) * 100);
+        var cabPct = Math.min(100, (pot.cabbage / cabTh) * 100);
         var sb = document.getElementById('g_solPotBar');
         var cb = document.getElementById('g_cabPotBar');
         var sl = document.getElementById('g_solPotLabel');
         var cl = document.getElementById('g_cabPotLabel');
         if (sb) sb.style.width = solPct + '%';
         if (cb) cb.style.width = cabPct + '%';
-        if (sl) sl.textContent = pot.sol.toFixed(2) + ' / ' + g_NFT_POT_THRESHOLD_SOL + ' ◎';
-        if (cl) cl.textContent = Math.floor(pot.cabbage).toLocaleString() + ' / ' + g_NFT_POT_THRESHOLD_CAB.toLocaleString() + ' 🥬';
+        if (sl) sl.textContent = pot.sol.toFixed(2) + ' / ' + solTh + ' ◎';
+        if (cl) cl.textContent = Math.floor(pot.cabbage).toLocaleString() + ' / ' + cabTh.toLocaleString() + ' 🥬';
         // Check triggers
-        await g_checkAndTriggerPrize('sol', pot.sol);
-        await g_checkAndTriggerPrize('cabbage', pot.cabbage);
+        await g_checkAndTriggerPrize('sol', pot.sol, solTh);
+        await g_checkAndTriggerPrize('cabbage', pot.cabbage, cabTh);
       } catch(e) {}
     }
 
-    function g_showWinnerModal() {
-      var wallet = walletPublicKey ? walletPublicKey.toBase58() : '—';
+    function g_showWinnerModal(winnerAddr, nftName, txSig) {
       var modal = document.getElementById('g_winnerModal');
       if (!modal) return;
       var wa = document.getElementById('g_winnerWallet');
-      if (wa) wa.textContent = wallet;
+      if (wa) wa.textContent = winnerAddr || '—';
+      var na = document.getElementById('g_winnerNFT');
+      if (na) na.textContent = nftName || 'LNL NFT';
+      var ta = document.getElementById('g_winnerTx');
+      if (ta) {
+        if (txSig && !txSig.startsWith('FAILED')) {
+          ta.innerHTML = '<a href="https://solscan.io/tx/' + txSig + '" target="_blank" style="color:#00d4ff;text-decoration:underline;font-size:0.65rem;word-break:break-all;">View on Solscan →</a>';
+        } else {
+          ta.textContent = 'Transfer processing…';
+        }
+      }
       modal.style.display = 'flex';
       g_launchConfetti();
     }
@@ -3045,7 +3239,7 @@ var nextTierRow = nextTier
       return data;
     }
 
-    // ── SOL→Cabbage conversion: 1 SOL bet = 100 cabbage payout ──
+    // ── SOL→Cabbage conversion: 1 SOL = 100 cabbage ──
     var g_SOL_TO_CABBAGE = 100;
 
     async function g_creditCabbage(amount) {
@@ -3080,9 +3274,9 @@ var nextTierRow = nextTier
     function g_playSlots(nftCount) {
       var bonus = g_nftBonus(nftCount);
       var r = Math.random() - bonus * 0.5; // small bonus shifts result
-      var symbols = ['🦒','🌿','🎲','💎','🔥','⭐'];
+      var symbols = ['🪶','🌿','🎲','💎','🔥','⭐'];
       if (r < g_GAMES.slots.jackpot.chance) {
-        return { reels: ['🦒','🦒','🦒'], result: 'jackpot', payout: g_GAMES.slots.jackpot.payout };
+        return { reels: ['🪶','🪶','🪶'], result: 'jackpot', payout: g_GAMES.slots.jackpot.payout };
       }
       if (r < g_GAMES.slots.jackpot.chance + g_GAMES.slots.threeKind.chance) {
         var s = symbols[Math.floor(Math.random() * symbols.length)];
@@ -3105,6 +3299,11 @@ var nextTierRow = nextTier
       g_betHistory.unshift({ game: game, bet: betAmt, currency: currency, won: won, payout: payout, time: new Date() });
       if (g_betHistory.length > 20) g_betHistory.pop();
       g_renderHistory();
+      // Mission tracking
+      mq_track('casino_play');
+      if (won) mq_track('casino_win');
+      // Lucky Boost decrement
+      g_useBoost();
     }
 
     function g_renderHistory() {
@@ -3147,15 +3346,35 @@ var nextTierRow = nextTier
         '.g_reel{font-size:2.2rem;background:#06060f;border:1px solid #161628;border-radius:10px;width:60px;height:60px;display:inline-flex;align-items:center;justify-content:center;}' +
         '.g_pot-bar{height:8px;background:rgba(255,255,255,0.05);border-radius:4px;overflow:hidden;margin-top:5px;}' +
         '.g_pot-fill{height:100%;border-radius:4px;transition:width 1s ease;}' +
+        '@keyframes g_coinFlip{0%{transform:rotateY(0)}100%{transform:rotateY(1800deg)}}' +
+        '@keyframes g_coinLand{0%{transform:scale(1.15)}50%{transform:scale(0.95)}100%{transform:scale(1)}}' +
+        '.g_coin{width:80px;height:80px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;perspective:600px;margin:0 auto;}' +
+        '.g_coin-inner{width:100%;height:100%;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.6rem;font-weight:900;transition:transform 0.1s;}' +
+        '.g_coin-inner.spinning{animation:g_coinFlip 1.2s ease-out forwards;}' +
+        '.g_coin-inner.landed{animation:g_coinLand 0.3s ease-out;}' +
+        '.g_coin-heads{background:linear-gradient(135deg,#ffd700,#f0c000);color:#6b4c00;border:3px solid #e6b800;text-shadow:0 1px 2px rgba(0,0,0,0.2);}' +
+        '.g_coin-tails{background:linear-gradient(135deg,#c0c0c0,#a0a0a0);color:#333;border:3px solid #909090;text-shadow:0 1px 2px rgba(0,0,0,0.15);}' +
+        '.bj_card{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:62px;height:88px;border-radius:8px;font-weight:700;font-size:0.95rem;margin:3px;box-shadow:0 3px 12px rgba(0,0,0,0.4);}' +
+        '.bj_front{background:linear-gradient(135deg,#fff,#f0f0f0);border:2px solid #ddd;}' +
+        '.bj_back{background:linear-gradient(135deg,#1a3a6a,#0d2240);border:2px solid #2a4a7a;background-image:repeating-linear-gradient(45deg,transparent,transparent 5px,rgba(255,255,255,0.03) 5px,rgba(255,255,255,0.03) 10px);}' +
+        '.bj_red{color:#cc0000;} .bj_blk{color:#111;}' +
+        '.pk_seat{width:110px;padding:10px;border-radius:12px;text-align:center;font-size:0.68rem;transition:all 0.2s;border:1px solid rgba(255,255,255,0.06);background:rgba(0,0,0,0.3);}' +
+        '.pk_seat.occ{border-color:rgba(0,255,136,0.3);background:rgba(0,255,136,0.04);}' +
+        '.pk_seat.turn{border-color:rgba(255,215,0,0.6);box-shadow:0 0 15px rgba(255,215,0,0.15);}' +
+        '.pk_seat.fold{opacity:0.4;}' +
+        '.plinko_canvas{width:100%;border-radius:8px;background:#06060f;border:1px solid #161628;display:block;}' +
+        '.crash_canvas{width:100%;height:200px;border-radius:8px;background:#06060f;border:1px solid #161628;display:block;}' +
+        '.crash_multi{font-family:"Bebas Neue",sans-serif;font-size:2.8rem;letter-spacing:2px;text-align:center;margin:0.3rem 0;transition:color 0.15s;}' +
         '</style>' +
 
         // ── Header ──
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;flex-wrap:wrap;gap:0.6rem;">' +
           '<div>' +
             '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.5rem;letter-spacing:3px;color:#e0e0ff;">🎰 LNL CASINO</div>' +
-            '<div style="font-size:0.7rem;color:#444;letter-spacing:1px;margin-top:2px;">All wins paid in 🥬 Cabbage · SOL bets fill the treasury</div>' +
+            '<div style="font-size:0.7rem;color:#444;letter-spacing:1px;margin-top:2px;">All wins paid in \ud83e\udd6c Cabbage \u00b7 SOL bets fill the treasury</div>' +
           '</div>' +
-                  '</div>' +
+          '<button onclick="switchView(\'profile\')" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#888;padding:7px 14px;border-radius:7px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;" onmouseover="this.style.borderColor=\'rgba(0,212,255,0.4)\';this.style.color=\'#00d4ff\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,0.1)\';this.style.color=\'#888\'">← Home</button>' +
+        '</div>' +
 
         // ── Balance bar ──
         '<div class="g_card" style="display:flex;gap:1.2rem;flex-wrap:wrap;align-items:center;padding:1rem 1.4rem;">' +
@@ -3206,11 +3425,14 @@ var nextTierRow = nextTier
           // COIN FLIP
           '<div class="g_card" style="margin:0;">' +
             '<div class="g_title">🪙 COIN FLIP</div>' +
-            '<div style="text-align:center;margin:1rem 0;">' +
-              '<div id="g_coinFace" style="font-size:3.5rem;line-height:1;">🪙</div>' +
+            '<div style="text-align:center;margin:0.6rem 0;">' +
+              '<div class="g_coin"><div class="g_coin-inner g_coin-heads" id="g_coinInner">👑</div></div>' +
               '<div style="color:#555;font-size:0.7rem;margin-top:6px;letter-spacing:1px;">43% WIN · 1.80× PAYOUT</div>' +
             '</div>' +
-            '<button class="g_btn g_btn-primary" style="width:100%;" id="g_coinBtn" onclick="g_playCoinGame()">FLIP</button>' +
+            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">' +
+              '<button class="g_btn g_btn-primary" id="g_coinHeadsBtn" onclick="g_playCoinGame(\'heads\')">👑 HEADS</button>' +
+              '<button class="g_btn g_btn-primary" id="g_coinTailsBtn" onclick="g_playCoinGame(\'tails\')">🪶 TAILS</button>' +
+            '</div>' +
             '<div class="g_result" id="g_coinResult" style="display:none;"></div>' +
           '</div>' +
 
@@ -3235,14 +3457,61 @@ var nextTierRow = nextTier
             '<div class="g_title">🎰 SLOTS</div>' +
             '<div style="text-align:center;margin:0.8rem 0;">' +
               '<div style="display:flex;gap:8px;justify-content:center;" id="g_slotReels">' +
-                '<div class="g_reel" id="g_reel0">🦒</div>' +
-                '<div class="g_reel" id="g_reel1">🦒</div>' +
-                '<div class="g_reel" id="g_reel2">🦒</div>' +
+                '<div class="g_reel" id="g_reel0">🪶</div>' +
+                '<div class="g_reel" id="g_reel1">🪶</div>' +
+                '<div class="g_reel" id="g_reel2">🪶</div>' +
               '</div>' +
-              '<div style="color:#555;font-size:0.65rem;margin-top:8px;letter-spacing:0.5px;">🦒🦒🦒 = 15× · 3-kind = 7× · 2-kind = 1.8×</div>' +
+              '<div style="color:#555;font-size:0.65rem;margin-top:8px;letter-spacing:0.5px;">🪶🪶🪶 = 15× · 3-kind = 7× · 2-kind = 1.8×</div>' +
             '</div>' +
             '<button class="g_btn g_btn-primary" style="width:100%;" id="g_slotsBtn" onclick="g_playSlotsGame()">SPIN</button>' +
             '<div class="g_result" id="g_slotsResult" style="display:none;"></div>' +
+          '</div>' +
+
+          // BLACKJACK
+          '<div class="g_card" style="margin:0;">' +
+            '<div class="g_title">🃏 BLACKJACK</div>' +
+            '<div id="bj_table" style="text-align:center;min-height:165px;">' +
+              '<div style="font-size:0.6rem;color:#555;letter-spacing:1px;margin-bottom:4px;">DEALER</div>' +
+              '<div id="bj_dealerCards" style="display:flex;justify-content:center;gap:3px;min-height:74px;align-items:center;"><span style="color:#252540;font-size:0.75rem;">Press Deal to play</span></div>' +
+              '<div id="bj_dealerScore" style="font-size:0.7rem;color:#888;margin:3px 0;min-height:16px;"></div>' +
+              '<div style="height:1px;background:rgba(255,255,255,0.04);margin:4px 0;"></div>' +
+              '<div id="bj_playerScore" style="font-size:0.7rem;color:#888;margin:3px 0;min-height:16px;"></div>' +
+              '<div id="bj_playerCards" style="display:flex;justify-content:center;gap:3px;min-height:74px;align-items:center;"></div>' +
+              '<div style="font-size:0.6rem;color:#555;letter-spacing:1px;margin-top:4px;">YOU</div>' +
+            '</div>' +
+            '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0.4rem;margin-top:0.5rem;">' +
+              '<button class="g_btn g_btn-primary" id="bj_dealBtn" onclick="bj_deal()">DEAL</button>' +
+              '<button class="g_btn" id="bj_hitBtn" onclick="bj_hit()" disabled>HIT</button>' +
+              '<button class="g_btn" id="bj_standBtn" onclick="bj_stand()" disabled>STAND</button>' +
+              '<button class="g_btn" id="bj_doubleBtn" onclick="bj_double()" disabled>2×</button>' +
+            '</div>' +
+            '<div class="g_result" id="bj_result" style="display:none;"></div>' +
+          '</div>' +
+
+          // CABBAGE DROP (PLINKO)
+          '<div class="g_card" style="margin:0;">' +
+            '<div class="g_title">🥬 CABBAGE DROP</div>' +
+            '<canvas id="plinko_cv" class="plinko_canvas" width="300" height="340"></canvas>' +
+            '<div style="display:flex;justify-content:center;gap:2px;margin-top:4px;" id="plinko_slots"></div>' +
+            '<button class="g_btn g_btn-primary" style="width:100%;margin-top:0.5rem;" id="plinko_btn" onclick="plinko_drop()">DROP</button>' +
+            '<div class="g_result" id="plinko_result" style="display:none;"></div>' +
+          '</div>' +
+
+          // CRASH
+          '<div class="g_card" style="margin:0;">' +
+            '<div class="g_title">📈 CRASH</div>' +
+            '<canvas id="crash_cv" class="crash_canvas" width="300" height="200"></canvas>' +
+            '<div class="crash_multi" id="crash_multi" style="color:#555;">1.00×</div>' +
+            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem;">' +
+              '<button class="g_btn g_btn-primary" id="crash_startBtn" onclick="crash_start()">BET & WATCH</button>' +
+              '<button class="g_btn" id="crash_cashBtn" onclick="crash_cashout()" disabled style="border-color:rgba(0,255,136,0.3);color:#00ff88;">CASH OUT</button>' +
+            '</div>' +
+            '<div style="display:flex;align-items:center;gap:6px;margin-top:6px;">' +
+              '<span style="color:#555;font-size:0.65rem;">Auto cash:</span>' +
+              '<input id="crash_auto" type="number" min="1.1" step="0.1" value="2" style="width:60px;background:#06060f;border:1px solid #1e1e3a;color:#e0e0ff;padding:5px 8px;border-radius:6px;font-family:\'Space Grotesk\',sans-serif;font-size:0.78rem;text-align:center;" />' +
+              '<span style="color:#555;font-size:0.65rem;">×</span>' +
+            '</div>' +
+            '<div class="g_result" id="crash_result" style="display:none;"></div>' +
           '</div>' +
 
         '</div>' +
@@ -3253,22 +3522,42 @@ var nextTierRow = nextTier
           '<div id="g_historyList"><div style="color:#252540;font-size:0.75rem;text-align:center;padding:1rem;letter-spacing:1px;">No games played yet</div></div>' +
         '</div>' +
 
+        // ── Texas Hold\'em Poker Lobby ──
+        '<div class="g_card">' +
+          '<div class="g_title">🃏 TEXAS HOLD\'EM — LIVE TABLES</div>' +
+          '<div style="font-size:0.72rem;color:#444;margin-bottom:1rem;">Sit down with up to 5 players. Buy in with 🥬. Winner takes the pot.</div>' +
+          '<div id="pk_lobby"><div style="text-align:center;padding:1rem;color:#252540;font-size:0.78rem;">Loading tables…</div></div>' +
+        '</div>' +
+
+        // ── Poker Game Area (hidden until seated) ──
+        '<div id="pk_gameWrap" style="display:none;">' +
+          '<div class="g_card" style="position:relative;min-height:400px;">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.8rem;">' +
+              '<div class="g_title" style="margin:0;" id="pk_tableName">TABLE</div>' +
+              '<button class="g_btn" onclick="pk_leaveTable()">Leave Table</button>' +
+            '</div>' +
+            '<div id="pk_gameArea"></div>' +
+          '</div>' +
+        '</div>' +
+
         // ── Footer ──
         '<div style="background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.04);border-radius:10px;padding:0.9rem 1.2rem;font-size:0.63rem;color:#2a2a44;letter-spacing:0.8px;text-align:center;line-height:2.2;text-transform:uppercase;">' +
           '◎ SOL Bets → <span style="font-family:monospace;color:#333;">' + g_SOL_TREASURY + '</span><br>' +
           '🏆 NFT Prizes From → <span style="font-family:monospace;color:#333;">' + g_NFT_TREASURY + '</span><br>' +
-          'SOL bets sent on-chain to treasury · All wins paid in 🥬 Cabbage (1 ◎ = 100 🥬) · House profit fills the NFT prize pot · Play responsibly' +
+          'SOL bets → treasury · All wins paid in 🥬 (1 ◎ = 100 🥬) · House profit fills NFT prize pot · Play responsibly' +
         '</div>' +
 
         // ── Winner Modal ──
         '<div id="g_winnerModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;align-items:center;justify-content:center;padding:2rem;">' +
           '<div id="g_confettiContainer" style="position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:10000;"></div>' +
           '<div style="position:relative;z-index:10001;background:linear-gradient(135deg,#111125,#0d0d20);border:2px solid #ffd700;box-shadow:0 0 60px rgba(255,215,0,0.3);border-radius:20px;padding:2.5rem;max-width:480px;width:100%;text-align:center;">' +
-            '<div style="font-size:4rem;animation:g_pulse 1.5s infinite;">🦒</div>' +
-            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:2rem;letter-spacing:4px;color:#ffd700;margin:0.5rem 0;">YOU WON AN NFT!</div>' +
-            '<div style="color:#888;font-size:0.8rem;margin-bottom:1rem;">Airdropping to your wallet</div>' +
-            '<div style="font-family:monospace;font-size:0.7rem;color:#555;word-break:break-all;background:rgba(0,0,0,0.3);padding:0.8rem;border-radius:8px;margin-bottom:1.5rem;" id="g_winnerWallet"></div>' +
-            '<div style="color:#00ff88;font-size:0.82rem;margin-bottom:1.5rem;">Your LNL NFT will be automatically sent to this wallet. This typically happens within seconds.</div>' +
+            '<div style="font-size:4rem;animation:g_pulse 1.5s infinite;">🪶</div>' +
+            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:2rem;letter-spacing:4px;color:#ffd700;margin:0.5rem 0;">🎉 NFT AIRDROP!</div>' +
+            '<div style="color:#00ff88;font-size:1rem;font-weight:700;margin-bottom:0.5rem;" id="g_winnerNFT">LNL NFT</div>' +
+            '<div style="color:#888;font-size:0.8rem;margin-bottom:1rem;">Airdropped to lucky winner:</div>' +
+            '<div style="font-family:monospace;font-size:0.7rem;color:#555;word-break:break-all;background:rgba(0,0,0,0.3);padding:0.8rem;border-radius:8px;margin-bottom:0.8rem;" id="g_winnerWallet"></div>' +
+            '<div style="margin-bottom:1.5rem;" id="g_winnerTx"></div>' +
+            '<div style="color:#888;font-size:0.72rem;margin-bottom:1.5rem;">The pot has been reset. Keep playing for the next NFT drop!</div>' +
             '<button class="g_btn g_btn-primary" onclick="g_closeWinnerModal()">AWESOME!</button>' +
           '</div>' +
         '</div>';
@@ -3277,6 +3566,8 @@ var nextTierRow = nextTier
       g_loadGameBalances();
       g_updatePotUI();
       g_renderHistory();
+      pk_loadLobby();
+      setTimeout(function(){ plinko_init(); crash_init(); }, 100);
     }
 
     function g_setCurrency(cur) {
@@ -3306,7 +3597,7 @@ var nextTierRow = nextTier
     }
 
     function g_disableGameBtns(dis) {
-      ['g_coinBtn','g_slotsBtn'].forEach(function(id){
+      ['g_coinHeadsBtn','g_coinTailsBtn','g_slotsBtn','bj_dealBtn','plinko_btn','crash_startBtn'].forEach(function(id){
         var b = document.getElementById(id);
         if (b) b.disabled = dis;
       });
@@ -3327,49 +3618,33 @@ var nextTierRow = nextTier
       }
     }
 
-    async function g_playCoinGame() {
+    async function g_playCoinGame(choice) {
       if (g_isSpinning) return;
       g_isSpinning = true;
       g_disableGameBtns(true);
-      var coinEl = document.getElementById('g_coinFace');
+      var coinEl = document.getElementById('g_coinInner');
       var bet = parseFloat(document.getElementById('g_betInput').value) || g_betAmount;
       g_betAmount = bet;
-
       try {
         await g_runBet(bet, g_currency);
-
-        // Animate
-        if (coinEl) { coinEl.textContent = '🌀'; }
-        await new Promise(function(r){ setTimeout(r, 600); });
-
+        if (coinEl) { coinEl.className = 'g_coin-inner spinning'; coinEl.textContent = ''; }
+        await new Promise(function(r){ setTimeout(r, 1200); });
         var nftCount = session.loadedNFTs ? session.loadedNFTs.length : 0;
-        var won = g_playCoin(nftCount);
+        var won = Math.random() < (g_GAMES.coin.winChance + g_nftBonus(nftCount));
+        var flipResult = won ? choice : (choice === 'heads' ? 'tails' : 'heads');
+        var isH = flipResult === 'heads';
+        if (coinEl) { coinEl.className = 'g_coin-inner landed ' + (isH ? 'g_coin-heads' : 'g_coin-tails'); coinEl.textContent = isH ? '👑' : '🪶'; }
         var multiplier = g_GAMES.coin.payout;
-        var cabbagePayout = 0;
-
-        if (won) {
-          cabbagePayout = g_currency === 'sol'
-            ? bet * multiplier * g_SOL_TO_CABBAGE
-            : bet * multiplier;
-          await g_creditCabbage(cabbagePayout);
-        }
-
-        var houseProfit = won ? 0 : bet;
-        if (coinEl) coinEl.textContent = won ? '😎' : '💀';
-
-        if (won) {
-          g_setResult('g_coinResult', '✅ HEADS! Won ' + cabbagePayout.toFixed(2) + ' 🥬', true);
-        } else {
-          g_setResult('g_coinResult', '💀 TAILS! Lost ' + bet.toFixed(4) + (g_currency==='sol'?' ◎':' 🥬'), false);
-        }
-
-        g_addHistory('🪙 Coin', bet, g_currency, won, cabbagePayout);
-        await g_logBet('🪙 Coin Flip', bet, g_currency, Math.max(0, houseProfit));
-        await g_updatePotUI();
-        await g_loadGameBalances();
+        var cabPay = 0;
+        if (won) { cabPay = g_currency === 'sol' ? bet * multiplier * g_SOL_TO_CABBAGE : bet * multiplier; await g_creditCabbage(cabPay); }
+        if (won) { g_setResult('g_coinResult', '✅ ' + flipResult.toUpperCase() + '! Won ' + cabPay.toFixed(2) + ' 🥬', true); }
+        else { g_setResult('g_coinResult', '💀 ' + flipResult.toUpperCase() + '! Lost ' + bet.toFixed(4) + (g_currency==='sol'?' ◎':' 🥬'), false); }
+        g_addHistory('🪙 Coin', bet, g_currency, won, cabPay);
+        await g_logBet('🪙 Coin Flip', bet, g_currency, won ? 0 : bet);
+        await g_updatePotUI(); await g_loadGameBalances();
       } catch(e) {
         g_setResult('g_coinResult', '⚠ ' + (e.message || 'Error'), false);
-        if (coinEl) coinEl.textContent = '🪙';
+        if (coinEl) { coinEl.className = 'g_coin-inner g_coin-heads'; coinEl.textContent = '👑'; }
       }
       g_isSpinning = false;
       g_disableGameBtns(false);
@@ -3394,26 +3669,16 @@ var nextTierRow = nextTier
         var diceNums = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣'];
         if (diceEl) diceEl.textContent = diceNums[result.roll - 1];
 
-        var multiplier = g_GAMES.dice.payout;
-        var cabbagePayout = 0;
-
+        var cabPay = 0;
+        if (result.won) { cabPay = g_currency === 'sol' ? bet * g_GAMES.dice.payout * g_SOL_TO_CABBAGE : bet * g_GAMES.dice.payout; await g_creditCabbage(cabPay); }
         if (result.won) {
-          cabbagePayout = g_currency === 'sol'
-            ? bet * multiplier * g_SOL_TO_CABBAGE
-            : bet * multiplier;
-          await g_creditCabbage(cabbagePayout);
-        }
-
-        var houseProfit = result.won ? 0 : bet;
-
-        if (result.won) {
-          g_setResult('g_diceResult', '✅ Rolled ' + result.roll + ' (' + choice.toUpperCase() + ')! Won ' + cabbagePayout.toFixed(2) + ' 🥬', true);
+          g_setResult('g_diceResult', '✅ Rolled ' + result.roll + ' (' + choice.toUpperCase() + ')! Won ' + cabPay.toFixed(2) + ' 🥬', true);
         } else {
           g_setResult('g_diceResult', '❌ Rolled ' + result.roll + ' (' + choice.toUpperCase() + '). Lost ' + bet.toFixed(4) + (g_currency==='sol'?' ◎':' 🥬'), false);
         }
 
-        g_addHistory('🎲 Dice', bet, g_currency, result.won, cabbagePayout);
-        await g_logBet('🎲 Dice Roll', bet, g_currency, Math.max(0, houseProfit));
+        g_addHistory('🎲 Dice', bet, g_currency, result.won, cabPay);
+        await g_logBet('🎲 Dice Roll', bet, g_currency, result.won ? 0 : bet);
         await g_updatePotUI();
         await g_loadGameBalances();
       } catch(e) {
@@ -3435,7 +3700,7 @@ var nextTierRow = nextTier
         await g_runBet(bet, g_currency);
 
         // Spin animation
-        var spinSyms = ['🦒','🌿','🎲','💎','🔥','⭐'];
+        var spinSyms = ['🪶','🌿','🎲','💎','🔥','⭐'];
         var si = 0;
         var spinAnim = setInterval(function(){
           for (var i = 0; i < 3; i++) {
@@ -3455,27 +3720,19 @@ var nextTierRow = nextTier
           if (el) el.textContent = slotsResult.reels[i];
         }
 
-        var won = slotsResult.result !== 'loss';
-        var cabbagePayout = 0;
-
-        if (won) {
-          cabbagePayout = g_currency === 'sol'
-            ? bet * slotsResult.payout * g_SOL_TO_CABBAGE
-            : bet * slotsResult.payout;
-          await g_creditCabbage(cabbagePayout);
-        }
-
-        var houseProfit = won ? 0 : bet;
+        var sWon = slotsResult.result !== 'loss';
+        var cabPay = 0;
+        if (sWon) { cabPay = g_currency === 'sol' ? bet * slotsResult.payout * g_SOL_TO_CABBAGE : bet * slotsResult.payout; await g_creditCabbage(cabPay); }
 
         var msg;
-        if (slotsResult.result === 'jackpot') msg = '🎉 JACKPOT! Won ' + cabbagePayout.toFixed(2) + ' 🥬';
-        else if (slotsResult.result === 'three') msg = '✅ THREE OF A KIND! Won ' + cabbagePayout.toFixed(2) + ' 🥬';
-        else if (slotsResult.result === 'two') msg = '✅ PAIR! Won ' + cabbagePayout.toFixed(2) + ' 🥬';
+        if (slotsResult.result === 'jackpot') msg = '🎉 JACKPOT! Won ' + cabPay.toFixed(2) + ' 🥬';
+        else if (slotsResult.result === 'three') msg = '✅ THREE OF A KIND! Won ' + cabPay.toFixed(2) + ' 🥬';
+        else if (slotsResult.result === 'two') msg = '✅ PAIR! Won ' + cabPay.toFixed(2) + ' 🥬';
         else msg = '❌ No match. Lost ' + bet.toFixed(4) + (g_currency==='sol'?' ◎':' 🥬');
 
-        g_setResult('g_slotsResult', msg, won);
-        g_addHistory('🎰 Slots', bet, g_currency, won, cabbagePayout);
-        await g_logBet('🎰 Slots', bet, g_currency, Math.max(0, houseProfit));
+        g_setResult('g_slotsResult', msg, sWon);
+        g_addHistory('🎰 Slots', bet, g_currency, sWon, cabPay);
+        await g_logBet('🎰 Slots', bet, g_currency, sWon ? 0 : bet);
         await g_updatePotUI();
         await g_loadGameBalances();
       } catch(e) {
@@ -3485,350 +3742,1549 @@ var nextTierRow = nextTier
       g_disableGameBtns(false);
     }
 
+    /* ================================================================
+       BLACKJACK vs DEALER
+    ================================================================ */
+    var bj_deck=[],bj_pH=[],bj_dH=[],bj_state='idle',bj_bet=0;
+    var BJ_S=['\u2660','\u2665','\u2666','\u2663'];
+    var BJ_SC={'\u2660':'bj_blk','\u2665':'bj_red','\u2666':'bj_red','\u2663':'bj_blk'};
+    var BJ_V=['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+
+    function bj_mkDeck(){var d=[];for(var s=0;s<4;s++)for(var v=0;v<13;v++)d.push({v:BJ_V[v],s:BJ_S[s]});for(var i=d.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=d[i];d[i]=d[j];d[j]=t;}return d;}
+    function bj_cv(c){if(c.v==='A')return 11;if('KQJ'.indexOf(c.v)>=0)return 10;return parseInt(c.v);}
+    function bj_hv(h){var t=0,a=0;for(var i=0;i<h.length;i++){t+=bj_cv(h[i]);if(h[i].v==='A')a++;}while(t>21&&a>0){t-=10;a--;}return t;}
+    function bj_rc(c,hide){
+      if(hide)return'<div class="bj_card bj_back"><div style="font-size:1.4rem;color:#2a4a7a;">🂠</div></div>';
+      var cc=BJ_SC[c.s]||'bj_blk';
+      return'<div class="bj_card bj_front '+cc+'"><div style="font-size:0.8rem;align-self:flex-start;margin:2px 0 0 4px;">'+c.v+'</div><div style="font-size:1.4rem;">'+c.s+'</div><div style="font-size:0.8rem;align-self:flex-end;margin:0 4px 2px 0;">'+c.v+'</div></div>';
+    }
+    function bj_paint(show){
+      var dc=document.getElementById('bj_dealerCards'),pc=document.getElementById('bj_playerCards');
+      var ds=document.getElementById('bj_dealerScore'),ps=document.getElementById('bj_playerScore');
+      if(dc){var h='';for(var i=0;i<bj_dH.length;i++)h+=bj_rc(bj_dH[i],i===1&&!show);dc.innerHTML=h;}
+      if(pc){var h2='';for(var j=0;j<bj_pH.length;j++)h2+=bj_rc(bj_pH[j],false);pc.innerHTML=h2;}
+      if(ps)ps.textContent=bj_pH.length?'Hand: '+bj_hv(bj_pH):'';
+      if(ds)ds.textContent=bj_dH.length?(show?'Hand: '+bj_hv(bj_dH):'Showing: '+bj_cv(bj_dH[0])):'';
+    }
+    function bj_btns(){
+      var p=bj_state==='play';
+      var d=document.getElementById('bj_dealBtn'),h=document.getElementById('bj_hitBtn'),s=document.getElementById('bj_standBtn'),db=document.getElementById('bj_doubleBtn');
+      if(d)d.disabled=p;if(h)h.disabled=!p;if(s)s.disabled=!p;if(db)db.disabled=!p||bj_pH.length!==2;
+    }
+    async function bj_deal(){
+      if(bj_state==='play')return;
+      var bet=parseFloat(document.getElementById('g_betInput').value)||g_betAmount;g_betAmount=bet;bj_bet=bet;
+      try{await g_runBet(bet,g_currency);}catch(e){g_setResult('bj_result','⚠ '+(e.message||'Error'),false);return;}
+      var r=document.getElementById('bj_result');if(r)r.style.display='none';
+      bj_deck=bj_mkDeck();bj_pH=[bj_deck.pop(),bj_deck.pop()];bj_dH=[bj_deck.pop(),bj_deck.pop()];
+      bj_state='play';bj_paint(false);bj_btns();
+      if(bj_hv(bj_pH)===21)await bj_stand();
+    }
+    function bj_hit(){if(bj_state!=='play')return;bj_pH.push(bj_deck.pop());bj_paint(false);var db=document.getElementById('bj_doubleBtn');if(db)db.disabled=true;if(bj_hv(bj_pH)>21){bj_state='done';bj_paint(true);bj_end();}}
+    async function bj_double(){
+      if(bj_state!=='play'||bj_pH.length!==2)return;
+      try{await g_runBet(bj_bet,g_currency);bj_bet*=2;}catch(e){g_setResult('bj_result','⚠ '+(e.message||'Error'),false);return;}
+      bj_pH.push(bj_deck.pop());bj_paint(false);
+      if(bj_hv(bj_pH)>21){bj_state='done';bj_paint(true);bj_end();}else await bj_stand();
+    }
+    async function bj_stand(){
+      if(bj_state!=='play')return;bj_state='dealer';bj_btns();bj_paint(true);
+      while(bj_hv(bj_dH)<17){await new Promise(function(r){setTimeout(r,400);});bj_dH.push(bj_deck.pop());bj_paint(true);}
+      bj_state='done';await bj_end();
+    }
+    async function bj_end(){
+      var pV=bj_hv(bj_pH),dV=bj_hv(bj_dH);
+      var pBJ=bj_pH.length===2&&pV===21,dBJ=bj_dH.length===2&&dV===21;
+      var won=false,push=false,cab=0,msg='';
+      if(pV>21){msg='💀 BUST! Lost '+bj_bet.toFixed(4)+(g_currency==='sol'?' ◎':' 🥬');}
+      else if(dV>21){won=true;msg='✅ Dealer busts!';}
+      else if(pBJ&&!dBJ){won=true;msg='🎉 BLACKJACK!';}
+      else if(pBJ&&dBJ){push=true;msg='🤝 Both Blackjack — Push';}
+      else if(dBJ){msg='💀 Dealer Blackjack!';}
+      else if(pV>dV){won=true;msg='✅ You win! '+pV+' vs '+dV;}
+      else if(pV===dV){push=true;msg='🤝 Push — '+pV+' vs '+dV;}
+      else{msg='💀 Dealer wins. '+dV+' vs '+pV;}
+      if(won){var m=pBJ?2.5:2;cab=g_currency==='sol'?bj_bet*m*g_SOL_TO_CABBAGE:bj_bet*m;await g_creditCabbage(cab);msg+=' Won '+cab.toFixed(2)+' 🥬';}
+      else if(push){var ref=g_currency==='sol'?bj_bet*g_SOL_TO_CABBAGE:bj_bet;await g_creditCabbage(ref);msg+=' (refund '+ref.toFixed(2)+' 🥬)';}
+      g_setResult('bj_result',msg,won);
+      g_addHistory('🃏 BJ',bj_bet,g_currency,won,cab);
+      await g_logBet('🃏 Blackjack',bj_bet,g_currency,won?0:bj_bet);
+      await g_updatePotUI();await g_loadGameBalances();
+      bj_state='idle';bj_btns();bj_paint(true);
+    }
 
     /* ================================================================
-       CABBAGE STORE
-       - Loads items from Supabase store_items table
-       - Community NFT listings from nft_listings table
-       - Purchases deduct cabbage via the spend endpoint
+       TEXAS HOLD'EM — MULTIPLAYER VIA SUPABASE REALTIME
     ================================================================ */
+    var pk_tables=[],pk_tid=null,pk_tbl=null,pk_plrs=[],pk_mySeat=-1,pk_ch=null;
+    var PK_SUITS={s:'♠',h:'♥',d:'♦',c:'♣'};
+    var PK_SCOL={s:'#999',h:'#e33',d:'#e33',c:'#999'};
+    var PK_VALS=['2','3','4','5','6','7','8','9','T','J','Q','K','A'];
 
-    var s_items = [];
-    var s_listings = [];
-    var s_filter = 'all';
-    var s_cabBalance = null;
+    function pk_rc(card,hide){
+      if(hide||!card)return'<div class="bj_card bj_back" style="width:52px;height:74px;"><div style="font-size:1.2rem;color:#2a4a7a;">🂠</div></div>';
+      var v=card[0],s=card[1];var dv={'T':'10'}[v]||v;var suit=PK_SUITS[s]||s;var col=PK_SCOL[s]||'#999';
+      return'<div class="bj_card bj_front" style="width:52px;height:74px;color:'+col+';"><div style="font-size:0.72rem;align-self:flex-start;margin:2px 0 0 3px;">'+dv+'</div><div style="font-size:1.2rem;">'+suit+'</div><div style="font-size:0.72rem;align-self:flex-end;margin:0 3px 2px 0;">'+dv+'</div></div>';
+    }
+    function pk_fullDeck(){var d=[];'shdc'.split('').forEach(function(s){PK_VALS.forEach(function(v){d.push(v+s);});});return d;}
+    function pk_shuffle(a){var r=a.slice();for(var i=r.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=r[i];r[i]=r[j];r[j]=t;}return r;}
 
-    async function s_fetchCabbageBalance() {
-      if (!walletPublicKey) return 0;
-      try {
-        var res = await fetch(SUPA_URL.replace(/\/+$/,'') + '/functions/v1/cabbage?wallet=' + encodeURIComponent(walletPublicKey.toBase58()), {
-          headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+    async function pk_loadLobby(){
+      var el=document.getElementById('pk_lobby');if(!el)return;
+      try{
+        var sb=getSupaClient();
+        var tR=await sb.from('poker_tables').select('*').order('buy_in',{ascending:true});
+        if(tR.error)throw tR.error;pk_tables=tR.data||[];
+        var ids=pk_tables.map(function(t){return t.id;});
+        if(ids.length===0){el.innerHTML='<div style="color:#333;text-align:center;font-size:0.75rem;">No tables yet</div>';return;}
+        var pR=await sb.from('poker_players').select('table_id,seat').in('table_id',ids).eq('is_active',true);
+        var ps=pR.data||[];
+        var html='';
+        pk_tables.forEach(function(t){
+          var cnt=ps.filter(function(p){return p.table_id===t.id;}).length;
+          var isSol=t.currency==='sol';
+          var sym=isSol?'◎':'🥬';
+          var badge=isSol?'<span style="background:linear-gradient(90deg,#9945ff,#00d4ff);color:#fff;padding:2px 6px;border-radius:4px;font-size:0.55rem;font-weight:700;letter-spacing:1px;margin-left:6px;">SOL</span>':'';
+          html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(0,0,0,0.2);border:1px solid '+(isSol?'rgba(153,69,255,0.2)':'rgba(255,255,255,0.06)')+';border-radius:10px;margin-bottom:8px;flex-wrap:wrap;gap:8px;">'
+            +'<div><div style="font-weight:700;color:#e0e0ff;font-size:0.85rem;">'+escapeHtml(t.name)+badge+'</div>'
+            +'<div style="font-size:0.65rem;color:#555;margin-top:2px;">Buy-in: '+t.buy_in+' '+sym+' · Blinds: '+t.small_blind+'/'+t.big_blind+'</div></div>'
+            +'<div style="display:flex;align-items:center;gap:10px;">'
+            +'<div style="font-size:0.72rem;color:'+(cnt>=5?'#ff3c5c':(cnt>=2?'#00ff88':'#555'))+';">'+cnt+'/5</div>'
+            +'<button class="g_btn'+(cnt<5?' g_btn-primary':'')+'" onclick="pk_join('+t.id+')" '+(cnt>=5?'disabled':'')+'>'+( cnt>=5?'FULL':'SIT DOWN')+'</button>'
+            +'</div></div>';
         });
-        var data = await res.json();
-        return Number(data.balance || 0) + Number(data.pending || 0);
-      } catch(e) { return 0; }
+        el.innerHTML=html;
+      }catch(e){el.innerHTML='<div style="color:#ff3c5c;font-size:0.75rem;">Failed to load tables</div>';}
     }
 
-    async function s_loadItems() {
-      try {
-        var sb = getSupaClient();
-        var res = await sb
-          .from('store_items')
-          .select('*')
-          .eq('active', true)
-          .order('category', { ascending: true })
-          .order('price', { ascending: true });
-        if (res.error) throw res.error;
-        s_items = res.data || [];
-      } catch(e) {
-        console.error('Store items load error:', e);
-        s_items = [];
+    async function pk_join(tid){
+      if(!walletPublicKey)return alert('Connect wallet first.');
+      var tbl=pk_tables.find(function(t){return t.id===tid;});if(!tbl)return;
+      var isSol=tbl.currency==='sol';
+      if(isSol){
+        var solBal=await g_fetchSolBalance();
+        if(solBal===null||solBal<tbl.buy_in+0.002)return alert('Need '+(tbl.buy_in+0.002).toFixed(3)+' ◎ (incl. fee). You have '+(solBal||0).toFixed(3)+' ◎.');
+      }else{
+        var cabBal=await g_fetchCabbageBalance();
+        if(cabBal<tbl.buy_in)return alert('Need '+tbl.buy_in+' 🥬 to sit. You have '+Math.floor(cabBal)+'.');
+      }
+      try{
+        var sb=getSupaClient();var w=walletPublicKey.toBase58();
+        var ex=await sb.from('poker_players').select('*').eq('table_id',tid).eq('wallet',w).eq('is_active',true).maybeSingle();
+        if(ex.data){pk_tid=tid;pk_mySeat=ex.data.seat;pk_open();return;}
+        await sb.from('poker_players').delete().eq('table_id',tid).eq('wallet',w);
+        var sR=await sb.from('poker_players').select('seat').eq('table_id',tid).eq('is_active',true);
+        var taken=(sR.data||[]).map(function(p){return p.seat;});
+        var open=-1;for(var i=0;i<5;i++){if(taken.indexOf(i)===-1){open=i;break;}}
+        if(open===-1)return alert('Table full.');
+        if(isSol){await g_sendSolBet(Math.round(tbl.buy_in*1e9));}
+        else{await g_spendCabbage(tbl.buy_in);}
+        var un=(session&&session.profile&&session.profile.username)||null;
+        await sb.from('poker_players').insert({table_id:tid,wallet:w,username:un,seat:open,chips:tbl.buy_in,is_active:true});
+        pk_tid=tid;pk_mySeat=open;pk_open();
+      }catch(e){alert('Join failed: '+(e.message||e));}
+    }
+
+    async function pk_open(){
+      document.getElementById('pk_gameWrap').style.display='block';
+      await pk_refresh();pk_sub();
+    }
+
+    async function pk_refresh(){
+      if(!pk_tid)return;var sb=getSupaClient();
+      var tR=await sb.from('poker_tables').select('*').eq('id',pk_tid).single();
+      if(tR.error)return;pk_tbl=tR.data;
+      var pR=await sb.from('poker_players').select('*').eq('table_id',pk_tid).eq('is_active',true).order('seat',{ascending:true});
+      pk_plrs=pR.data||[];
+      var tn=document.getElementById('pk_tableName');if(tn)tn.textContent='🃏 '+pk_tbl.name;
+      pk_paint();
+    }
+
+    function pk_sub(){pk_unsub();var sb=getSupaClient();
+      pk_ch=sb.channel('pk_'+pk_tid)
+        .on('postgres_changes',{event:'*',schema:'public',table:'poker_tables',filter:'id=eq.'+pk_tid},function(){pk_refresh();})
+        .on('postgres_changes',{event:'*',schema:'public',table:'poker_players',filter:'table_id=eq.'+pk_tid},function(){pk_refresh();})
+        .subscribe();
+    }
+    function pk_unsub(){if(pk_ch){try{getSupaClient().removeChannel(pk_ch);}catch(e){}pk_ch=null;}}
+
+    async function pk_leaveTable(){
+      if(!pk_tid)return;var sb=getSupaClient();var w=walletPublicKey.toBase58();
+      var me=pk_plrs.find(function(p){return p.wallet===w;});
+      if(me&&me.chips>0){
+        var isSol=pk_tbl&&pk_tbl.currency==='sol';
+        if(isSol){
+          var cabOut=me.chips*g_SOL_TO_CABBAGE;
+          await g_creditCabbage(cabOut);
+        }else{
+          await g_creditCabbage(me.chips);
+        }
+      }
+      await sb.from('poker_players').delete().eq('table_id',pk_tid).eq('wallet',w);
+      pk_unsub();pk_tid=null;pk_tbl=null;pk_plrs=[];pk_mySeat=-1;
+      document.getElementById('pk_gameWrap').style.display='none';pk_loadLobby();
+    }
+
+    function pk_paint(){
+      var area=document.getElementById('pk_gameArea');if(!area||!pk_tbl)return;
+      var t=pk_tbl;var myW=walletPublicKey?walletPublicKey.toBase58():'';
+      var isSol=t.currency==='sol';var sym=isSol?'◎':'🥬';var chipCol=isSol?'#00d4ff':'#00ff88';
+      var comm=[];try{comm=JSON.parse(t.community||'[]');}catch(e){}
+      var isPlay=t.status==='playing';
+      var me=pk_plrs.find(function(p){return p.wallet===myW;});if(me)pk_mySeat=me.seat;
+      var isMyTurn=me&&t.action_seat===me.seat&&isPlay;
+      var active=pk_plrs.filter(function(p){return p.is_active;});
+      var html='';
+
+      // Community cards
+      html+='<div style="text-align:center;margin:0.5rem 0 1rem;"><div style="font-size:0.6rem;color:#555;letter-spacing:2px;margin-bottom:6px;">COMMUNITY</div><div style="display:flex;justify-content:center;gap:3px;min-height:58px;align-items:center;">';
+      if(comm.length>0){comm.forEach(function(c){html+=pk_rc(c,false);});for(var p=comm.length;p<5;p++)html+='<div style="width:52px;height:74px;border:1px dashed rgba(255,255,255,0.06);border-radius:5px;"></div>';}
+      else{for(var e=0;e<5;e++)html+='<div style="width:52px;height:74px;border:1px dashed rgba(255,255,255,0.06);border-radius:5px;"></div>';}
+      html+='</div><div style="font-size:0.9rem;color:#ffd700;font-weight:700;margin-top:8px;">POT: '+(t.pot||0).toLocaleString()+' '+sym+'</div>';
+      if(isSol)html+='<div style="font-size:0.55rem;color:#9945ff;margin-top:2px;">SOL TABLE · Winnings paid as 🥬 (1 ◎ = '+g_SOL_TO_CABBAGE+' 🥬)</div>';
+      if(isPlay)html+='<div style="font-size:0.62rem;color:#555;margin-top:2px;">'+(t.phase||'').toUpperCase()+' · Current bet: '+(t.current_bet||0)+' '+sym+'</div>';
+      html+='</div>';
+
+      // Seats
+      html+='<div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:0.8rem 0;">';
+      for(var s=0;s<5;s++){
+        var pl=pk_plrs.find(function(p){return p.seat===s;});
+        var isMe=pl&&pl.wallet===myW;var isTurn=t.action_seat===s&&isPlay;var folded=pl&&pl.folded;
+        var cls='pk_seat'+(pl?' occ':'')+(isTurn?' turn':'')+(folded?' fold':'');
+        html+='<div class="'+cls+'">';
+        if(pl){
+          var hole=[];try{hole=JSON.parse(pl.hole_cards||'[]');}catch(e){}
+          var dn=pl.username||(pl.wallet.slice(0,4)+'…');
+          var isDealer=t.dealer_seat===s;
+          html+='<div style="font-weight:700;font-size:0.7rem;color:'+(isMe?'#00d4ff':'#e0e0ff')+';margin-bottom:3px;">'+(isDealer?'<span style="background:#ffd700;color:#000;padding:1px 4px;border-radius:3px;font-size:0.5rem;margin-right:3px;">D</span>':'')+escapeHtml(dn)+(isMe?' (you)':'')+'</div>';
+          html+='<div style="display:flex;justify-content:center;gap:2px;margin:3px 0;">';
+          if(hole.length===2&&(isMe||t.phase==='showdown'))html+=pk_rc(hole[0],false)+pk_rc(hole[1],false);
+          else if(isPlay&&!folded)html+=pk_rc(null,true)+pk_rc(null,true);
+          html+='</div>';
+          html+='<div style="font-size:0.62rem;color:'+chipCol+';">'+pl.chips.toLocaleString()+' '+sym+'</div>';
+          if(pl.current_bet>0)html+='<div style="font-size:0.58rem;color:#ffd700;">Bet: '+pl.current_bet+' '+sym+'</div>';
+          if(folded)html+='<div style="font-size:0.58rem;color:#ff3c5c;">FOLDED</div>';
+          if(isTurn)html+='<div style="font-size:0.52rem;color:#ffd700;animation:g_pulse 1s infinite;">⏳ YOUR TURN</div>';
+        }else{html+='<div style="color:#252540;font-size:0.68rem;">Empty</div><div style="font-size:0.58rem;color:#333;">Seat '+(s+1)+'</div>';}
+        html+='</div>';
+      }
+      html+='</div>';
+
+      // Action buttons
+      html+='<div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:0.8rem;">';
+      if(!isPlay&&t.phase!=='showdown'&&active.length>=2&&me)html+='<button class="g_btn g_btn-primary" onclick="pk_deal()">🃏 DEAL</button>';
+      if(isMyTurn&&!me.folded){
+        var toCall=Math.max(0,(t.current_bet||0)-(me?me.current_bet:0));
+        if(toCall===0)html+='<button class="g_btn g_btn-primary" onclick="pk_act(\'check\')">CHECK</button>';
+        else html+='<button class="g_btn g_btn-primary" onclick="pk_act(\'call\')">CALL '+toCall+' '+sym+'</button>';
+        html+='<button class="g_btn" onclick="pk_doRaise()">RAISE</button>';
+        html+='<button class="g_btn" style="border-color:rgba(255,60,92,0.3);color:#ff3c5c;" onclick="pk_act(\'fold\')">FOLD</button>';
+      }
+      if(t.phase==='showdown'&&me)html+='<button class="g_btn g_btn-primary" onclick="pk_deal()">NEXT HAND</button>';
+      html+='</div>';
+      area.innerHTML=html;
+    }
+
+    async function pk_deal(){
+      if(!pk_tid)return;var sb=getSupaClient();var t=pk_tbl;
+      if(t.status==='playing')return;
+      var ap=pk_plrs.filter(function(p){return p.is_active;});
+      if(ap.length<2)return alert('Need 2+ players.');
+      ap.sort(function(a,b){return a.seat-b.seat;});
+      var deck=pk_shuffle(pk_fullDeck());
+      for(var i=0;i<ap.length;i++){var h=[deck.pop(),deck.pop()];await sb.from('poker_players').update({hole_cards:JSON.stringify(h),current_bet:0,total_bet:0,folded:false,all_in:false}).eq('id',ap[i].id);}
+      var seatNums=ap.map(function(p){return p.seat;});
+      function nextAfter(s){for(var k=0;k<seatNums.length;k++){if(seatNums[k]>s)return seatNums[k];}return seatNums[0];}
+      var oldDS=t.dealer_seat;if(oldDS===undefined||oldDS===null)oldDS=-1;
+      var newDS=nextAfter(oldDS);
+      var sbSeat,bbSeat,actSeat;
+      if(ap.length===2){sbSeat=newDS;bbSeat=nextAfter(newDS);actSeat=newDS;}
+      else{sbSeat=nextAfter(newDS);bbSeat=nextAfter(sbSeat);actSeat=nextAfter(bbSeat);}
+      var sbP=ap.find(function(p){return p.seat===sbSeat;});
+      var bbP=ap.find(function(p){return p.seat===bbSeat;});
+      var sba=Math.min(t.small_blind,sbP.chips),bba=Math.min(t.big_blind,bbP.chips);
+      await sb.from('poker_players').update({current_bet:sba,total_bet:sba,chips:sbP.chips-sba}).eq('id',sbP.id);
+      await sb.from('poker_players').update({current_bet:bba,total_bet:bba,chips:bbP.chips-bba}).eq('id',bbP.id);
+      await sb.from('poker_tables').update({status:'playing',phase:'preflop',community:'[]',pot:sba+bba,current_bet:bba,dealer_seat:newDS,action_seat:actSeat,round_starter:actSeat,deck:JSON.stringify(deck),hand_num:(t.hand_num||0)+1,updated_at:new Date().toISOString()}).eq('id',pk_tid);
+    }
+
+    function pk_doRaise(){var cur=pk_tbl?pk_tbl.current_bet||0:0;var a=prompt('Raise to:',String(cur*2));if(!a)return;var r=parseFloat(a);if(isNaN(r)||r<=cur)return alert('Must raise above '+cur);pk_act('raise',r);}
+
+    async function pk_act(action,raiseAmt){
+      if(!pk_tid||!pk_tbl)return;var sb=getSupaClient();var w=walletPublicKey.toBase58();
+      var me=pk_plrs.find(function(p){return p.wallet===w;});if(!me||pk_tbl.action_seat!==me.seat)return;
+      var t=pk_tbl;var potAdd=0;
+      if(action==='fold'){await sb.from('poker_players').update({folded:true}).eq('id',me.id);}
+      else if(action==='check'){/* no chips moved */}
+      else if(action==='call'){var tc=Math.min(Math.max(0,(t.current_bet||0)-me.current_bet),me.chips);await sb.from('poker_players').update({chips:me.chips-tc,current_bet:me.current_bet+tc,total_bet:me.total_bet+tc,all_in:me.chips-tc<=0}).eq('id',me.id);potAdd=tc;}
+      else if(action==='raise'){var need=raiseAmt-me.current_bet;var act=Math.min(need,me.chips);await sb.from('poker_players').update({chips:me.chips-act,current_bet:me.current_bet+act,total_bet:me.total_bet+act,all_in:me.chips-act<=0}).eq('id',me.id);potAdd=act;await sb.from('poker_tables').update({current_bet:raiseAmt,round_starter:me.seat}).eq('id',pk_tid);}
+      if(potAdd>0)await sb.from('poker_tables').update({pot:(t.pot||0)+potAdd}).eq('id',pk_tid);
+      await pk_advance(me,action);
+    }
+
+    async function pk_advance(acted,action){
+      var sb=getSupaClient();
+      var pR=await sb.from('poker_players').select('*').eq('table_id',pk_tid).eq('is_active',true).order('seat');
+      var plrs=pR.data||[];
+      var nf=plrs.filter(function(p){return !p.folded;});
+      if(nf.length<=1){await pk_award(nf[0]);return;}
+      var tR=await sb.from('poker_tables').select('*').eq('id',pk_tid).single();var t=tR.data;
+      var canAct=plrs.filter(function(p){return !p.folded&&!p.all_in;});
+      if(canAct.length===0){await pk_nextPhase();return;}
+      var seats=canAct.map(function(p){return p.seat;}).sort(function(a,b){return a-b;});
+      // Helper: find next seat clockwise after a given seat
+      function findNext(afterSeat){for(var i=0;i<seats.length;i++){if(seats[i]>afterSeat)return seats[i];}return seats[0];}
+      // If only 1 can act and they've matched the bet, advance
+      if(canAct.length===1&&canAct[0].current_bet>=(t.current_bet||0)){await pk_nextPhase();return;}
+      var nextSeat=findNext(acted.seat);
+      // Resolve effective round_starter — must be in canAct
+      var rs=t.round_starter;
+      var rsChanged=false;
+      if(rs===undefined||rs===null||rs<0||seats.indexOf(rs)===-1){
+        rs=findNext(rs!==undefined&&rs!==null&&rs>=0?rs:- 1);
+        rsChanged=true;
+        await sb.from('poker_tables').update({round_starter:rs}).eq('id',pk_tid);
+      }
+      // Check if all bets match and we've gone full circle back to round_starter
+      var allMatch=canAct.every(function(p){return p.current_bet>=(t.current_bet||0);});
+      if(allMatch&&nextSeat===rs&&!rsChanged){
+        await pk_nextPhase();
+        return;
+      }
+      await sb.from('poker_tables').update({action_seat:nextSeat,updated_at:new Date().toISOString()}).eq('id',pk_tid);
+    }
+
+    async function pk_nextPhase(){
+      var sb=getSupaClient();
+      var tR=await sb.from('poker_tables').select('*').eq('id',pk_tid).single();var t=tR.data;
+      var deck=[];try{deck=JSON.parse(t.deck||'[]');}catch(e){}
+      var comm=[];try{comm=JSON.parse(t.community||'[]');}catch(e){}
+      await sb.from('poker_players').update({current_bet:0}).eq('table_id',pk_tid).eq('is_active',true);
+      var next='';
+      if(t.phase==='preflop'){next='flop';comm.push(deck.pop(),deck.pop(),deck.pop());}
+      else if(t.phase==='flop'){next='turn';comm.push(deck.pop());}
+      else if(t.phase==='turn'){next='river';comm.push(deck.pop());}
+      else{await pk_showdown();return;}
+      var cR=await sb.from('poker_players').select('*').eq('table_id',pk_tid).eq('is_active',true).eq('folded',false).eq('all_in',false).order('seat');
+      var active=cR.data||[];
+      if(active.length<=1){while(comm.length<5&&deck.length>0)comm.push(deck.pop());
+        await sb.from('poker_tables').update({phase:'showdown',community:JSON.stringify(comm),deck:JSON.stringify(deck),current_bet:0,action_seat:-1,round_starter:-1,updated_at:new Date().toISOString()}).eq('id',pk_tid);
+        setTimeout(pk_showdown,1200);return;}
+      // Post-flop: first to act is first active player AFTER the dealer
+      var ds=t.dealer_seat;
+      var actSeats=active.map(function(p){return p.seat;}).sort(function(a,b){return a-b;});
+      var firstSeat=actSeats[0];
+      for(var i=0;i<actSeats.length;i++){if(actSeats[i]>ds){firstSeat=actSeats[i];break;}}
+      await sb.from('poker_tables').update({phase:next,community:JSON.stringify(comm),deck:JSON.stringify(deck),current_bet:0,action_seat:firstSeat,round_starter:firstSeat,updated_at:new Date().toISOString()}).eq('id',pk_tid);
+    }
+
+    async function pk_showdown(){
+      var sb=getSupaClient();
+      var tR=await sb.from('poker_tables').select('*').eq('id',pk_tid).single();var t=tR.data;
+      var comm=[];try{comm=JSON.parse(t.community||'[]');}catch(e){}
+      var cR=await sb.from('poker_players').select('*').eq('table_id',pk_tid).eq('is_active',true).eq('folded',false);
+      var cont=cR.data||[];
+      if(cont.length<=1){if(cont[0])await pk_award(cont[0]);return;}
+      var best=null,bestS=-1;
+      cont.forEach(function(p){var h=[];try{h=JSON.parse(p.hole_cards||'[]');}catch(e){}var all=h.concat(comm);var sc=pk_score(all);if(sc>bestS){bestS=sc;best=p;}});
+      if(best)await pk_award(best);
+    }
+
+    async function pk_award(winner){
+      var sb=getSupaClient();
+      var tR=await sb.from('poker_tables').select('pot').eq('id',pk_tid).single();
+      var pot=tR.data?tR.data.pot:0;
+      // Re-read fresh chips
+      var pR=await sb.from('poker_players').select('chips').eq('id',winner.id).single();
+      var freshChips=pR.data?pR.data.chips:winner.chips;
+      await sb.from('poker_players').update({chips:freshChips+pot}).eq('id',winner.id);
+      await sb.from('poker_tables').update({status:'between_hands',phase:'showdown',pot:0,current_bet:0,action_seat:-1,updated_at:new Date().toISOString()}).eq('id',pk_tid);
+    }
+
+    // ── Hand evaluator ──
+    function pk_cn(c){var v={'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'T':10,'J':11,'Q':12,'K':13,'A':14};return v[c[0]]||0;}
+    function pk_eval5(cards){
+      var vals=cards.map(pk_cn).sort(function(a,b){return b-a;});
+      var suits=cards.map(function(c){return c[1];});
+      var flush=suits.every(function(s){return s===suits[0];});
+      var str=vals[0]-vals[1]===1&&vals[1]-vals[2]===1&&vals[2]-vals[3]===1&&vals[3]-vals[4]===1;
+      if(!str&&vals[0]===14&&vals[1]===5&&vals[2]===4&&vals[3]===3&&vals[4]===2){str=true;vals=[5,4,3,2,1];}
+      var ct={};vals.forEach(function(v){ct[v]=(ct[v]||0)+1;});
+      var g=Object.keys(ct).map(function(k){return{v:parseInt(k),c:ct[k]};}).sort(function(a,b){return b.c-a.c||b.v-a.v;});
+      if(flush&&str)return vals[0]===14?9e6:8e6+vals[0];
+      if(g[0].c===4)return 7e6+g[0].v*100+(g[1]?g[1].v:0);
+      if(g[0].c===3&&g.length>=2&&g[1].c===2)return 6e6+g[0].v*100+g[1].v;
+      if(flush)return 5e6+vals[0]*1e4+vals[1]*1e3+vals[2]*100+vals[3]*10+vals[4];
+      if(str)return 4e6+vals[0];
+      if(g[0].c===3)return 3e6+g[0].v*1e4+(g[1]?g[1].v*100:0)+(g[2]?g[2].v:0);
+      if(g[0].c===2&&g.length>=2&&g[1].c===2){var hp=Math.max(g[0].v,g[1].v),lp=Math.min(g[0].v,g[1].v);return 2e6+hp*1e4+lp*100+(g[2]?g[2].v:0);}
+      if(g[0].c===2)return 1e6+g[0].v*1e4+(g[1]?g[1].v*100:0)+(g[2]?g[2].v*10:0)+(g[3]?g[3].v:0);
+      return vals[0]*1e4+vals[1]*1e3+vals[2]*100+vals[3]*10+vals[4];
+    }
+    function pk_score(seven){
+      if(seven.length<5)return 0;var best=0;
+      for(var i=0;i<seven.length;i++)for(var j=i+1;j<seven.length;j++)for(var k=j+1;k<seven.length;k++)for(var l=k+1;l<seven.length;l++)for(var m=l+1;m<seven.length;m++){
+        var sc=pk_eval5([seven[i],seven[j],seven[k],seven[l],seven[m]]);if(sc>best)best=sc;}
+      return best;
+    }
+
+    /* ================================================================
+       CABBAGE DROP (PLINKO)
+    ================================================================ */
+    var PLINKO_ROWS = 10;
+    var PLINKO_MULTS = [10, 3, 2, 1.5, 1, 0.5, 0.3, 0.5, 1, 1.5, 2, 3, 10];
+    var PLINKO_COLORS = ['#ff3c5c','#ff6b35','#ffa033','#ffd700','#aaa','#888','#666','#888','#aaa','#ffd700','#ffa033','#ff6b35','#ff3c5c'];
+    var plinko_running = false;
+
+    function plinko_init() {
+      var cv = document.getElementById('plinko_cv');
+      if (!cv) return;
+      var ctx = cv.getContext('2d');
+      var W = cv.width, H = cv.height;
+      ctx.clearRect(0, 0, W, H);
+
+      // Draw pegs
+      for (var row = 0; row < PLINKO_ROWS; row++) {
+        var pegsInRow = row + 3;
+        var spacing = W / (pegsInRow + 1);
+        for (var col = 0; col < pegsInRow; col++) {
+          var px = spacing * (col + 1);
+          var py = 30 + row * ((H - 60) / PLINKO_ROWS);
+          ctx.beginPath();
+          ctx.arc(px, py, 4, 0, Math.PI * 2);
+          ctx.fillStyle = '#2a2a4a';
+          ctx.fill();
+        }
+      }
+
+      // Draw bottom slots
+      var slotEl = document.getElementById('plinko_slots');
+      if (slotEl) {
+        var sh = '';
+        PLINKO_MULTS.forEach(function(m, i) {
+          var c = PLINKO_COLORS[i];
+          sh += '<div style="flex:1;text-align:center;font-size:0.5rem;font-weight:700;color:' + c + ';padding:3px 0;background:rgba(0,0,0,0.3);border-radius:3px;border:1px solid ' + c + '22;">' + m + '×</div>';
+        });
+        slotEl.innerHTML = sh;
       }
     }
 
-    async function s_loadListings() {
+    async function plinko_drop() {
+      if (plinko_running || g_isSpinning) return;
+      var bet = parseFloat(document.getElementById('g_betInput').value) || g_betAmount;
+      g_betAmount = bet;
+
+      try {
+        await g_runBet(bet, g_currency);
+      } catch(e) {
+        g_setResult('plinko_result', '⚠ ' + (e.message || 'Error'), false);
+        return;
+      }
+
+      plinko_running = true;
+      g_disableGameBtns(true);
+
+      var cv = document.getElementById('plinko_cv');
+      if (!cv) return;
+      var ctx = cv.getContext('2d');
+      var W = cv.width, H = cv.height;
+
+      // Calculate ball path through pegs
+      var ballX = W / 2 + (Math.random() - 0.5) * 20;
+      var ballY = 8;
+      var slot = 0;
+      var path = [{x: ballX, y: ballY}];
+
+      // Simulate drops through each row
+      for (var row = 0; row < PLINKO_ROWS; row++) {
+        var nftCount = session.loadedNFTs ? session.loadedNFTs.length : 0;
+        // Slight bias toward center for house edge
+        var bias = (ballX > W/2) ? -0.02 : 0.02;
+        var goRight = Math.random() + bias > 0.5;
+        var pegsInRow = row + 3;
+        var spacing = W / (pegsInRow + 1);
+        var shift = spacing * 0.48 * (goRight ? 1 : -1);
+        ballX = Math.max(15, Math.min(W - 15, ballX + shift));
+        ballY = 30 + row * ((H - 60) / PLINKO_ROWS);
+        path.push({x: ballX, y: ballY});
+      }
+
+      // Determine which slot
+      var slotWidth = W / PLINKO_MULTS.length;
+      slot = Math.floor(ballX / slotWidth);
+      slot = Math.max(0, Math.min(PLINKO_MULTS.length - 1, slot));
+      var mult = PLINKO_MULTS[slot];
+
+      // Final landing
+      var finalX = slotWidth * slot + slotWidth / 2;
+      path.push({x: finalX, y: H - 12});
+
+      // Animate ball
+      var frame = 0;
+      var totalFrames = path.length;
+
+      function drawFrame() {
+        ctx.clearRect(0, 0, W, H);
+
+        // Redraw pegs
+        for (var row = 0; row < PLINKO_ROWS; row++) {
+          var pegsInRow = row + 3;
+          var sp = W / (pegsInRow + 1);
+          for (var col = 0; col < pegsInRow; col++) {
+            ctx.beginPath();
+            ctx.arc(sp * (col + 1), 30 + row * ((H - 60) / PLINKO_ROWS), 4, 0, Math.PI * 2);
+            ctx.fillStyle = '#2a2a4a';
+            ctx.fill();
+          }
+        }
+
+        // Draw trail
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(0,255,136,0.3)';
+        ctx.lineWidth = 2;
+        for (var t = 0; t <= frame && t < path.length; t++) {
+          if (t === 0) ctx.moveTo(path[t].x, path[t].y);
+          else ctx.lineTo(path[t].x, path[t].y);
+        }
+        ctx.stroke();
+
+        // Draw ball at current position
+        var pt = path[Math.min(frame, path.length - 1)];
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, 8, 0, Math.PI * 2);
+        var grd = ctx.createRadialGradient(pt.x - 2, pt.y - 2, 1, pt.x, pt.y, 8);
+        grd.addColorStop(0, '#7fff7f');
+        grd.addColorStop(1, '#00aa00');
+        ctx.fillStyle = grd;
+        ctx.fill();
+        ctx.strokeStyle = '#00ff88';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Draw slot highlight on last frame
+        if (frame >= path.length - 1) {
+          ctx.fillStyle = PLINKO_COLORS[slot] + '33';
+          ctx.fillRect(slotWidth * slot, H - 25, slotWidth, 25);
+        }
+
+        frame++;
+        if (frame < path.length + 1) {
+          setTimeout(drawFrame, 120);
+        } else {
+          finishPlinko();
+        }
+      }
+
+      drawFrame();
+
+      async function finishPlinko() {
+        var cabPay = 0;
+        var won = mult >= 1;
+        cabPay = g_currency === 'sol' ? bet * mult * g_SOL_TO_CABBAGE : bet * mult;
+        if (cabPay > 0) await g_creditCabbage(cabPay);
+
+        if (mult >= 2) {
+          g_setResult('plinko_result', '🎉 ' + mult + '× — Won ' + cabPay.toFixed(2) + ' 🥬!', true);
+        } else if (mult >= 1) {
+          g_setResult('plinko_result', '✅ ' + mult + '× — Got ' + cabPay.toFixed(2) + ' 🥬', true);
+        } else {
+          g_setResult('plinko_result', '💀 ' + mult + '× — Got ' + cabPay.toFixed(2) + ' 🥬', false);
+        }
+
+        g_addHistory('🥬 Drop', bet, g_currency, won, cabPay);
+        await g_logBet('🥬 Cabbage Drop', bet, g_currency, won ? 0 : bet * (1 - mult));
+        await g_updatePotUI();
+        await g_loadGameBalances();
+        plinko_running = false;
+        g_isSpinning = false;
+        g_disableGameBtns(false);
+      }
+    }
+
+    /* ================================================================
+       CRASH
+    ================================================================ */
+    var crash_running = false;
+    var crash_cashed = false;
+    var crash_point = 1;
+    var crash_current = 1;
+    var crash_bet = 0;
+    var crash_raf = null;
+    var crash_startTime = 0;
+    var crash_history = [];
+
+    function crash_init() {
+      var cv = document.getElementById('crash_cv');
+      if (!cv) return;
+      var ctx = cv.getContext('2d');
+      crash_drawChart(ctx, cv.width, cv.height, [], 1, false);
+
+      // Draw recent crash history
+      if (crash_history.length > 0) {
+        var hEl = document.getElementById('crash_multi');
+        if (hEl) hEl.textContent = '1.00×';
+      }
+    }
+
+    function crash_genPoint() {
+      // House edge ~3%: E[1/crashPoint] = 0.97
+      var r = Math.random();
+      if (r < 0.03) return 1.00; // instant crash 3% of time
+      return Math.floor(100 * (0.97 / r)) / 100;
+    }
+
+    function crash_drawChart(ctx, W, H, points, current, crashed) {
+      ctx.clearRect(0, 0, W, H);
+
+      // Background grid
+      ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+      ctx.lineWidth = 1;
+      for (var gy = 1; gy < 6; gy++) {
+        var yy = H - (gy / 6) * H;
+        ctx.beginPath(); ctx.moveTo(0, yy); ctx.lineTo(W, yy); ctx.stroke();
+      }
+
+      if (points.length < 2) return;
+
+      // Scale
+      var maxM = Math.max(current, 2);
+      var xScale = W / points.length;
+      var yScale = (H - 20) / (maxM - 1);
+
+      // Draw line
+      ctx.beginPath();
+      ctx.lineWidth = 3;
+      var grad = ctx.createLinearGradient(0, H, 0, 0);
+      if (crashed) {
+        grad.addColorStop(0, '#ff3c5c');
+        grad.addColorStop(1, '#ff6b35');
+      } else {
+        grad.addColorStop(0, '#00ff88');
+        grad.addColorStop(1, '#00d4ff');
+      }
+      ctx.strokeStyle = grad;
+
+      for (var i = 0; i < points.length; i++) {
+        var x = i * xScale;
+        var y = H - 10 - (points[i] - 1) * yScale;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+
+      // Glow under line
+      ctx.lineTo(points.length * xScale, H);
+      ctx.lineTo(0, H);
+      ctx.closePath();
+      ctx.fillStyle = crashed ? 'rgba(255,60,92,0.08)' : 'rgba(0,255,136,0.06)';
+      ctx.fill();
+
+      // Current multiplier dot
+      if (points.length > 0) {
+        var lx = (points.length - 1) * xScale;
+        var ly = H - 10 - (points[points.length - 1] - 1) * yScale;
+        ctx.beginPath();
+        ctx.arc(lx, Math.max(5, ly), 5, 0, Math.PI * 2);
+        ctx.fillStyle = crashed ? '#ff3c5c' : '#00ff88';
+        ctx.fill();
+      }
+    }
+
+    async function crash_start() {
+      if (crash_running || g_isSpinning) return;
+      var bet = parseFloat(document.getElementById('g_betInput').value) || g_betAmount;
+      g_betAmount = bet;
+
+      try {
+        await g_runBet(bet, g_currency);
+      } catch(e) {
+        g_setResult('crash_result', '⚠ ' + (e.message || 'Error'), false);
+        return;
+      }
+
+      crash_running = true;
+      crash_cashed = false;
+      crash_bet = bet;
+      crash_current = 1.00;
+      crash_point = crash_genPoint();
+      crash_startTime = Date.now();
+      g_disableGameBtns(true);
+
+      var sb = document.getElementById('crash_startBtn');
+      var cb = document.getElementById('crash_cashBtn');
+      if (sb) sb.disabled = true;
+      if (cb) cb.disabled = false;
+
+      var rEl = document.getElementById('crash_result');
+      if (rEl) rEl.style.display = 'none';
+
+      var cv = document.getElementById('crash_cv');
+      var ctx = cv ? cv.getContext('2d') : null;
+      var W = cv ? cv.width : 300;
+      var H = cv ? cv.height : 200;
+      var points = [1];
+      var mEl = document.getElementById('crash_multi');
+
+      function tick() {
+        var elapsed = (Date.now() - crash_startTime) / 1000;
+        // Exponential growth: starts slow, gets fast
+        crash_current = Math.pow(Math.E, elapsed * 0.15);
+        crash_current = Math.floor(crash_current * 100) / 100;
+
+        // Auto cashout
+        var autoVal = parseFloat(document.getElementById('crash_auto').value);
+        if (autoVal && crash_current >= autoVal && !crash_cashed) {
+          crash_cashout();
+          return;
+        }
+
+        if (crash_current >= crash_point && !crash_cashed) {
+          // CRASHED
+          crash_current = crash_point;
+          points.push(crash_current);
+          if (ctx) crash_drawChart(ctx, W, H, points, crash_current, true);
+          if (mEl) { mEl.textContent = crash_current.toFixed(2) + '×'; mEl.style.color = '#ff3c5c'; }
+          crash_finish(false);
+          return;
+        }
+
+        points.push(crash_current);
+        if (ctx) crash_drawChart(ctx, W, H, points, crash_current, false);
+        if (mEl) {
+          mEl.textContent = crash_current.toFixed(2) + '×';
+          if (crash_current < 1.5) mEl.style.color = '#00ff88';
+          else if (crash_current < 3) mEl.style.color = '#ffd700';
+          else if (crash_current < 5) mEl.style.color = '#ff6b35';
+          else mEl.style.color = '#ff3c5c';
+        }
+
+        crash_raf = setTimeout(tick, 50);
+      }
+
+      tick();
+    }
+
+    async function crash_cashout() {
+      if (!crash_running || crash_cashed) return;
+      crash_cashed = true;
+
+      if (crash_raf) { clearTimeout(crash_raf); crash_raf = null; }
+
+      var cb = document.getElementById('crash_cashBtn');
+      if (cb) cb.disabled = true;
+
+      var mult = crash_current;
+      var cabPay = g_currency === 'sol' ? crash_bet * mult * g_SOL_TO_CABBAGE : crash_bet * mult;
+      await g_creditCabbage(cabPay);
+
+      g_setResult('crash_result', '💰 Cashed out at ' + mult.toFixed(2) + '× — Won ' + cabPay.toFixed(2) + ' 🥬!', true);
+      g_addHistory('📈 Crash', crash_bet, g_currency, true, cabPay);
+      await g_logBet('📈 Crash', crash_bet, g_currency, 0);
+      await g_updatePotUI();
+      await g_loadGameBalances();
+
+      // Let the animation continue to show where it would have crashed
+      var cv = document.getElementById('crash_cv');
+      var ctx = cv ? cv.getContext('2d') : null;
+      var W = cv ? cv.width : 300;
+      var H = cv ? cv.height : 200;
+      var mEl = document.getElementById('crash_multi');
+      var points = [1, mult];
+
+      function coastTick() {
+        var elapsed = (Date.now() - crash_startTime) / 1000;
+        var val = Math.pow(Math.E, elapsed * 0.15);
+        val = Math.floor(val * 100) / 100;
+
+        if (val >= crash_point) {
+          points.push(crash_point);
+          if (ctx) crash_drawChart(ctx, W, H, points, crash_point, true);
+          if (mEl) { mEl.textContent = '💰 ' + mult.toFixed(2) + '× (crashed @ ' + crash_point.toFixed(2) + '×)'; mEl.style.color = '#00ff88'; }
+          crash_running = false;
+          var sb = document.getElementById('crash_startBtn'); if (sb) sb.disabled = false;
+          g_disableGameBtns(false);
+          crash_history.unshift(crash_point);
+          if (crash_history.length > 10) crash_history.pop();
+          return;
+        }
+
+        points.push(val);
+        if (ctx) crash_drawChart(ctx, W, H, points, val, false);
+        setTimeout(coastTick, 50);
+      }
+      coastTick();
+    }
+
+    async function crash_finish(won) {
+      crash_running = false;
+      var cb = document.getElementById('crash_cashBtn');
+      var sb = document.getElementById('crash_startBtn');
+      if (cb) cb.disabled = true;
+      if (sb) sb.disabled = false;
+
+      if (!won) {
+        g_setResult('crash_result', '💥 CRASHED at ' + crash_point.toFixed(2) + '× — Lost ' + crash_bet.toFixed(4) + (g_currency === 'sol' ? ' ◎' : ' 🥬'), false);
+        g_addHistory('📈 Crash', crash_bet, g_currency, false, 0);
+        await g_logBet('📈 Crash', crash_bet, g_currency, crash_bet);
+        await g_updatePotUI();
+        await g_loadGameBalances();
+      }
+
+      crash_history.unshift(crash_point);
+      if (crash_history.length > 10) crash_history.pop();
+      g_disableGameBtns(false);
+    }
+
+    /* ================================================================
+       CABBAGE STORE — burn sinks for the economy
+    ================================================================ */
+    var shop_items = {};     // wallet → { item_id: {data, bought_at} }
+    var shop_allItems = {};  // cache of ALL user items for chat rendering
+    var shop_loaded = false;
+    var shop_raffleCurrent = null;
+    var shop_raffleMyTickets = 0;
+
+    var SHOP_CATALOG = [
+      { id: 'badge_fire',   cat: 'chat',    icon: '🔥', name: 'Fire Badge',       price: 50,   desc: '🔥 next to your name in chat', perm: true },
+      { id: 'badge_diamond',cat: 'chat',    icon: '💎', name: 'Diamond Badge',    price: 50,   desc: '💎 next to your name in chat', perm: true },
+      { id: 'badge_crown',  cat: 'chat',    icon: '👑', name: 'Crown Badge',      price: 100,  desc: '👑 next to your name in chat', perm: true },
+      { id: 'badge_skull',  cat: 'chat',    icon: '💀', name: 'Skull Badge',      price: 50,   desc: '💀 next to your name in chat', perm: true },
+      { id: 'badge_rocket', cat: 'chat',    icon: '🚀', name: 'Rocket Badge',     price: 75,   desc: '🚀 next to your name in chat', perm: true },
+      { id: 'namecolor_gold',   cat: 'chat', icon: '✨', name: 'Gold Name',       price: 200,  desc: 'Your name shows gold in chat', perm: true, color: '#ffd700' },
+      { id: 'namecolor_cyan',   cat: 'chat', icon: '💠', name: 'Cyan Name',       price: 200,  desc: 'Your name shows cyan in chat', perm: true, color: '#00ffee' },
+      { id: 'namecolor_purple', cat: 'chat', icon: '🔮', name: 'Purple Name',     price: 200,  desc: 'Your name shows purple in chat', perm: true, color: '#bf5fff' },
+      { id: 'namecolor_red',    cat: 'chat', icon: '❤️', name: 'Red Name',        price: 200,  desc: 'Your name shows red in chat', perm: true, color: '#ff3c5c' },
+      { id: 'chat_glow',    cat: 'chat',    icon: '🌟', name: 'Message Glow',    price: 300,  desc: 'Your messages have a subtle glow', perm: true },
+      { id: 'vip_flair',    cat: 'chat',    icon: '⭐', name: 'VIP Flair',        price: 5000, desc: '⭐ VIP tag next to your name', perm: true },
+      { id: 'frame_gold',   cat: 'profile', icon: '🖼️', name: 'Gold Frame',       price: 500,  desc: 'Gold border on your profile PFP', perm: true },
+      { id: 'frame_diamond',cat: 'profile', icon: '💎', name: 'Diamond Frame',    price: 2000, desc: 'Diamond animated border on PFP', perm: true },
+      { id: 'lucky_boost',  cat: 'casino',  icon: '🍀', name: 'Lucky Boost',      price: 500,  desc: 'Next 10 casino bets get +5% odds', perm: false, uses: 10 },
+      { id: 'raffle_ticket',cat: 'raffle',  icon: '🎟️', name: 'Raffle Ticket',    price: 1000, desc: 'Enter the current NFT raffle', perm: false }
+    ];
+
+    var SHOP_CATS = [
+      { id: 'chat',    label: '💬 Chat Perks' },
+      { id: 'profile', label: '🖼️ Profile' },
+      { id: 'casino',  label: '🎰 Casino' },
+      { id: 'raffle',  label: '🎟️ Raffle' }
+    ];
+    var shop_activeCat = 'chat';
+
+    async function shop_loadMyItems() {
+      if (!walletPublicKey) return;
+      var sb = getSupaClient();
+      var w = walletPublicKey.toBase58();
+      try {
+        var res = await sb.from('user_items').select('*').eq('wallet', w);
+        shop_items = {};
+        (res.data || []).forEach(function(r) {
+          shop_items[r.item_id] = { data: r.data || {}, bought_at: r.bought_at, expires_at: r.expires_at };
+        });
+        shop_loaded = true;
+      } catch(e) { console.warn('shop_loadMyItems error:', e); }
+    }
+
+    // Load ALL users' chat cosmetics for rendering
+    async function shop_loadAllChatItems() {
+      var sb = getSupaClient();
+      try {
+        var res = await sb.from('user_items').select('wallet,item_id,data')
+          .in('item_id', ['badge_fire','badge_diamond','badge_crown','badge_skull','badge_rocket','namecolor_gold','namecolor_cyan','namecolor_purple','namecolor_red','chat_glow','vip_flair']);
+        shop_allItems = {};
+        (res.data || []).forEach(function(r) {
+          if (!shop_allItems[r.wallet]) shop_allItems[r.wallet] = {};
+          shop_allItems[r.wallet][r.item_id] = r.data || {};
+        });
+      } catch(e) { console.warn('shop_loadAllChatItems:', e); }
+    }
+
+    function shop_owns(itemId) {
+      return !!shop_items[itemId];
+    }
+
+    // Get chat badge emoji for a wallet
+    function shop_getBadge(wallet) {
+      var items = shop_allItems[wallet];
+      if (!items) return '';
+      var badges = ['badge_fire','badge_diamond','badge_crown','badge_skull','badge_rocket'];
+      for (var i = 0; i < badges.length; i++) {
+        if (items[badges[i]]) {
+          var cat = SHOP_CATALOG.find(function(c) { return c.id === badges[i]; });
+          if (cat) return cat.icon;
+        }
+      }
+      return '';
+    }
+
+    function shop_getVIP(wallet) {
+      var items = shop_allItems[wallet];
+      return items && items['vip_flair'] ? '⭐' : '';
+    }
+
+    function shop_getNameColor(wallet) {
+      var items = shop_allItems[wallet];
+      if (!items) return null;
+      var colors = ['namecolor_gold','namecolor_cyan','namecolor_purple','namecolor_red'];
+      for (var i = 0; i < colors.length; i++) {
+        if (items[colors[i]]) {
+          var cat = SHOP_CATALOG.find(function(c) { return c.id === colors[i]; });
+          if (cat) return cat.color;
+        }
+      }
+      return null;
+    }
+
+    function shop_hasGlow(wallet) {
+      var items = shop_allItems[wallet];
+      return items && items['chat_glow'];
+    }
+
+    function shop_hasBoost() {
+      var b = shop_items['lucky_boost'];
+      if (!b) return false;
+      var uses = b.data && b.data.uses_left !== undefined ? b.data.uses_left : 0;
+      return uses > 0;
+    }
+
+    async function shop_buy(itemId) {
+      if (!walletPublicKey) return alert('Connect wallet first.');
+      var cat = SHOP_CATALOG.find(function(c) { return c.id === itemId; });
+      if (!cat) return;
+
+      // Already owned (permanent items)
+      if (cat.perm && shop_owns(itemId)) return alert('You already own this!');
+
+      // Confirm
+      if (!confirm('Buy ' + cat.name + ' for ' + cat.price.toLocaleString() + ' 🥬?')) return;
+
+      try {
+        // Spend cabbage
+        await g_spendCabbage(cat.price);
+
+        var sb = getSupaClient();
+        var w = walletPublicKey.toBase58();
+        var itemData = {};
+
+        if (itemId === 'lucky_boost') {
+          // If already have boost, add uses
+          var existing = shop_items['lucky_boost'];
+          var currentUses = existing && existing.data ? (existing.data.uses_left || 0) : 0;
+          itemData = { uses_left: currentUses + (cat.uses || 10) };
+          await sb.from('user_items').upsert({
+            wallet: w, item_id: itemId, data: itemData, bought_at: new Date().toISOString()
+          }, { onConflict: 'wallet,item_id' });
+        } else if (itemId === 'raffle_ticket') {
+          // Handle raffle entry
+          if (!shop_raffleCurrent) return alert('No active raffle right now.');
+          var exR = await sb.from('raffle_entries').select('id,tickets').eq('raffle_id', shop_raffleCurrent.id).eq('wallet', w).maybeSingle();
+          if (exR.data) {
+            await sb.from('raffle_entries').update({ tickets: exR.data.tickets + 1 }).eq('id', exR.data.id);
+          } else {
+            await sb.from('raffle_entries').insert({ raffle_id: shop_raffleCurrent.id, wallet: w, tickets: 1 });
+          }
+          shop_raffleMyTickets++;
+          shop_paintStore();
+          return;
+        } else {
+          // Permanent item
+          await sb.from('user_items').upsert({
+            wallet: w, item_id: itemId, data: itemData, bought_at: new Date().toISOString()
+          }, { onConflict: 'wallet,item_id' });
+        }
+
+        shop_items[itemId] = { data: itemData, bought_at: new Date().toISOString() };
+        // Refresh chat cosmetics cache
+        await shop_loadAllChatItems();
+        shop_paintStore();
+        alert('✅ ' + cat.name + ' purchased!');
+      } catch(e) {
+        alert('Purchase failed: ' + (e.message || e));
+      }
+    }
+
+    async function shop_loadRaffle() {
       try {
         var sb = getSupaClient();
-        var res = await sb
-          .from('nft_listings')
-          .select('*')
-          .eq('status', 'listed')
-          .order('created_at', { ascending: false });
-        if (res.error) throw res.error;
-        s_listings = res.data || [];
-      } catch(e) {
-        console.error('NFT listings load error:', e);
-        s_listings = [];
-      }
+        var res = await sb.from('raffles').select('*').eq('status', 'open').order('created_at', { ascending: false }).limit(1).maybeSingle();
+        shop_raffleCurrent = res.data || null;
+        if (shop_raffleCurrent && walletPublicKey) {
+          var w = walletPublicKey.toBase58();
+          var eR = await sb.from('raffle_entries').select('tickets').eq('raffle_id', shop_raffleCurrent.id).eq('wallet', w).maybeSingle();
+          shop_raffleMyTickets = eR.data ? eR.data.tickets : 0;
+          // Total entries
+          var tR = await sb.from('raffle_entries').select('tickets').eq('raffle_id', shop_raffleCurrent.id);
+          shop_raffleCurrent._totalTickets = (tR.data || []).reduce(function(s, r) { return s + r.tickets; }, 0);
+          shop_raffleCurrent._totalEntrants = (tR.data || []).length;
+        }
+      } catch(e) { console.warn('shop_loadRaffle:', e); }
     }
 
     async function renderStoreUI() {
       var view = document.getElementById('view-store');
       if (!view) return;
 
+      if (!shop_loaded) await shop_loadMyItems();
+      await shop_loadRaffle();
+
+      var cabBal = 0;
+      try { cabBal = await g_fetchCabbageBalance(); } catch(e) {}
+
       view.innerHTML =
-        '<div style="display:flex;align-items:center;justify-content:center;padding:3rem;color:#252540;font-size:0.8rem;letter-spacing:2px;">Loading store…</div>';
+        '<style>' +
+        '.sh_cats{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:1rem;}' +
+        '.sh_cat{padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:rgba(0,0,0,0.2);color:#555;font-size:0.68rem;font-weight:700;cursor:pointer;transition:all 0.2s;font-family:"Space Grotesk",sans-serif;}' +
+        '.sh_cat:hover{border-color:rgba(0,212,255,0.3);color:#888;}' +
+        '.sh_cat.active{border-color:rgba(0,212,255,0.5);color:#00d4ff;background:rgba(0,212,255,0.08);}' +
+        '.sh_grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;}' +
+        '.sh_item{background:#0a0a1a;border:1px solid #1a1a30;border-radius:12px;padding:1rem;text-align:center;transition:all 0.2s;}' +
+        '.sh_item:hover{border-color:rgba(0,212,255,0.3);transform:translateY(-2px);}' +
+        '.sh_item.owned{border-color:rgba(0,255,136,0.3);background:rgba(0,255,136,0.03);}' +
+        '.sh_icon{font-size:2rem;margin-bottom:0.4rem;}' +
+        '.sh_name{font-weight:700;font-size:0.78rem;color:#e0e0ff;margin-bottom:4px;}' +
+        '.sh_desc{font-size:0.62rem;color:#444;margin-bottom:0.7rem;line-height:1.4;}' +
+        '.sh_price{font-size:0.82rem;font-weight:900;color:#ffd700;margin-bottom:0.6rem;}' +
+        '.sh_buy{padding:6px 16px;border-radius:7px;border:1px solid rgba(0,212,255,0.4);background:rgba(0,212,255,0.1);color:#00d4ff;font-weight:700;font-size:0.68rem;cursor:pointer;font-family:"Space Grotesk",sans-serif;letter-spacing:1px;text-transform:uppercase;transition:all 0.2s;}' +
+        '.sh_buy:hover{background:rgba(0,212,255,0.2);box-shadow:0 0 12px rgba(0,212,255,0.2);}' +
+        '.sh_buy.owned{border-color:rgba(0,255,136,0.3);color:#00ff88;cursor:default;}' +
+        '.sh_raffle{background:#0f0f22;border:1px solid #1e1e3a;border-radius:14px;padding:1.4rem;margin-bottom:1rem;}' +
+        '</style>' +
 
-      s_cabBalance = await s_fetchCabbageBalance();
-      await s_loadItems();
-      await s_loadListings();
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.6rem;">' +
+          '<div>' +
+            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.5rem;letter-spacing:3px;color:#e0e0ff;">🛒 CABBAGE STORE</div>' +
+            '<div style="font-size:0.7rem;color:#444;letter-spacing:1px;margin-top:2px;">Spend cabbage. Flex on everyone.</div>' +
+          '</div>' +
+          '<div style="display:flex;align-items:center;gap:1rem;">' +
+            '<div style="font-size:0.82rem;font-weight:700;color:#00ff88;" id="sh_balance">' + Math.floor(cabBal).toLocaleString() + ' 🥬</div>' +
+            '<button onclick="switchView(\'profile\')" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#888;padding:7px 14px;border-radius:7px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;" onmouseover="this.style.borderColor=\'rgba(0,212,255,0.4)\';this.style.color=\'#00d4ff\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,0.1)\';this.style.color=\'#888\'">← Home</button>' +
+          '</div>' +
+        '</div>' +
 
-      s_paintStore();
+        '<div class="sh_cats" id="sh_cats"></div>' +
+        '<div id="sh_body"></div>' +
+
+        '<div style="background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.04);border-radius:10px;padding:0.9rem 1.2rem;margin-top:1rem;font-size:0.62rem;color:#2a2a44;letter-spacing:0.8px;text-align:center;text-transform:uppercase;">' +
+          'Earn → Spend → Flex · Chat cosmetics show for everyone · Boosts apply to your next games' +
+        '</div>';
+
+      // Render category tabs
+      var catsEl = document.getElementById('sh_cats');
+      var cHTML = '';
+      SHOP_CATS.forEach(function(c) {
+        cHTML += '<div class="sh_cat' + (c.id === shop_activeCat ? ' active' : '') + '" onclick="shop_switchCat(\'' + c.id + '\')">' + c.label + '</div>';
+      });
+      catsEl.innerHTML = cHTML;
+
+      shop_paintStore();
     }
 
-    function s_paintStore() {
-      var view = document.getElementById('view-store');
-      if (!view) return;
+    function shop_switchCat(catId) {
+      shop_activeCat = catId;
+      var tabs = document.querySelectorAll('.sh_cat');
+      tabs.forEach(function(t) { t.classList.remove('active'); });
+      var idx = SHOP_CATS.findIndex(function(c) { return c.id === catId; });
+      if (tabs[idx]) tabs[idx].classList.add('active');
+      shop_paintStore();
+    }
 
-      var myWallet = walletPublicKey ? walletPublicKey.toBase58() : '';
+    function shop_paintStore() {
+      var body = document.getElementById('sh_body');
+      if (!body) return;
       var html = '';
 
-      // ── Header ──
-      html +=
-        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;flex-wrap:wrap;gap:0.6rem;">' +
-          '<div>' +
-            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.5rem;letter-spacing:3px;color:#e0e0ff;">🥬 CABBAGE STORE</div>' +
-            '<div style="font-size:0.7rem;color:#444;letter-spacing:1px;margin-top:2px;">Spend your cabbage on merch, raffles, and NFTs</div>' +
-          '</div>' +
-          '<div style="display:flex;align-items:center;gap:0.8rem;">' +
-            '<div style="background:rgba(0,255,136,0.06);border:1px solid rgba(0,255,136,0.15);border-radius:10px;padding:8px 14px;display:flex;align-items:center;gap:6px;">' +
-              '<span style="font-size:1.1rem;">🥬</span>' +
-              '<span style="font-weight:700;color:#00ff88;font-size:1rem;" id="s_balDisplay">' + Math.floor(s_cabBalance).toLocaleString() + '</span>' +
+      if (shop_activeCat === 'raffle') {
+        // Raffle section
+        if (shop_raffleCurrent) {
+          var r = shop_raffleCurrent;
+          var endsStr = r.ends_at ? new Date(r.ends_at).toLocaleDateString() : 'TBD';
+          html += '<div class="sh_raffle">' +
+            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.2rem;letter-spacing:3px;color:#ffd700;margin-bottom:0.5rem;">🎟️ ' + escapeHtml(r.title) + '</div>' +
+            '<div style="font-size:0.78rem;color:#c8c8e8;margin-bottom:0.5rem;">' + escapeHtml(r.prize_desc || 'NFT Prize') + '</div>' +
+            '<div style="display:flex;gap:2rem;flex-wrap:wrap;margin:1rem 0;">' +
+              '<div><div style="color:#555;font-size:0.6rem;letter-spacing:1px;">ENDS</div><div style="font-weight:700;color:#00d4ff;">' + endsStr + '</div></div>' +
+              '<div><div style="color:#555;font-size:0.6rem;letter-spacing:1px;">TOTAL ENTRIES</div><div style="font-weight:700;color:#7b68ee;">' + (r._totalTickets || 0) + '</div></div>' +
+              '<div><div style="color:#555;font-size:0.6rem;letter-spacing:1px;">ENTRANTS</div><div style="font-weight:700;color:#e0e0ff;">' + (r._totalEntrants || 0) + '</div></div>' +
+              '<div><div style="color:#555;font-size:0.6rem;letter-spacing:1px;">YOUR TICKETS</div><div style="font-weight:700;color:#00ff88;">' + shop_raffleMyTickets + '</div></div>' +
             '</div>' +
-                      '</div>' +
-        '</div>';
-
-      // ── Filter Tabs ──
-      var filters = [
-        { id:'all', label:'All' },
-        { id:'merch', label:'🛍 Merch' },
-        { id:'digital', label:'✨ Digital' },
-        { id:'raffle', label:'🎟 Raffles' },
-        { id:'nft', label:'🖼 NFT Market' }
-      ];
-      html += '<div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.4rem;">';
-      filters.forEach(function(f) {
-        var active = s_filter === f.id;
-        html += '<button onclick="s_setFilter(\'' + f.id + '\')" style="background:' + (active ? 'rgba(0,212,255,0.08)' : 'transparent') + ';border:1px solid ' + (active ? 'rgba(0,212,255,0.5)' : 'rgba(255,255,255,0.08)') + ';color:' + (active ? '#00d4ff' : '#888') + ';padding:8px 16px;border-radius:8px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;transition:all 0.2s;">' + f.label + '</button>';
-      });
-      html += '</div>';
-
-      // ── List NFT Button ──
-      if (s_filter === 'nft' || s_filter === 'all') {
-        html += '<div style="margin-bottom:1.2rem;">' +
-          '<button onclick="s_openListNftModal()" style="background:linear-gradient(135deg,rgba(0,212,255,0.12),rgba(123,104,238,0.12));border:1px solid rgba(0,212,255,0.3);color:#00d4ff;padding:10px 22px;border-radius:10px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.75rem;letter-spacing:1.5px;text-transform:uppercase;transition:all 0.2s;">+ List My NFT For Sale</button>' +
-        '</div>';
-      }
-
-      // ── Items Grid ──
-      var visibleItems = s_filter === 'all' ? s_items : (s_filter === 'nft' ? [] : s_items.filter(function(i){ return i.category === s_filter; }));
-      var visibleListings = (s_filter === 'all' || s_filter === 'nft') ? s_listings : [];
-
-      if (visibleItems.length === 0 && visibleListings.length === 0) {
-        html += '<div style="text-align:center;padding:3rem;color:#252540;font-size:0.78rem;letter-spacing:2px;">No items in this category yet</div>';
-      }
-
-      html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1.2rem;">';
-
-      // Store items
-      visibleItems.forEach(function(item) {
-        var outOfStock = item.stock !== null && item.stock <= 0;
-        var cantAfford = s_cabBalance < item.price;
-        var stockLabel = item.stock !== null ? (item.stock + ' left') : '∞';
-        var catBadge = item.category === 'merch' ? '🛍' : (item.category === 'digital' ? '✨' : '🎟');
-
-        html +=
-          '<div style="background:#0f0f22;border:1px solid #1e1e3a;border-radius:14px;overflow:hidden;transition:all 0.2s;' + (outOfStock ? 'opacity:0.5;' : '') + '">' +
-            (item.image_url ? '<div style="width:100%;aspect-ratio:1;background:#06060f;overflow:hidden;"><img src="' + escapeHtml(item.image_url) + '" style="width:100%;height:100%;object-fit:cover;" loading="lazy" onerror="this.style.display=\'none\'"></div>' : '<div style="width:100%;aspect-ratio:1;background:#06060f;display:flex;align-items:center;justify-content:center;font-size:3rem;">' + catBadge + '</div>') +
-            '<div style="padding:1rem;">' +
-              '<div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:0.4rem;">' +
-                '<div style="font-weight:700;font-size:0.88rem;color:#e0e0ff;">' + escapeHtml(item.name) + '</div>' +
-                '<div style="font-size:0.6rem;color:#555;letter-spacing:1px;text-transform:uppercase;flex-shrink:0;margin-left:8px;">' + catBadge + ' ' + stockLabel + '</div>' +
-              '</div>' +
-              '<div style="font-size:0.75rem;color:#555;margin-bottom:0.8rem;line-height:1.5;">' + escapeHtml(item.description || '') + '</div>' +
-              '<div style="display:flex;justify-content:space-between;align-items:center;">' +
-                '<div style="font-weight:900;font-size:1rem;color:#00ff88;">' + item.price.toLocaleString() + ' 🥬</div>' +
-                '<button onclick="s_buyItem(' + item.id + ')" ' + (outOfStock || cantAfford ? 'disabled' : '') + ' style="background:' + (outOfStock ? '#1a1a30' : (cantAfford ? '#1a1a30' : 'linear-gradient(135deg,rgba(0,255,136,0.15),rgba(0,212,255,0.15))')) + ';border:1px solid ' + (outOfStock || cantAfford ? 'rgba(255,255,255,0.05)' : 'rgba(0,255,136,0.3)') + ';color:' + (outOfStock ? '#333' : (cantAfford ? '#555' : '#00ff88')) + ';padding:8px 16px;border-radius:8px;cursor:' + (outOfStock || cantAfford ? 'not-allowed' : 'pointer') + ';font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.7rem;letter-spacing:1.5px;text-transform:uppercase;transition:all 0.2s;">' + (outOfStock ? 'SOLD OUT' : (cantAfford ? 'NEED MORE 🥬' : 'BUY')) + '</button>' +
-              '</div>' +
+            '<div style="display:flex;align-items:center;gap:1rem;margin-top:0.8rem;">' +
+              '<button class="sh_buy" onclick="shop_buy(\'raffle_ticket\')">BUY TICKET · 1,000 🥬</button>' +
+              '<div style="font-size:0.6rem;color:#333;">Each ticket = 1 entry. More tickets = better odds.</div>' +
             '</div>' +
           '</div>';
-      });
-
-      // NFT listings
-      visibleListings.forEach(function(listing) {
-        var isOwn = listing.seller_wallet === myWallet;
-        var cantAfford = s_cabBalance < listing.price;
-        var sellerShort = listing.seller_wallet.slice(0,4) + '…' + listing.seller_wallet.slice(-4);
-        var sellerLabel = listing.seller_name || sellerShort;
-
-        html +=
-          '<div style="background:#0f0f22;border:1px solid ' + (isOwn ? 'rgba(123,104,238,0.3)' : '#1e1e3a') + ';border-radius:14px;overflow:hidden;transition:all 0.2s;">' +
-            (listing.image_url ? '<div style="width:100%;aspect-ratio:1;background:#06060f;overflow:hidden;"><img src="' + escapeHtml(listing.image_url) + '" style="width:100%;height:100%;object-fit:cover;" loading="lazy" onerror="this.style.display=\'none\'"></div>' : '<div style="width:100%;aspect-ratio:1;background:#06060f;display:flex;align-items:center;justify-content:center;font-size:3rem;">🖼</div>') +
-            '<div style="padding:1rem;">' +
-              '<div style="font-weight:700;font-size:0.88rem;color:#e0e0ff;margin-bottom:0.3rem;">' + escapeHtml(listing.name) + '</div>' +
-              '<div style="font-size:0.68rem;color:#555;margin-bottom:0.8rem;">Listed by <span style="color:#7b68ee;">' + escapeHtml(sellerLabel) + '</span></div>' +
-              '<div style="display:flex;justify-content:space-between;align-items:center;">' +
-                '<div style="font-weight:900;font-size:1rem;color:#00ff88;">' + listing.price.toLocaleString() + ' 🥬</div>' +
-                (isOwn
-                  ? '<button onclick="s_cancelListing(' + listing.id + ')" style="background:transparent;border:1px solid rgba(255,60,92,0.3);color:#ff3c5c;padding:8px 16px;border-radius:8px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.7rem;letter-spacing:1.5px;text-transform:uppercase;">CANCEL</button>'
-                  : '<button onclick="s_buyListing(' + listing.id + ')" ' + (cantAfford ? 'disabled' : '') + ' style="background:' + (cantAfford ? '#1a1a30' : 'linear-gradient(135deg,rgba(0,255,136,0.15),rgba(0,212,255,0.15))') + ';border:1px solid ' + (cantAfford ? 'rgba(255,255,255,0.05)' : 'rgba(0,255,136,0.3)') + ';color:' + (cantAfford ? '#555' : '#00ff88') + ';padding:8px 16px;border-radius:8px;cursor:' + (cantAfford ? 'not-allowed' : 'pointer') + ';font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.7rem;letter-spacing:1.5px;text-transform:uppercase;">' + (cantAfford ? 'NEED MORE 🥬' : 'BUY NFT') + '</button>'
-                ) +
-              '</div>' +
-            '</div>' +
-          '</div>';
-      });
-
-      html += '</div>';
-
-      html += '<div style="margin-top:2rem;text-align:center;font-size:0.63rem;color:#1e1e3a;letter-spacing:1px;text-transform:uppercase;line-height:2;">All purchases are final · Physical items require shipping info · NFT transfers are manual</div>';
-
-      view.innerHTML = html;
-    }
-
-    function s_setFilter(filter) {
-      s_filter = filter;
-      s_paintStore();
-    }
-
-    async function s_buyItem(itemId) {
-      var item = s_items.find(function(i){ return i.id === itemId; });
-      if (!item) return alert('Item not found.');
-      if (!walletPublicKey) return alert('Connect wallet first.');
-
-      var confirmed = confirm('Buy "' + item.name + '" for ' + item.price.toLocaleString() + ' 🥬?');
-      if (!confirmed) return;
-
-      // If merch, collect shipping info
-      var shipping = null;
-      if (item.category === 'merch') {
-        var shipName = prompt('Shipping Name:');
-        if (!shipName) return;
-        var address = prompt('Street Address:');
-        if (!address) return;
-        var city = prompt('City:');
-        if (!city) return;
-        var state = prompt('State / Province:');
-        var zip = prompt('ZIP / Postal Code:');
-        var country = prompt('Country:', 'US');
-        shipping = { name: shipName, address: address, city: city, state: state || '', zip: zip || '', country: country || 'US' };
+        } else {
+          html += '<div style="text-align:center;color:#333;padding:3rem;font-size:0.82rem;">No active raffle right now. Check back soon!</div>';
+        }
       }
 
+      // Item grid
+      var items = SHOP_CATALOG.filter(function(i) { return i.cat === shop_activeCat; });
+      if (shop_activeCat === 'raffle') {
+        // Don't show raffle_ticket in grid — it's in the raffle card above
+        items = items.filter(function(i) { return i.id !== 'raffle_ticket'; });
+      }
+
+      if (items.length > 0) {
+        html += '<div class="sh_grid">';
+        items.forEach(function(item) {
+          var owned = shop_owns(item.id);
+          var boostInfo = '';
+          if (item.id === 'lucky_boost' && owned) {
+            var uses = shop_items[item.id].data ? (shop_items[item.id].data.uses_left || 0) : 0;
+            boostInfo = '<div style="font-size:0.6rem;color:#00ff88;margin-bottom:4px;">' + uses + ' uses left</div>';
+          }
+          html += '<div class="sh_item' + (owned && item.perm ? ' owned' : '') + '">' +
+            '<div class="sh_icon">' + item.icon + '</div>' +
+            '<div class="sh_name">' + item.name + '</div>' +
+            '<div class="sh_desc">' + item.desc + '</div>' +
+            boostInfo +
+            '<div class="sh_price">' + item.price.toLocaleString() + ' 🥬</div>';
+          if (owned && item.perm) {
+            html += '<div class="sh_buy owned">✅ OWNED</div>';
+          } else {
+            html += '<button class="sh_buy" onclick="shop_buy(\'' + item.id + '\')">' + (owned && !item.perm ? 'BUY MORE' : 'BUY') + '</button>';
+          }
+          html += '</div>';
+        });
+        html += '</div>';
+      }
+
+      body.innerHTML = html;
+    }
+    var lb_cache = {};
+    var lb_cacheTime = 0;
+    var lb_activeTab = 'cabbage';
+    var LB_TABS = [
+      { id: 'cabbage',  icon: '🥬', label: 'Top Cabbage' },
+      { id: 'winners',  icon: '🎰', label: 'Casino Wins' },
+      { id: 'chatters', icon: '🔥', label: 'Top Chatters' },
+      { id: 'holders',  icon: '🪶', label: 'OG Holders' },
+      { id: 'bigwins',  icon: '💰', label: 'Biggest Wins' }
+    ];
+
+    async function lb_fetchAll() {
+      // Cache for 60s
+      if (lb_cache.cabbage && Date.now() - lb_cacheTime < 60000) return lb_cache;
+      var sb = getSupaClient();
       try {
-        await g_spendCabbage(item.price);
+        // Top Cabbage Holders
+        var cR = await sb.from('cabbage_accounts').select('wallet,balance').order('balance', { ascending: false }).limit(20);
+        lb_cache.cabbage = (cR.data || []).filter(function(r) { return r.balance > 0; });
 
-        var sb = getSupaClient();
-        var wallet = walletPublicKey.toBase58();
-        var username = (session && session.profile && session.profile.username) || null;
+        // Casino total winnings (payout from game_bets where house_profit < 0 means player won)
+        var gR = await sb.from('game_bets').select('wallet,bet_amount,house_profit,game').order('played_at', { ascending: false }).limit(2000);
+        var gData = gR.data || [];
 
-        var orderRes = await sb.from('store_orders').insert({
-          wallet: wallet,
-          username: username,
-          item_id: item.id,
-          item_name: item.name,
-          price_paid: item.price,
-          status: 'pending',
-          shipping: shipping
-        }).select().single();
+        // Aggregate wins per wallet
+        var winMap = {};
+        var bigWins = [];
+        gData.forEach(function(b) {
+          if (Number(b.house_profit) <= 0) {
+            // Player won — profit is the negative of house_profit
+            var profit = Math.abs(Number(b.house_profit));
+            if (!winMap[b.wallet]) winMap[b.wallet] = { wallet: b.wallet, total: 0, count: 0 };
+            winMap[b.wallet].total += profit;
+            winMap[b.wallet].count++;
+            bigWins.push({ wallet: b.wallet, amount: Number(b.bet_amount) + profit, game: b.game });
+          }
+        });
+        lb_cache.winners = Object.values(winMap).sort(function(a, b) { return b.total - a.total; }).slice(0, 20);
+        lb_cache.bigwins = bigWins.sort(function(a, b) { return b.amount - a.amount; }).slice(0, 20);
 
-        if (orderRes.error) throw orderRes.error;
+        // Most Active Chatters
+        var chR = await sb.from('chat_messages').select('wallet,username').order('created_at', { ascending: false }).limit(2000);
+        var chatMap = {};
+        (chR.data || []).forEach(function(m) {
+          if (!chatMap[m.wallet]) chatMap[m.wallet] = { wallet: m.wallet, username: m.username, count: 0 };
+          chatMap[m.wallet].count++;
+          if (m.username) chatMap[m.wallet].username = m.username;
+        });
+        lb_cache.chatters = Object.values(chatMap).sort(function(a, b) { return b.count - a.count; }).slice(0, 20);
 
-        if (item.stock !== null) {
-          await sb.from('store_items').update({ stock: Math.max(0, item.stock - 1) }).eq('id', item.id);
+        // OG Holders (earliest stakers)
+        var hR = await sb.from('cabbage_accounts').select('wallet,started_at').not('started_at', 'is', null).order('started_at', { ascending: true }).limit(20);
+        lb_cache.holders = (hR.data || []).filter(function(r) { return r.started_at; });
+
+        lb_cacheTime = Date.now();
+      } catch(e) { console.warn('lb_fetchAll error:', e); }
+      return lb_cache;
+    }
+
+    function lb_shortWallet(w) {
+      if (!w || w.length < 8) return w || '—';
+      return w.slice(0, 4) + '…' + w.slice(-4);
+    }
+
+    function lb_isMe(w) {
+      return walletPublicKey && walletPublicKey.toBase58() === w;
+    }
+
+    function lb_daysSince(iso) {
+      if (!iso) return 0;
+      return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+    }
+
+    async function renderLeaderboardUI() {
+      var view = document.getElementById('view-leaderboard');
+      if (!view) return;
+
+      view.innerHTML =
+        '<style>' +
+        '.lb_tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:1rem;}' +
+        '.lb_tab{padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:rgba(0,0,0,0.2);color:#555;font-size:0.68rem;font-weight:700;cursor:pointer;transition:all 0.2s;font-family:"Space Grotesk",sans-serif;letter-spacing:0.5px;}' +
+        '.lb_tab:hover{border-color:rgba(0,212,255,0.3);color:#888;}' +
+        '.lb_tab.active{border-color:rgba(0,212,255,0.5);color:#00d4ff;background:rgba(0,212,255,0.08);}' +
+        '.lb_table{width:100%;border-collapse:collapse;}' +
+        '.lb_table th{text-align:left;font-size:0.6rem;color:#333;letter-spacing:1.5px;text-transform:uppercase;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.04);}' +
+        '.lb_table td{padding:10px;font-size:0.78rem;border-bottom:1px solid rgba(255,255,255,0.02);}' +
+        '.lb_rank{font-weight:900;width:32px;text-align:center;}' +
+        '.lb_gold{color:#ffd700;}.lb_silver{color:#c0c0c0;}.lb_bronze{color:#cd7f32;}' +
+        '.lb_me{background:rgba(0,212,255,0.06) !important;}' +
+        '.lb_wallet{font-family:monospace;font-size:0.72rem;}' +
+        '.lb_val{text-align:right;font-weight:700;font-family:"Space Grotesk",sans-serif;}' +
+        '.lb_loading{text-align:center;color:#333;padding:3rem;font-size:0.8rem;letter-spacing:1px;}' +
+        '</style>' +
+
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.6rem;">' +
+          '<div>' +
+            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.5rem;letter-spacing:3px;color:#e0e0ff;">🏆 LEADERBOARDS</div>' +
+            '<div style="font-size:0.7rem;color:#444;letter-spacing:1px;margin-top:2px;">See who\'s on top. Compete. Win rewards.</div>' +
+          '</div>' +
+          '<button onclick="switchView(\'profile\')" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#888;padding:7px 14px;border-radius:7px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;" onmouseover="this.style.borderColor=\'rgba(0,212,255,0.4)\';this.style.color=\'#00d4ff\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,0.1)\';this.style.color=\'#888\'">← Home</button>' +
+        '</div>' +
+
+        '<div class="lb_tabs" id="lb_tabs"></div>' +
+        '<div style="background:#0f0f22;border:1px solid #1e1e3a;border-radius:14px;padding:1.2rem;min-height:300px;" id="lb_body">' +
+          '<div class="lb_loading">Loading…</div>' +
+        '</div>' +
+
+        '<div style="background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.04);border-radius:10px;padding:0.9rem 1.2rem;margin-top:1rem;font-size:0.62rem;color:#2a2a44;letter-spacing:0.8px;text-align:center;text-transform:uppercase;">' +
+          'Top players earn rewards · Free mints · Casino credits · Store discounts · Special roles' +
+        '</div>';
+
+      // Render tab buttons
+      var tabsEl = document.getElementById('lb_tabs');
+      var tabsHTML = '';
+      LB_TABS.forEach(function(t) {
+        tabsHTML += '<div class="lb_tab' + (t.id === lb_activeTab ? ' active' : '') + '" onclick="lb_switchTab(\'' + t.id + '\')">' + t.icon + ' ' + t.label + '</div>';
+      });
+      tabsEl.innerHTML = tabsHTML;
+
+      // Fetch and render
+      await lb_fetchAll();
+      lb_renderBoard();
+    }
+
+    function lb_switchTab(tabId) {
+      lb_activeTab = tabId;
+      // Update tab active states
+      var tabs = document.querySelectorAll('.lb_tab');
+      tabs.forEach(function(t) { t.classList.remove('active'); });
+      var idx = LB_TABS.findIndex(function(t) { return t.id === tabId; });
+      if (tabs[idx]) tabs[idx].classList.add('active');
+      lb_renderBoard();
+    }
+
+    function lb_renderBoard() {
+      var body = document.getElementById('lb_body');
+      if (!body) return;
+      var data = lb_cache[lb_activeTab] || [];
+      if (data.length === 0) {
+        body.innerHTML = '<div class="lb_loading">No data yet — keep playing!</div>';
+        return;
+      }
+
+      var html = '<table class="lb_table"><thead><tr><th>#</th><th>Player</th><th style="text-align:right;">';
+
+      if (lb_activeTab === 'cabbage') html += 'Balance</th></tr></thead><tbody>';
+      else if (lb_activeTab === 'winners') html += 'Total Won</th></tr></thead><tbody>';
+      else if (lb_activeTab === 'chatters') html += 'Messages</th></tr></thead><tbody>';
+      else if (lb_activeTab === 'holders') html += 'Holding Since</th></tr></thead><tbody>';
+      else if (lb_activeTab === 'bigwins') html += 'Win Amount</th></tr></thead><tbody>';
+
+      data.forEach(function(row, i) {
+        var rank = i + 1;
+        var rankClass = rank === 1 ? 'lb_gold' : rank === 2 ? 'lb_silver' : rank === 3 ? 'lb_bronze' : '';
+        var medal = rank === 1 ? '👑' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank;
+        var w = row.wallet || '';
+        var meClass = lb_isMe(w) ? ' lb_me' : '';
+        var name = row.username || lb_shortWallet(w);
+
+        html += '<tr class="' + meClass + '">';
+        html += '<td class="lb_rank ' + rankClass + '">' + medal + '</td>';
+        html += '<td>';
+        html += '<span style="color:' + (lb_isMe(w) ? '#00d4ff' : '#c8c8e8') + ';font-weight:' + (lb_isMe(w) ? '700' : '400') + ';">' + escapeHtml(name) + '</span>';
+        if (lb_isMe(w)) html += ' <span style="font-size:0.58rem;color:#00d4ff;opacity:0.6;">(you)</span>';
+        html += '<div class="lb_wallet" style="color:' + walletColor(w) + ';">' + lb_shortWallet(w) + '</div>';
+        html += '</td>';
+        html += '<td class="lb_val">';
+
+        if (lb_activeTab === 'cabbage') {
+          html += '<span style="color:#00ff88;">' + Math.floor(row.balance).toLocaleString() + ' 🥬</span>';
+        } else if (lb_activeTab === 'winners') {
+          html += '<span style="color:#ffd700;">' + row.total.toFixed(2) + ' 🥬</span>';
+          html += '<div style="font-size:0.58rem;color:#555;">' + row.count + ' wins</div>';
+        } else if (lb_activeTab === 'chatters') {
+          html += '<span style="color:#7b68ee;">' + row.count.toLocaleString() + '</span>';
+        } else if (lb_activeTab === 'holders') {
+          var days = lb_daysSince(row.started_at);
+          html += '<span style="color:#00d4ff;">' + days + ' days</span>';
+          html += '<div style="font-size:0.55rem;color:#333;">' + new Date(row.started_at).toLocaleDateString() + '</div>';
+        } else if (lb_activeTab === 'bigwins') {
+          html += '<span style="color:#ffd700;">' + row.amount.toFixed(2) + ' 🥬</span>';
+          html += '<div style="font-size:0.58rem;color:#555;">' + (row.game || '') + '</div>';
         }
 
-        alert('✅ Purchased "' + item.name + '" for ' + item.price.toLocaleString() + ' 🥬!\n\n' + (item.category === 'merch' ? 'We\'ll ship it to you soon.' : (item.category === 'raffle' ? 'You\'re entered! Good luck.' : 'Order confirmed.')));
+        html += '</td></tr>';
+      });
 
-        s_cabBalance = await s_fetchCabbageBalance();
-        await s_loadItems();
-        s_paintStore();
+      html += '</tbody></table>';
 
-      } catch(e) {
-        alert('Purchase failed: ' + (e.message || e));
+      // Find my position
+      var myW = walletPublicKey ? walletPublicKey.toBase58() : '';
+      if (myW) {
+        var myIdx = data.findIndex(function(r) { return r.wallet === myW; });
+        if (myIdx >= 0) {
+          html += '<div style="text-align:center;margin-top:1rem;font-size:0.72rem;color:#00d4ff;font-weight:700;">Your rank: #' + (myIdx + 1) + '</div>';
+        } else {
+          html += '<div style="text-align:center;margin-top:1rem;font-size:0.68rem;color:#333;">You\'re not on this board yet — keep going!</div>';
+        }
       }
+
+      body.innerHTML = html;
     }
 
-    function s_openListNftModal() {
-      if (!walletPublicKey) return alert('Connect wallet first.');
-      if (!session.loadedNFTs || session.loadedNFTs.length === 0) return alert('No NFTs found in your wallet.');
+    /* ================================================================
+       MISSIONS / QUESTS SYSTEM
+    ================================================================ */
+    var MQ_DAILY = [
+      { id: 'daily_login',    icon: '🌅', name: 'Daily Login',          key: 'daily_login',    goal: 1,  reward: 2,  desc: 'Visit the dashboard' },
+      { id: 'claim_staking',  icon: '🥬', name: 'Claim Staking',       key: 'claim_staking',  goal: 1,  reward: 5,  desc: 'Claim your cabbage' },
+      { id: 'casino_play_5',  icon: '🎰', name: 'Play 5 Casino Games', key: 'casino_play',    goal: 5,  reward: 10, desc: 'Any game counts' },
+      { id: 'casino_win_1',   icon: '🏆', name: 'Win a Game',          key: 'casino_win',     goal: 1,  reward: 8,  desc: 'Win any casino game' },
+      { id: 'chat_msg_1',     icon: '💬', name: 'Say Something',       key: 'chat_msg',       goal: 1,  reward: 3,  desc: 'Send a chat message' }
+    ];
+    var MQ_WEEKLY = [
+      { id: 'casino_win_5w',  icon: '🔥', name: 'Win 5 Games',         key: 'casino_win',     goal: 5,  reward: 50,  desc: 'Win 5 casino games this week' },
+      { id: 'casino_play_25w',icon: '🎲', name: 'Play 25 Games',       key: 'casino_play',    goal: 25, reward: 75,  desc: 'Play 25 casino games this week' },
+      { id: 'chat_msg_10w',   icon: '📣', name: 'Chat 10 Messages',    key: 'chat_msg',       goal: 10, reward: 30,  desc: 'Send 10 messages this week' },
+      { id: 'claim_5w',       icon: '📅', name: 'Claim 5 Days',        key: 'claim_staking',  goal: 5,  reward: 40,  desc: 'Claim staking 5 different days' }
+    ];
 
-      var options = session.loadedNFTs.map(function(nft, idx) {
-        return (idx + 1) + ') ' + nft.name + ' (' + (nft.mint ? nft.mint.slice(0,6) + '…' : '?') + ')';
-      }).join('\n');
+    var mq_data = {};  // { missionId: { progress, claimed } }
+    var mq_loaded = false;
 
-      var choice = prompt('Which NFT do you want to list?\n\n' + options + '\n\nEnter the number:');
-      if (!choice) return;
-      var idx = parseInt(choice) - 1;
-      if (isNaN(idx) || idx < 0 || idx >= session.loadedNFTs.length) return alert('Invalid selection.');
-
-      var nft = session.loadedNFTs[idx];
-      var price = prompt('Set your price in 🥬 Cabbage for "' + nft.name + '":');
-      if (!price) return;
-      var priceNum = parseFloat(price);
-      if (isNaN(priceNum) || priceNum <= 0) return alert('Invalid price.');
-
-      s_createListing(nft, priceNum);
+    function mq_todayKey() {
+      return new Date().toISOString().slice(0, 10);
+    }
+    function mq_weekKey() {
+      var d = new Date();
+      var jan1 = new Date(d.getFullYear(), 0, 1);
+      var wk = Math.ceil(((d - jan1) / 86400000 + jan1.getDay() + 1) / 7);
+      return d.getFullYear() + '-W' + String(wk).padStart(2, '0');
     }
 
-    async function s_createListing(nft, price) {
+    async function mq_load() {
+      if (!walletPublicKey) return;
+      var sb = getSupaClient();
+      var w = walletPublicKey.toBase58();
+      var dk = mq_todayKey();
+      var wk = mq_weekKey();
       try {
-        var sb = getSupaClient();
-        var wallet = walletPublicKey.toBase58();
-        var username = (session && session.profile && session.profile.username) || null;
-
-        var res = await sb.from('nft_listings').insert({
-          seller_wallet: wallet,
-          seller_name: username,
-          mint_address: nft.mint,
-          name: nft.name,
-          image_url: nft.image || null,
-          price: price,
-          status: 'listed'
-        }).select().single();
-
+        var res = await sb.from('user_missions').select('*')
+          .eq('wallet', w)
+          .in('period_key', [dk, wk]);
         if (res.error) throw res.error;
-
-        alert('✅ Listed "' + nft.name + '" for ' + price.toLocaleString() + ' 🥬!\n\nBuyers will see it in the NFT Market tab.');
-
-        await s_loadListings();
-        s_paintStore();
-      } catch(e) {
-        alert('Listing failed: ' + (e.message || e));
-      }
-    }
-
-    async function s_cancelListing(listingId) {
-      if (!confirm('Cancel this listing?')) return;
-      try {
-        var sb = getSupaClient();
-        var res = await sb.from('nft_listings').update({ status: 'cancelled' }).eq('id', listingId);
-        if (res.error) throw res.error;
-
-        alert('Listing cancelled.');
-        await s_loadListings();
-        s_paintStore();
-      } catch(e) {
-        alert('Cancel failed: ' + (e.message || e));
-      }
-    }
-
-    async function s_buyListing(listingId) {
-      var listing = s_listings.find(function(l){ return l.id === listingId; });
-      if (!listing) return alert('Listing not found.');
-      if (!walletPublicKey) return alert('Connect wallet first.');
-
-      var confirmed = confirm('Buy "' + listing.name + '" for ' + listing.price.toLocaleString() + ' 🥬?\n\nThe NFT will be transferred to your wallet by the seller.');
-      if (!confirmed) return;
-
-      try {
-        await g_spendCabbage(listing.price);
-
-        var sb = getSupaClient();
-        var buyerWallet = walletPublicKey.toBase58();
-
-        // Credit seller
-        var creditRes = await fetch(SUPA_URL.replace(/\/+$/,'') + '/functions/v1/cabbage', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY },
-          body: JSON.stringify({ action: 'credit', wallet: listing.seller_wallet, amount: listing.price })
+        mq_data = {};
+        (res.data || []).forEach(function(r) {
+          mq_data[r.mission_id] = { progress: r.progress, claimed: r.claimed };
         });
-        var creditData = await creditRes.json();
-        if (!creditRes.ok) throw new Error(creditData.error || 'Credit seller failed');
+        mq_loaded = true;
+      } catch(e) { console.warn('mq_load error:', e); }
+    }
 
-        // Mark sold
-        await sb.from('nft_listings').update({
-          status: 'sold',
-          buyer_wallet: buyerWallet,
-          sold_at: new Date().toISOString()
-        }).eq('id', listingId);
+    async function mq_track(actionKey) {
+      if (!walletPublicKey) return;
+      var sb = getSupaClient();
+      var w = walletPublicKey.toBase58();
 
-        alert('✅ Purchased "' + listing.name + '" for ' + listing.price.toLocaleString() + ' 🥬!\n\nThe seller has been paid and will transfer the NFT to your wallet:\n' + buyerWallet);
+      // Find all missions that match this action key
+      var all = MQ_DAILY.concat(MQ_WEEKLY);
+      var matching = all.filter(function(m) { return m.key === actionKey; });
+      if (matching.length === 0) return;
 
-        s_cabBalance = await s_fetchCabbageBalance();
-        await s_loadListings();
-        s_paintStore();
-      } catch(e) {
-        alert('Purchase failed: ' + (e.message || e));
+      for (var i = 0; i < matching.length; i++) {
+        var m = matching[i];
+        var isWeekly = MQ_WEEKLY.indexOf(m) >= 0;
+        var pk = isWeekly ? mq_weekKey() : mq_todayKey();
+
+        try {
+          // Try upsert
+          var existing = await sb.from('user_missions')
+            .select('id, progress, claimed')
+            .eq('wallet', w).eq('mission_id', m.id).eq('period_key', pk)
+            .maybeSingle();
+
+          if (existing.data) {
+            if (!existing.data.claimed && existing.data.progress < m.goal) {
+              await sb.from('user_missions').update({
+                progress: existing.data.progress + 1,
+                updated_at: new Date().toISOString()
+              }).eq('id', existing.data.id);
+              // Update local
+              mq_data[m.id] = { progress: existing.data.progress + 1, claimed: existing.data.claimed };
+            }
+          } else {
+            await sb.from('user_missions').insert({
+              wallet: w, mission_id: m.id, progress: 1, period_key: pk, claimed: false
+            });
+            mq_data[m.id] = { progress: 1, claimed: false };
+          }
+        } catch(e) { console.warn('mq_track error:', e); }
       }
+    }
+
+    async function mq_claimReward(missionId) {
+      var all = MQ_DAILY.concat(MQ_WEEKLY);
+      var m = all.find(function(x) { return x.id === missionId; });
+      if (!m) return;
+      var d = mq_data[missionId];
+      if (!d || d.progress < m.goal || d.claimed) return;
+
+      var isWeekly = MQ_WEEKLY.indexOf(m) >= 0;
+      var pk = isWeekly ? mq_weekKey() : mq_todayKey();
+
+      try {
+        var sb = getSupaClient();
+        var w = walletPublicKey.toBase58();
+        await sb.from('user_missions').update({ claimed: true }).eq('wallet', w).eq('mission_id', missionId).eq('period_key', pk);
+        await g_creditCabbage(m.reward);
+        mq_data[missionId].claimed = true;
+        mq_paintMissions();
+      } catch(e) { alert('Claim failed: ' + (e.message || e)); }
+    }
+
+    async function renderMissionsUI() {
+      var view = document.getElementById('view-missions');
+      if (!view) return;
+
+      // Load data first
+      if (!mq_loaded) await mq_load();
+      // Track daily login
+      await mq_track('daily_login');
+
+      var nftCount = session.loadedNFTs ? session.loadedNFTs.length : 0;
+
+      view.innerHTML =
+        '<style>' +
+        '.mq_card{background:#0f0f22;border:1px solid #1e1e3a;border-radius:14px;padding:1.4rem;margin-bottom:1.2rem;}' +
+        '.mq_row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.03);}' +
+        '.mq_row:last-child{border-bottom:none;}' +
+        '.mq_icon{font-size:1.5rem;width:36px;text-align:center;flex-shrink:0;}' +
+        '.mq_info{flex:1;min-width:0;}' +
+        '.mq_name{font-weight:700;font-size:0.82rem;color:#e0e0ff;margin-bottom:2px;}' +
+        '.mq_desc{font-size:0.65rem;color:#444;letter-spacing:0.5px;}' +
+        '.mq_bar{height:6px;background:rgba(255,255,255,0.05);border-radius:3px;overflow:hidden;margin-top:6px;}' +
+        '.mq_fill{height:100%;border-radius:3px;transition:width 0.6s ease;}' +
+        '.mq_right{text-align:right;flex-shrink:0;min-width:70px;}' +
+        '.mq_reward{font-size:0.7rem;color:#ffd700;font-weight:700;}' +
+        '.mq_prog{font-size:0.62rem;color:#555;margin-top:2px;}' +
+        '.mq_claim{background:linear-gradient(135deg,rgba(0,255,136,0.15),rgba(0,212,255,0.15));border:1px solid rgba(0,255,136,0.4);color:#00ff88;padding:5px 12px;border-radius:6px;cursor:pointer;font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:0.68rem;letter-spacing:1px;text-transform:uppercase;transition:all 0.2s;margin-top:4px;}' +
+        '.mq_claim:hover{background:rgba(0,255,136,0.12);box-shadow:0 0 12px rgba(0,255,136,0.2);}' +
+        '.mq_done{font-size:0.68rem;color:#555;font-weight:700;letter-spacing:1px;}' +
+        '</style>' +
+
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;flex-wrap:wrap;gap:0.6rem;">' +
+          '<div>' +
+            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.5rem;letter-spacing:3px;color:#e0e0ff;">🎯 MISSIONS</div>' +
+            '<div style="font-size:0.7rem;color:#444;letter-spacing:1px;margin-top:2px;">Complete tasks. Earn 🥬 Cabbage. Come back daily.</div>' +
+          '</div>' +
+          '<button onclick="switchView(\'profile\')" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#888;padding:7px 14px;border-radius:7px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;" onmouseover="this.style.borderColor=\'rgba(0,212,255,0.4)\';this.style.color=\'#00d4ff\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,0.1)\';this.style.color=\'#888\'">← Home</button>' +
+        '</div>' +
+
+        // Summary card
+        '<div class="mq_card" style="display:flex;gap:1.5rem;flex-wrap:wrap;align-items:center;padding:1rem 1.4rem;">' +
+          '<div><div style="color:#555;font-size:0.65rem;letter-spacing:1px;">TODAY</div><div style="font-weight:700;color:#00d4ff;font-size:1rem;" id="mq_dailyCount">0/5</div></div>' +
+          '<div><div style="color:#555;font-size:0.65rem;letter-spacing:1px;">THIS WEEK</div><div style="font-weight:700;color:#7b68ee;font-size:1rem;" id="mq_weeklyCount">0/4</div></div>' +
+          '<div><div style="color:#555;font-size:0.65rem;letter-spacing:1px;">EARNED TODAY</div><div style="font-weight:700;color:#ffd700;font-size:1rem;" id="mq_earnedToday">0 🥬</div></div>' +
+          '<div><div style="color:#555;font-size:0.65rem;letter-spacing:1px;">HOLDING</div><div style="font-weight:700;color:#00ff88;font-size:1rem;">' + nftCount + ' NFTs</div></div>' +
+        '</div>' +
+
+        // Daily
+        '<div class="mq_card">' +
+          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1rem;letter-spacing:3px;color:#555;margin-bottom:0.8rem;">📋 DAILY MISSIONS <span style="font-size:0.7rem;color:#333;font-family:\'Space Grotesk\',sans-serif;letter-spacing:0;">Resets at midnight UTC</span></div>' +
+          '<div id="mq_dailyList"></div>' +
+        '</div>' +
+
+        // Weekly
+        '<div class="mq_card">' +
+          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1rem;letter-spacing:3px;color:#555;margin-bottom:0.8rem;">🗓️ WEEKLY MISSIONS <span style="font-size:0.7rem;color:#333;font-family:\'Space Grotesk\',sans-serif;letter-spacing:0;">Resets every Monday</span></div>' +
+          '<div id="mq_weeklyList"></div>' +
+        '</div>' +
+
+        // Streak / info
+        '<div style="background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.04);border-radius:10px;padding:0.9rem 1.2rem;font-size:0.65rem;color:#2a2a44;letter-spacing:0.8px;text-align:center;text-transform:uppercase;">' +
+          'Complete all daily missions for bonus rewards · Holding NFTs unlocks future exclusive missions · More missions coming soon' +
+        '</div>';
+
+      mq_paintMissions();
+    }
+
+    function mq_paintMissions() {
+      var dEl = document.getElementById('mq_dailyList');
+      var wEl = document.getElementById('mq_weeklyList');
+      if (!dEl || !wEl) return;
+
+      var dailyDone = 0, dailyEarned = 0;
+      var weeklyDone = 0;
+
+      function renderRow(m, isWeekly) {
+        var d = mq_data[m.id] || { progress: 0, claimed: false };
+        var prog = Math.min(d.progress, m.goal);
+        var pct = Math.floor((prog / m.goal) * 100);
+        var complete = prog >= m.goal;
+        var claimed = d.claimed;
+
+        if (complete && !isWeekly) dailyDone++;
+        if (complete && isWeekly) weeklyDone++;
+        if (claimed && !isWeekly) dailyEarned += m.reward;
+        if (claimed && isWeekly) dailyEarned += m.reward;
+
+        var fillColor = complete ? (claimed ? '#555' : 'linear-gradient(90deg,#00ff88,#00d4ff)') : 'linear-gradient(90deg,#9945ff,#00d4ff)';
+        var rightHTML = '';
+        if (claimed) {
+          rightHTML = '<div class="mq_done">✅ CLAIMED</div>';
+        } else if (complete) {
+          rightHTML = '<button class="mq_claim" onclick="mq_claimReward(\'' + m.id + '\')">CLAIM ' + m.reward + ' 🥬</button>';
+        } else {
+          rightHTML = '<div class="mq_reward">+' + m.reward + ' 🥬</div><div class="mq_prog">' + prog + '/' + m.goal + '</div>';
+        }
+
+        return '<div class="mq_row">' +
+          '<div class="mq_icon">' + m.icon + '</div>' +
+          '<div class="mq_info">' +
+            '<div class="mq_name">' + m.name + '</div>' +
+            '<div class="mq_desc">' + m.desc + '</div>' +
+            '<div class="mq_bar"><div class="mq_fill" style="width:' + pct + '%;background:' + fillColor + ';"></div></div>' +
+          '</div>' +
+          '<div class="mq_right">' + rightHTML + '</div>' +
+        '</div>';
+      }
+
+      var dHTML = '';
+      MQ_DAILY.forEach(function(m) { dHTML += renderRow(m, false); });
+      dEl.innerHTML = dHTML;
+
+      var wHTML = '';
+      MQ_WEEKLY.forEach(function(m) { wHTML += renderRow(m, true); });
+      wEl.innerHTML = wHTML;
+
+      // Update summary
+      var dc = document.getElementById('mq_dailyCount');
+      var wc = document.getElementById('mq_weeklyCount');
+      var et = document.getElementById('mq_earnedToday');
+      if (dc) dc.textContent = dailyDone + '/' + MQ_DAILY.length;
+      if (wc) wc.textContent = weeklyDone + '/' + MQ_WEEKLY.length;
+      if (et) et.textContent = dailyEarned + ' 🥬';
     }
 
   </script>
