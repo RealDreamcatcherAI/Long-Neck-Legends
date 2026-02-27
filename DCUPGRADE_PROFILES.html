@@ -3715,30 +3715,6 @@ var nextTierRow = nextTier
         }
       }
       await sb.from('poker_players').delete().eq('table_id',pk_tid).eq('wallet',w);
-      // Check how many active players remain after leaving
-      var remR=await sb.from('poker_players').select('id').eq('table_id',pk_tid).eq('is_active',true);
-      var remaining=(remR.data||[]).length;
-      if(remaining===0){
-        // No one left — fully reset the table so it's clean for next session
-        await sb.from('poker_tables').update({
-          status:'waiting',phase:null,community:'[]',pot:0,
-          current_bet:0,action_seat:-1,round_starter:-1,
-          deck:'[]',dealer_seat:null,updated_at:new Date().toISOString()
-        }).eq('id',pk_tid);
-      }else if(remaining===1&&pk_tbl&&pk_tbl.status==='playing'){
-        // Only 1 player left mid-game — award them the pot and reset
-        var lastR=await sb.from('poker_players').select('*').eq('table_id',pk_tid).eq('is_active',true).single();
-        if(lastR.data&&lastR.data.chips!==undefined){
-          var potR=await sb.from('poker_tables').select('pot').eq('id',pk_tid).single();
-          var leftPot=potR.data?potR.data.pot:0;
-          if(leftPot>0)await sb.from('poker_players').update({chips:lastR.data.chips+leftPot}).eq('id',lastR.data.id);
-        }
-        await sb.from('poker_tables').update({
-          status:'waiting',phase:null,community:'[]',pot:0,
-          current_bet:0,action_seat:-1,round_starter:-1,
-          deck:'[]',updated_at:new Date().toISOString()
-        }).eq('id',pk_tid);
-      }
       pk_unsub();pk_tid=null;pk_tbl=null;pk_plrs=[];pk_mySeat=-1;
       document.getElementById('pk_gameWrap').style.display='none';pk_loadLobby();
     }
@@ -3773,7 +3749,8 @@ var nextTierRow = nextTier
         if(pl){
           var hole=[];try{hole=JSON.parse(pl.hole_cards||'[]');}catch(e){}
           var dn=pl.username||(pl.wallet.slice(0,4)+'…');
-          html+='<div style="font-weight:700;font-size:0.7rem;color:'+(isMe?'#00d4ff':'#e0e0ff')+';margin-bottom:3px;">'+escapeHtml(dn)+(isMe?' (you)':'')+'</div>';
+          var isDealer=t.dealer_seat===s;
+          html+='<div style="font-weight:700;font-size:0.7rem;color:'+(isMe?'#00d4ff':'#e0e0ff')+';margin-bottom:3px;">'+(isDealer?'<span style="background:#ffd700;color:#000;padding:1px 4px;border-radius:3px;font-size:0.5rem;margin-right:3px;">D</span>':'')+escapeHtml(dn)+(isMe?' (you)':'')+'</div>';
           html+='<div style="display:flex;justify-content:center;gap:2px;margin:3px 0;">';
           if(hole.length===2&&(isMe||t.phase==='showdown'))html+=pk_rc(hole[0],false)+pk_rc(hole[1],false);
           else if(isPlay&&!folded)html+=pk_rc(null,true)+pk_rc(null,true);
@@ -3781,8 +3758,7 @@ var nextTierRow = nextTier
           html+='<div style="font-size:0.62rem;color:'+chipCol+';">'+pl.chips.toLocaleString()+' '+sym+'</div>';
           if(pl.current_bet>0)html+='<div style="font-size:0.58rem;color:#ffd700;">Bet: '+pl.current_bet+' '+sym+'</div>';
           if(folded)html+='<div style="font-size:0.58rem;color:#ff3c5c;">FOLDED</div>';
-          if(isTurn&&isMe)html+='<div style="font-size:0.52rem;color:#00ff88;animation:g_pulse 1s infinite;">⭐ YOUR TURN</div>';
-          else if(isTurn&&!isMe)html+='<div style="font-size:0.52rem;color:#ffd700;animation:g_pulse 1s infinite;">⏳ THEIR TURN</div>';
+          if(isTurn)html+='<div style="font-size:0.52rem;color:#ffd700;animation:g_pulse 1s infinite;">⏳ YOUR TURN</div>';
         }else{html+='<div style="color:#252540;font-size:0.68rem;">Empty</div><div style="font-size:0.58rem;color:#333;">Seat '+(s+1)+'</div>';}
         html+='</div>';
       }
@@ -3790,7 +3766,7 @@ var nextTierRow = nextTier
 
       // Action buttons
       html+='<div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:0.8rem;">';
-      if(!isPlay&&active.length>=2&&me)html+='<button class="g_btn g_btn-primary" onclick="pk_deal()">🃏 DEAL</button>';
+      if(!isPlay&&t.phase!=='showdown'&&active.length>=2&&me)html+='<button class="g_btn g_btn-primary" onclick="pk_deal()">🃏 DEAL</button>';
       if(isMyTurn&&!me.folded){
         var toCall=Math.max(0,(t.current_bet||0)-(me?me.current_bet:0));
         if(toCall===0)html+='<button class="g_btn g_btn-primary" onclick="pk_act(\'check\')">CHECK</button>';
@@ -3798,25 +3774,32 @@ var nextTierRow = nextTier
         html+='<button class="g_btn" onclick="pk_doRaise()">RAISE</button>';
         html+='<button class="g_btn" style="border-color:rgba(255,60,92,0.3);color:#ff3c5c;" onclick="pk_act(\'fold\')">FOLD</button>';
       }
-      if(t.status==='between_hands'&&me)html+='<button class="g_btn g_btn-primary" onclick="pk_deal()">NEXT HAND</button>';
+      if(t.phase==='showdown'&&me)html+='<button class="g_btn g_btn-primary" onclick="pk_deal()">NEXT HAND</button>';
       html+='</div>';
       area.innerHTML=html;
     }
 
     async function pk_deal(){
       if(!pk_tid)return;var sb=getSupaClient();var t=pk_tbl;
-      var ap=pk_plrs.filter(function(p){return p.is_active;});if(ap.length<2)return alert('Need 2+ players.');
+      if(t.status==='playing')return;
+      var ap=pk_plrs.filter(function(p){return p.is_active;});
+      if(ap.length<2)return alert('Need 2+ players.');
+      ap.sort(function(a,b){return a.seat-b.seat;});
       var deck=pk_shuffle(pk_fullDeck());
       for(var i=0;i<ap.length;i++){var h=[deck.pop(),deck.pop()];await sb.from('poker_players').update({hole_cards:JSON.stringify(h),current_bet:0,total_bet:0,folded:false,all_in:false}).eq('id',ap[i].id);}
-      var prevDI=ap.findIndex(function(p){return p.seat===(t.dealer_seat!==null&&t.dealer_seat!==undefined?t.dealer_seat:-1);});
-      var dealerIdx=(prevDI<0?0:(prevDI+1))%ap.length;
-      var sbIdx=(dealerIdx+1)%ap.length,bbIdx=(dealerIdx+2)%ap.length;
-      var utgIdx=ap.length===2?dealerIdx:(dealerIdx+3)%ap.length;
-      var sbP=ap[sbIdx],bbP=ap[bbIdx],act=ap[utgIdx];
+      var seatNums=ap.map(function(p){return p.seat;});
+      function nextAfter(s){for(var k=0;k<seatNums.length;k++){if(seatNums[k]>s)return seatNums[k];}return seatNums[0];}
+      var oldDS=t.dealer_seat;if(oldDS===undefined||oldDS===null)oldDS=-1;
+      var newDS=nextAfter(oldDS);
+      var sbSeat,bbSeat,actSeat;
+      if(ap.length===2){sbSeat=newDS;bbSeat=nextAfter(newDS);actSeat=newDS;}
+      else{sbSeat=nextAfter(newDS);bbSeat=nextAfter(sbSeat);actSeat=nextAfter(bbSeat);}
+      var sbP=ap.find(function(p){return p.seat===sbSeat;});
+      var bbP=ap.find(function(p){return p.seat===bbSeat;});
       var sba=Math.min(t.small_blind,sbP.chips),bba=Math.min(t.big_blind,bbP.chips);
       await sb.from('poker_players').update({current_bet:sba,total_bet:sba,chips:sbP.chips-sba}).eq('id',sbP.id);
       await sb.from('poker_players').update({current_bet:bba,total_bet:bba,chips:bbP.chips-bba}).eq('id',bbP.id);
-      await sb.from('poker_tables').update({status:'playing',phase:'preflop',community:'[]',pot:sba+bba,current_bet:bba,dealer_seat:ap[dealerIdx].seat,action_seat:act.seat,round_starter:act.seat,deck:JSON.stringify(deck),hand_num:(t.hand_num||0)+1,updated_at:new Date().toISOString()}).eq('id',pk_tid);
+      await sb.from('poker_tables').update({status:'playing',phase:'preflop',community:'[]',pot:sba+bba,current_bet:bba,dealer_seat:newDS,action_seat:actSeat,round_starter:actSeat,deck:JSON.stringify(deck),hand_num:(t.hand_num||0)+1,updated_at:new Date().toISOString()}).eq('id',pk_tid);
     }
 
     function pk_doRaise(){var cur=pk_tbl?pk_tbl.current_bet||0:0;var a=prompt('Raise to:',String(cur*2));if(!a)return;var r=parseFloat(a);if(isNaN(r)||r<=cur)return alert('Must raise above '+cur);pk_act('raise',r);}
@@ -3830,44 +3813,38 @@ var nextTierRow = nextTier
       else if(action==='call'){var tc=Math.min(Math.max(0,(t.current_bet||0)-me.current_bet),me.chips);await sb.from('poker_players').update({chips:me.chips-tc,current_bet:me.current_bet+tc,total_bet:me.total_bet+tc,all_in:me.chips-tc<=0}).eq('id',me.id);potAdd=tc;}
       else if(action==='raise'){var need=raiseAmt-me.current_bet;var act=Math.min(need,me.chips);await sb.from('poker_players').update({chips:me.chips-act,current_bet:me.current_bet+act,total_bet:me.total_bet+act,all_in:me.chips-act<=0}).eq('id',me.id);potAdd=act;await sb.from('poker_tables').update({current_bet:raiseAmt,round_starter:me.seat}).eq('id',pk_tid);}
       if(potAdd>0)await sb.from('poker_tables').update({pot:(t.pot||0)+potAdd}).eq('id',pk_tid);
-      await pk_advance(me.seat,action);
+      await pk_advance(me,action);
     }
 
-    async function pk_advance(actedSeat,action){
+    async function pk_advance(acted,action){
       var sb=getSupaClient();
-      // Always read fresh state from DB after the action was written
       var pR=await sb.from('poker_players').select('*').eq('table_id',pk_tid).eq('is_active',true).order('seat');
       var plrs=pR.data||[];
       var nf=plrs.filter(function(p){return !p.folded;});
-      // Only 1 player left unfold = instant win
-      if(nf.length<=1){if(nf[0])await pk_award(nf[0]);return;}
-      // Fresh table data
+      if(nf.length<=1){await pk_award(nf[0]);return;}
       var tR=await sb.from('poker_tables').select('*').eq('id',pk_tid).single();var t=tR.data;
-      // Who can still act (not folded, not all-in) - uses fresh DB values
       var canAct=plrs.filter(function(p){return !p.folded&&!p.all_in;});
-      if(canAct.length<=0){await pk_nextPhase();return;}
-      // All seats that can still act, sorted
+      if(canAct.length===0){await pk_nextPhase();return;}
       var seats=canAct.map(function(p){return p.seat;}).sort(function(a,b){return a-b;});
-      // Find acted player's seat in canAct list (may not be there if they just folded/all-in)
-      var ci=seats.indexOf(actedSeat);
-      if(ci===-1){
-        // Acted player is no longer in canAct — find the index just before their seat so nextIdx points past them
-        ci=seats.length-1;
-        for(var x=0;x<seats.length;x++){if(seats[x]>actedSeat){ci=x-1;break;}}
-      }
-      var nextIdx=(ci+1)%seats.length;
-      var nextSeat=seats[nextIdx];
-      // Round ends when all bets match AND the full circle is complete:
-      // Either the person who just acted IS the round_starter (they went last),
-      // or the next person up IS the round_starter (we've looped back to them)
+      // Helper: find next seat clockwise after a given seat
+      function findNext(afterSeat){for(var i=0;i<seats.length;i++){if(seats[i]>afterSeat)return seats[i];}return seats[0];}
+      // If only 1 can act and they've matched the bet, advance
+      if(canAct.length===1&&canAct[0].current_bet>=(t.current_bet||0)){await pk_nextPhase();return;}
+      var nextSeat=findNext(acted.seat);
+      // Resolve effective round_starter — must be in canAct
       var rs=t.round_starter;
-      if(rs===undefined||rs===null||rs<0)rs=seats[0];
-      var allBetsMatch=canAct.every(function(p){return p.current_bet>=(t.current_bet||0);});
-      if(allBetsMatch&&(actedSeat===rs||(nextSeat===rs&&actedSeat!==rs))){
+      var rsChanged=false;
+      if(rs===undefined||rs===null||rs<0||seats.indexOf(rs)===-1){
+        rs=findNext(rs!==undefined&&rs!==null&&rs>=0?rs:- 1);
+        rsChanged=true;
+        await sb.from('poker_tables').update({round_starter:rs}).eq('id',pk_tid);
+      }
+      // Check if all bets match and we've gone full circle back to round_starter
+      var allMatch=canAct.every(function(p){return p.current_bet>=(t.current_bet||0);});
+      if(allMatch&&nextSeat===rs&&!rsChanged){
         await pk_nextPhase();
         return;
       }
-      // Pass action to next player
       await sb.from('poker_tables').update({action_seat:nextSeat,updated_at:new Date().toISOString()}).eq('id',pk_tid);
     }
 
@@ -3887,7 +3864,11 @@ var nextTierRow = nextTier
       if(active.length<=1){while(comm.length<5&&deck.length>0)comm.push(deck.pop());
         await sb.from('poker_tables').update({phase:'showdown',community:JSON.stringify(comm),deck:JSON.stringify(deck),current_bet:0,action_seat:-1,round_starter:-1,updated_at:new Date().toISOString()}).eq('id',pk_tid);
         setTimeout(pk_showdown,1200);return;}
-      var firstSeat=active[0].seat;
+      // Post-flop: first to act is first active player AFTER the dealer
+      var ds=t.dealer_seat;
+      var actSeats=active.map(function(p){return p.seat;}).sort(function(a,b){return a-b;});
+      var firstSeat=actSeats[0];
+      for(var i=0;i<actSeats.length;i++){if(actSeats[i]>ds){firstSeat=actSeats[i];break;}}
       await sb.from('poker_tables').update({phase:next,community:JSON.stringify(comm),deck:JSON.stringify(deck),current_bet:0,action_seat:firstSeat,round_starter:firstSeat,updated_at:new Date().toISOString()}).eq('id',pk_tid);
     }
 
@@ -3907,7 +3888,10 @@ var nextTierRow = nextTier
       var sb=getSupaClient();
       var tR=await sb.from('poker_tables').select('pot').eq('id',pk_tid).single();
       var pot=tR.data?tR.data.pot:0;
-      await sb.from('poker_players').update({chips:winner.chips+pot}).eq('id',winner.id);
+      // Re-read fresh chips
+      var pR=await sb.from('poker_players').select('chips').eq('id',winner.id).single();
+      var freshChips=pR.data?pR.data.chips:winner.chips;
+      await sb.from('poker_players').update({chips:freshChips+pot}).eq('id',winner.id);
       await sb.from('poker_tables').update({status:'between_hands',phase:'showdown',pot:0,current_bet:0,action_seat:-1,updated_at:new Date().toISOString()}).eq('id',pk_tid);
     }
 
