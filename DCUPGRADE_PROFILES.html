@@ -989,6 +989,7 @@ a.plink:hover{
         <button class="dash-tab" id="tabProfile" onclick="toggleProfilePanel()">Profile</button>
         <button class="dash-tab" id="tabChat" onclick="switchView('chat')">💬 Chat</button>
         <button class="dash-tab" id="tabGames" onclick="switchView('games')">🎰 Casino</button>
+        <button class="dash-tab" id="tabMissions" onclick="switchView('missions')">🎯 Missions</button>
       </div>
 
       <div class="dash-right">
@@ -1018,6 +1019,7 @@ a.plink:hover{
     <div class="view show" id="view-profile"></div>
     <div class="view" id="view-chat"></div>
     <div class="view" id="view-games"></div>
+    <div class="view" id="view-missions"></div>
   </div>
 
   <!-- PFP MODAL -->
@@ -1469,6 +1471,7 @@ a.plink:hover{
       document.getElementById("view-profile").classList.remove("show");
       document.getElementById("view-chat").classList.remove("show");
       document.getElementById("view-games").classList.remove("show");
+      var vm = document.getElementById("view-missions"); if (vm) vm.classList.remove("show");
 
       session.profilePanelOpen = false;
       var tabProfile = document.getElementById("tabProfile");
@@ -1477,6 +1480,8 @@ a.plink:hover{
       if (tabChat) tabChat.classList.remove("active");
       var tabGames = document.getElementById("tabGames");
       if (tabGames) tabGames.classList.remove("active");
+      var tabMissions = document.getElementById("tabMissions");
+      if (tabMissions) tabMissions.classList.remove("active");
 
       session.currentView = "profile";
     }
@@ -1488,17 +1493,21 @@ a.plink:hover{
       var vp = document.getElementById("view-profile");
       var vc = document.getElementById("view-chat");
       var vg = document.getElementById("view-games");
+      var vq = document.getElementById("view-missions");
       if (vp) vp.classList.remove("show");
       if (vc) vc.classList.remove("show");
       if (vg) vg.classList.remove("show");
+      if (vq) vq.classList.remove("show");
 
       // Deactivate all tabs
       var tabProfile = document.getElementById("tabProfile");
       var tabChat    = document.getElementById("tabChat");
       var tabGames   = document.getElementById("tabGames");
+      var tabMissions = document.getElementById("tabMissions");
       if (tabProfile) tabProfile.classList.remove("active");
       if (tabChat)    tabChat.classList.remove("active");
       if (tabGames)   tabGames.classList.remove("active");
+      if (tabMissions) tabMissions.classList.remove("active");
 
       if (viewName === "profile") {
         stopChatPoll();
@@ -1517,6 +1526,13 @@ a.plink:hover{
         if (vg) vg.classList.add("show");
         if (tabGames) tabGames.classList.add("active");
         renderGamesUI();
+      }
+
+      if (viewName === "missions") {
+        stopChatPoll();
+        if (vq) vq.classList.add("show");
+        if (tabMissions) tabMissions.classList.add("active");
+        renderMissionsUI();
       }
     }
 
@@ -2435,6 +2451,7 @@ var nextTierRow = nextTier
         if (!res.ok) throw new Error(data && data.error ? data.error : ('HTTP ' + res.status));
 
         await refreshCabbageUI();
+        mq_track('claim_staking');
       } catch (e) {
         console.error('claimCabbage error:', e);
         alert('Claim failed: ' + (e.message || e));
@@ -2754,6 +2771,7 @@ var nextTierRow = nextTier
           chatMsgs.push(res.data);
           paintMessages();
           scrollToBottom(true);
+          mq_track('chat_msg');
         }
       } catch(e) {
         console.error('Send error:', e);
@@ -3079,6 +3097,9 @@ var nextTierRow = nextTier
       g_betHistory.unshift({ game: game, bet: betAmt, currency: currency, won: won, payout: payout, time: new Date() });
       if (g_betHistory.length > 20) g_betHistory.pop();
       g_renderHistory();
+      // Mission tracking
+      mq_track('casino_play');
+      if (won) mq_track('casino_win');
     }
 
     function g_renderHistory() {
@@ -4297,6 +4318,240 @@ var nextTierRow = nextTier
       crash_history.unshift(crash_point);
       if (crash_history.length > 10) crash_history.pop();
       g_disableGameBtns(false);
+    }
+
+    /* ================================================================
+       MISSIONS / QUESTS SYSTEM
+    ================================================================ */
+    var MQ_DAILY = [
+      { id: 'daily_login',    icon: '🌅', name: 'Daily Login',          key: 'daily_login',    goal: 1,  reward: 2,  desc: 'Visit the dashboard' },
+      { id: 'claim_staking',  icon: '🥬', name: 'Claim Staking',       key: 'claim_staking',  goal: 1,  reward: 5,  desc: 'Claim your cabbage' },
+      { id: 'casino_play_5',  icon: '🎰', name: 'Play 5 Casino Games', key: 'casino_play',    goal: 5,  reward: 10, desc: 'Any game counts' },
+      { id: 'casino_win_1',   icon: '🏆', name: 'Win a Game',          key: 'casino_win',     goal: 1,  reward: 8,  desc: 'Win any casino game' },
+      { id: 'chat_msg_1',     icon: '💬', name: 'Say Something',       key: 'chat_msg',       goal: 1,  reward: 3,  desc: 'Send a chat message' }
+    ];
+    var MQ_WEEKLY = [
+      { id: 'casino_win_5w',  icon: '🔥', name: 'Win 5 Games',         key: 'casino_win',     goal: 5,  reward: 50,  desc: 'Win 5 casino games this week' },
+      { id: 'casino_play_25w',icon: '🎲', name: 'Play 25 Games',       key: 'casino_play',    goal: 25, reward: 75,  desc: 'Play 25 casino games this week' },
+      { id: 'chat_msg_10w',   icon: '📣', name: 'Chat 10 Messages',    key: 'chat_msg',       goal: 10, reward: 30,  desc: 'Send 10 messages this week' },
+      { id: 'claim_5w',       icon: '📅', name: 'Claim 5 Days',        key: 'claim_staking',  goal: 5,  reward: 40,  desc: 'Claim staking 5 different days' }
+    ];
+
+    var mq_data = {};  // { missionId: { progress, claimed } }
+    var mq_loaded = false;
+
+    function mq_todayKey() {
+      return new Date().toISOString().slice(0, 10);
+    }
+    function mq_weekKey() {
+      var d = new Date();
+      var jan1 = new Date(d.getFullYear(), 0, 1);
+      var wk = Math.ceil(((d - jan1) / 86400000 + jan1.getDay() + 1) / 7);
+      return d.getFullYear() + '-W' + String(wk).padStart(2, '0');
+    }
+
+    async function mq_load() {
+      if (!walletPublicKey) return;
+      var sb = getSupaClient();
+      var w = walletPublicKey.toBase58();
+      var dk = mq_todayKey();
+      var wk = mq_weekKey();
+      try {
+        var res = await sb.from('user_missions').select('*')
+          .eq('wallet', w)
+          .in('period_key', [dk, wk]);
+        if (res.error) throw res.error;
+        mq_data = {};
+        (res.data || []).forEach(function(r) {
+          mq_data[r.mission_id] = { progress: r.progress, claimed: r.claimed };
+        });
+        mq_loaded = true;
+      } catch(e) { console.warn('mq_load error:', e); }
+    }
+
+    async function mq_track(actionKey) {
+      if (!walletPublicKey) return;
+      var sb = getSupaClient();
+      var w = walletPublicKey.toBase58();
+
+      // Find all missions that match this action key
+      var all = MQ_DAILY.concat(MQ_WEEKLY);
+      var matching = all.filter(function(m) { return m.key === actionKey; });
+      if (matching.length === 0) return;
+
+      for (var i = 0; i < matching.length; i++) {
+        var m = matching[i];
+        var isWeekly = MQ_WEEKLY.indexOf(m) >= 0;
+        var pk = isWeekly ? mq_weekKey() : mq_todayKey();
+
+        try {
+          // Try upsert
+          var existing = await sb.from('user_missions')
+            .select('id, progress, claimed')
+            .eq('wallet', w).eq('mission_id', m.id).eq('period_key', pk)
+            .maybeSingle();
+
+          if (existing.data) {
+            if (!existing.data.claimed && existing.data.progress < m.goal) {
+              await sb.from('user_missions').update({
+                progress: existing.data.progress + 1,
+                updated_at: new Date().toISOString()
+              }).eq('id', existing.data.id);
+              // Update local
+              mq_data[m.id] = { progress: existing.data.progress + 1, claimed: existing.data.claimed };
+            }
+          } else {
+            await sb.from('user_missions').insert({
+              wallet: w, mission_id: m.id, progress: 1, period_key: pk, claimed: false
+            });
+            mq_data[m.id] = { progress: 1, claimed: false };
+          }
+        } catch(e) { console.warn('mq_track error:', e); }
+      }
+    }
+
+    async function mq_claimReward(missionId) {
+      var all = MQ_DAILY.concat(MQ_WEEKLY);
+      var m = all.find(function(x) { return x.id === missionId; });
+      if (!m) return;
+      var d = mq_data[missionId];
+      if (!d || d.progress < m.goal || d.claimed) return;
+
+      var isWeekly = MQ_WEEKLY.indexOf(m) >= 0;
+      var pk = isWeekly ? mq_weekKey() : mq_todayKey();
+
+      try {
+        var sb = getSupaClient();
+        var w = walletPublicKey.toBase58();
+        await sb.from('user_missions').update({ claimed: true }).eq('wallet', w).eq('mission_id', missionId).eq('period_key', pk);
+        await g_creditCabbage(m.reward);
+        mq_data[missionId].claimed = true;
+        mq_paintMissions();
+      } catch(e) { alert('Claim failed: ' + (e.message || e)); }
+    }
+
+    async function renderMissionsUI() {
+      var view = document.getElementById('view-missions');
+      if (!view) return;
+
+      // Load data first
+      if (!mq_loaded) await mq_load();
+      // Track daily login
+      await mq_track('daily_login');
+
+      var nftCount = session.loadedNFTs ? session.loadedNFTs.length : 0;
+
+      view.innerHTML =
+        '<style>' +
+        '.mq_card{background:#0f0f22;border:1px solid #1e1e3a;border-radius:14px;padding:1.4rem;margin-bottom:1.2rem;}' +
+        '.mq_row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.03);}' +
+        '.mq_row:last-child{border-bottom:none;}' +
+        '.mq_icon{font-size:1.5rem;width:36px;text-align:center;flex-shrink:0;}' +
+        '.mq_info{flex:1;min-width:0;}' +
+        '.mq_name{font-weight:700;font-size:0.82rem;color:#e0e0ff;margin-bottom:2px;}' +
+        '.mq_desc{font-size:0.65rem;color:#444;letter-spacing:0.5px;}' +
+        '.mq_bar{height:6px;background:rgba(255,255,255,0.05);border-radius:3px;overflow:hidden;margin-top:6px;}' +
+        '.mq_fill{height:100%;border-radius:3px;transition:width 0.6s ease;}' +
+        '.mq_right{text-align:right;flex-shrink:0;min-width:70px;}' +
+        '.mq_reward{font-size:0.7rem;color:#ffd700;font-weight:700;}' +
+        '.mq_prog{font-size:0.62rem;color:#555;margin-top:2px;}' +
+        '.mq_claim{background:linear-gradient(135deg,rgba(0,255,136,0.15),rgba(0,212,255,0.15));border:1px solid rgba(0,255,136,0.4);color:#00ff88;padding:5px 12px;border-radius:6px;cursor:pointer;font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:0.68rem;letter-spacing:1px;text-transform:uppercase;transition:all 0.2s;margin-top:4px;}' +
+        '.mq_claim:hover{background:rgba(0,255,136,0.12);box-shadow:0 0 12px rgba(0,255,136,0.2);}' +
+        '.mq_done{font-size:0.68rem;color:#555;font-weight:700;letter-spacing:1px;}' +
+        '</style>' +
+
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;flex-wrap:wrap;gap:0.6rem;">' +
+          '<div>' +
+            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.5rem;letter-spacing:3px;color:#e0e0ff;">🎯 MISSIONS</div>' +
+            '<div style="font-size:0.7rem;color:#444;letter-spacing:1px;margin-top:2px;">Complete tasks. Earn 🥬 Cabbage. Come back daily.</div>' +
+          '</div>' +
+          '<button onclick="switchView(\'profile\')" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#888;padding:7px 14px;border-radius:7px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;" onmouseover="this.style.borderColor=\'rgba(0,212,255,0.4)\';this.style.color=\'#00d4ff\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,0.1)\';this.style.color=\'#888\'">← Home</button>' +
+        '</div>' +
+
+        // Summary card
+        '<div class="mq_card" style="display:flex;gap:1.5rem;flex-wrap:wrap;align-items:center;padding:1rem 1.4rem;">' +
+          '<div><div style="color:#555;font-size:0.65rem;letter-spacing:1px;">TODAY</div><div style="font-weight:700;color:#00d4ff;font-size:1rem;" id="mq_dailyCount">0/5</div></div>' +
+          '<div><div style="color:#555;font-size:0.65rem;letter-spacing:1px;">THIS WEEK</div><div style="font-weight:700;color:#7b68ee;font-size:1rem;" id="mq_weeklyCount">0/4</div></div>' +
+          '<div><div style="color:#555;font-size:0.65rem;letter-spacing:1px;">EARNED TODAY</div><div style="font-weight:700;color:#ffd700;font-size:1rem;" id="mq_earnedToday">0 🥬</div></div>' +
+          '<div><div style="color:#555;font-size:0.65rem;letter-spacing:1px;">HOLDING</div><div style="font-weight:700;color:#00ff88;font-size:1rem;">' + nftCount + ' NFTs</div></div>' +
+        '</div>' +
+
+        // Daily
+        '<div class="mq_card">' +
+          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1rem;letter-spacing:3px;color:#555;margin-bottom:0.8rem;">📋 DAILY MISSIONS <span style="font-size:0.7rem;color:#333;font-family:\'Space Grotesk\',sans-serif;letter-spacing:0;">Resets at midnight UTC</span></div>' +
+          '<div id="mq_dailyList"></div>' +
+        '</div>' +
+
+        // Weekly
+        '<div class="mq_card">' +
+          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1rem;letter-spacing:3px;color:#555;margin-bottom:0.8rem;">🗓️ WEEKLY MISSIONS <span style="font-size:0.7rem;color:#333;font-family:\'Space Grotesk\',sans-serif;letter-spacing:0;">Resets every Monday</span></div>' +
+          '<div id="mq_weeklyList"></div>' +
+        '</div>' +
+
+        // Streak / info
+        '<div style="background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.04);border-radius:10px;padding:0.9rem 1.2rem;font-size:0.65rem;color:#2a2a44;letter-spacing:0.8px;text-align:center;text-transform:uppercase;">' +
+          'Complete all daily missions for bonus rewards · Holding NFTs unlocks future exclusive missions · More missions coming soon' +
+        '</div>';
+
+      mq_paintMissions();
+    }
+
+    function mq_paintMissions() {
+      var dEl = document.getElementById('mq_dailyList');
+      var wEl = document.getElementById('mq_weeklyList');
+      if (!dEl || !wEl) return;
+
+      var dailyDone = 0, dailyEarned = 0;
+      var weeklyDone = 0;
+
+      function renderRow(m, isWeekly) {
+        var d = mq_data[m.id] || { progress: 0, claimed: false };
+        var prog = Math.min(d.progress, m.goal);
+        var pct = Math.floor((prog / m.goal) * 100);
+        var complete = prog >= m.goal;
+        var claimed = d.claimed;
+
+        if (complete && !isWeekly) dailyDone++;
+        if (complete && isWeekly) weeklyDone++;
+        if (claimed && !isWeekly) dailyEarned += m.reward;
+        if (claimed && isWeekly) dailyEarned += m.reward;
+
+        var fillColor = complete ? (claimed ? '#555' : 'linear-gradient(90deg,#00ff88,#00d4ff)') : 'linear-gradient(90deg,#9945ff,#00d4ff)';
+        var rightHTML = '';
+        if (claimed) {
+          rightHTML = '<div class="mq_done">✅ CLAIMED</div>';
+        } else if (complete) {
+          rightHTML = '<button class="mq_claim" onclick="mq_claimReward(\'' + m.id + '\')">CLAIM ' + m.reward + ' 🥬</button>';
+        } else {
+          rightHTML = '<div class="mq_reward">+' + m.reward + ' 🥬</div><div class="mq_prog">' + prog + '/' + m.goal + '</div>';
+        }
+
+        return '<div class="mq_row">' +
+          '<div class="mq_icon">' + m.icon + '</div>' +
+          '<div class="mq_info">' +
+            '<div class="mq_name">' + m.name + '</div>' +
+            '<div class="mq_desc">' + m.desc + '</div>' +
+            '<div class="mq_bar"><div class="mq_fill" style="width:' + pct + '%;background:' + fillColor + ';"></div></div>' +
+          '</div>' +
+          '<div class="mq_right">' + rightHTML + '</div>' +
+        '</div>';
+      }
+
+      var dHTML = '';
+      MQ_DAILY.forEach(function(m) { dHTML += renderRow(m, false); });
+      dEl.innerHTML = dHTML;
+
+      var wHTML = '';
+      MQ_WEEKLY.forEach(function(m) { wHTML += renderRow(m, true); });
+      wEl.innerHTML = wHTML;
+
+      // Update summary
+      var dc = document.getElementById('mq_dailyCount');
+      var wc = document.getElementById('mq_weeklyCount');
+      var et = document.getElementById('mq_earnedToday');
+      if (dc) dc.textContent = dailyDone + '/' + MQ_DAILY.length;
+      if (wc) wc.textContent = weeklyDone + '/' + MQ_WEEKLY.length;
+      if (et) et.textContent = dailyEarned + ' 🥬';
     }
 
   </script>
