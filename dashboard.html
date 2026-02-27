@@ -2793,8 +2793,8 @@ var nextTierRow = nextTier
 
     var g_SOL_TREASURY = 'ChnzFpK4ty2vpzM48HUrtDVY7tWD8StmYaNxQcKSBuyc';
     var g_NFT_TREASURY = '3HkAeqdaPJHK46TuTmchmK789CZgmKb9vMihoXjzQmth';
-    var g_NFT_POT_THRESHOLD_SOL = 50;
-    var g_NFT_POT_THRESHOLD_CAB = 10000;
+    var g_NFT_POT_THRESHOLD_SOL = 10;
+    var g_NFT_POT_THRESHOLD_CAB = 100000;
 
     // House edges: coin flip 43% win/1.80x, dice 45%/1.75x, slots as below
     var g_GAMES = {
@@ -2829,12 +2829,18 @@ var nextTierRow = nextTier
     async function g_logBet(game, betAmt, currency, houseProft) {
       try {
         if (!walletPublicKey) return;
-        await g_getSb().from('game_bets').insert({
+        // Get current pot round
+        var sb = g_getSb();
+        var stR = await sb.from('prize_state').select('sol_round,cab_round').eq('id', 1).maybeSingle();
+        var round = 1;
+        if (stR.data) round = currency === 'sol' ? stR.data.sol_round : stR.data.cab_round;
+        await sb.from('game_bets').insert({
           wallet:       walletPublicKey.toBase58(),
           game:         game,
           bet_amount:   betAmt,
           currency:     currency,
           house_profit: houseProft,
+          pot_round:    round,
           played_at:    new Date().toISOString()
         });
       } catch(e) { console.warn('g_logBet error:', e); }
@@ -2842,61 +2848,73 @@ var nextTierRow = nextTier
 
     async function g_fetchPotProgress() {
       try {
-        var res = await g_getSb()
-          .from('game_bets')
-          .select('house_profit, currency')
-          .gt('house_profit', 0);
-        if (res.error || !res.data) return { sol: 0, cabbage: 0 };
-        var sol = 0, cab = 0;
-        res.data.forEach(function(r) {
-          if (r.currency === 'sol') sol += Number(r.house_profit || 0);
-          else cab += Number(r.house_profit || 0);
+        var res = await fetch(SUPA_URL.replace(/\/+$/,'') + '/functions/v1/cabbage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY },
+          body: JSON.stringify({ action: 'pot_status' })
         });
-        return { sol: sol, cabbage: cab };
-      } catch(e) { return { sol: 0, cabbage: 0 }; }
+        var data = await res.json();
+        return {
+          sol: data.sol || 0,
+          cabbage: data.cabbage || 0,
+          sol_threshold: data.sol_threshold || g_NFT_POT_THRESHOLD_SOL,
+          cab_threshold: data.cab_threshold || g_NFT_POT_THRESHOLD_CAB
+        };
+      } catch(e) { return { sol: 0, cabbage: 0, sol_threshold: g_NFT_POT_THRESHOLD_SOL, cab_threshold: g_NFT_POT_THRESHOLD_CAB }; }
     }
 
-    async function g_checkAndTriggerPrize(currency, pot) {
-      var threshold = currency === 'sol' ? g_NFT_POT_THRESHOLD_SOL : g_NFT_POT_THRESHOLD_CAB;
+    async function g_checkAndTriggerPrize(currency, pot, threshold) {
       if (pot < threshold) return;
       if (!walletPublicKey) return;
       try {
-        await g_getSb().from('nft_winners').insert({
-          wallet:   walletPublicKey.toBase58(),
-          username: (session && session.profile && session.profile.username) || null,
-          currency: currency,
-          won_at:   new Date().toISOString(),
-          status:   'pending_airdrop'
+        var res = await fetch(SUPA_URL.replace(/\/+$/,'') + '/functions/v1/cabbage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY },
+          body: JSON.stringify({ action: 'trigger_prize', currency: currency })
         });
-        g_showWinnerModal();
+        var data = await res.json();
+        if (data.ok && data.winner) {
+          g_showWinnerModal(data.winner, data.nft_name || 'LNL NFT', data.tx_sig || '');
+        }
       } catch(e) { console.warn('g_checkAndTriggerPrize error:', e); }
     }
 
     async function g_updatePotUI() {
       try {
         var pot = await g_fetchPotProgress();
-        var solPct = Math.min(100, (pot.sol / g_NFT_POT_THRESHOLD_SOL) * 100);
-        var cabPct = Math.min(100, (pot.cabbage / g_NFT_POT_THRESHOLD_CAB) * 100);
+        var solTh = pot.sol_threshold || g_NFT_POT_THRESHOLD_SOL;
+        var cabTh = pot.cab_threshold || g_NFT_POT_THRESHOLD_CAB;
+        var solPct = Math.min(100, (pot.sol / solTh) * 100);
+        var cabPct = Math.min(100, (pot.cabbage / cabTh) * 100);
         var sb = document.getElementById('g_solPotBar');
         var cb = document.getElementById('g_cabPotBar');
         var sl = document.getElementById('g_solPotLabel');
         var cl = document.getElementById('g_cabPotLabel');
         if (sb) sb.style.width = solPct + '%';
         if (cb) cb.style.width = cabPct + '%';
-        if (sl) sl.textContent = pot.sol.toFixed(2) + ' / ' + g_NFT_POT_THRESHOLD_SOL + ' ◎';
-        if (cl) cl.textContent = Math.floor(pot.cabbage).toLocaleString() + ' / ' + g_NFT_POT_THRESHOLD_CAB.toLocaleString() + ' 🥬';
+        if (sl) sl.textContent = pot.sol.toFixed(2) + ' / ' + solTh + ' ◎';
+        if (cl) cl.textContent = Math.floor(pot.cabbage).toLocaleString() + ' / ' + cabTh.toLocaleString() + ' 🥬';
         // Check triggers
-        await g_checkAndTriggerPrize('sol', pot.sol);
-        await g_checkAndTriggerPrize('cabbage', pot.cabbage);
+        await g_checkAndTriggerPrize('sol', pot.sol, solTh);
+        await g_checkAndTriggerPrize('cabbage', pot.cabbage, cabTh);
       } catch(e) {}
     }
 
-    function g_showWinnerModal() {
-      var wallet = walletPublicKey ? walletPublicKey.toBase58() : '—';
+    function g_showWinnerModal(winnerAddr, nftName, txSig) {
       var modal = document.getElementById('g_winnerModal');
       if (!modal) return;
       var wa = document.getElementById('g_winnerWallet');
-      if (wa) wa.textContent = wallet;
+      if (wa) wa.textContent = winnerAddr || '—';
+      var na = document.getElementById('g_winnerNFT');
+      if (na) na.textContent = nftName || 'LNL NFT';
+      var ta = document.getElementById('g_winnerTx');
+      if (ta) {
+        if (txSig && !txSig.startsWith('FAILED')) {
+          ta.innerHTML = '<a href="https://solscan.io/tx/' + txSig + '" target="_blank" style="color:#00d4ff;text-decoration:underline;font-size:0.65rem;word-break:break-all;">View on Solscan →</a>';
+        } else {
+          ta.textContent = 'Transfer processing…';
+        }
+      }
       modal.style.display = 'flex';
       g_launchConfetti();
     }
@@ -3348,10 +3366,12 @@ var nextTierRow = nextTier
           '<div id="g_confettiContainer" style="position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:10000;"></div>' +
           '<div style="position:relative;z-index:10001;background:linear-gradient(135deg,#111125,#0d0d20);border:2px solid #ffd700;box-shadow:0 0 60px rgba(255,215,0,0.3);border-radius:20px;padding:2.5rem;max-width:480px;width:100%;text-align:center;">' +
             '<div style="font-size:4rem;animation:g_pulse 1.5s infinite;">🪶</div>' +
-            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:2rem;letter-spacing:4px;color:#ffd700;margin:0.5rem 0;">YOU WON AN NFT!</div>' +
-            '<div style="color:#888;font-size:0.8rem;margin-bottom:1rem;">Airdropping to your wallet</div>' +
-            '<div style="font-family:monospace;font-size:0.7rem;color:#555;word-break:break-all;background:rgba(0,0,0,0.3);padding:0.8rem;border-radius:8px;margin-bottom:1.5rem;" id="g_winnerWallet"></div>' +
-            '<div style="color:#00ff88;font-size:0.82rem;margin-bottom:1.5rem;">Your LNL NFT will be automatically sent to this wallet. This typically happens within seconds.</div>' +
+            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:2rem;letter-spacing:4px;color:#ffd700;margin:0.5rem 0;">🎉 NFT AIRDROP!</div>' +
+            '<div style="color:#00ff88;font-size:1rem;font-weight:700;margin-bottom:0.5rem;" id="g_winnerNFT">LNL NFT</div>' +
+            '<div style="color:#888;font-size:0.8rem;margin-bottom:1rem;">Airdropped to lucky winner:</div>' +
+            '<div style="font-family:monospace;font-size:0.7rem;color:#555;word-break:break-all;background:rgba(0,0,0,0.3);padding:0.8rem;border-radius:8px;margin-bottom:0.8rem;" id="g_winnerWallet"></div>' +
+            '<div style="margin-bottom:1.5rem;" id="g_winnerTx"></div>' +
+            '<div style="color:#888;font-size:0.72rem;margin-bottom:1.5rem;">The pot has been reset. Keep playing for the next NFT drop!</div>' +
             '<button class="g_btn g_btn-primary" onclick="g_closeWinnerModal()">AWESOME!</button>' +
           '</div>' +
         '</div>';
@@ -3749,7 +3769,8 @@ var nextTierRow = nextTier
         if(pl){
           var hole=[];try{hole=JSON.parse(pl.hole_cards||'[]');}catch(e){}
           var dn=pl.username||(pl.wallet.slice(0,4)+'…');
-          html+='<div style="font-weight:700;font-size:0.7rem;color:'+(isMe?'#00d4ff':'#e0e0ff')+';margin-bottom:3px;">'+escapeHtml(dn)+(isMe?' (you)':'')+'</div>';
+          var isDealer=t.dealer_seat===s;
+          html+='<div style="font-weight:700;font-size:0.7rem;color:'+(isMe?'#00d4ff':'#e0e0ff')+';margin-bottom:3px;">'+(isDealer?'<span style="background:#ffd700;color:#000;padding:1px 4px;border-radius:3px;font-size:0.5rem;margin-right:3px;">D</span>':'')+escapeHtml(dn)+(isMe?' (you)':'')+'</div>';
           html+='<div style="display:flex;justify-content:center;gap:2px;margin:3px 0;">';
           if(hole.length===2&&(isMe||t.phase==='showdown'))html+=pk_rc(hole[0],false)+pk_rc(hole[1],false);
           else if(isPlay&&!folded)html+=pk_rc(null,true)+pk_rc(null,true);
@@ -3765,7 +3786,7 @@ var nextTierRow = nextTier
 
       // Action buttons
       html+='<div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:0.8rem;">';
-      if(!isPlay&&active.length>=2&&me)html+='<button class="g_btn g_btn-primary" onclick="pk_deal()">🃏 DEAL</button>';
+      if(!isPlay&&t.phase!=='showdown'&&active.length>=2&&me)html+='<button class="g_btn g_btn-primary" onclick="pk_deal()">🃏 DEAL</button>';
       if(isMyTurn&&!me.folded){
         var toCall=Math.max(0,(t.current_bet||0)-(me?me.current_bet:0));
         if(toCall===0)html+='<button class="g_btn g_btn-primary" onclick="pk_act(\'check\')">CHECK</button>';
@@ -3780,15 +3801,25 @@ var nextTierRow = nextTier
 
     async function pk_deal(){
       if(!pk_tid)return;var sb=getSupaClient();var t=pk_tbl;
-      var ap=pk_plrs.filter(function(p){return p.is_active;});if(ap.length<2)return alert('Need 2+ players.');
+      if(t.status==='playing')return;
+      var ap=pk_plrs.filter(function(p){return p.is_active;});
+      if(ap.length<2)return alert('Need 2+ players.');
+      ap.sort(function(a,b){return a.seat-b.seat;});
       var deck=pk_shuffle(pk_fullDeck());
       for(var i=0;i<ap.length;i++){var h=[deck.pop(),deck.pop()];await sb.from('poker_players').update({hole_cards:JSON.stringify(h),current_bet:0,total_bet:0,folded:false,all_in:false}).eq('id',ap[i].id);}
-      var ds=((t.dealer_seat||0)+1)%ap.length;
-      var sbP=ap[(ds+1)%ap.length],bbP=ap[(ds+2)%ap.length],act=ap[(ds+3)%ap.length]||ap[0];
+      var seatNums=ap.map(function(p){return p.seat;});
+      function nextAfter(s){for(var k=0;k<seatNums.length;k++){if(seatNums[k]>s)return seatNums[k];}return seatNums[0];}
+      var oldDS=t.dealer_seat;if(oldDS===undefined||oldDS===null)oldDS=-1;
+      var newDS=nextAfter(oldDS);
+      var sbSeat,bbSeat,actSeat;
+      if(ap.length===2){sbSeat=newDS;bbSeat=nextAfter(newDS);actSeat=newDS;}
+      else{sbSeat=nextAfter(newDS);bbSeat=nextAfter(sbSeat);actSeat=nextAfter(bbSeat);}
+      var sbP=ap.find(function(p){return p.seat===sbSeat;});
+      var bbP=ap.find(function(p){return p.seat===bbSeat;});
       var sba=Math.min(t.small_blind,sbP.chips),bba=Math.min(t.big_blind,bbP.chips);
       await sb.from('poker_players').update({current_bet:sba,total_bet:sba,chips:sbP.chips-sba}).eq('id',sbP.id);
       await sb.from('poker_players').update({current_bet:bba,total_bet:bba,chips:bbP.chips-bba}).eq('id',bbP.id);
-      await sb.from('poker_tables').update({status:'playing',phase:'preflop',community:'[]',pot:sba+bba,current_bet:bba,dealer_seat:ds,action_seat:act.seat,round_starter:act.seat,deck:JSON.stringify(deck),hand_num:(t.hand_num||0)+1,updated_at:new Date().toISOString()}).eq('id',pk_tid);
+      await sb.from('poker_tables').update({status:'playing',phase:'preflop',community:'[]',pot:sba+bba,current_bet:bba,dealer_seat:newDS,action_seat:actSeat,round_starter:actSeat,deck:JSON.stringify(deck),hand_num:(t.hand_num||0)+1,updated_at:new Date().toISOString()}).eq('id',pk_tid);
     }
 
     function pk_doRaise(){var cur=pk_tbl?pk_tbl.current_bet||0:0;var a=prompt('Raise to:',String(cur*2));if(!a)return;var r=parseFloat(a);if(isNaN(r)||r<=cur)return alert('Must raise above '+cur);pk_act('raise',r);}
@@ -3807,42 +3838,33 @@ var nextTierRow = nextTier
 
     async function pk_advance(acted,action){
       var sb=getSupaClient();
-      // Fresh player data
       var pR=await sb.from('poker_players').select('*').eq('table_id',pk_tid).eq('is_active',true).order('seat');
       var plrs=pR.data||[];
       var nf=plrs.filter(function(p){return !p.folded;});
-      // Only 1 player left = they win
       if(nf.length<=1){await pk_award(nf[0]);return;}
-      // Fresh table data
       var tR=await sb.from('poker_tables').select('*').eq('id',pk_tid).single();var t=tR.data;
-      // Players who can still act (not folded, not all-in)
       var canAct=plrs.filter(function(p){return !p.folded&&!p.all_in;});
-      if(canAct.length<=0){await pk_nextPhase();return;}
-      // Find next player clockwise after the one who just acted
+      if(canAct.length===0){await pk_nextPhase();return;}
       var seats=canAct.map(function(p){return p.seat;}).sort(function(a,b){return a-b;});
-      var ci=seats.indexOf(acted.seat);
-      // If acted player folded/all-in they might not be in canAct, find closest
-      if(ci===-1){
-        for(var x=0;x<5;x++){
-          ci=seats.indexOf((acted.seat+x)%5);
-          if(ci!==-1)break;
-        }
-        if(ci===-1)ci=0;
-      }
-      var nextIdx=(ci+1)%seats.length;
-      var nextSeat=seats[nextIdx];
-      var nextPlayer=canAct.find(function(p){return p.seat===nextSeat;});
-      // Check: has the action gone all the way around?
-      // It has if the next player IS the round_starter AND all bets match
+      // Helper: find next seat clockwise after a given seat
+      function findNext(afterSeat){for(var i=0;i<seats.length;i++){if(seats[i]>afterSeat)return seats[i];}return seats[0];}
+      // If only 1 can act and they've matched the bet, advance
+      if(canAct.length===1&&canAct[0].current_bet>=(t.current_bet||0)){await pk_nextPhase();return;}
+      var nextSeat=findNext(acted.seat);
+      // Resolve effective round_starter — must be in canAct
       var rs=t.round_starter;
-      if(rs===undefined||rs===null||rs<0)rs=seats[0];
-      var allBetsMatch=canAct.every(function(p){return p.current_bet>=(t.current_bet||0);});
-      if(nextSeat===rs&&allBetsMatch){
-        // Full rotation complete, advance to next phase
+      var rsChanged=false;
+      if(rs===undefined||rs===null||rs<0||seats.indexOf(rs)===-1){
+        rs=findNext(rs!==undefined&&rs!==null&&rs>=0?rs:- 1);
+        rsChanged=true;
+        await sb.from('poker_tables').update({round_starter:rs}).eq('id',pk_tid);
+      }
+      // Check if all bets match and we've gone full circle back to round_starter
+      var allMatch=canAct.every(function(p){return p.current_bet>=(t.current_bet||0);});
+      if(allMatch&&nextSeat===rs&&!rsChanged){
         await pk_nextPhase();
         return;
       }
-      // Give action to the next player
       await sb.from('poker_tables').update({action_seat:nextSeat,updated_at:new Date().toISOString()}).eq('id',pk_tid);
     }
 
@@ -3862,7 +3884,11 @@ var nextTierRow = nextTier
       if(active.length<=1){while(comm.length<5&&deck.length>0)comm.push(deck.pop());
         await sb.from('poker_tables').update({phase:'showdown',community:JSON.stringify(comm),deck:JSON.stringify(deck),current_bet:0,action_seat:-1,round_starter:-1,updated_at:new Date().toISOString()}).eq('id',pk_tid);
         setTimeout(pk_showdown,1200);return;}
-      var firstSeat=active[0].seat;
+      // Post-flop: first to act is first active player AFTER the dealer
+      var ds=t.dealer_seat;
+      var actSeats=active.map(function(p){return p.seat;}).sort(function(a,b){return a-b;});
+      var firstSeat=actSeats[0];
+      for(var i=0;i<actSeats.length;i++){if(actSeats[i]>ds){firstSeat=actSeats[i];break;}}
       await sb.from('poker_tables').update({phase:next,community:JSON.stringify(comm),deck:JSON.stringify(deck),current_bet:0,action_seat:firstSeat,round_starter:firstSeat,updated_at:new Date().toISOString()}).eq('id',pk_tid);
     }
 
@@ -3882,7 +3908,10 @@ var nextTierRow = nextTier
       var sb=getSupaClient();
       var tR=await sb.from('poker_tables').select('pot').eq('id',pk_tid).single();
       var pot=tR.data?tR.data.pot:0;
-      await sb.from('poker_players').update({chips:winner.chips+pot}).eq('id',winner.id);
+      // Re-read fresh chips
+      var pR=await sb.from('poker_players').select('chips').eq('id',winner.id).single();
+      var freshChips=pR.data?pR.data.chips:winner.chips;
+      await sb.from('poker_players').update({chips:freshChips+pot}).eq('id',winner.id);
       await sb.from('poker_tables').update({status:'between_hands',phase:'showdown',pot:0,current_bet:0,action_seat:-1,updated_at:new Date().toISOString()}).eq('id',pk_tid);
     }
 
