@@ -102,9 +102,9 @@ a.plink:hover{
     /* ---- DASH NAV (DASHBOARD-ONLY) ---- */
     .dash-nav-wrap{
       position: sticky;
-      top: 60px; /* below site nav */
+      top: 60px;
       z-index: 900;
-      background: rgba(10,10,26,0.92);
+      background: rgba(10,10,26,0.96);
       backdrop-filter: blur(10px);
       border-top: 1px solid rgba(255,255,255,0.04);
       border-bottom: 1px solid rgba(255,255,255,0.06);
@@ -112,6 +112,7 @@ a.plink:hover{
     }
     .dash-nav-wrap.show { display: block; }
 
+    /* ── Desktop nav ── */
     .dash-nav{
       max-width: 1200px;
       margin: 0 auto;
@@ -121,13 +122,15 @@ a.plink:hover{
       justify-content: space-between;
       gap: 1rem;
     }
-
     .dash-tabs{
+      flex: 1 1 auto;
+      min-width: 0;
       display: flex;
       align-items: center;
       gap: 0.75rem;
       flex-wrap: wrap;
     }
+    .dash-right{ flex: 0 0 auto; }
 
     .dash-tab{
       background: transparent;
@@ -142,6 +145,8 @@ a.plink:hover{
       transition: all 0.2s;
       font-weight: 700;
       font-family: 'Space Grotesk', sans-serif;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
     .dash-tab:hover{
       border-color: rgba(0,212,255,0.45);
@@ -162,30 +167,59 @@ a.plink:hover{
       gap: 0.7rem;
       flex-wrap: wrap;
     }
-
-    /* --- DASH NAV mobile-safe polish (max width like cards) --- */
-    .dash-nav{
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 0.9rem 2rem;
-    }
-
-    .dash-tabs{ flex: 1 1 auto; min-width: 0; }
-    .dash-right{ flex: 0 0 auto; }
-
     .wallet-chip{ max-width: 240px; }
     .wallet-addr{ overflow: hidden; text-overflow: ellipsis; }
 
+    /* ── Tablet ── */
     @media (max-width: 800px){
-      .dash-nav{ padding: 0.8rem 1rem; }
-      .dash-right{ gap: 0.5rem; }
-      .wallet-chip{ max-width: 170px; }
+      .dash-nav{ padding: 0.7rem 1rem; gap: 0.6rem; }
+      .dash-right{ gap: 0.4rem; }
+      .wallet-chip{ max-width: 160px; }
+      .dash-tab{ padding: 7px 11px; font-size: 0.72rem; letter-spacing: 1px; }
     }
 
-    @media (max-width: 420px){
-      .dash-nav{ flex-wrap: wrap; row-gap: 0.6rem; }
-      .dash-right{ width: 100%; justify-content: flex-end; }
-      .wallet-chip{ max-width: 100%; }
+    /* ── Mobile — single scrollable row, no wrapping ── */
+    @media (max-width: 600px){
+      .dash-nav{
+        flex-direction: column;
+        align-items: stretch;
+        padding: 0;
+        gap: 0;
+      }
+      /* Top row: wallet chip + disconnect */
+      .dash-right{
+        order: 1;
+        width: 100%;
+        padding: 6px 12px;
+        border-bottom: 1px solid rgba(255,255,255,0.04);
+        justify-content: space-between;
+        flex-wrap: nowrap;
+        gap: 6px;
+      }
+      .wallet-chip{ max-width: none; flex: 1; min-width: 0; }
+      /* Bottom row: tabs scroll horizontally */
+      .dash-tabs{
+        order: 2;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scroll-snap-type: x proximity;
+        padding: 6px 10px 8px;
+        gap: 6px;
+        /* hide scrollbar on mobile */
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+      }
+      .dash-tabs::-webkit-scrollbar { display: none; }
+      .dash-tab{
+        scroll-snap-align: start;
+        padding: 6px 11px;
+        font-size: 0.65rem;
+        letter-spacing: 0.8px;
+        border-radius: 6px;
+        flex-shrink: 0;
+      }
     }
 
     .wallet-chip{
@@ -228,12 +262,6 @@ a.plink:hover{
       font-weight: 700;
     }
     .disconnect-btn:hover { border-color: #ff3c5c; color: #ff3c5c; box-shadow: 0 0 18px rgba(255,60,92,0.14); }
-
-    @media (max-width: 700px){
-      .dash-nav{ padding: 0.8rem 1rem; }
-      nav a { margin: 0 0.8rem; font-size: 0.75rem; }
-      .wallet-chip{ max-width: 100%; }
-    }
 
     /* ---- CONNECT SECTION ---- */
     .connect-section {
