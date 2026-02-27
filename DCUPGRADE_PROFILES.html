@@ -990,6 +990,7 @@ a.plink:hover{
         <button class="dash-tab" id="tabChat" onclick="switchView('chat')">💬 Chat</button>
         <button class="dash-tab" id="tabGames" onclick="switchView('games')">🎰 Casino</button>
         <button class="dash-tab" id="tabMissions" onclick="switchView('missions')">🎯 Missions</button>
+        <button class="dash-tab" id="tabStore" onclick="switchView('store')">🛒 Store</button>
         <button class="dash-tab" id="tabLeaderboard" onclick="switchView('leaderboard')">🏆</button>
       </div>
 
@@ -1022,6 +1023,7 @@ a.plink:hover{
     <div class="view" id="view-games"></div>
     <div class="view" id="view-missions"></div>
     <div class="view" id="view-leaderboard"></div>
+    <div class="view" id="view-store"></div>
   </div>
 
   <!-- PFP MODAL -->
@@ -1475,6 +1477,7 @@ a.plink:hover{
       document.getElementById("view-games").classList.remove("show");
       var vm = document.getElementById("view-missions"); if (vm) vm.classList.remove("show");
       var vl = document.getElementById("view-leaderboard"); if (vl) vl.classList.remove("show");
+      var vs = document.getElementById("view-store"); if (vs) vs.classList.remove("show");
 
       session.profilePanelOpen = false;
       var tabProfile = document.getElementById("tabProfile");
@@ -1485,9 +1488,12 @@ a.plink:hover{
       if (tabGames) tabGames.classList.remove("active");
       var tabMissions = document.getElementById("tabMissions");
       var tabLeaderboard = document.getElementById("tabLeaderboard");
+      var tabStore = document.getElementById("tabStore");
       if (tabMissions) tabMissions.classList.remove("active");
       var tabLeaderboard = document.getElementById("tabLeaderboard");
       if (tabLeaderboard) tabLeaderboard.classList.remove("active");
+      var tabStore = document.getElementById("tabStore");
+      if (tabStore) tabStore.classList.remove("active");
 
       session.currentView = "profile";
     }
@@ -1501,11 +1507,13 @@ a.plink:hover{
       var vg = document.getElementById("view-games");
       var vq = document.getElementById("view-missions");
       var vl = document.getElementById("view-leaderboard");
+      var vs = document.getElementById("view-store");
       if (vp) vp.classList.remove("show");
       if (vc) vc.classList.remove("show");
       if (vg) vg.classList.remove("show");
       if (vq) vq.classList.remove("show");
       if (vl) vl.classList.remove("show");
+      if (vs) vs.classList.remove("show");
 
       // Deactivate all tabs
       var tabProfile = document.getElementById("tabProfile");
@@ -1517,6 +1525,7 @@ a.plink:hover{
       if (tabGames)   tabGames.classList.remove("active");
       if (tabMissions) tabMissions.classList.remove("active");
       if (tabLeaderboard) tabLeaderboard.classList.remove("active");
+      if (tabStore) tabStore.classList.remove("active");
 
       if (viewName === "profile") {
         stopChatPoll();
@@ -1549,6 +1558,13 @@ a.plink:hover{
         if (vl) vl.classList.add("show");
         if (tabLeaderboard) tabLeaderboard.classList.add("active");
         renderLeaderboardUI();
+      }
+
+      if (viewName === "store") {
+        stopChatPoll();
+        if (vs) vs.classList.add("show");
+        if (tabStore) tabStore.classList.add("active");
+        renderStoreUI();
       }
     }
 
@@ -1590,6 +1606,7 @@ a.plink:hover{
         }
 
         document.getElementById("loadingSection").style.display = "none";
+        shop_loadMyItems();
         renderProfileView(merged);
 
         document.getElementById("dashboard").classList.add("show");
@@ -1646,6 +1663,14 @@ a.plink:hover{
         badgeInner = tier.icon;
       }
 
+      // Store frames
+      var frameStyle = '';
+      if (shop_owns('frame_diamond')) {
+        frameStyle = 'box-shadow:0 0 20px rgba(0,212,255,0.4),0 0 40px rgba(123,104,238,0.2);border:3px solid #00d4ff;animation:g_pulse 2s infinite;';
+      } else if (shop_owns('frame_gold')) {
+        frameStyle = 'box-shadow:0 0 15px rgba(255,215,0,0.3);border:3px solid #ffd700;';
+      }
+
       var linksHTML = '';
       if (xUrl) linksHTML += '<a class="plink" href="' + xUrl + '" target="_blank">X: @' + normalizeHandle(session.profile.x) + '</a>';
       if (disc) linksHTML += '<span class="plink" style="cursor:default;">Discord: ' + disc + '</span>';
@@ -1653,7 +1678,7 @@ a.plink:hover{
 
       view.innerHTML +=
       '<div class="tier-card ' + tier.cssClass + '">' +
-        '<div class="tier-badge" id="pfpBadge">' + badgeInner + '</div>' +
+        '<div class="tier-badge" id="pfpBadge" style="' + frameStyle + '">' + badgeInner + '</div>' +
         '<div class="tier-info">' +
           '<div class="tier-label">YOUR TIER</div>' +
           '<div class="tier-name">' + tier.name + '</div>' +
@@ -2557,6 +2582,7 @@ var nextTierRow = nextTier
 
       // Load history then subscribe
       chatMsgs = [];
+      shop_loadAllChatItems();
       loadChatHistory();
     }
 
@@ -2720,6 +2746,13 @@ var nextTierRow = nextTier
         var isMe  = m.wallet === myWallet;
         var color = walletColor(m.wallet);
 
+        // Store cosmetics
+        var badge = shop_getBadge(m.wallet);
+        var vip = shop_getVIP(m.wallet);
+        var nameCol = shop_getNameColor(m.wallet);
+        var glow = shop_hasGlow(m.wallet);
+        if (nameCol) color = nameCol;
+
         // Display name: use stored username if present, else shorten wallet
         var name = m.username
           ? m.username
@@ -2735,13 +2768,16 @@ var nextTierRow = nextTier
           if (i > 0) html += '<div style="height:12px;"></div>';
           html +=
             '<div style="display:flex;align-items:baseline;gap:7px;margin-bottom:3px;">' +
+              (vip ? '<span style="font-size:0.6rem;background:linear-gradient(135deg,#ffd700,#ff8c00);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:900;">VIP</span>' : '') +
               '<span style="font-weight:700;font-size:0.8rem;color:' + color + ';">' + escapeHtml(name) + '</span>' +
+              (badge ? '<span style="font-size:0.7rem;">' + badge + '</span>' : '') +
               '<span style="font-size:0.6rem;color:#252540;">' + timeStr + '</span>' +
               (isMe ? '<span style="font-size:0.55rem;letter-spacing:1px;color:#1e1e3a;text-transform:uppercase;">you</span>' : '') +
             '</div>';
         }
 
-        html += '<div style="font-size:0.87rem;color:#c8c8e8;line-height:1.6;word-break:break-word;padding:1px 0;">' + escapeHtml(m.text) + '</div>';
+        var glowStyle = glow ? 'text-shadow:0 0 8px rgba(0,212,255,0.15);' : '';
+        html += '<div style="font-size:0.87rem;color:#c8c8e8;line-height:1.6;word-break:break-word;padding:1px 0;' + glowStyle + '">' + escapeHtml(m.text) + '</div>';
       });
 
       inner.innerHTML = html;
@@ -2825,11 +2861,29 @@ var nextTierRow = nextTier
 
     // NFT bonus: +win% based on LNL held
     function g_nftBonus(count) {
-      if (count >= 20) return 0.04;
-      if (count >= 10) return 0.03;
-      if (count >= 5)  return 0.02;
-      if (count >= 1)  return 0.01;
-      return 0;
+      var bonus = 0;
+      if (count >= 20) bonus = 0.04;
+      else if (count >= 10) bonus = 0.03;
+      else if (count >= 5)  bonus = 0.02;
+      else if (count >= 1)  bonus = 0.01;
+      // Lucky Boost from store
+      if (shop_hasBoost()) bonus += 0.05;
+      return bonus;
+    }
+
+    // Call after each casino bet to decrement boost uses
+    function g_useBoost() {
+      if (!shop_hasBoost()) return;
+      var b = shop_items['lucky_boost'];
+      if (b && b.data && b.data.uses_left > 0) {
+        b.data.uses_left--;
+        // Update server async (fire-and-forget)
+        if (walletPublicKey) {
+          getSupaClient().from('user_items').update({ data: b.data })
+            .eq('wallet', walletPublicKey.toBase58()).eq('item_id', 'lucky_boost')
+            .then(function(){}).catch(function(){});
+        }
+      }
     }
 
     var g_currency    = 'sol';  // 'sol' or 'cabbage'
@@ -3134,6 +3188,8 @@ var nextTierRow = nextTier
       // Mission tracking
       mq_track('casino_play');
       if (won) mq_track('casino_win');
+      // Lucky Boost decrement
+      g_useBoost();
     }
 
     function g_renderHistory() {
@@ -4366,8 +4422,320 @@ var nextTierRow = nextTier
     }
 
     /* ================================================================
-       LEADERBOARDS
+       CABBAGE STORE — burn sinks for the economy
     ================================================================ */
+    var shop_items = {};     // wallet → { item_id: {data, bought_at} }
+    var shop_allItems = {};  // cache of ALL user items for chat rendering
+    var shop_loaded = false;
+    var shop_raffleCurrent = null;
+    var shop_raffleMyTickets = 0;
+
+    var SHOP_CATALOG = [
+      { id: 'badge_fire',   cat: 'chat',    icon: '🔥', name: 'Fire Badge',       price: 50,   desc: '🔥 next to your name in chat', perm: true },
+      { id: 'badge_diamond',cat: 'chat',    icon: '💎', name: 'Diamond Badge',    price: 50,   desc: '💎 next to your name in chat', perm: true },
+      { id: 'badge_crown',  cat: 'chat',    icon: '👑', name: 'Crown Badge',      price: 100,  desc: '👑 next to your name in chat', perm: true },
+      { id: 'badge_skull',  cat: 'chat',    icon: '💀', name: 'Skull Badge',      price: 50,   desc: '💀 next to your name in chat', perm: true },
+      { id: 'badge_rocket', cat: 'chat',    icon: '🚀', name: 'Rocket Badge',     price: 75,   desc: '🚀 next to your name in chat', perm: true },
+      { id: 'namecolor_gold',   cat: 'chat', icon: '✨', name: 'Gold Name',       price: 200,  desc: 'Your name shows gold in chat', perm: true, color: '#ffd700' },
+      { id: 'namecolor_cyan',   cat: 'chat', icon: '💠', name: 'Cyan Name',       price: 200,  desc: 'Your name shows cyan in chat', perm: true, color: '#00ffee' },
+      { id: 'namecolor_purple', cat: 'chat', icon: '🔮', name: 'Purple Name',     price: 200,  desc: 'Your name shows purple in chat', perm: true, color: '#bf5fff' },
+      { id: 'namecolor_red',    cat: 'chat', icon: '❤️', name: 'Red Name',        price: 200,  desc: 'Your name shows red in chat', perm: true, color: '#ff3c5c' },
+      { id: 'chat_glow',    cat: 'chat',    icon: '🌟', name: 'Message Glow',    price: 300,  desc: 'Your messages have a subtle glow', perm: true },
+      { id: 'vip_flair',    cat: 'chat',    icon: '⭐', name: 'VIP Flair',        price: 5000, desc: '⭐ VIP tag next to your name', perm: true },
+      { id: 'frame_gold',   cat: 'profile', icon: '🖼️', name: 'Gold Frame',       price: 500,  desc: 'Gold border on your profile PFP', perm: true },
+      { id: 'frame_diamond',cat: 'profile', icon: '💎', name: 'Diamond Frame',    price: 2000, desc: 'Diamond animated border on PFP', perm: true },
+      { id: 'lucky_boost',  cat: 'casino',  icon: '🍀', name: 'Lucky Boost',      price: 500,  desc: 'Next 10 casino bets get +5% odds', perm: false, uses: 10 },
+      { id: 'raffle_ticket',cat: 'raffle',  icon: '🎟️', name: 'Raffle Ticket',    price: 1000, desc: 'Enter the current NFT raffle', perm: false }
+    ];
+
+    var SHOP_CATS = [
+      { id: 'chat',    label: '💬 Chat Perks' },
+      { id: 'profile', label: '🖼️ Profile' },
+      { id: 'casino',  label: '🎰 Casino' },
+      { id: 'raffle',  label: '🎟️ Raffle' }
+    ];
+    var shop_activeCat = 'chat';
+
+    async function shop_loadMyItems() {
+      if (!walletPublicKey) return;
+      var sb = getSupaClient();
+      var w = walletPublicKey.toBase58();
+      try {
+        var res = await sb.from('user_items').select('*').eq('wallet', w);
+        shop_items = {};
+        (res.data || []).forEach(function(r) {
+          shop_items[r.item_id] = { data: r.data || {}, bought_at: r.bought_at, expires_at: r.expires_at };
+        });
+        shop_loaded = true;
+      } catch(e) { console.warn('shop_loadMyItems error:', e); }
+    }
+
+    // Load ALL users' chat cosmetics for rendering
+    async function shop_loadAllChatItems() {
+      var sb = getSupaClient();
+      try {
+        var res = await sb.from('user_items').select('wallet,item_id,data')
+          .in('item_id', ['badge_fire','badge_diamond','badge_crown','badge_skull','badge_rocket','namecolor_gold','namecolor_cyan','namecolor_purple','namecolor_red','chat_glow','vip_flair']);
+        shop_allItems = {};
+        (res.data || []).forEach(function(r) {
+          if (!shop_allItems[r.wallet]) shop_allItems[r.wallet] = {};
+          shop_allItems[r.wallet][r.item_id] = r.data || {};
+        });
+      } catch(e) { console.warn('shop_loadAllChatItems:', e); }
+    }
+
+    function shop_owns(itemId) {
+      return !!shop_items[itemId];
+    }
+
+    // Get chat badge emoji for a wallet
+    function shop_getBadge(wallet) {
+      var items = shop_allItems[wallet];
+      if (!items) return '';
+      var badges = ['badge_fire','badge_diamond','badge_crown','badge_skull','badge_rocket'];
+      for (var i = 0; i < badges.length; i++) {
+        if (items[badges[i]]) {
+          var cat = SHOP_CATALOG.find(function(c) { return c.id === badges[i]; });
+          if (cat) return cat.icon;
+        }
+      }
+      return '';
+    }
+
+    function shop_getVIP(wallet) {
+      var items = shop_allItems[wallet];
+      return items && items['vip_flair'] ? '⭐' : '';
+    }
+
+    function shop_getNameColor(wallet) {
+      var items = shop_allItems[wallet];
+      if (!items) return null;
+      var colors = ['namecolor_gold','namecolor_cyan','namecolor_purple','namecolor_red'];
+      for (var i = 0; i < colors.length; i++) {
+        if (items[colors[i]]) {
+          var cat = SHOP_CATALOG.find(function(c) { return c.id === colors[i]; });
+          if (cat) return cat.color;
+        }
+      }
+      return null;
+    }
+
+    function shop_hasGlow(wallet) {
+      var items = shop_allItems[wallet];
+      return items && items['chat_glow'];
+    }
+
+    function shop_hasBoost() {
+      var b = shop_items['lucky_boost'];
+      if (!b) return false;
+      var uses = b.data && b.data.uses_left !== undefined ? b.data.uses_left : 0;
+      return uses > 0;
+    }
+
+    async function shop_buy(itemId) {
+      if (!walletPublicKey) return alert('Connect wallet first.');
+      var cat = SHOP_CATALOG.find(function(c) { return c.id === itemId; });
+      if (!cat) return;
+
+      // Already owned (permanent items)
+      if (cat.perm && shop_owns(itemId)) return alert('You already own this!');
+
+      // Confirm
+      if (!confirm('Buy ' + cat.name + ' for ' + cat.price.toLocaleString() + ' 🥬?')) return;
+
+      try {
+        // Spend cabbage
+        await g_spendCabbage(cat.price);
+
+        var sb = getSupaClient();
+        var w = walletPublicKey.toBase58();
+        var itemData = {};
+
+        if (itemId === 'lucky_boost') {
+          // If already have boost, add uses
+          var existing = shop_items['lucky_boost'];
+          var currentUses = existing && existing.data ? (existing.data.uses_left || 0) : 0;
+          itemData = { uses_left: currentUses + (cat.uses || 10) };
+          await sb.from('user_items').upsert({
+            wallet: w, item_id: itemId, data: itemData, bought_at: new Date().toISOString()
+          }, { onConflict: 'wallet,item_id' });
+        } else if (itemId === 'raffle_ticket') {
+          // Handle raffle entry
+          if (!shop_raffleCurrent) return alert('No active raffle right now.');
+          var exR = await sb.from('raffle_entries').select('id,tickets').eq('raffle_id', shop_raffleCurrent.id).eq('wallet', w).maybeSingle();
+          if (exR.data) {
+            await sb.from('raffle_entries').update({ tickets: exR.data.tickets + 1 }).eq('id', exR.data.id);
+          } else {
+            await sb.from('raffle_entries').insert({ raffle_id: shop_raffleCurrent.id, wallet: w, tickets: 1 });
+          }
+          shop_raffleMyTickets++;
+          shop_paintStore();
+          return;
+        } else {
+          // Permanent item
+          await sb.from('user_items').upsert({
+            wallet: w, item_id: itemId, data: itemData, bought_at: new Date().toISOString()
+          }, { onConflict: 'wallet,item_id' });
+        }
+
+        shop_items[itemId] = { data: itemData, bought_at: new Date().toISOString() };
+        // Refresh chat cosmetics cache
+        await shop_loadAllChatItems();
+        shop_paintStore();
+        alert('✅ ' + cat.name + ' purchased!');
+      } catch(e) {
+        alert('Purchase failed: ' + (e.message || e));
+      }
+    }
+
+    async function shop_loadRaffle() {
+      try {
+        var sb = getSupaClient();
+        var res = await sb.from('raffles').select('*').eq('status', 'open').order('created_at', { ascending: false }).limit(1).maybeSingle();
+        shop_raffleCurrent = res.data || null;
+        if (shop_raffleCurrent && walletPublicKey) {
+          var w = walletPublicKey.toBase58();
+          var eR = await sb.from('raffle_entries').select('tickets').eq('raffle_id', shop_raffleCurrent.id).eq('wallet', w).maybeSingle();
+          shop_raffleMyTickets = eR.data ? eR.data.tickets : 0;
+          // Total entries
+          var tR = await sb.from('raffle_entries').select('tickets').eq('raffle_id', shop_raffleCurrent.id);
+          shop_raffleCurrent._totalTickets = (tR.data || []).reduce(function(s, r) { return s + r.tickets; }, 0);
+          shop_raffleCurrent._totalEntrants = (tR.data || []).length;
+        }
+      } catch(e) { console.warn('shop_loadRaffle:', e); }
+    }
+
+    async function renderStoreUI() {
+      var view = document.getElementById('view-store');
+      if (!view) return;
+
+      if (!shop_loaded) await shop_loadMyItems();
+      await shop_loadRaffle();
+
+      var cabBal = 0;
+      try { cabBal = await g_fetchCabbageBalance(); } catch(e) {}
+
+      view.innerHTML =
+        '<style>' +
+        '.sh_cats{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:1rem;}' +
+        '.sh_cat{padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:rgba(0,0,0,0.2);color:#555;font-size:0.68rem;font-weight:700;cursor:pointer;transition:all 0.2s;font-family:"Space Grotesk",sans-serif;}' +
+        '.sh_cat:hover{border-color:rgba(0,212,255,0.3);color:#888;}' +
+        '.sh_cat.active{border-color:rgba(0,212,255,0.5);color:#00d4ff;background:rgba(0,212,255,0.08);}' +
+        '.sh_grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;}' +
+        '.sh_item{background:#0a0a1a;border:1px solid #1a1a30;border-radius:12px;padding:1rem;text-align:center;transition:all 0.2s;}' +
+        '.sh_item:hover{border-color:rgba(0,212,255,0.3);transform:translateY(-2px);}' +
+        '.sh_item.owned{border-color:rgba(0,255,136,0.3);background:rgba(0,255,136,0.03);}' +
+        '.sh_icon{font-size:2rem;margin-bottom:0.4rem;}' +
+        '.sh_name{font-weight:700;font-size:0.78rem;color:#e0e0ff;margin-bottom:4px;}' +
+        '.sh_desc{font-size:0.62rem;color:#444;margin-bottom:0.7rem;line-height:1.4;}' +
+        '.sh_price{font-size:0.82rem;font-weight:900;color:#ffd700;margin-bottom:0.6rem;}' +
+        '.sh_buy{padding:6px 16px;border-radius:7px;border:1px solid rgba(0,212,255,0.4);background:rgba(0,212,255,0.1);color:#00d4ff;font-weight:700;font-size:0.68rem;cursor:pointer;font-family:"Space Grotesk",sans-serif;letter-spacing:1px;text-transform:uppercase;transition:all 0.2s;}' +
+        '.sh_buy:hover{background:rgba(0,212,255,0.2);box-shadow:0 0 12px rgba(0,212,255,0.2);}' +
+        '.sh_buy.owned{border-color:rgba(0,255,136,0.3);color:#00ff88;cursor:default;}' +
+        '.sh_raffle{background:#0f0f22;border:1px solid #1e1e3a;border-radius:14px;padding:1.4rem;margin-bottom:1rem;}' +
+        '</style>' +
+
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.6rem;">' +
+          '<div>' +
+            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.5rem;letter-spacing:3px;color:#e0e0ff;">🛒 CABBAGE STORE</div>' +
+            '<div style="font-size:0.7rem;color:#444;letter-spacing:1px;margin-top:2px;">Spend cabbage. Flex on everyone.</div>' +
+          '</div>' +
+          '<div style="display:flex;align-items:center;gap:1rem;">' +
+            '<div style="font-size:0.82rem;font-weight:700;color:#00ff88;" id="sh_balance">' + Math.floor(cabBal).toLocaleString() + ' 🥬</div>' +
+            '<button onclick="switchView(\'profile\')" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#888;padding:7px 14px;border-radius:7px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;" onmouseover="this.style.borderColor=\'rgba(0,212,255,0.4)\';this.style.color=\'#00d4ff\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,0.1)\';this.style.color=\'#888\'">← Home</button>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="sh_cats" id="sh_cats"></div>' +
+        '<div id="sh_body"></div>' +
+
+        '<div style="background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.04);border-radius:10px;padding:0.9rem 1.2rem;margin-top:1rem;font-size:0.62rem;color:#2a2a44;letter-spacing:0.8px;text-align:center;text-transform:uppercase;">' +
+          'Earn → Spend → Flex · Chat cosmetics show for everyone · Boosts apply to your next games' +
+        '</div>';
+
+      // Render category tabs
+      var catsEl = document.getElementById('sh_cats');
+      var cHTML = '';
+      SHOP_CATS.forEach(function(c) {
+        cHTML += '<div class="sh_cat' + (c.id === shop_activeCat ? ' active' : '') + '" onclick="shop_switchCat(\'' + c.id + '\')">' + c.label + '</div>';
+      });
+      catsEl.innerHTML = cHTML;
+
+      shop_paintStore();
+    }
+
+    function shop_switchCat(catId) {
+      shop_activeCat = catId;
+      var tabs = document.querySelectorAll('.sh_cat');
+      tabs.forEach(function(t) { t.classList.remove('active'); });
+      var idx = SHOP_CATS.findIndex(function(c) { return c.id === catId; });
+      if (tabs[idx]) tabs[idx].classList.add('active');
+      shop_paintStore();
+    }
+
+    function shop_paintStore() {
+      var body = document.getElementById('sh_body');
+      if (!body) return;
+      var html = '';
+
+      if (shop_activeCat === 'raffle') {
+        // Raffle section
+        if (shop_raffleCurrent) {
+          var r = shop_raffleCurrent;
+          var endsStr = r.ends_at ? new Date(r.ends_at).toLocaleDateString() : 'TBD';
+          html += '<div class="sh_raffle">' +
+            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.2rem;letter-spacing:3px;color:#ffd700;margin-bottom:0.5rem;">🎟️ ' + escapeHtml(r.title) + '</div>' +
+            '<div style="font-size:0.78rem;color:#c8c8e8;margin-bottom:0.5rem;">' + escapeHtml(r.prize_desc || 'NFT Prize') + '</div>' +
+            '<div style="display:flex;gap:2rem;flex-wrap:wrap;margin:1rem 0;">' +
+              '<div><div style="color:#555;font-size:0.6rem;letter-spacing:1px;">ENDS</div><div style="font-weight:700;color:#00d4ff;">' + endsStr + '</div></div>' +
+              '<div><div style="color:#555;font-size:0.6rem;letter-spacing:1px;">TOTAL ENTRIES</div><div style="font-weight:700;color:#7b68ee;">' + (r._totalTickets || 0) + '</div></div>' +
+              '<div><div style="color:#555;font-size:0.6rem;letter-spacing:1px;">ENTRANTS</div><div style="font-weight:700;color:#e0e0ff;">' + (r._totalEntrants || 0) + '</div></div>' +
+              '<div><div style="color:#555;font-size:0.6rem;letter-spacing:1px;">YOUR TICKETS</div><div style="font-weight:700;color:#00ff88;">' + shop_raffleMyTickets + '</div></div>' +
+            '</div>' +
+            '<div style="display:flex;align-items:center;gap:1rem;margin-top:0.8rem;">' +
+              '<button class="sh_buy" onclick="shop_buy(\'raffle_ticket\')">BUY TICKET · 1,000 🥬</button>' +
+              '<div style="font-size:0.6rem;color:#333;">Each ticket = 1 entry. More tickets = better odds.</div>' +
+            '</div>' +
+          '</div>';
+        } else {
+          html += '<div style="text-align:center;color:#333;padding:3rem;font-size:0.82rem;">No active raffle right now. Check back soon!</div>';
+        }
+      }
+
+      // Item grid
+      var items = SHOP_CATALOG.filter(function(i) { return i.cat === shop_activeCat; });
+      if (shop_activeCat === 'raffle') {
+        // Don't show raffle_ticket in grid — it's in the raffle card above
+        items = items.filter(function(i) { return i.id !== 'raffle_ticket'; });
+      }
+
+      if (items.length > 0) {
+        html += '<div class="sh_grid">';
+        items.forEach(function(item) {
+          var owned = shop_owns(item.id);
+          var boostInfo = '';
+          if (item.id === 'lucky_boost' && owned) {
+            var uses = shop_items[item.id].data ? (shop_items[item.id].data.uses_left || 0) : 0;
+            boostInfo = '<div style="font-size:0.6rem;color:#00ff88;margin-bottom:4px;">' + uses + ' uses left</div>';
+          }
+          html += '<div class="sh_item' + (owned && item.perm ? ' owned' : '') + '">' +
+            '<div class="sh_icon">' + item.icon + '</div>' +
+            '<div class="sh_name">' + item.name + '</div>' +
+            '<div class="sh_desc">' + item.desc + '</div>' +
+            boostInfo +
+            '<div class="sh_price">' + item.price.toLocaleString() + ' 🥬</div>';
+          if (owned && item.perm) {
+            html += '<div class="sh_buy owned">✅ OWNED</div>';
+          } else {
+            html += '<button class="sh_buy" onclick="shop_buy(\'' + item.id + '\')">' + (owned && !item.perm ? 'BUY MORE' : 'BUY') + '</button>';
+          }
+          html += '</div>';
+        });
+        html += '</div>';
+      }
+
+      body.innerHTML = html;
+    }
     var lb_cache = {};
     var lb_cacheTime = 0;
     var lb_activeTab = 'cabbage';
