@@ -3137,6 +3137,9 @@ var nextTierRow = nextTier
         '.pk_seat.occ{border-color:rgba(0,255,136,0.3);background:rgba(0,255,136,0.04);}' +
         '.pk_seat.turn{border-color:rgba(255,215,0,0.6);box-shadow:0 0 15px rgba(255,215,0,0.15);}' +
         '.pk_seat.fold{opacity:0.4;}' +
+        '.plinko_canvas{width:100%;border-radius:8px;background:#06060f;border:1px solid #161628;display:block;}' +
+        '.crash_canvas{width:100%;height:200px;border-radius:8px;background:#06060f;border:1px solid #161628;display:block;}' +
+        '.crash_multi{font-family:"Bebas Neue",sans-serif;font-size:2.8rem;letter-spacing:2px;text-align:center;margin:0.3rem 0;transition:color 0.15s;}' +
         '</style>' +
 
         // ── Header ──
@@ -3260,6 +3263,32 @@ var nextTierRow = nextTier
             '<div class="g_result" id="bj_result" style="display:none;"></div>' +
           '</div>' +
 
+          // CABBAGE DROP (PLINKO)
+          '<div class="g_card" style="margin:0;">' +
+            '<div class="g_title">🥬 CABBAGE DROP</div>' +
+            '<canvas id="plinko_cv" class="plinko_canvas" width="300" height="340"></canvas>' +
+            '<div style="display:flex;justify-content:center;gap:2px;margin-top:4px;" id="plinko_slots"></div>' +
+            '<button class="g_btn g_btn-primary" style="width:100%;margin-top:0.5rem;" id="plinko_btn" onclick="plinko_drop()">DROP</button>' +
+            '<div class="g_result" id="plinko_result" style="display:none;"></div>' +
+          '</div>' +
+
+          // CRASH
+          '<div class="g_card" style="margin:0;">' +
+            '<div class="g_title">📈 CRASH</div>' +
+            '<canvas id="crash_cv" class="crash_canvas" width="300" height="200"></canvas>' +
+            '<div class="crash_multi" id="crash_multi" style="color:#555;">1.00×</div>' +
+            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem;">' +
+              '<button class="g_btn g_btn-primary" id="crash_startBtn" onclick="crash_start()">BET & WATCH</button>' +
+              '<button class="g_btn" id="crash_cashBtn" onclick="crash_cashout()" disabled style="border-color:rgba(0,255,136,0.3);color:#00ff88;">CASH OUT</button>' +
+            '</div>' +
+            '<div style="display:flex;align-items:center;gap:6px;margin-top:6px;">' +
+              '<span style="color:#555;font-size:0.65rem;">Auto cash:</span>' +
+              '<input id="crash_auto" type="number" min="1.1" step="0.1" value="2" style="width:60px;background:#06060f;border:1px solid #1e1e3a;color:#e0e0ff;padding:5px 8px;border-radius:6px;font-family:\'Space Grotesk\',sans-serif;font-size:0.78rem;text-align:center;" />' +
+              '<span style="color:#555;font-size:0.65rem;">×</span>' +
+            '</div>' +
+            '<div class="g_result" id="crash_result" style="display:none;"></div>' +
+          '</div>' +
+
         '</div>' +
 
         // ── History ──
@@ -3311,6 +3340,7 @@ var nextTierRow = nextTier
       g_updatePotUI();
       g_renderHistory();
       pk_loadLobby();
+      setTimeout(function(){ plinko_init(); crash_init(); }, 100);
     }
 
     function g_setCurrency(cur) {
@@ -3340,7 +3370,7 @@ var nextTierRow = nextTier
     }
 
     function g_disableGameBtns(dis) {
-      ['g_coinHeadsBtn','g_coinTailsBtn','g_slotsBtn','bj_dealBtn'].forEach(function(id){
+      ['g_coinHeadsBtn','g_coinTailsBtn','g_slotsBtn','bj_dealBtn','plinko_btn','crash_startBtn'].forEach(function(id){
         var b = document.getElementById(id);
         if (b) b.disabled = dis;
       });
@@ -3860,6 +3890,413 @@ var nextTierRow = nextTier
       for(var i=0;i<seven.length;i++)for(var j=i+1;j<seven.length;j++)for(var k=j+1;k<seven.length;k++)for(var l=k+1;l<seven.length;l++)for(var m=l+1;m<seven.length;m++){
         var sc=pk_eval5([seven[i],seven[j],seven[k],seven[l],seven[m]]);if(sc>best)best=sc;}
       return best;
+    }
+
+    /* ================================================================
+       CABBAGE DROP (PLINKO)
+    ================================================================ */
+    var PLINKO_ROWS = 10;
+    var PLINKO_MULTS = [10, 3, 2, 1.5, 1, 0.5, 0.3, 0.5, 1, 1.5, 2, 3, 10];
+    var PLINKO_COLORS = ['#ff3c5c','#ff6b35','#ffa033','#ffd700','#aaa','#888','#666','#888','#aaa','#ffd700','#ffa033','#ff6b35','#ff3c5c'];
+    var plinko_running = false;
+
+    function plinko_init() {
+      var cv = document.getElementById('plinko_cv');
+      if (!cv) return;
+      var ctx = cv.getContext('2d');
+      var W = cv.width, H = cv.height;
+      ctx.clearRect(0, 0, W, H);
+
+      // Draw pegs
+      for (var row = 0; row < PLINKO_ROWS; row++) {
+        var pegsInRow = row + 3;
+        var spacing = W / (pegsInRow + 1);
+        for (var col = 0; col < pegsInRow; col++) {
+          var px = spacing * (col + 1);
+          var py = 30 + row * ((H - 60) / PLINKO_ROWS);
+          ctx.beginPath();
+          ctx.arc(px, py, 4, 0, Math.PI * 2);
+          ctx.fillStyle = '#2a2a4a';
+          ctx.fill();
+        }
+      }
+
+      // Draw bottom slots
+      var slotEl = document.getElementById('plinko_slots');
+      if (slotEl) {
+        var sh = '';
+        PLINKO_MULTS.forEach(function(m, i) {
+          var c = PLINKO_COLORS[i];
+          sh += '<div style="flex:1;text-align:center;font-size:0.5rem;font-weight:700;color:' + c + ';padding:3px 0;background:rgba(0,0,0,0.3);border-radius:3px;border:1px solid ' + c + '22;">' + m + '×</div>';
+        });
+        slotEl.innerHTML = sh;
+      }
+    }
+
+    async function plinko_drop() {
+      if (plinko_running || g_isSpinning) return;
+      var bet = parseFloat(document.getElementById('g_betInput').value) || g_betAmount;
+      g_betAmount = bet;
+
+      try {
+        await g_runBet(bet, g_currency);
+      } catch(e) {
+        g_setResult('plinko_result', '⚠ ' + (e.message || 'Error'), false);
+        return;
+      }
+
+      plinko_running = true;
+      g_disableGameBtns(true);
+
+      var cv = document.getElementById('plinko_cv');
+      if (!cv) return;
+      var ctx = cv.getContext('2d');
+      var W = cv.width, H = cv.height;
+
+      // Calculate ball path through pegs
+      var ballX = W / 2 + (Math.random() - 0.5) * 20;
+      var ballY = 8;
+      var slot = 0;
+      var path = [{x: ballX, y: ballY}];
+
+      // Simulate drops through each row
+      for (var row = 0; row < PLINKO_ROWS; row++) {
+        var nftCount = session.loadedNFTs ? session.loadedNFTs.length : 0;
+        // Slight bias toward center for house edge
+        var bias = (ballX > W/2) ? -0.02 : 0.02;
+        var goRight = Math.random() + bias > 0.5;
+        var pegsInRow = row + 3;
+        var spacing = W / (pegsInRow + 1);
+        var shift = spacing * 0.48 * (goRight ? 1 : -1);
+        ballX = Math.max(15, Math.min(W - 15, ballX + shift));
+        ballY = 30 + row * ((H - 60) / PLINKO_ROWS);
+        path.push({x: ballX, y: ballY});
+      }
+
+      // Determine which slot
+      var slotWidth = W / PLINKO_MULTS.length;
+      slot = Math.floor(ballX / slotWidth);
+      slot = Math.max(0, Math.min(PLINKO_MULTS.length - 1, slot));
+      var mult = PLINKO_MULTS[slot];
+
+      // Final landing
+      var finalX = slotWidth * slot + slotWidth / 2;
+      path.push({x: finalX, y: H - 12});
+
+      // Animate ball
+      var frame = 0;
+      var totalFrames = path.length;
+
+      function drawFrame() {
+        ctx.clearRect(0, 0, W, H);
+
+        // Redraw pegs
+        for (var row = 0; row < PLINKO_ROWS; row++) {
+          var pegsInRow = row + 3;
+          var sp = W / (pegsInRow + 1);
+          for (var col = 0; col < pegsInRow; col++) {
+            ctx.beginPath();
+            ctx.arc(sp * (col + 1), 30 + row * ((H - 60) / PLINKO_ROWS), 4, 0, Math.PI * 2);
+            ctx.fillStyle = '#2a2a4a';
+            ctx.fill();
+          }
+        }
+
+        // Draw trail
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(0,255,136,0.3)';
+        ctx.lineWidth = 2;
+        for (var t = 0; t <= frame && t < path.length; t++) {
+          if (t === 0) ctx.moveTo(path[t].x, path[t].y);
+          else ctx.lineTo(path[t].x, path[t].y);
+        }
+        ctx.stroke();
+
+        // Draw ball at current position
+        var pt = path[Math.min(frame, path.length - 1)];
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, 8, 0, Math.PI * 2);
+        var grd = ctx.createRadialGradient(pt.x - 2, pt.y - 2, 1, pt.x, pt.y, 8);
+        grd.addColorStop(0, '#7fff7f');
+        grd.addColorStop(1, '#00aa00');
+        ctx.fillStyle = grd;
+        ctx.fill();
+        ctx.strokeStyle = '#00ff88';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Draw slot highlight on last frame
+        if (frame >= path.length - 1) {
+          ctx.fillStyle = PLINKO_COLORS[slot] + '33';
+          ctx.fillRect(slotWidth * slot, H - 25, slotWidth, 25);
+        }
+
+        frame++;
+        if (frame < path.length + 1) {
+          setTimeout(drawFrame, 120);
+        } else {
+          finishPlinko();
+        }
+      }
+
+      drawFrame();
+
+      async function finishPlinko() {
+        var cabPay = 0;
+        var won = mult >= 1;
+        cabPay = g_currency === 'sol' ? bet * mult * g_SOL_TO_CABBAGE : bet * mult;
+        if (cabPay > 0) await g_creditCabbage(cabPay);
+
+        if (mult >= 2) {
+          g_setResult('plinko_result', '🎉 ' + mult + '× — Won ' + cabPay.toFixed(2) + ' 🥬!', true);
+        } else if (mult >= 1) {
+          g_setResult('plinko_result', '✅ ' + mult + '× — Got ' + cabPay.toFixed(2) + ' 🥬', true);
+        } else {
+          g_setResult('plinko_result', '💀 ' + mult + '× — Got ' + cabPay.toFixed(2) + ' 🥬', false);
+        }
+
+        g_addHistory('🥬 Drop', bet, g_currency, won, cabPay);
+        await g_logBet('🥬 Cabbage Drop', bet, g_currency, won ? 0 : bet * (1 - mult));
+        await g_updatePotUI();
+        await g_loadGameBalances();
+        plinko_running = false;
+        g_isSpinning = false;
+        g_disableGameBtns(false);
+      }
+    }
+
+    /* ================================================================
+       CRASH
+    ================================================================ */
+    var crash_running = false;
+    var crash_cashed = false;
+    var crash_point = 1;
+    var crash_current = 1;
+    var crash_bet = 0;
+    var crash_raf = null;
+    var crash_startTime = 0;
+    var crash_history = [];
+
+    function crash_init() {
+      var cv = document.getElementById('crash_cv');
+      if (!cv) return;
+      var ctx = cv.getContext('2d');
+      crash_drawChart(ctx, cv.width, cv.height, [], 1, false);
+
+      // Draw recent crash history
+      if (crash_history.length > 0) {
+        var hEl = document.getElementById('crash_multi');
+        if (hEl) hEl.textContent = '1.00×';
+      }
+    }
+
+    function crash_genPoint() {
+      // House edge ~3%: E[1/crashPoint] = 0.97
+      var r = Math.random();
+      if (r < 0.03) return 1.00; // instant crash 3% of time
+      return Math.floor(100 * (0.97 / r)) / 100;
+    }
+
+    function crash_drawChart(ctx, W, H, points, current, crashed) {
+      ctx.clearRect(0, 0, W, H);
+
+      // Background grid
+      ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+      ctx.lineWidth = 1;
+      for (var gy = 1; gy < 6; gy++) {
+        var yy = H - (gy / 6) * H;
+        ctx.beginPath(); ctx.moveTo(0, yy); ctx.lineTo(W, yy); ctx.stroke();
+      }
+
+      if (points.length < 2) return;
+
+      // Scale
+      var maxM = Math.max(current, 2);
+      var xScale = W / points.length;
+      var yScale = (H - 20) / (maxM - 1);
+
+      // Draw line
+      ctx.beginPath();
+      ctx.lineWidth = 3;
+      var grad = ctx.createLinearGradient(0, H, 0, 0);
+      if (crashed) {
+        grad.addColorStop(0, '#ff3c5c');
+        grad.addColorStop(1, '#ff6b35');
+      } else {
+        grad.addColorStop(0, '#00ff88');
+        grad.addColorStop(1, '#00d4ff');
+      }
+      ctx.strokeStyle = grad;
+
+      for (var i = 0; i < points.length; i++) {
+        var x = i * xScale;
+        var y = H - 10 - (points[i] - 1) * yScale;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+
+      // Glow under line
+      ctx.lineTo(points.length * xScale, H);
+      ctx.lineTo(0, H);
+      ctx.closePath();
+      ctx.fillStyle = crashed ? 'rgba(255,60,92,0.08)' : 'rgba(0,255,136,0.06)';
+      ctx.fill();
+
+      // Current multiplier dot
+      if (points.length > 0) {
+        var lx = (points.length - 1) * xScale;
+        var ly = H - 10 - (points[points.length - 1] - 1) * yScale;
+        ctx.beginPath();
+        ctx.arc(lx, Math.max(5, ly), 5, 0, Math.PI * 2);
+        ctx.fillStyle = crashed ? '#ff3c5c' : '#00ff88';
+        ctx.fill();
+      }
+    }
+
+    async function crash_start() {
+      if (crash_running || g_isSpinning) return;
+      var bet = parseFloat(document.getElementById('g_betInput').value) || g_betAmount;
+      g_betAmount = bet;
+
+      try {
+        await g_runBet(bet, g_currency);
+      } catch(e) {
+        g_setResult('crash_result', '⚠ ' + (e.message || 'Error'), false);
+        return;
+      }
+
+      crash_running = true;
+      crash_cashed = false;
+      crash_bet = bet;
+      crash_current = 1.00;
+      crash_point = crash_genPoint();
+      crash_startTime = Date.now();
+      g_disableGameBtns(true);
+
+      var sb = document.getElementById('crash_startBtn');
+      var cb = document.getElementById('crash_cashBtn');
+      if (sb) sb.disabled = true;
+      if (cb) cb.disabled = false;
+
+      var rEl = document.getElementById('crash_result');
+      if (rEl) rEl.style.display = 'none';
+
+      var cv = document.getElementById('crash_cv');
+      var ctx = cv ? cv.getContext('2d') : null;
+      var W = cv ? cv.width : 300;
+      var H = cv ? cv.height : 200;
+      var points = [1];
+      var mEl = document.getElementById('crash_multi');
+
+      function tick() {
+        var elapsed = (Date.now() - crash_startTime) / 1000;
+        // Exponential growth: starts slow, gets fast
+        crash_current = Math.pow(Math.E, elapsed * 0.15);
+        crash_current = Math.floor(crash_current * 100) / 100;
+
+        // Auto cashout
+        var autoVal = parseFloat(document.getElementById('crash_auto').value);
+        if (autoVal && crash_current >= autoVal && !crash_cashed) {
+          crash_cashout();
+          return;
+        }
+
+        if (crash_current >= crash_point && !crash_cashed) {
+          // CRASHED
+          crash_current = crash_point;
+          points.push(crash_current);
+          if (ctx) crash_drawChart(ctx, W, H, points, crash_current, true);
+          if (mEl) { mEl.textContent = crash_current.toFixed(2) + '×'; mEl.style.color = '#ff3c5c'; }
+          crash_finish(false);
+          return;
+        }
+
+        points.push(crash_current);
+        if (ctx) crash_drawChart(ctx, W, H, points, crash_current, false);
+        if (mEl) {
+          mEl.textContent = crash_current.toFixed(2) + '×';
+          if (crash_current < 1.5) mEl.style.color = '#00ff88';
+          else if (crash_current < 3) mEl.style.color = '#ffd700';
+          else if (crash_current < 5) mEl.style.color = '#ff6b35';
+          else mEl.style.color = '#ff3c5c';
+        }
+
+        crash_raf = setTimeout(tick, 50);
+      }
+
+      tick();
+    }
+
+    async function crash_cashout() {
+      if (!crash_running || crash_cashed) return;
+      crash_cashed = true;
+
+      if (crash_raf) { clearTimeout(crash_raf); crash_raf = null; }
+
+      var cb = document.getElementById('crash_cashBtn');
+      if (cb) cb.disabled = true;
+
+      var mult = crash_current;
+      var cabPay = g_currency === 'sol' ? crash_bet * mult * g_SOL_TO_CABBAGE : crash_bet * mult;
+      await g_creditCabbage(cabPay);
+
+      g_setResult('crash_result', '💰 Cashed out at ' + mult.toFixed(2) + '× — Won ' + cabPay.toFixed(2) + ' 🥬!', true);
+      g_addHistory('📈 Crash', crash_bet, g_currency, true, cabPay);
+      await g_logBet('📈 Crash', crash_bet, g_currency, 0);
+      await g_updatePotUI();
+      await g_loadGameBalances();
+
+      // Let the animation continue to show where it would have crashed
+      var cv = document.getElementById('crash_cv');
+      var ctx = cv ? cv.getContext('2d') : null;
+      var W = cv ? cv.width : 300;
+      var H = cv ? cv.height : 200;
+      var mEl = document.getElementById('crash_multi');
+      var points = [1, mult];
+
+      function coastTick() {
+        var elapsed = (Date.now() - crash_startTime) / 1000;
+        var val = Math.pow(Math.E, elapsed * 0.15);
+        val = Math.floor(val * 100) / 100;
+
+        if (val >= crash_point) {
+          points.push(crash_point);
+          if (ctx) crash_drawChart(ctx, W, H, points, crash_point, true);
+          if (mEl) { mEl.textContent = '💰 ' + mult.toFixed(2) + '× (crashed @ ' + crash_point.toFixed(2) + '×)'; mEl.style.color = '#00ff88'; }
+          crash_running = false;
+          var sb = document.getElementById('crash_startBtn'); if (sb) sb.disabled = false;
+          g_disableGameBtns(false);
+          crash_history.unshift(crash_point);
+          if (crash_history.length > 10) crash_history.pop();
+          return;
+        }
+
+        points.push(val);
+        if (ctx) crash_drawChart(ctx, W, H, points, val, false);
+        setTimeout(coastTick, 50);
+      }
+      coastTick();
+    }
+
+    async function crash_finish(won) {
+      crash_running = false;
+      var cb = document.getElementById('crash_cashBtn');
+      var sb = document.getElementById('crash_startBtn');
+      if (cb) cb.disabled = true;
+      if (sb) sb.disabled = false;
+
+      if (!won) {
+        g_setResult('crash_result', '💥 CRASHED at ' + crash_point.toFixed(2) + '× — Lost ' + crash_bet.toFixed(4) + (g_currency === 'sol' ? ' ◎' : ' 🥬'), false);
+        g_addHistory('📈 Crash', crash_bet, g_currency, false, 0);
+        await g_logBet('📈 Crash', crash_bet, g_currency, crash_bet);
+        await g_updatePotUI();
+        await g_loadGameBalances();
+      }
+
+      crash_history.unshift(crash_point);
+      if (crash_history.length > 10) crash_history.pop();
+      g_disableGameBtns(false);
     }
 
   </script>
