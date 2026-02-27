@@ -1582,10 +1582,10 @@ a.plink:hover{
         if (vv) vv.classList.add("show");
         if (tabVoice) tabVoice.classList.add("active");
         renderVoiceUI();
-      } else {
-        // If navigating AWAY from voice, leave any active room
-        if (session.currentView !== 'voice') voice_leave();
       }
+
+      // Update voice tab indicator — show live dot whenever in a room, regardless of active tab
+      voice_updateTabIndicator();
     }
 
     async function loadDashboard() {
@@ -5727,6 +5727,17 @@ var nextTierRow = nextTier
       return walletPublicKey ? walletPublicKey.toBase58() : 'anon';
     }
 
+    // ── Keep the tab button showing a live dot when in a room ──
+    function voice_updateTabIndicator() {
+      var tab = document.getElementById('tabVoice');
+      if (!tab) return;
+      if (voice_roomId) {
+        tab.innerHTML = '<span style="display:inline-flex;align-items:center;gap:5px;">🎙️ Voice <span style="width:6px;height:6px;border-radius:50%;background:#00ff88;box-shadow:0 0 6px rgba(0,255,136,0.8);display:inline-block;animation:voice_pulse 1.5s infinite;"></span></span>';
+      } else {
+        tab.innerHTML = '🎙️ Voice';
+      }
+    }
+
     // ── Join a room ──
     async function voice_join(roomId) {
       if (voice_roomId === roomId) return; // already here
@@ -5810,6 +5821,7 @@ var nextTierRow = nextTier
       });
 
       voice_paintRoom();
+      voice_updateTabIndicator();
     }
 
     // ── Create a peer connection to another user ──
@@ -5971,6 +5983,7 @@ var nextTierRow = nextTier
 
       // Repaint if still on voice tab
       if (session.currentView === 'voice') voice_paintRoom();
+      voice_updateTabIndicator();
     }
 
     // ── Toggle mute ──
