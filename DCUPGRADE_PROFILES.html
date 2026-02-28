@@ -1011,7 +1011,7 @@ a.plink:hover{
   <div class="dash-nav-wrap" id="dashNavWrap">
     <div class="dash-nav">
       <div class="dash-tabs">
-        <button class="dash-tab" id="tabProfile" onclick="toggleProfilePanel()">Profile</button>
+        <button class="dash-tab" id="tabProfile" onclick="profileBtnClick()">Profile</button>
         <button class="dash-tab" id="tabChat" onclick="switchView('chat')">💬 Chat</button>
         <button class="dash-tab" id="tabGames" onclick="switchView('games')">🎰 Casino</button>
         <button class="dash-tab" id="tabMissions" onclick="switchView('missions')">🎯 Missions</button>
@@ -1445,6 +1445,16 @@ a.plink:hover{
       applyProfilePanelUI();
     }
 
+    function profileBtnClick(){
+      if (session.currentView !== 'profile') {
+        // Navigate home
+        switchView('profile');
+      } else {
+        // Already on profile — toggle edit panel
+        toggleProfilePanel();
+      }
+    }
+
     async function connectWallet() {
       var provider = detectWalletProvider();
       if (!provider || typeof provider.connect !== "function") {
@@ -1565,7 +1575,7 @@ a.plink:hover{
       if (viewName === "profile") {
         stopChatPoll();
         if (vp) vp.classList.add("show");
-        if (tabProfile) tabProfile.classList.toggle("active", !!session.profilePanelOpen);
+        if (tabProfile) tabProfile.classList.add("active");
       }
 
       if (viewName === "chat") {
@@ -3449,15 +3459,14 @@ var nextTierRow = nextTier
               '<div id="bj_dealerCards" style="display:flex;justify-content:center;gap:3px;min-height:74px;align-items:center;"><span style="color:#252540;font-size:0.75rem;">Press Deal to play</span></div>' +
               '<div id="bj_dealerScore" style="font-size:0.7rem;color:#888;margin:3px 0;min-height:16px;"></div>' +
               '<div style="height:1px;background:rgba(255,255,255,0.04);margin:4px 0;"></div>' +
-              '<div id="bj_playerScore" style="font-size:0.7rem;color:#888;margin:3px 0;min-height:16px;"></div>' +
-              '<div id="bj_playerCards" style="display:flex;justify-content:center;gap:3px;min-height:74px;align-items:center;"></div>' +
-              '<div style="font-size:0.6rem;color:#555;letter-spacing:1px;margin-top:4px;">YOU</div>' +
+              '<div id="bj_playerArea" style="min-height:100px;"></div>' +
             '</div>' +
-            '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0.4rem;margin-top:0.5rem;">' +
+            '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:0.4rem;margin-top:0.5rem;">' +
               '<button class="g_btn g_btn-primary" id="bj_dealBtn" onclick="bj_deal()">DEAL</button>' +
               '<button class="g_btn" id="bj_hitBtn" onclick="bj_hit()" disabled>HIT</button>' +
               '<button class="g_btn" id="bj_standBtn" onclick="bj_stand()" disabled>STAND</button>' +
               '<button class="g_btn" id="bj_doubleBtn" onclick="bj_double()" disabled>2×</button>' +
+              '<button class="g_btn" id="bj_splitBtn" onclick="bj_split()" disabled>SPLIT</button>' +
             '</div>' +
             '<div class="g_result" id="bj_result" style="display:none;"></div>' +
           '</div>' +
@@ -3505,13 +3514,43 @@ var nextTierRow = nextTier
           // LIMBO
           '<div class="g_card" style="margin:0;">' +
             '<div class="g_title">🎯 LIMBO</div>' +
-            '<div style="display:flex;align-items:center;gap:8px;margin-bottom:0.5rem;">' +
-              '<span style="color:#555;font-size:0.65rem;">Target:</span>' +
-              '<input id="limbo_target" type="number" min="1.1" max="100" step="0.1" value="2" style="width:65px;background:#06060f;border:1px solid #1e1e3a;color:#e0e0ff;padding:5px 8px;border-radius:6px;font-family:\'Space Grotesk\',sans-serif;font-size:0.78rem;text-align:center;" />' +
-              '<span style="color:#555;font-size:0.65rem;">× (' + '<span id="limbo_chance">47.5</span>%)</span>' +
-              '<button class="g_btn g_btn-primary" id="limbo_btn" onclick="limbo_play()">GO</button>' +
+            // Target presets
+            '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:0.6rem;">' +
+              '<button class="g_btn" onclick="limbo_setTarget(1.5)" style="font-size:0.65rem;padding:6px 10px;">1.5×</button>' +
+              '<button class="g_btn" onclick="limbo_setTarget(2)" style="font-size:0.65rem;padding:6px 10px;">2×</button>' +
+              '<button class="g_btn" onclick="limbo_setTarget(3)" style="font-size:0.65rem;padding:6px 10px;">3×</button>' +
+              '<button class="g_btn" onclick="limbo_setTarget(5)" style="font-size:0.65rem;padding:6px 10px;">5×</button>' +
+              '<button class="g_btn" onclick="limbo_setTarget(10)" style="font-size:0.65rem;padding:6px 10px;">10×</button>' +
+              '<button class="g_btn" onclick="limbo_setTarget(50)" style="font-size:0.65rem;padding:6px 10px;">50×</button>' +
+              '<button class="g_btn" onclick="limbo_setTarget(100)" style="font-size:0.65rem;padding:6px 10px;">100×</button>' +
             '</div>' +
-            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:3.5rem;text-align:center;letter-spacing:2px;margin:0.5rem 0;transition:color 0.2s;" id="limbo_result_num" style="color:#555;">—</div>' +
+            // Target input + chance + GO
+            '<div style="display:flex;align-items:center;gap:8px;margin-bottom:0.6rem;flex-wrap:wrap;">' +
+              '<div style="display:flex;align-items:center;gap:4px;background:#06060f;border:1px solid #1e1e3a;border-radius:8px;padding:4px 8px;">' +
+                '<span style="color:#555;font-size:0.6rem;letter-spacing:1px;">TARGET</span>' +
+                '<input id="limbo_target" type="number" min="1.1" max="100" step="0.1" value="2" style="width:55px;background:transparent;border:none;color:#ffd700;font-family:\'Bebas Neue\',sans-serif;font-size:1.1rem;text-align:center;outline:none;letter-spacing:1px;" />' +
+                '<span style="color:#555;font-size:0.7rem;">×</span>' +
+              '</div>' +
+              '<div style="display:flex;flex-direction:column;gap:1px;">' +
+                '<span style="color:#555;font-size:0.5rem;letter-spacing:1px;text-transform:uppercase;">Win Chance</span>' +
+                '<span style="color:#00d4ff;font-size:0.85rem;font-weight:900;font-family:\'Space Grotesk\',sans-serif;" id="limbo_chance">47.5%</span>' +
+              '</div>' +
+              '<div style="display:flex;flex-direction:column;gap:1px;">' +
+                '<span style="color:#555;font-size:0.5rem;letter-spacing:1px;text-transform:uppercase;">Profit</span>' +
+                '<span style="color:#00ff88;font-size:0.85rem;font-weight:900;font-family:\'Space Grotesk\',sans-serif;" id="limbo_profit">2.00×</span>' +
+              '</div>' +
+              '<button class="g_btn g_btn-primary" id="limbo_btn" onclick="limbo_play()" style="padding:10px 24px;font-size:0.85rem;">GO</button>' +
+            '</div>' +
+            // Big result display
+            '<div style="position:relative;background:#06060f;border:1px solid #1e1e3a;border-radius:14px;padding:1.5rem 1rem;margin:0.4rem 0;overflow:hidden;">' +
+              '<div id="limbo_bg_flash" style="position:absolute;inset:0;border-radius:14px;opacity:0;transition:opacity 0.3s;"></div>' +
+              '<div style="position:relative;z-index:1;text-align:center;">' +
+                '<div id="limbo_result_num" style="font-family:\'Bebas Neue\',sans-serif;font-size:4.5rem;letter-spacing:4px;color:#333;transition:transform 0.15s;line-height:1;">—</div>' +
+                '<div id="limbo_target_line" style="font-size:0.65rem;color:#333;letter-spacing:1px;margin-top:2px;">Target: 2.00×</div>' +
+              '</div>' +
+            '</div>' +
+            // Recent results strip
+            '<div style="display:flex;gap:4px;overflow-x:auto;padding:4px 0;margin-top:0.4rem;" id="limbo_history"></div>' +
             '<div class="g_result" id="limbo_result" style="display:none;"></div>' +
           '</div>' +
 
@@ -3756,12 +3795,20 @@ var nextTierRow = nextTier
     }
 
     /* ================================================================
-       BLACKJACK vs DEALER
+       BLACKJACK vs DEALER (with split support)
     ================================================================ */
-    var bj_deck=[],bj_pH=[],bj_dH=[],bj_state='idle',bj_bet=0;
+    var bj_deck=[], bj_dH=[], bj_state='idle', bj_bet=0, bj_busy=false;
+    // Multi-hand model: each hand = { cards:[], bet:number, status:'playing'|'stand'|'bust'|'done', doubled:false, fromSplit:false }
+    var bj_hands=[];     // array of hand objects
+    var bj_activeIdx=0;  // which hand is being played
     var BJ_S=['\u2660','\u2665','\u2666','\u2663'];
     var BJ_SC={'\u2660':'bj_blk','\u2665':'bj_red','\u2666':'bj_red','\u2663':'bj_blk'};
     var BJ_V=['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+
+    // Config
+    var BJ_ALLOW_DOUBLE_AFTER_SPLIT = true;
+    var BJ_SPLIT_ACE_ONE_CARD = true; // Aces get exactly one card after split
+    var BJ_SPLIT_BLACKJACK_PAYS_21 = true; // After split, 21 counts as 21 not BJ
 
     function bj_mkDeck(){var d=[];for(var s=0;s<4;s++)for(var v=0;v<13;v++)d.push({v:BJ_V[v],s:BJ_S[s]});for(var i=d.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=d[i];d[i]=d[j];d[j]=t;}return d;}
     function bj_cv(c){if(c.v==='A')return 11;if('KQJ'.indexOf(c.v)>=0)return 10;return parseInt(c.v);}
@@ -3771,59 +3818,365 @@ var nextTierRow = nextTier
       var cc=BJ_SC[c.s]||'bj_blk';
       return'<div class="bj_card bj_front '+cc+'"><div style="font-size:0.8rem;align-self:flex-start;margin:2px 0 0 4px;">'+c.v+'</div><div style="font-size:1.4rem;">'+c.s+'</div><div style="font-size:0.8rem;align-self:flex-end;margin:0 4px 2px 0;">'+c.v+'</div></div>';
     }
-    function bj_paint(show){
-      var dc=document.getElementById('bj_dealerCards'),pc=document.getElementById('bj_playerCards');
-      var ds=document.getElementById('bj_dealerScore'),ps=document.getElementById('bj_playerScore');
-      if(dc){var h='';for(var i=0;i<bj_dH.length;i++)h+=bj_rc(bj_dH[i],i===1&&!show);dc.innerHTML=h;}
-      if(pc){var h2='';for(var j=0;j<bj_pH.length;j++)h2+=bj_rc(bj_pH[j],false);pc.innerHTML=h2;}
-      if(ps)ps.textContent=bj_pH.length?'Hand: '+bj_hv(bj_pH):'';
-      if(ds)ds.textContent=bj_dH.length?(show?'Hand: '+bj_hv(bj_dH):'Showing: '+bj_cv(bj_dH[0])):'';
+
+    // Get the active hand object
+    function bj_activeHand(){ return bj_hands[bj_activeIdx] || null; }
+
+    // Can we split the active hand?
+    function bj_canSplit(){
+      var h = bj_activeHand();
+      if(!h || h.cards.length !== 2 || h.status !== 'playing') return false;
+      if(bj_cv(h.cards[0]) !== bj_cv(h.cards[1])) return false;
+      // Max 4 hands (3 splits)
+      if(bj_hands.length >= 4) return false;
+      return true;
     }
+
+    // Paint: render dealer + all player hands with active indicator
+    function bj_paint(showDealer){
+      var dc=document.getElementById('bj_dealerCards');
+      var ds=document.getElementById('bj_dealerScore');
+      var pa=document.getElementById('bj_playerArea');
+
+      // Dealer
+      if(dc){var h='';for(var i=0;i<bj_dH.length;i++)h+=bj_rc(bj_dH[i],i===1&&!showDealer);dc.innerHTML=h;}
+      if(ds)ds.textContent=bj_dH.length?(showDealer?'Hand: '+bj_hv(bj_dH):'Showing: '+bj_cv(bj_dH[0])):'';
+
+      // Player hands
+      if(!pa) return;
+      if(bj_hands.length===0){ pa.innerHTML=''; return; }
+
+      var multiHand = bj_hands.length > 1;
+      var html = '';
+      if(multiHand) html += '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">';
+
+      for(var hi=0; hi<bj_hands.length; hi++){
+        var hand = bj_hands[hi];
+        var isActive = (hi === bj_activeIdx && bj_state === 'play');
+        var val = bj_hv(hand.cards);
+        var borderCol = isActive ? 'rgba(0,212,255,0.5)' : (hand.status==='bust' ? 'rgba(255,60,92,0.3)' : 'rgba(255,255,255,0.06)');
+        var bgCol = isActive ? 'rgba(0,212,255,0.04)' : 'transparent';
+
+        if(multiHand) html += '<div style="flex:1;min-width:120px;max-width:200px;border:1px solid '+borderCol+';border-radius:10px;padding:8px 6px;background:'+bgCol+';transition:all 0.2s;">';
+
+        // Hand label for multi-hand
+        if(multiHand){
+          var label = 'Hand ' + (hi+1);
+          if(hand.doubled) label += ' (2×)';
+          var labelCol = isActive ? '#00d4ff' : '#444';
+          html += '<div style="font-size:0.55rem;color:'+labelCol+';letter-spacing:1px;margin-bottom:3px;text-transform:uppercase;">'+label+'</div>';
+        }
+
+        // Score
+        var scoreCol = hand.status==='bust' ? '#ff3c5c' : (hand.status==='stand' ? '#888' : '#e0e0ff');
+        html += '<div style="font-size:0.7rem;color:'+scoreCol+';margin:2px 0;min-height:16px;">';
+        if(hand.cards.length) html += (hand.status==='bust' ? 'BUST ' : 'Hand: ') + val;
+        if(hand.bet !== bj_bet && multiHand) html += ' <span style="color:#ffd700;font-size:0.55rem;">('+hand.bet.toFixed(4)+')</span>';
+        html += '</div>';
+
+        // Cards
+        html += '<div style="display:flex;justify-content:center;gap:2px;min-height:74px;align-items:center;flex-wrap:wrap;">';
+        for(var ci=0; ci<hand.cards.length; ci++) html += bj_rc(hand.cards[ci], false);
+        html += '</div>';
+
+        // Status tag for resolved hands
+        if(hand.status === 'bust') html += '<div style="font-size:0.55rem;color:#ff3c5c;letter-spacing:1px;margin-top:2px;">BUST</div>';
+        else if(hand.status === 'stand') html += '<div style="font-size:0.55rem;color:#888;letter-spacing:1px;margin-top:2px;">STAND</div>';
+
+        if(multiHand) html += '</div>';
+      }
+
+      if(multiHand) html += '</div>';
+
+      // "YOU" label
+      html += '<div style="font-size:0.6rem;color:#555;letter-spacing:1px;margin-top:4px;">YOU</div>';
+      pa.innerHTML = html;
+    }
+
+    // Button states
     function bj_btns(){
-      var p=bj_state==='play';
-      var d=document.getElementById('bj_dealBtn'),h=document.getElementById('bj_hitBtn'),s=document.getElementById('bj_standBtn'),db=document.getElementById('bj_doubleBtn');
-      if(d)d.disabled=p;if(h)h.disabled=!p;if(s)s.disabled=!p;if(db)db.disabled=!p||bj_pH.length!==2;
+      var playing = bj_state === 'play' && !bj_busy;
+      var hand = bj_activeHand();
+      var canAct = playing && hand && hand.status === 'playing';
+      var canDbl = canAct && hand.cards.length === 2 && (!hand.fromSplit || BJ_ALLOW_DOUBLE_AFTER_SPLIT);
+      var canSpl = canAct && bj_canSplit();
+
+      var d=document.getElementById('bj_dealBtn');
+      var h=document.getElementById('bj_hitBtn');
+      var s=document.getElementById('bj_standBtn');
+      var db=document.getElementById('bj_doubleBtn');
+      var sp=document.getElementById('bj_splitBtn');
+
+      if(d) d.disabled = playing;
+      if(h) h.disabled = !canAct;
+      if(s) s.disabled = !canAct;
+      if(db) db.disabled = !canDbl;
+      if(sp) sp.disabled = !canSpl;
     }
+
+    // Advance to next playable hand, or trigger dealer turn
+    async function bj_advanceHand(){
+      // Find next hand with status 'playing' after current
+      var found = false;
+      for(var i = bj_activeIdx + 1; i < bj_hands.length; i++){
+        if(bj_hands[i].status === 'playing'){
+          bj_activeIdx = i;
+          found = true;
+          break;
+        }
+      }
+      if(found){
+        bj_paint(false);
+        bj_btns();
+        // If this split hand is aces and BJ_SPLIT_ACE_ONE_CARD, auto-stand
+        var h = bj_activeHand();
+        if(h && h.fromSplit && h.cards.length >= 2 && h.cards[0].v === 'A' && BJ_SPLIT_ACE_ONE_CARD){
+          h.status = 'stand';
+          await bj_advanceHand();
+        }
+      } else {
+        // All player hands done — dealer turn
+        await bj_dealerPlay();
+      }
+    }
+
+    // Dealer plays (once, after all player hands resolved)
+    async function bj_dealerPlay(){
+      bj_state = 'dealer';
+      bj_btns();
+      bj_paint(true);
+
+      // Check if ALL player hands are bust — dealer doesn't need to draw
+      var allBust = true;
+      for(var i=0; i<bj_hands.length; i++){
+        if(bj_hands[i].status !== 'bust') allBust = false;
+      }
+
+      if(!allBust){
+        while(bj_hv(bj_dH) < 17){
+          await new Promise(function(r){ setTimeout(r, 400); });
+          bj_dH.push(bj_deck.pop());
+          bj_paint(true);
+        }
+      }
+
+      bj_state = 'done';
+      await bj_resolveAll();
+    }
+
+    // DEAL
     async function bj_deal(){
-      if(bj_state==='play')return;
-      var bet=parseFloat(document.getElementById('g_betInput').value)||g_betAmount;g_betAmount=bet;bj_bet=bet;
-      try{await g_runBet(bet,g_currency);}catch(e){g_setResult('bj_result','⚠ '+(e.message||'Error'),false);return;}
-      var r=document.getElementById('bj_result');if(r)r.style.display='none';
-      bj_deck=bj_mkDeck();bj_pH=[bj_deck.pop(),bj_deck.pop()];bj_dH=[bj_deck.pop(),bj_deck.pop()];
-      bj_state='play';bj_paint(false);bj_btns();
-      if(bj_hv(bj_pH)===21)await bj_stand();
+      if(bj_state==='play' || bj_busy) return;
+      bj_busy = true;
+      var bet = parseFloat(document.getElementById('g_betInput').value) || g_betAmount;
+      g_betAmount = bet;
+      bj_bet = bet;
+
+      try{ await g_runBet(bet, g_currency); }catch(e){ g_setResult('bj_result','⚠ '+(e.message||'Error'),false); bj_busy=false; return; }
+
+      var r = document.getElementById('bj_result'); if(r) r.style.display = 'none';
+
+      bj_deck = bj_mkDeck();
+      bj_dH = [bj_deck.pop(), bj_deck.pop()];
+      bj_hands = [{ cards: [bj_deck.pop(), bj_deck.pop()], bet: bet, status: 'playing', doubled: false, fromSplit: false }];
+      bj_activeIdx = 0;
+      bj_state = 'play';
+
+      bj_paint(false);
+      bj_btns();
+
+      // Auto-stand on natural 21
+      if(bj_hv(bj_hands[0].cards) === 21){
+        bj_hands[0].status = 'stand';
+        await bj_advanceHand();
+      }
+      bj_busy = false;
     }
-    function bj_hit(){if(bj_state!=='play')return;bj_pH.push(bj_deck.pop());bj_paint(false);var db=document.getElementById('bj_doubleBtn');if(db)db.disabled=true;if(bj_hv(bj_pH)>21){bj_state='done';bj_paint(true);bj_end();}}
-    async function bj_double(){
-      if(bj_state!=='play'||bj_pH.length!==2)return;
-      try{await g_runBet(bj_bet,g_currency);bj_bet*=2;}catch(e){g_setResult('bj_result','⚠ '+(e.message||'Error'),false);return;}
-      bj_pH.push(bj_deck.pop());bj_paint(false);
-      if(bj_hv(bj_pH)>21){bj_state='done';bj_paint(true);bj_end();}else await bj_stand();
+
+    // HIT
+    async function bj_hit(){
+      if(bj_state !== 'play' || bj_busy) return;
+      var hand = bj_activeHand();
+      if(!hand || hand.status !== 'playing') return;
+
+      bj_busy = true;
+      hand.cards.push(bj_deck.pop());
+      bj_paint(false);
+      bj_btns();
+
+      if(bj_hv(hand.cards) > 21){
+        hand.status = 'bust';
+        bj_paint(false);
+        await bj_advanceHand();
+      } else if(bj_hv(hand.cards) === 21){
+        hand.status = 'stand';
+        await bj_advanceHand();
+      }
+      bj_busy = false;
     }
+
+    // STAND
     async function bj_stand(){
-      if(bj_state!=='play')return;bj_state='dealer';bj_btns();bj_paint(true);
-      while(bj_hv(bj_dH)<17){await new Promise(function(r){setTimeout(r,400);});bj_dH.push(bj_deck.pop());bj_paint(true);}
-      bj_state='done';await bj_end();
+      if(bj_state !== 'play' || bj_busy) return;
+      var hand = bj_activeHand();
+      if(!hand || hand.status !== 'playing') return;
+
+      bj_busy = true;
+      hand.status = 'stand';
+      await bj_advanceHand();
+      bj_busy = false;
     }
-    async function bj_end(){
-      var pV=bj_hv(bj_pH),dV=bj_hv(bj_dH);
-      var pBJ=bj_pH.length===2&&pV===21,dBJ=bj_dH.length===2&&dV===21;
-      var won=false,push=false,cab=0,msg='';
-      if(pV>21){msg='💀 BUST! Lost '+bj_bet.toFixed(4)+(g_currency==='sol'?' ◎':' 🥬');}
-      else if(dV>21){won=true;msg='✅ Dealer busts!';}
-      else if(pBJ&&!dBJ){won=true;msg='🎉 BLACKJACK!';}
-      else if(pBJ&&dBJ){push=true;msg='🤝 Both Blackjack — Push';}
-      else if(dBJ){msg='💀 Dealer Blackjack!';}
-      else if(pV>dV){won=true;msg='✅ You win! '+pV+' vs '+dV;}
-      else if(pV===dV){push=true;msg='🤝 Push — '+pV+' vs '+dV;}
-      else{msg='💀 Dealer wins. '+dV+' vs '+pV;}
-      if(won){var m=pBJ?2.2:2;cab=g_currency==='sol'?bj_bet*m*g_SOL_TO_CABBAGE:bj_bet*m;await g_creditCabbage(cab);msg+=' Won '+cab.toFixed(2)+' 🥬';}
-      else if(push){var ref=g_currency==='sol'?bj_bet*g_SOL_TO_CABBAGE:bj_bet;await g_creditCabbage(ref);msg+=' (refund '+ref.toFixed(2)+' 🥬)';}
-      g_setResult('bj_result',msg,won);
-      g_addHistory('🃏 BJ',bj_bet,g_currency,won,cab);
-      await g_logBet('🃏 Blackjack',bj_bet,g_currency,won?0:bj_bet);
-      await g_updatePotUI();await g_loadGameBalances();
-      bj_state='idle';bj_btns();bj_paint(true);
+
+    // DOUBLE DOWN
+    async function bj_double(){
+      if(bj_state !== 'play' || bj_busy) return;
+      var hand = bj_activeHand();
+      if(!hand || hand.status !== 'playing' || hand.cards.length !== 2) return;
+
+      bj_busy = true;
+      try{ await g_runBet(hand.bet, g_currency); }catch(e){ g_setResult('bj_result','⚠ '+(e.message||'Error'),false); bj_busy=false; return; }
+
+      hand.bet *= 2;
+      hand.doubled = true;
+      hand.cards.push(bj_deck.pop());
+      bj_paint(false);
+
+      if(bj_hv(hand.cards) > 21){
+        hand.status = 'bust';
+      } else {
+        hand.status = 'stand';
+      }
+      await bj_advanceHand();
+      bj_busy = false;
+    }
+
+    // SPLIT
+    async function bj_split(){
+      if(bj_state !== 'play' || bj_busy) return;
+      if(!bj_canSplit()) return;
+      var hand = bj_activeHand();
+      if(!hand) return;
+
+      bj_busy = true;
+      // Charge another bet for the second hand
+      try{ await g_runBet(hand.bet, g_currency); }catch(e){ g_setResult('bj_result','⚠ '+(e.message||'Error'),false); bj_busy=false; return; }
+
+      var card1 = hand.cards[0];
+      var card2 = hand.cards[1];
+      var splitBet = hand.bet;
+
+      // Replace active hand with hand A (card1 + new card)
+      hand.cards = [card1, bj_deck.pop()];
+      hand.fromSplit = true;
+
+      // Insert hand B right after active hand
+      var handB = { cards: [card2, bj_deck.pop()], bet: splitBet, status: 'playing', doubled: false, fromSplit: true };
+      bj_hands.splice(bj_activeIdx + 1, 0, handB);
+
+      bj_paint(false);
+      bj_btns();
+
+      // If split aces, each gets one card and auto-stands
+      if(BJ_SPLIT_ACE_ONE_CARD && card1.v === 'A'){
+        hand.status = 'stand';
+        handB.status = 'stand';
+        bj_paint(false);
+        await bj_advanceHand();
+        bj_busy = false;
+        return;
+      }
+
+      // Auto-stand if first hand hit 21
+      if(bj_hv(hand.cards) === 21){
+        hand.status = 'stand';
+        await bj_advanceHand();
+      }
+      bj_busy = false;
+    }
+
+    // RESOLVE ALL HANDS — runs after dealer is done
+    async function bj_resolveAll(){
+      var dV = bj_hv(bj_dH);
+      var dBJ = bj_dH.length === 2 && dV === 21;
+      var multiHand = bj_hands.length > 1;
+      var totalCab = 0;
+      var totalBet = 0;
+      var msgs = [];
+      var anyWon = false;
+
+      for(var i = 0; i < bj_hands.length; i++){
+        var hand = bj_hands[i];
+        var pV = bj_hv(hand.cards);
+        var pBJ = !hand.fromSplit && hand.cards.length === 2 && pV === 21;
+        // If split and BJ_SPLIT_BLACKJACK_PAYS_21, treat 21 as regular win
+        if(hand.fromSplit && BJ_SPLIT_BLACKJACK_PAYS_21) pBJ = false;
+
+        var won = false, push = false, cab = 0;
+        var prefix = multiHand ? ('H' + (i+1) + ': ') : '';
+
+        if(pV > 21){
+          msgs.push(prefix + '💀 BUST');
+        } else if(dV > 21){
+          won = true;
+          msgs.push(prefix + '✅ Dealer busts!');
+        } else if(pBJ && !dBJ){
+          won = true;
+          msgs.push(prefix + '🎉 BLACKJACK!');
+        } else if(pBJ && dBJ){
+          push = true;
+          msgs.push(prefix + '🤝 Both BJ — Push');
+        } else if(dBJ && !pBJ){
+          msgs.push(prefix + '💀 Dealer BJ');
+        } else if(pV > dV){
+          won = true;
+          msgs.push(prefix + '✅ ' + pV + ' vs ' + dV);
+        } else if(pV === dV){
+          push = true;
+          msgs.push(prefix + '🤝 Push ' + pV);
+        } else {
+          msgs.push(prefix + '💀 ' + dV + ' vs ' + pV);
+        }
+
+        if(won){
+          var mult = pBJ ? 2.2 : 2;
+          cab = g_currency === 'sol' ? hand.bet * mult * g_SOL_TO_CABBAGE : hand.bet * mult;
+          totalCab += cab;
+          anyWon = true;
+        } else if(push){
+          var ref = g_currency === 'sol' ? hand.bet * g_SOL_TO_CABBAGE : hand.bet;
+          totalCab += ref;
+        }
+
+        totalBet += hand.bet;
+        hand.status = 'done';
+      }
+
+      // Credit all winnings in one call
+      if(totalCab > 0) await g_creditCabbage(totalCab);
+
+      // Build result message
+      var msg = msgs.join(' · ');
+      if(totalCab > 0) msg += ' | ' + (anyWon ? 'Won' : 'Refund') + ' ' + totalCab.toFixed(2) + ' 🥬';
+
+      g_setResult('bj_result', msg, anyWon);
+
+      // Calculate actual house profit for pot tracking
+      // totalBet = all SOL/cabbage wagered across all hands (incl doubles)
+      // totalCab = all cabbage credited back (wins + pushes)
+      // houseLoss = what the player actually lost in bet currency terms
+      var totalBetInCab = g_currency === 'sol' ? totalBet * g_SOL_TO_CABBAGE : totalBet;
+      var houseLoss = Math.max(0, totalBetInCab - totalCab);
+      var playerLoss = g_currency === 'sol' ? houseLoss / g_SOL_TO_CABBAGE : houseLoss;
+
+      g_addHistory('🃏 BJ', totalBet, g_currency, anyWon, totalCab);
+      await g_logBet('🃏 Blackjack', totalBet, g_currency, playerLoss);
+      await g_updatePotUI();
+      await g_loadGameBalances();
+
+      bj_state = 'idle';
+      bj_busy = false;
+      bj_btns();
+      bj_paint(true);
     }
 
     /* ================================================================
@@ -4709,16 +5062,44 @@ var nextTierRow = nextTier
        If roll >= target, you win target × your bet.
        Win chance = 0.95 / target (5% house edge).
     ================================================================ */
+    var limbo_history = []; // recent rolls
+
     function limbo_hookTarget() {
       var inp = document.getElementById('limbo_target');
       if (!inp) return;
-      inp.addEventListener('input', function() {
-        var t = parseFloat(inp.value) || 2;
-        t = Math.max(1.1, Math.min(100, t));
-        var chance = Math.min(95, (0.95 / t) * 100);
-        var el = document.getElementById('limbo_chance');
-        if (el) el.textContent = chance.toFixed(1);
-      });
+      inp.addEventListener('input', limbo_updateStats);
+      limbo_updateStats();
+    }
+
+    function limbo_updateStats() {
+      var inp = document.getElementById('limbo_target');
+      var t = parseFloat(inp ? inp.value : 2) || 2;
+      t = Math.max(1.1, Math.min(100, t));
+      var chance = Math.min(95, (0.95 / t) * 100);
+      var chEl = document.getElementById('limbo_chance');
+      var prEl = document.getElementById('limbo_profit');
+      var tgtEl = document.getElementById('limbo_target_line');
+      if (chEl) chEl.textContent = chance.toFixed(1) + '%';
+      if (prEl) prEl.textContent = t.toFixed(2) + '×';
+      if (tgtEl) tgtEl.textContent = 'Target: ' + t.toFixed(2) + '×';
+    }
+
+    function limbo_setTarget(val) {
+      var inp = document.getElementById('limbo_target');
+      if (inp) { inp.value = val; limbo_updateStats(); }
+    }
+
+    function limbo_paintHistory() {
+      var el = document.getElementById('limbo_history');
+      if (!el) return;
+      el.innerHTML = limbo_history.map(function(h) {
+        var col = h.won ? '#00ff88' : '#ff3c5c';
+        var bg = h.won ? 'rgba(0,255,136,0.08)' : 'rgba(255,60,92,0.06)';
+        return '<div style="flex-shrink:0;background:' + bg + ';border:1px solid ' + col + '33;border-radius:6px;padding:4px 8px;text-align:center;">' +
+          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:0.9rem;color:' + col + ';letter-spacing:1px;">' + h.roll.toFixed(2) + '×</div>' +
+          '<div style="font-size:0.45rem;color:#444;">' + h.target.toFixed(1) + '×</div>' +
+        '</div>';
+      }).join('');
     }
 
     async function limbo_play() {
@@ -4738,39 +5119,60 @@ var nextTierRow = nextTier
       }
 
       var numEl = document.getElementById('limbo_result_num');
+      var bgFlash = document.getElementById('limbo_bg_flash');
 
-      // Animate roll
-      var animCount = 0;
+      // Rolling animation — fast tick through random numbers
+      if (numEl) { numEl.style.transform = 'scale(0.9)'; numEl.style.color = '#555'; }
+      if (bgFlash) { bgFlash.style.opacity = '0'; }
+      var tick = 0;
       var animId = setInterval(function() {
-        var fake = (Math.random() * 10 + 1).toFixed(2);
-        if (numEl) { numEl.textContent = fake + '×'; numEl.style.color = '#555'; }
-        animCount++;
-      }, 60);
+        var fake = (Math.random() * 20 + 1);
+        if (fake > 10) fake = Math.random() * 100;
+        if (numEl) numEl.textContent = fake.toFixed(2) + '×';
+        tick++;
+      }, 40);
 
-      await new Promise(function(r) { setTimeout(r, 800); });
+      await new Promise(function(r) { setTimeout(r, 900); });
       clearInterval(animId);
 
       // Generate result: house edge 5%
-      // roll = 0.95 / random(0..1), capped at 100
       var r = Math.random();
       var roll;
-      if (r < 0.05) { roll = 1.00; } // instant floor 5%
+      if (r < 0.05) { roll = 1.00; }
       else { roll = Math.floor((0.95 / r) * 100) / 100; }
-      roll = Math.min(100, roll);
+      roll = Math.min(100, Math.max(1.00, roll));
 
       var won = roll >= target;
+
+      // Reveal with impact
       if (numEl) {
         numEl.textContent = roll.toFixed(2) + '×';
         numEl.style.color = won ? '#00ff88' : '#ff3c5c';
+        numEl.style.transform = 'scale(1.15)';
+        setTimeout(function() { if (numEl) numEl.style.transform = 'scale(1)'; }, 200);
       }
+
+      // Background flash
+      if (bgFlash) {
+        bgFlash.style.background = won
+          ? 'radial-gradient(ellipse at center, rgba(0,255,136,0.15) 0%, transparent 70%)'
+          : 'radial-gradient(ellipse at center, rgba(255,60,92,0.12) 0%, transparent 70%)';
+        bgFlash.style.opacity = '1';
+        setTimeout(function() { if (bgFlash) bgFlash.style.opacity = '0'; }, 1500);
+      }
+
+      // Track history
+      limbo_history.unshift({ roll: roll, target: target, won: won });
+      if (limbo_history.length > 15) limbo_history.pop();
+      limbo_paintHistory();
 
       var cabPay = 0;
       if (won) {
         cabPay = g_currency === 'sol' ? bet * target * g_SOL_TO_CABBAGE : bet * target;
         await g_creditCabbage(cabPay);
-        g_setResult('limbo_result', '✅ Rolled ' + roll.toFixed(2) + '× ≥ ' + target.toFixed(1) + '× — Won ' + cabPay.toFixed(2) + ' 🥬', true);
+        g_setResult('limbo_result', '✅ ' + roll.toFixed(2) + '× ≥ ' + target.toFixed(1) + '× — Won ' + cabPay.toFixed(2) + ' 🥬', true);
       } else {
-        g_setResult('limbo_result', '❌ Rolled ' + roll.toFixed(2) + '× < ' + target.toFixed(1) + '× — Lost ' + bet.toFixed(4) + (g_currency === 'sol' ? ' ◎' : ' 🥬'), false);
+        g_setResult('limbo_result', '❌ ' + roll.toFixed(2) + '× < ' + target.toFixed(1) + '× — Lost ' + bet.toFixed(4) + (g_currency === 'sol' ? ' ◎' : ' 🥬'), false);
       }
 
       g_addHistory('🎯 Limbo', bet, g_currency, won, cabPay);
