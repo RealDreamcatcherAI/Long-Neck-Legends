@@ -1751,6 +1751,19 @@ a.plink:hover{
         '</div>' +
       '</div>';
 
+      // Profile edit panel (right under tier card for easy access)
+      view.innerHTML +=
+        '<div class="profile-actions" id="profilePanel">' +
+          '<div class="stats-title">PROFILE</div>' +
+          '<div class="actions-grid">' +
+            '<button class="action-btn" onclick="openPfpModal()">Edit PFP</button>' +
+            '<button class="action-btn" onclick="editUsername()">Edit Username</button>' +
+            '<button class="action-btn" onclick="connectX()">Connect X</button>' +
+            '<button class="action-btn" onclick="connectDiscord()">Connect Discord</button>' +
+            '<button class="action-btn" onclick="openSecondWalletModal()">Link 2nd Wallet</button>' +
+          '</div>' +
+        '</div>';
+
       // Compute achievements FIRST (player card needs the count)
       var xp = pp_computeXP(pp_stats);
       var level = pp_levelFromXP(xp);
@@ -1763,18 +1776,6 @@ a.plink:hover{
       ach_save(ach_myBadges); // persist to DB (fire-and-forget)
       view.innerHTML += ach_renderSection(ach_myBadges);
       setTimeout(function() { ach_paintGrid(ach_myBadges); }, 50);
-
-      view.innerHTML +=
-        '<div class="profile-actions" id="profilePanel">' +
-          '<div class="stats-title">PROFILE</div>' +
-          '<div class="actions-grid">' +
-            '<button class="action-btn" onclick="openPfpModal()">Edit PFP</button>' +
-            '<button class="action-btn" onclick="editUsername()">Edit Username</button>' +
-            '<button class="action-btn" onclick="connectX()">Connect X</button>' +
-            '<button class="action-btn" onclick="connectDiscord()">Connect Discord</button>' +
-            '<button class="action-btn" onclick="openSecondWalletModal()">Link 2nd Wallet</button>' +
-          '</div>' +
-        '</div>';
 
       view.innerHTML +=
         '<div class="stats-card">' +
@@ -3461,12 +3462,14 @@ var nextTierRow = nextTier
               '<div style="height:1px;background:rgba(255,255,255,0.04);margin:4px 0;"></div>' +
               '<div id="bj_playerArea" style="min-height:100px;"></div>' +
             '</div>' +
-            '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:0.4rem;margin-top:0.5rem;">' +
+            '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.4rem;margin-top:0.5rem;">' +
               '<button class="g_btn g_btn-primary" id="bj_dealBtn" onclick="bj_deal()">DEAL</button>' +
               '<button class="g_btn" id="bj_hitBtn" onclick="bj_hit()" disabled>HIT</button>' +
               '<button class="g_btn" id="bj_standBtn" onclick="bj_stand()" disabled>STAND</button>' +
-              '<button class="g_btn" id="bj_doubleBtn" onclick="bj_double()" disabled>2×</button>' +
-              '<button class="g_btn" id="bj_splitBtn" onclick="bj_split()" disabled>SPLIT</button>' +
+            '</div>' +
+            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem;margin-top:0.3rem;">' +
+              '<button class="g_btn" id="bj_doubleBtn" onclick="bj_double()" disabled>DOUBLE 2×</button>' +
+              '<button class="g_btn" id="bj_splitBtn" onclick="bj_split()" disabled>SPLIT ✂</button>' +
             '</div>' +
             '<div class="g_result" id="bj_result" style="display:none;"></div>' +
           '</div>' +
