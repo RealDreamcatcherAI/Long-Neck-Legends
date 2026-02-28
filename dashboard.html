@@ -1741,16 +1741,18 @@ a.plink:hover{
         '</div>' +
       '</div>';
 
-      // Player Progression Card
-      view.innerHTML += pp_renderPlayerCard(count, 0);
-
-      // Achievement badges
+      // Compute achievements FIRST (player card needs the count)
       var xp = pp_computeXP(pp_stats);
       var level = pp_levelFromXP(xp);
-      ach_myBadges = ach_check(pp_stats, count, level, pp_stats._gameWins);
+      ach_myBadges = ach_check(pp_stats, count, level, pp_stats._gamesPlayedMap);
+
+      // Player Progression Card (now has correct ach_myBadges.length)
+      view.innerHTML += pp_renderPlayerCard(count, 0);
+
+      // Achievement section
       ach_save(ach_myBadges); // persist to DB (fire-and-forget)
       view.innerHTML += ach_renderSection(ach_myBadges);
-      setTimeout(function() { ach_paintGrid(ach_myBadges); }, 20);
+      setTimeout(function() { ach_paintGrid(ach_myBadges); }, 50);
 
       view.innerHTML +=
         '<div class="profile-actions" id="profilePanel">' +
@@ -2914,24 +2916,24 @@ var nextTierRow = nextTier
 
     // House edges: coin flip 43% win/1.80x, dice 45%/1.75x, slots as below
     var g_GAMES = {
-      coin:  { winChance: 0.43, payout: 1.80 },
-      dice:  { winChance: 0.45, payout: 1.75 },
+      coin:  { winChance: 0.38, payout: 1.80 },
+      dice:  { winChance: 0.45, payout: 1.55 },
       slots: {
-        jackpot:    { chance: 0.008, payout: 15 },
-        threeKind:  { chance: 0.04,  payout: 7  },
-        twoKind:    { chance: 0.28,  payout: 1.8 }
+        jackpot:    { chance: 0.005, payout: 12 },
+        threeKind:  { chance: 0.03,  payout: 5  },
+        twoKind:    { chance: 0.25,  payout: 1.5 }
       }
     };
 
     // NFT bonus: +win% based on LNL held
     function g_nftBonus(count) {
       var bonus = 0;
-      if (count >= 20) bonus = 0.04;
-      else if (count >= 10) bonus = 0.03;
-      else if (count >= 5)  bonus = 0.02;
-      else if (count >= 1)  bonus = 0.01;
+      if (count >= 20) bonus = 0.02;
+      else if (count >= 10) bonus = 0.015;
+      else if (count >= 5)  bonus = 0.01;
+      else if (count >= 1)  bonus = 0.005;
       // Lucky Boost from store
-      if (shop_hasBoost()) bonus += 0.05;
+      if (shop_hasBoost()) bonus += 0.02;
       return bonus;
     }
 
@@ -3212,12 +3214,22 @@ var nextTierRow = nextTier
 
     function g_playDice(choice) {
       // choice: 'high' (4-6), 'low' (1-3), 'even', 'odd'
-      var roll = Math.floor(Math.random() * 6) + 1;
-      var won;
-      if (choice === 'high') won = roll >= 4;
-      else if (choice === 'low') won = roll <= 3;
-      else if (choice === 'even') won = roll % 2 === 0;
-      else won = roll % 2 !== 0;
+      var nftCount = session.loadedNFTs ? session.loadedNFTs.length : 0;
+      var chance = g_GAMES.dice.winChance + g_nftBonus(nftCount);
+      var won = Math.random() < chance;
+      // Pick a die face that matches the outcome
+      var roll;
+      if (won) {
+        if (choice === 'high') roll = [4,5,6][Math.floor(Math.random()*3)];
+        else if (choice === 'low') roll = [1,2,3][Math.floor(Math.random()*3)];
+        else if (choice === 'even') roll = [2,4,6][Math.floor(Math.random()*3)];
+        else roll = [1,3,5][Math.floor(Math.random()*3)];
+      } else {
+        if (choice === 'high') roll = [1,2,3][Math.floor(Math.random()*3)];
+        else if (choice === 'low') roll = [4,5,6][Math.floor(Math.random()*3)];
+        else if (choice === 'even') roll = [1,3,5][Math.floor(Math.random()*3)];
+        else roll = [2,4,6][Math.floor(Math.random()*3)];
+      }
       return { roll: roll, won: won };
     }
 
@@ -3754,7 +3766,7 @@ var nextTierRow = nextTier
       else if(pV>dV){won=true;msg='✅ You win! '+pV+' vs '+dV;}
       else if(pV===dV){push=true;msg='🤝 Push — '+pV+' vs '+dV;}
       else{msg='💀 Dealer wins. '+dV+' vs '+pV;}
-      if(won){var m=pBJ?2.5:2;cab=g_currency==='sol'?bj_bet*m*g_SOL_TO_CABBAGE:bj_bet*m;await g_creditCabbage(cab);msg+=' Won '+cab.toFixed(2)+' 🥬';}
+      if(won){var m=pBJ?2.2:2;cab=g_currency==='sol'?bj_bet*m*g_SOL_TO_CABBAGE:bj_bet*m;await g_creditCabbage(cab);msg+=' Won '+cab.toFixed(2)+' 🥬';}
       else if(push){var ref=g_currency==='sol'?bj_bet*g_SOL_TO_CABBAGE:bj_bet;await g_creditCabbage(ref);msg+=' (refund '+ref.toFixed(2)+' 🥬)';}
       g_setResult('bj_result',msg,won);
       g_addHistory('🃏 BJ',bj_bet,g_currency,won,cab);
@@ -4082,7 +4094,7 @@ var nextTierRow = nextTier
        CABBAGE DROP (PLINKO)
     ================================================================ */
     var PLINKO_ROWS = 10;
-    var PLINKO_MULTS = [10, 3, 2, 1.5, 1, 0.5, 0.3, 0.5, 1, 1.5, 2, 3, 10];
+    var PLINKO_MULTS = [5, 2, 1.5, 1, 0.5, 0.3, 0.2, 0.3, 0.5, 1, 1.5, 2, 5];
     var PLINKO_COLORS = ['#ff3c5c','#ff6b35','#ffa033','#ffd700','#aaa','#888','#666','#888','#aaa','#ffd700','#ffa033','#ff6b35','#ff3c5c'];
     var plinko_running = false;
 
@@ -4148,8 +4160,8 @@ var nextTierRow = nextTier
       // Simulate drops through each row
       for (var row = 0; row < PLINKO_ROWS; row++) {
         var nftCount = session.loadedNFTs ? session.loadedNFTs.length : 0;
-        // Slight bias toward center for house edge
-        var bias = (ballX > W/2) ? -0.02 : 0.02;
+        // Bias toward center for house edge
+        var bias = (ballX > W/2) ? -0.06 : 0.06;
         var goRight = Math.random() + bias > 0.5;
         var pegsInRow = row + 3;
         var spacing = W / (pegsInRow + 1);
@@ -4277,10 +4289,10 @@ var nextTierRow = nextTier
     }
 
     function crash_genPoint() {
-      // House edge ~3%: E[1/crashPoint] = 0.97
+      // House edge ~5%: E[1/crashPoint] = 0.95
       var r = Math.random();
-      if (r < 0.03) return 1.00; // instant crash 3% of time
-      return Math.floor(100 * (0.97 / r)) / 100;
+      if (r < 0.05) return 1.00; // instant crash 5% of time
+      return Math.floor(100 * (0.95 / r)) / 100;
     }
 
     function crash_drawChart(ctx, W, H, points, current, crashed) {
@@ -4557,15 +4569,18 @@ var nextTierRow = nextTier
 
       try {
         // Casino stats from game_bets
-        var gR = await sb.from('game_bets').select('bet_amount,house_profit,game,currency').eq('wallet', w);
+        var gR = await sb.from('game_bets').select('bet_amount,house_profit,game,currency').eq('wallet', w).order('played_at', { ascending: true });
         var bets = gR.data || [];
         var gameWins = {};
+        var gamesPlayedMap = {};
         bets.forEach(function(b) {
           stats.gamesPlayed++;
           var hp = Number(b.house_profit || 0);
           var ba = Number(b.bet_amount || 0);
           stats.totalWagered += ba;
           if (b.currency === 'sol') stats.solWagered += ba;
+          // Track unique games played
+          if (b.game) gamesPlayedMap[b.game] = (gamesPlayedMap[b.game] || 0) + 1;
           if (hp <= 0) {
             stats.gamesWon++;
             stats.winStreak++; stats.lossStreak = 0;
@@ -4603,14 +4618,15 @@ var nextTierRow = nextTier
           }
         }
 
-        // Items owned
-        var iR = await sb.from('user_items').select('id', { count: 'exact', head: true }).eq('wallet', w);
+        // Items owned (exclude achievement records)
+        var iR = await sb.from('user_items').select('id', { count: 'exact', head: true }).eq('wallet', w).not('item_id', 'like', 'ach_%');
         stats.itemsOwned = iR.count || 0;
 
       } catch(e) { console.warn('pp_fetchStats error:', e); }
 
       pp_stats = stats;
       pp_stats._gameWins = gameWins || {};
+      pp_stats._gamesPlayedMap = gamesPlayedMap || {};
       pp_loaded = true;
       return stats;
     }
@@ -4860,15 +4876,20 @@ var nextTierRow = nextTier
       var sb = getSupaClient();
       var w = walletPublicKey.toBase58();
       try {
-        // Upsert all achievements as user_items with ach_ prefix
-        for (var i = 0; i < unlocked.length; i++) {
-          await sb.from('user_items').upsert({
-            wallet: w,
-            item_id: 'ach_' + unlocked[i],
-            data: { unlocked: true },
-            bought_at: new Date().toISOString()
-          }, { onConflict: 'wallet,item_id' });
-        }
+        // Fetch what's already saved to avoid re-saving
+        var existing = await sb.from('user_items').select('item_id').eq('wallet', w).like('item_id', 'ach_%');
+        var saved = {};
+        (existing.data || []).forEach(function(r) { saved[r.item_id] = true; });
+
+        // Only save NEW achievements
+        var newAchs = unlocked.filter(function(id) { return !saved['ach_' + id]; });
+        if (newAchs.length === 0) return;
+
+        // Batch upsert in one call
+        var rows = newAchs.map(function(id) {
+          return { wallet: w, item_id: 'ach_' + id, data: { unlocked: true }, bought_at: new Date().toISOString() };
+        });
+        await sb.from('user_items').upsert(rows, { onConflict: 'wallet,item_id' });
       } catch(e) { /* silent - non-critical */ }
     }
 
