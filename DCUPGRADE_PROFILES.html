@@ -186,7 +186,6 @@ a.plink:hover{
         padding: 0;
         gap: 0;
       }
-      /* Top row: wallet chip + disconnect */
       .dash-right{
         order: 1;
         width: 100%;
@@ -197,7 +196,6 @@ a.plink:hover{
         gap: 6px;
       }
       .wallet-chip{ max-width: none; flex: 1; min-width: 0; }
-      /* Bottom row: tabs scroll horizontally */
       .dash-tabs{
         order: 2;
         flex-wrap: nowrap;
@@ -207,7 +205,6 @@ a.plink:hover{
         scroll-snap-type: x proximity;
         padding: 6px 10px 8px;
         gap: 6px;
-        /* hide scrollbar on mobile */
         scrollbar-width: none;
         -ms-overflow-style: none;
       }
@@ -1020,6 +1017,7 @@ a.plink:hover{
         <button class="dash-tab" id="tabMissions" onclick="switchView('missions')">🎯 Missions</button>
         <button class="dash-tab" id="tabStore" onclick="switchView('store')">🛒 Store</button>
         <button class="dash-tab" id="tabLeaderboard" onclick="switchView('leaderboard')">🏆</button>
+        <button class="dash-tab" id="tabVoice" onclick="switchView('voice')">🎙️ Voice</button>
       </div>
 
       <div class="dash-right">
@@ -1052,6 +1050,7 @@ a.plink:hover{
     <div class="view" id="view-missions"></div>
     <div class="view" id="view-leaderboard"></div>
     <div class="view" id="view-store"></div>
+    <div class="view" id="view-voice"></div>
   </div>
 
   <!-- PFP MODAL -->
@@ -1506,6 +1505,8 @@ a.plink:hover{
       var vm = document.getElementById("view-missions"); if (vm) vm.classList.remove("show");
       var vl = document.getElementById("view-leaderboard"); if (vl) vl.classList.remove("show");
       var vs = document.getElementById("view-store"); if (vs) vs.classList.remove("show");
+      var vv = document.getElementById("view-voice"); if (vv) vv.classList.remove("show");
+      voice_leave();
 
       session.profilePanelOpen = false;
       var tabProfile = document.getElementById("tabProfile");
@@ -1522,6 +1523,8 @@ a.plink:hover{
       if (tabLeaderboard) tabLeaderboard.classList.remove("active");
       var tabStore = document.getElementById("tabStore");
       if (tabStore) tabStore.classList.remove("active");
+      var tabVoice = document.getElementById("tabVoice");
+      if (tabVoice) tabVoice.classList.remove("active");
 
       session.currentView = "profile";
     }
@@ -1536,12 +1539,14 @@ a.plink:hover{
       var vq = document.getElementById("view-missions");
       var vl = document.getElementById("view-leaderboard");
       var vs = document.getElementById("view-store");
+      var vv = document.getElementById("view-voice");
       if (vp) vp.classList.remove("show");
       if (vc) vc.classList.remove("show");
       if (vg) vg.classList.remove("show");
       if (vq) vq.classList.remove("show");
       if (vl) vl.classList.remove("show");
       if (vs) vs.classList.remove("show");
+      if (vv) vv.classList.remove("show");
 
       // Deactivate all tabs
       var tabProfile = document.getElementById("tabProfile");
@@ -1554,6 +1559,8 @@ a.plink:hover{
       if (tabMissions) tabMissions.classList.remove("active");
       if (tabLeaderboard) tabLeaderboard.classList.remove("active");
       if (tabStore) tabStore.classList.remove("active");
+      var tabVoice = document.getElementById("tabVoice");
+      if (tabVoice) tabVoice.classList.remove("active");
 
       if (viewName === "profile") {
         stopChatPoll();
@@ -1594,6 +1601,16 @@ a.plink:hover{
         if (tabStore) tabStore.classList.add("active");
         renderStoreUI();
       }
+
+      if (viewName === "voice") {
+        stopChatPoll();
+        if (vv) vv.classList.add("show");
+        if (tabVoice) tabVoice.classList.add("active");
+        renderVoiceUI();
+      }
+
+      // Update voice tab indicator — show live dot whenever in a room, regardless of active tab
+      voice_updateTabIndicator();
     }
 
     async function loadDashboard() {
@@ -1724,16 +1741,18 @@ a.plink:hover{
         '</div>' +
       '</div>';
 
-      // Player Progression Card
-      view.innerHTML += pp_renderPlayerCard(count, 0);
-
-      // Achievement badges
+      // Compute achievements FIRST (player card needs the count)
       var xp = pp_computeXP(pp_stats);
       var level = pp_levelFromXP(xp);
-      ach_myBadges = ach_check(pp_stats, count, level, pp_stats._gameWins);
+      ach_myBadges = ach_check(pp_stats, count, level, pp_stats._gamesPlayedMap);
+
+      // Player Progression Card (now has correct ach_myBadges.length)
+      view.innerHTML += pp_renderPlayerCard(count, 0);
+
+      // Achievement section
       ach_save(ach_myBadges); // persist to DB (fire-and-forget)
       view.innerHTML += ach_renderSection(ach_myBadges);
-      setTimeout(function() { ach_paintGrid(ach_myBadges); }, 20);
+      setTimeout(function() { ach_paintGrid(ach_myBadges); }, 50);
 
       view.innerHTML +=
         '<div class="profile-actions" id="profilePanel">' +
@@ -2897,24 +2916,24 @@ var nextTierRow = nextTier
 
     // House edges: coin flip 43% win/1.80x, dice 45%/1.75x, slots as below
     var g_GAMES = {
-      coin:  { winChance: 0.43, payout: 1.80 },
-      dice:  { winChance: 0.45, payout: 1.75 },
+      coin:  { winChance: 0.38, payout: 1.80 },
+      dice:  { winChance: 0.45, payout: 1.55 },
       slots: {
-        jackpot:    { chance: 0.008, payout: 15 },
-        threeKind:  { chance: 0.04,  payout: 7  },
-        twoKind:    { chance: 0.28,  payout: 1.8 }
+        jackpot:    { chance: 0.005, payout: 12 },
+        threeKind:  { chance: 0.03,  payout: 5  },
+        twoKind:    { chance: 0.25,  payout: 1.5 }
       }
     };
 
     // NFT bonus: +win% based on LNL held
     function g_nftBonus(count) {
       var bonus = 0;
-      if (count >= 20) bonus = 0.04;
-      else if (count >= 10) bonus = 0.03;
-      else if (count >= 5)  bonus = 0.02;
-      else if (count >= 1)  bonus = 0.01;
+      if (count >= 20) bonus = 0.02;
+      else if (count >= 10) bonus = 0.015;
+      else if (count >= 5)  bonus = 0.01;
+      else if (count >= 1)  bonus = 0.005;
       // Lucky Boost from store
-      if (shop_hasBoost()) bonus += 0.05;
+      if (shop_hasBoost()) bonus += 0.02;
       return bonus;
     }
 
@@ -3195,12 +3214,22 @@ var nextTierRow = nextTier
 
     function g_playDice(choice) {
       // choice: 'high' (4-6), 'low' (1-3), 'even', 'odd'
-      var roll = Math.floor(Math.random() * 6) + 1;
-      var won;
-      if (choice === 'high') won = roll >= 4;
-      else if (choice === 'low') won = roll <= 3;
-      else if (choice === 'even') won = roll % 2 === 0;
-      else won = roll % 2 !== 0;
+      var nftCount = session.loadedNFTs ? session.loadedNFTs.length : 0;
+      var chance = g_GAMES.dice.winChance + g_nftBonus(nftCount);
+      var won = Math.random() < chance;
+      // Pick a die face that matches the outcome
+      var roll;
+      if (won) {
+        if (choice === 'high') roll = [4,5,6][Math.floor(Math.random()*3)];
+        else if (choice === 'low') roll = [1,2,3][Math.floor(Math.random()*3)];
+        else if (choice === 'even') roll = [2,4,6][Math.floor(Math.random()*3)];
+        else roll = [1,3,5][Math.floor(Math.random()*3)];
+      } else {
+        if (choice === 'high') roll = [1,2,3][Math.floor(Math.random()*3)];
+        else if (choice === 'low') roll = [4,5,6][Math.floor(Math.random()*3)];
+        else if (choice === 'even') roll = [1,3,5][Math.floor(Math.random()*3)];
+        else roll = [2,4,6][Math.floor(Math.random()*3)];
+      }
       return { roll: roll, won: won };
     }
 
@@ -3298,6 +3327,18 @@ var nextTierRow = nextTier
         '.plinko_canvas{width:100%;border-radius:8px;background:#06060f;border:1px solid #161628;display:block;}' +
         '.crash_canvas{width:100%;height:200px;border-radius:8px;background:#06060f;border:1px solid #161628;display:block;}' +
         '.crash_multi{font-family:"Bebas Neue",sans-serif;font-size:2.8rem;letter-spacing:2px;text-align:center;margin:0.3rem 0;transition:color 0.15s;}' +
+        '.mines_grid{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin:0.5rem 0;}' +
+        '.mines_cell{aspect-ratio:1;border-radius:8px;border:1px solid #1e1e3a;background:#0a0a1a;display:flex;align-items:center;justify-content:center;font-size:1.4rem;cursor:pointer;transition:all 0.15s;user-select:none;}' +
+        '.mines_cell:hover:not(.revealed){border-color:rgba(0,212,255,0.4);background:rgba(0,212,255,0.04);}' +
+        '.mines_cell.gem{background:rgba(0,255,136,0.08);border-color:rgba(0,255,136,0.3);}' +
+        '.mines_cell.mine{background:rgba(255,60,92,0.1);border-color:rgba(255,60,92,0.4);}' +
+        '.tower_grid{display:flex;flex-direction:column-reverse;gap:3px;margin:0.5rem 0;}' +
+        '.tower_row{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;}' +
+        '.tower_cell{height:38px;border-radius:6px;border:1px solid #1e1e3a;background:#0a0a1a;display:flex;align-items:center;justify-content:center;font-size:1rem;cursor:pointer;transition:all 0.15s;font-weight:700;}' +
+        '.tower_cell:hover:not(.done){border-color:rgba(0,212,255,0.4);background:rgba(0,212,255,0.04);}' +
+        '.tower_cell.safe{background:rgba(0,255,136,0.1);border-color:rgba(0,255,136,0.3);cursor:default;}' +
+        '.tower_cell.trap{background:rgba(255,60,92,0.12);border-color:rgba(255,60,92,0.4);cursor:default;}' +
+        '.tower_cell.locked{opacity:0.3;cursor:default;}' +
         '</style>' +
 
         // ── Header ──
@@ -3447,6 +3488,45 @@ var nextTierRow = nextTier
             '<div class="g_result" id="crash_result" style="display:none;"></div>' +
           '</div>' +
 
+          // MINES
+          '<div class="g_card" style="margin:0;">' +
+            '<div class="g_title">💣 MINES</div>' +
+            '<div style="display:flex;align-items:center;gap:8px;margin-bottom:0.5rem;">' +
+              '<span style="color:#555;font-size:0.65rem;">Mines:</span>' +
+              '<input id="mines_count" type="number" min="1" max="24" value="5" style="width:50px;background:#06060f;border:1px solid #1e1e3a;color:#e0e0ff;padding:5px 8px;border-radius:6px;font-family:\'Space Grotesk\',sans-serif;font-size:0.78rem;text-align:center;" />' +
+              '<button class="g_btn g_btn-primary" id="mines_startBtn" onclick="mines_start()">START</button>' +
+              '<button class="g_btn" id="mines_cashBtn" onclick="mines_cashout()" disabled style="border-color:rgba(0,255,136,0.3);color:#00ff88;">CASH OUT</button>' +
+            '</div>' +
+            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.6rem;color:#555;text-align:center;letter-spacing:2px;" id="mines_multi">1.00×</div>' +
+            '<div class="mines_grid" id="mines_grid"></div>' +
+            '<div class="g_result" id="mines_result" style="display:none;"></div>' +
+          '</div>' +
+
+          // LIMBO
+          '<div class="g_card" style="margin:0;">' +
+            '<div class="g_title">🎯 LIMBO</div>' +
+            '<div style="display:flex;align-items:center;gap:8px;margin-bottom:0.5rem;">' +
+              '<span style="color:#555;font-size:0.65rem;">Target:</span>' +
+              '<input id="limbo_target" type="number" min="1.1" max="100" step="0.1" value="2" style="width:65px;background:#06060f;border:1px solid #1e1e3a;color:#e0e0ff;padding:5px 8px;border-radius:6px;font-family:\'Space Grotesk\',sans-serif;font-size:0.78rem;text-align:center;" />' +
+              '<span style="color:#555;font-size:0.65rem;">× (' + '<span id="limbo_chance">47.5</span>%)</span>' +
+              '<button class="g_btn g_btn-primary" id="limbo_btn" onclick="limbo_play()">GO</button>' +
+            '</div>' +
+            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:3.5rem;text-align:center;letter-spacing:2px;margin:0.5rem 0;transition:color 0.2s;" id="limbo_result_num" style="color:#555;">—</div>' +
+            '<div class="g_result" id="limbo_result" style="display:none;"></div>' +
+          '</div>' +
+
+          // TOWER
+          '<div class="g_card" style="margin:0;">' +
+            '<div class="g_title">🗼 TOWER</div>' +
+            '<div style="display:flex;align-items:center;gap:8px;margin-bottom:0.5rem;">' +
+              '<button class="g_btn g_btn-primary" id="tower_startBtn" onclick="tower_start()">CLIMB</button>' +
+              '<button class="g_btn" id="tower_cashBtn" onclick="tower_cashout()" disabled style="border-color:rgba(0,255,136,0.3);color:#00ff88;">CASH OUT</button>' +
+              '<span style="font-family:\'Bebas Neue\',sans-serif;font-size:1.4rem;color:#555;letter-spacing:2px;" id="tower_multi">1.00×</span>' +
+            '</div>' +
+            '<div class="tower_grid" id="tower_grid"></div>' +
+            '<div class="g_result" id="tower_result" style="display:none;"></div>' +
+          '</div>' +
+
         '</div>' +
 
         // ── History ──
@@ -3500,7 +3580,7 @@ var nextTierRow = nextTier
       g_updatePotUI();
       g_renderHistory();
       pk_loadLobby();
-      setTimeout(function(){ plinko_init(); crash_init(); }, 100);
+      setTimeout(function(){ plinko_init(); crash_init(); mines_init(); tower_init(); limbo_hookTarget(); }, 100);
     }
 
     function g_setCurrency(cur) {
@@ -3530,7 +3610,7 @@ var nextTierRow = nextTier
     }
 
     function g_disableGameBtns(dis) {
-      ['g_coinHeadsBtn','g_coinTailsBtn','g_slotsBtn','bj_dealBtn','plinko_btn','crash_startBtn'].forEach(function(id){
+      ['g_coinHeadsBtn','g_coinTailsBtn','g_slotsBtn','bj_dealBtn','plinko_btn','crash_startBtn','mines_startBtn','limbo_btn','tower_startBtn'].forEach(function(id){
         var b = document.getElementById(id);
         if (b) b.disabled = dis;
       });
@@ -3737,7 +3817,7 @@ var nextTierRow = nextTier
       else if(pV>dV){won=true;msg='✅ You win! '+pV+' vs '+dV;}
       else if(pV===dV){push=true;msg='🤝 Push — '+pV+' vs '+dV;}
       else{msg='💀 Dealer wins. '+dV+' vs '+pV;}
-      if(won){var m=pBJ?2.5:2;cab=g_currency==='sol'?bj_bet*m*g_SOL_TO_CABBAGE:bj_bet*m;await g_creditCabbage(cab);msg+=' Won '+cab.toFixed(2)+' 🥬';}
+      if(won){var m=pBJ?2.2:2;cab=g_currency==='sol'?bj_bet*m*g_SOL_TO_CABBAGE:bj_bet*m;await g_creditCabbage(cab);msg+=' Won '+cab.toFixed(2)+' 🥬';}
       else if(push){var ref=g_currency==='sol'?bj_bet*g_SOL_TO_CABBAGE:bj_bet;await g_creditCabbage(ref);msg+=' (refund '+ref.toFixed(2)+' 🥬)';}
       g_setResult('bj_result',msg,won);
       g_addHistory('🃏 BJ',bj_bet,g_currency,won,cab);
@@ -4065,7 +4145,7 @@ var nextTierRow = nextTier
        CABBAGE DROP (PLINKO)
     ================================================================ */
     var PLINKO_ROWS = 10;
-    var PLINKO_MULTS = [10, 3, 2, 1.5, 1, 0.5, 0.3, 0.5, 1, 1.5, 2, 3, 10];
+    var PLINKO_MULTS = [5, 2, 1.5, 1, 0.5, 0.3, 0.2, 0.3, 0.5, 1, 1.5, 2, 5];
     var PLINKO_COLORS = ['#ff3c5c','#ff6b35','#ffa033','#ffd700','#aaa','#888','#666','#888','#aaa','#ffd700','#ffa033','#ff6b35','#ff3c5c'];
     var plinko_running = false;
 
@@ -4131,8 +4211,8 @@ var nextTierRow = nextTier
       // Simulate drops through each row
       for (var row = 0; row < PLINKO_ROWS; row++) {
         var nftCount = session.loadedNFTs ? session.loadedNFTs.length : 0;
-        // Slight bias toward center for house edge
-        var bias = (ballX > W/2) ? -0.02 : 0.02;
+        // Bias toward center for house edge
+        var bias = (ballX > W/2) ? -0.06 : 0.06;
         var goRight = Math.random() + bias > 0.5;
         var pegsInRow = row + 3;
         var spacing = W / (pegsInRow + 1);
@@ -4260,10 +4340,10 @@ var nextTierRow = nextTier
     }
 
     function crash_genPoint() {
-      // House edge ~3%: E[1/crashPoint] = 0.97
+      // House edge ~5%: E[1/crashPoint] = 0.95
       var r = Math.random();
-      if (r < 0.03) return 1.00; // instant crash 3% of time
-      return Math.floor(100 * (0.97 / r)) / 100;
+      if (r < 0.05) return 1.00; // instant crash 5% of time
+      return Math.floor(100 * (0.95 / r)) / 100;
     }
 
     function crash_drawChart(ctx, W, H, points, current, crashed) {
@@ -4469,6 +4549,407 @@ var nextTierRow = nextTier
     }
 
     /* ================================================================
+       💣 MINES — Stake-style grid reveal
+       5×5 grid, configurable mines (1-24). Each safe pick
+       compounds multiplier. Hit mine = lose. Cash out anytime.
+       House edge ~5% baked into multiplier formula.
+    ================================================================ */
+    var mines_board = [];    // 25 cells: true=mine, false=safe
+    var mines_revealed = []; // booleans per cell
+    var mines_running = false;
+    var mines_bet = 0;
+    var mines_picks = 0;
+    var mines_mineCount = 5;
+
+    function mines_init() {
+      var grid = document.getElementById('mines_grid');
+      if (!grid) return;
+      var html = '';
+      for (var i = 0; i < 25; i++) {
+        html += '<div class="mines_cell" id="mc_' + i + '" onclick="mines_pick(' + i + ')">?</div>';
+      }
+      grid.innerHTML = html;
+    }
+
+    function mines_multiplier(picks, mineCount) {
+      // Fair odds: product of (remaining safe / remaining total) for each pick
+      // Then apply 0.95 house cut
+      if (picks === 0) return 1;
+      var mult = 1;
+      for (var i = 0; i < picks; i++) {
+        var remaining = 25 - i;
+        var safeCells = remaining - mineCount;
+        mult *= remaining / safeCells;
+      }
+      return Math.floor(mult * 0.95 * 100) / 100;
+    }
+
+    async function mines_start() {
+      if (mines_running || g_isSpinning) return;
+      var bet = parseFloat(document.getElementById('g_betInput').value) || g_betAmount;
+      g_betAmount = bet;
+      var mc = parseInt(document.getElementById('mines_count').value) || 5;
+      mc = Math.max(1, Math.min(24, mc));
+      mines_mineCount = mc;
+
+      try { await g_runBet(bet, g_currency); } catch(e) {
+        g_setResult('mines_result', '⚠ ' + (e.message || 'Error'), false);
+        return;
+      }
+
+      mines_bet = bet;
+      mines_picks = 0;
+      mines_running = true;
+
+      // Generate board
+      mines_board = [];
+      mines_revealed = [];
+      for (var i = 0; i < 25; i++) { mines_board.push(false); mines_revealed.push(false); }
+      // Place mines randomly
+      var placed = 0;
+      while (placed < mc) {
+        var idx = Math.floor(Math.random() * 25);
+        if (!mines_board[idx]) { mines_board[idx] = true; placed++; }
+      }
+
+      mines_init();
+      var mEl = document.getElementById('mines_multi');
+      if (mEl) { mEl.textContent = '1.00×'; mEl.style.color = '#555'; }
+      var rEl = document.getElementById('mines_result');
+      if (rEl) rEl.style.display = 'none';
+
+      var sb = document.getElementById('mines_startBtn');
+      var cb = document.getElementById('mines_cashBtn');
+      if (sb) sb.disabled = true;
+      if (cb) cb.disabled = false;
+      document.getElementById('mines_count').disabled = true;
+      g_disableGameBtns(true);
+      // re-enable mines cashout
+      if (cb) cb.disabled = false;
+    }
+
+    function mines_pick(idx) {
+      if (!mines_running || mines_revealed[idx]) return;
+      mines_revealed[idx] = true;
+      var cell = document.getElementById('mc_' + idx);
+
+      if (mines_board[idx]) {
+        // HIT MINE — reveal all
+        if (cell) { cell.textContent = '💣'; cell.className = 'mines_cell revealed mine'; }
+        mines_revealAll();
+        mines_running = false;
+        g_setResult('mines_result', '💣 BOOM! Hit a mine — Lost ' + mines_bet.toFixed(4) + (g_currency === 'sol' ? ' ◎' : ' 🥬'), false);
+        g_addHistory('💣 Mines', mines_bet, g_currency, false, 0);
+        g_logBet('💣 Mines', mines_bet, g_currency, mines_bet);
+        g_updatePotUI(); g_loadGameBalances();
+        var sb = document.getElementById('mines_startBtn');
+        var cb = document.getElementById('mines_cashBtn');
+        if (sb) sb.disabled = false;
+        if (cb) cb.disabled = true;
+        document.getElementById('mines_count').disabled = false;
+        g_disableGameBtns(false);
+        var mEl = document.getElementById('mines_multi');
+        if (mEl) { mEl.textContent = '💀'; mEl.style.color = '#ff3c5c'; }
+      } else {
+        // SAFE — gem found
+        mines_picks++;
+        if (cell) { cell.textContent = '💎'; cell.className = 'mines_cell revealed gem'; }
+        var mult = mines_multiplier(mines_picks, mines_mineCount);
+        var mEl = document.getElementById('mines_multi');
+        if (mEl) {
+          mEl.textContent = mult.toFixed(2) + '×';
+          mEl.style.color = mult < 2 ? '#00ff88' : mult < 5 ? '#ffd700' : '#ff6b35';
+        }
+        // Check if all safe cells found (auto-cashout)
+        if (mines_picks >= 25 - mines_mineCount) {
+          mines_cashout();
+        }
+      }
+    }
+
+    function mines_revealAll() {
+      for (var i = 0; i < 25; i++) {
+        var cell = document.getElementById('mc_' + i);
+        if (!cell || mines_revealed[i]) continue;
+        if (mines_board[i]) {
+          cell.textContent = '💣'; cell.className = 'mines_cell revealed mine';
+        } else {
+          cell.textContent = '💎'; cell.className = 'mines_cell revealed gem';
+          cell.style.opacity = '0.3';
+        }
+      }
+    }
+
+    async function mines_cashout() {
+      if (!mines_running || mines_picks === 0) return;
+      mines_running = false;
+      var mult = mines_multiplier(mines_picks, mines_mineCount);
+      var cabPay = g_currency === 'sol' ? mines_bet * mult * g_SOL_TO_CABBAGE : mines_bet * mult;
+      await g_creditCabbage(cabPay);
+
+      mines_revealAll();
+      g_setResult('mines_result', '✅ Cashed out at ' + mult.toFixed(2) + '× — Won ' + cabPay.toFixed(2) + ' 🥬', true);
+      g_addHistory('💣 Mines', mines_bet, g_currency, true, cabPay);
+      await g_logBet('💣 Mines', mines_bet, g_currency, 0);
+      await g_updatePotUI(); await g_loadGameBalances();
+
+      var sb = document.getElementById('mines_startBtn');
+      var cb = document.getElementById('mines_cashBtn');
+      if (sb) sb.disabled = false;
+      if (cb) cb.disabled = true;
+      document.getElementById('mines_count').disabled = false;
+      g_disableGameBtns(false);
+      var mEl = document.getElementById('mines_multi');
+      if (mEl) { mEl.textContent = mult.toFixed(2) + '×'; mEl.style.color = '#00ff88'; }
+    }
+
+    /* ================================================================
+       🎯 LIMBO — Instant multiplier game
+       Pick a target (1.1× – 100×). Random number rolls.
+       If roll >= target, you win target × your bet.
+       Win chance = 0.95 / target (5% house edge).
+    ================================================================ */
+    function limbo_hookTarget() {
+      var inp = document.getElementById('limbo_target');
+      if (!inp) return;
+      inp.addEventListener('input', function() {
+        var t = parseFloat(inp.value) || 2;
+        t = Math.max(1.1, Math.min(100, t));
+        var chance = Math.min(95, (0.95 / t) * 100);
+        var el = document.getElementById('limbo_chance');
+        if (el) el.textContent = chance.toFixed(1);
+      });
+    }
+
+    async function limbo_play() {
+      if (g_isSpinning) return;
+      g_isSpinning = true;
+      g_disableGameBtns(true);
+
+      var bet = parseFloat(document.getElementById('g_betInput').value) || g_betAmount;
+      g_betAmount = bet;
+      var target = parseFloat(document.getElementById('limbo_target').value) || 2;
+      target = Math.max(1.1, Math.min(100, target));
+
+      try { await g_runBet(bet, g_currency); } catch(e) {
+        g_setResult('limbo_result', '⚠ ' + (e.message || 'Error'), false);
+        g_isSpinning = false; g_disableGameBtns(false);
+        return;
+      }
+
+      var numEl = document.getElementById('limbo_result_num');
+
+      // Animate roll
+      var animCount = 0;
+      var animId = setInterval(function() {
+        var fake = (Math.random() * 10 + 1).toFixed(2);
+        if (numEl) { numEl.textContent = fake + '×'; numEl.style.color = '#555'; }
+        animCount++;
+      }, 60);
+
+      await new Promise(function(r) { setTimeout(r, 800); });
+      clearInterval(animId);
+
+      // Generate result: house edge 5%
+      // roll = 0.95 / random(0..1), capped at 100
+      var r = Math.random();
+      var roll;
+      if (r < 0.05) { roll = 1.00; } // instant floor 5%
+      else { roll = Math.floor((0.95 / r) * 100) / 100; }
+      roll = Math.min(100, roll);
+
+      var won = roll >= target;
+      if (numEl) {
+        numEl.textContent = roll.toFixed(2) + '×';
+        numEl.style.color = won ? '#00ff88' : '#ff3c5c';
+      }
+
+      var cabPay = 0;
+      if (won) {
+        cabPay = g_currency === 'sol' ? bet * target * g_SOL_TO_CABBAGE : bet * target;
+        await g_creditCabbage(cabPay);
+        g_setResult('limbo_result', '✅ Rolled ' + roll.toFixed(2) + '× ≥ ' + target.toFixed(1) + '× — Won ' + cabPay.toFixed(2) + ' 🥬', true);
+      } else {
+        g_setResult('limbo_result', '❌ Rolled ' + roll.toFixed(2) + '× < ' + target.toFixed(1) + '× — Lost ' + bet.toFixed(4) + (g_currency === 'sol' ? ' ◎' : ' 🥬'), false);
+      }
+
+      g_addHistory('🎯 Limbo', bet, g_currency, won, cabPay);
+      await g_logBet('🎯 Limbo', bet, g_currency, won ? 0 : bet);
+      await g_updatePotUI(); await g_loadGameBalances();
+      g_isSpinning = false;
+      g_disableGameBtns(false);
+    }
+
+    /* ================================================================
+       🗼 TOWER — Climb rows, avoid traps
+       8 rows × 4 tiles. Each row has 1 trap, 3 safe.
+       Pick one tile per row going up. Hit trap = lose.
+       Multiplier compounds ~1.27× per row (with 5% edge).
+       Cash out anytime after a successful row.
+    ================================================================ */
+    var TOWER_ROWS = 8;
+    var TOWER_COLS = 4;
+    var tower_traps = [];   // trap column per row
+    var tower_row = 0;      // current row to pick
+    var tower_running = false;
+    var tower_bet = 0;
+
+    function tower_init() {
+      var grid = document.getElementById('tower_grid');
+      if (!grid) return;
+      var html = '';
+      for (var row = 0; row < TOWER_ROWS; row++) {
+        html += '<div class="tower_row">';
+        for (var col = 0; col < TOWER_COLS; col++) {
+          html += '<div class="tower_cell locked" id="tw_' + row + '_' + col + '">?</div>';
+        }
+        html += '</div>';
+      }
+      grid.innerHTML = html;
+    }
+
+    function tower_multiplier(row) {
+      // Each row survived: mult = (TOWER_COLS/(TOWER_COLS-1))^row * 0.95
+      // 4/3 = 1.333 per row, ×0.95 house cut
+      if (row === 0) return 1;
+      return Math.floor(Math.pow(TOWER_COLS / (TOWER_COLS - 1), row) * 0.95 * 100) / 100;
+    }
+
+    async function tower_start() {
+      if (tower_running || g_isSpinning) return;
+      var bet = parseFloat(document.getElementById('g_betInput').value) || g_betAmount;
+      g_betAmount = bet;
+
+      try { await g_runBet(bet, g_currency); } catch(e) {
+        g_setResult('tower_result', '⚠ ' + (e.message || 'Error'), false);
+        return;
+      }
+
+      tower_bet = bet;
+      tower_row = 0;
+      tower_running = true;
+
+      // Generate traps
+      tower_traps = [];
+      for (var r = 0; r < TOWER_ROWS; r++) {
+        tower_traps.push(Math.floor(Math.random() * TOWER_COLS));
+      }
+
+      tower_init();
+      // Unlock bottom row
+      tower_unlockRow(0);
+
+      var mEl = document.getElementById('tower_multi');
+      if (mEl) { mEl.textContent = '1.00×'; mEl.style.color = '#555'; }
+      var rEl = document.getElementById('tower_result');
+      if (rEl) rEl.style.display = 'none';
+
+      var sb = document.getElementById('tower_startBtn');
+      var cb = document.getElementById('tower_cashBtn');
+      if (sb) sb.disabled = true;
+      if (cb) cb.disabled = false;
+      g_disableGameBtns(true);
+      if (cb) cb.disabled = false;
+    }
+
+    function tower_unlockRow(row) {
+      for (var col = 0; col < TOWER_COLS; col++) {
+        var cell = document.getElementById('tw_' + row + '_' + col);
+        if (cell) {
+          cell.className = 'tower_cell';
+          cell.textContent = '?';
+          cell.onclick = (function(r, c) { return function() { tower_pick(r, c); }; })(row, col);
+        }
+      }
+    }
+
+    function tower_pick(row, col) {
+      if (!tower_running || row !== tower_row) return;
+
+      var cell = document.getElementById('tw_' + row + '_' + col);
+      if (tower_traps[row] === col) {
+        // HIT TRAP
+        if (cell) { cell.textContent = '💀'; cell.className = 'tower_cell done trap'; }
+        tower_revealAll();
+        tower_running = false;
+        g_setResult('tower_result', '💀 Fell at row ' + (row + 1) + ' — Lost ' + tower_bet.toFixed(4) + (g_currency === 'sol' ? ' ◎' : ' 🥬'), false);
+        g_addHistory('🗼 Tower', tower_bet, g_currency, false, 0);
+        g_logBet('🗼 Tower', tower_bet, g_currency, tower_bet);
+        g_updatePotUI(); g_loadGameBalances();
+        var sb = document.getElementById('tower_startBtn');
+        var cb = document.getElementById('tower_cashBtn');
+        if (sb) sb.disabled = false;
+        if (cb) cb.disabled = true;
+        g_disableGameBtns(false);
+        var mEl = document.getElementById('tower_multi');
+        if (mEl) { mEl.textContent = '💀'; mEl.style.color = '#ff3c5c'; }
+      } else {
+        // SAFE
+        if (cell) { cell.textContent = '✅'; cell.className = 'tower_cell done safe'; }
+        // Lock current row remaining cells
+        for (var c = 0; c < TOWER_COLS; c++) {
+          if (c === col) continue;
+          var other = document.getElementById('tw_' + row + '_' + c);
+          if (other) { other.className = 'tower_cell done locked'; other.textContent = '·'; other.onclick = null; }
+        }
+
+        tower_row++;
+        var mult = tower_multiplier(tower_row);
+        var mEl = document.getElementById('tower_multi');
+        if (mEl) {
+          mEl.textContent = mult.toFixed(2) + '×';
+          mEl.style.color = mult < 2 ? '#00ff88' : mult < 4 ? '#ffd700' : '#ff6b35';
+        }
+
+        if (tower_row >= TOWER_ROWS) {
+          // Topped out — auto cashout
+          tower_cashout();
+        } else {
+          tower_unlockRow(tower_row);
+        }
+      }
+    }
+
+    function tower_revealAll() {
+      for (var r = 0; r < TOWER_ROWS; r++) {
+        for (var c = 0; c < TOWER_COLS; c++) {
+          var cell = document.getElementById('tw_' + r + '_' + c);
+          if (!cell) continue;
+          if (cell.className.indexOf('done') !== -1) continue;
+          if (tower_traps[r] === c) {
+            cell.textContent = '💣'; cell.className = 'tower_cell done trap';
+            cell.style.opacity = '0.4';
+          } else {
+            cell.textContent = '·'; cell.className = 'tower_cell done locked';
+          }
+          cell.onclick = null;
+        }
+      }
+    }
+
+    async function tower_cashout() {
+      if (!tower_running || tower_row === 0) return;
+      tower_running = false;
+      var mult = tower_multiplier(tower_row);
+      var cabPay = g_currency === 'sol' ? tower_bet * mult * g_SOL_TO_CABBAGE : tower_bet * mult;
+      await g_creditCabbage(cabPay);
+
+      tower_revealAll();
+      g_setResult('tower_result', '✅ Escaped at row ' + tower_row + ' — ' + mult.toFixed(2) + '× — Won ' + cabPay.toFixed(2) + ' 🥬', true);
+      g_addHistory('🗼 Tower', tower_bet, g_currency, true, cabPay);
+      await g_logBet('🗼 Tower', tower_bet, g_currency, 0);
+      await g_updatePotUI(); await g_loadGameBalances();
+
+      var sb = document.getElementById('tower_startBtn');
+      var cb = document.getElementById('tower_cashBtn');
+      if (sb) sb.disabled = false;
+      if (cb) cb.disabled = true;
+      g_disableGameBtns(false);
+      var mEl = document.getElementById('tower_multi');
+      if (mEl) { mEl.textContent = mult.toFixed(2) + '×'; mEl.style.color = '#00ff88'; }
+    }
+
+    /* ================================================================
        PLAYER PROGRESSION SYSTEM
     ================================================================ */
     var pp_stats = null; // cached stats
@@ -4540,15 +5021,18 @@ var nextTierRow = nextTier
 
       try {
         // Casino stats from game_bets
-        var gR = await sb.from('game_bets').select('bet_amount,house_profit,game,currency').eq('wallet', w);
+        var gR = await sb.from('game_bets').select('bet_amount,house_profit,game,currency').eq('wallet', w).order('played_at', { ascending: true });
         var bets = gR.data || [];
         var gameWins = {};
+        var gamesPlayedMap = {};
         bets.forEach(function(b) {
           stats.gamesPlayed++;
           var hp = Number(b.house_profit || 0);
           var ba = Number(b.bet_amount || 0);
           stats.totalWagered += ba;
           if (b.currency === 'sol') stats.solWagered += ba;
+          // Track unique games played
+          if (b.game) gamesPlayedMap[b.game] = (gamesPlayedMap[b.game] || 0) + 1;
           if (hp <= 0) {
             stats.gamesWon++;
             stats.winStreak++; stats.lossStreak = 0;
@@ -4586,14 +5070,15 @@ var nextTierRow = nextTier
           }
         }
 
-        // Items owned
-        var iR = await sb.from('user_items').select('id', { count: 'exact', head: true }).eq('wallet', w);
+        // Items owned (exclude achievement records)
+        var iR = await sb.from('user_items').select('id', { count: 'exact', head: true }).eq('wallet', w).not('item_id', 'like', 'ach_%');
         stats.itemsOwned = iR.count || 0;
 
       } catch(e) { console.warn('pp_fetchStats error:', e); }
 
       pp_stats = stats;
       pp_stats._gameWins = gameWins || {};
+      pp_stats._gamesPlayedMap = gamesPlayedMap || {};
       pp_loaded = true;
       return stats;
     }
@@ -4832,8 +5317,8 @@ var nextTierRow = nextTier
       if (level >= 10) u('level_10');
       if (level >= 25) u('level_25');
       if (level >= 50) u('level_50');
-      // All games: check if at least 5 unique games played (coin, dice, slots, blackjack, plinko, crash, poker)
-      if (gamesMap && Object.keys(gamesMap).length >= 5) u('all_games');
+      // All games: check if at least 7 unique games played (coin, dice, slots, blackjack, plinko, crash, mines, limbo, tower)
+      if (gamesMap && Object.keys(gamesMap).length >= 7) u('all_games');
 
       return unlocked;
     }
@@ -4843,15 +5328,20 @@ var nextTierRow = nextTier
       var sb = getSupaClient();
       var w = walletPublicKey.toBase58();
       try {
-        // Upsert all achievements as user_items with ach_ prefix
-        for (var i = 0; i < unlocked.length; i++) {
-          await sb.from('user_items').upsert({
-            wallet: w,
-            item_id: 'ach_' + unlocked[i],
-            data: { unlocked: true },
-            bought_at: new Date().toISOString()
-          }, { onConflict: 'wallet,item_id' });
-        }
+        // Fetch what's already saved to avoid re-saving
+        var existing = await sb.from('user_items').select('item_id').eq('wallet', w).like('item_id', 'ach_%');
+        var saved = {};
+        (existing.data || []).forEach(function(r) { saved[r.item_id] = true; });
+
+        // Only save NEW achievements
+        var newAchs = unlocked.filter(function(id) { return !saved['ach_' + id]; });
+        if (newAchs.length === 0) return;
+
+        // Batch upsert in one call
+        var rows = newAchs.map(function(id) {
+          return { wallet: w, item_id: 'ach_' + id, data: { unlocked: true }, bought_at: new Date().toISOString() };
+        });
+        await sb.from('user_items').upsert(rows, { onConflict: 'wallet,item_id' });
       } catch(e) { /* silent - non-critical */ }
     }
 
@@ -5689,6 +6179,427 @@ var nextTierRow = nextTier
       if (dc) dc.textContent = dailyDone + '/' + MQ_DAILY.length;
       if (wc) wc.textContent = weeklyDone + '/' + MQ_WEEKLY.length;
       if (et) et.textContent = dailyEarned + ' 🥬';
+    }
+
+    /* ================================================================
+       🎙️ VOICE CHAT — WebRTC + Supabase Realtime signaling
+       How it works:
+         - Supabase Realtime channel "voice:roomId" handles signaling
+           (offer / answer / ice-candidate messages)
+         - Each peer creates a RTCPeerConnection to every other peer
+         - Audio streams attach to hidden <audio> elements
+         - Presence (who's in room) tracked via the same channel
+         - No external TURN/STUN beyond Google's free public servers
+       Supabase tables needed:
+         voice_rooms: id, name, created_at   (optional — rooms are ephemeral)
+    ================================================================ */
+
+    var VOICE_ROOMS = [
+      { id: 'general',   name: '🌿 General',      desc: 'Main holder lounge'         },
+      { id: 'casino',    name: '🎰 Casino Floor',  desc: 'Talk while you gamble'      },
+      { id: 'alpha',     name: '🔒 Alpha Room',    desc: 'Degens only — share plays'  },
+      { id: 'chill',     name: '🎧 Chill Zone',    desc: 'Lofi vibes, no drama'       }
+    ];
+
+    var ICE_SERVERS = [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' }
+    ];
+
+    // Voice state
+    var voice_roomId       = null;   // which room we're in
+    var voice_channel      = null;   // Supabase realtime channel
+    var voice_stream       = null;   // our local MediaStream
+    var voice_peers        = {};     // peerId -> RTCPeerConnection
+    var voice_members      = {};     // peerId -> { name, wallet, speaking }
+    var voice_muted        = false;
+    var voice_myId         = null;   // unique peer ID for this session
+    var voice_speakTimers  = {};     // for visual speaking indicator
+
+    function voice_myName() {
+      if (!walletPublicKey) return 'Anonymous';
+      return session.profile.username || shortAddr(walletPublicKey.toBase58());
+    }
+
+    function voice_myWallet() {
+      return walletPublicKey ? walletPublicKey.toBase58() : 'anon';
+    }
+
+    // ── Keep the tab button showing a live dot when in a room ──
+    function voice_updateTabIndicator() {
+      var tab = document.getElementById('tabVoice');
+      if (!tab) return;
+      if (voice_roomId) {
+        tab.innerHTML = '<span style="display:inline-flex;align-items:center;gap:5px;">🎙️ Voice <span style="width:6px;height:6px;border-radius:50%;background:#00ff88;box-shadow:0 0 6px rgba(0,255,136,0.8);display:inline-block;animation:voice_pulse 1.5s infinite;"></span></span>';
+      } else {
+        tab.innerHTML = '🎙️ Voice';
+      }
+    }
+
+    // ── Join a room ──
+    async function voice_join(roomId) {
+      if (voice_roomId === roomId) return; // already here
+      await voice_leave(); // clean up previous room
+
+      if (!walletPublicKey) return alert('Connect your wallet first.');
+
+      // Request mic permission
+      try {
+        voice_stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      } catch(e) {
+        return alert('Microphone access denied. Please allow mic access in your browser and try again.');
+      }
+
+      voice_roomId = roomId;
+      voice_myId   = voice_myWallet() + '_' + Date.now();
+      voice_peers  = {};
+      voice_members = {};
+      voice_muted  = false;
+
+      // Subscribe to Supabase Realtime channel for this room
+      var sb = getSupaClient();
+      voice_channel = sb.channel('voice:' + roomId, { config: { presence: { key: voice_myId } } });
+
+      // ── Presence: someone joined or left ──
+      voice_channel.on('presence', { event: 'sync' }, function() {
+        var state = voice_channel.presenceState();
+        var currentIds = {};
+        Object.keys(state).forEach(function(key) {
+          var presences = state[key];
+          presences.forEach(function(p) {
+            currentIds[p.peerId] = p;
+            if (p.peerId !== voice_myId && !voice_peers[p.peerId]) {
+              // New peer — we initiate
+              voice_connectToPeer(p.peerId, p.name, p.wallet);
+            }
+            voice_members[p.peerId] = { name: p.name, wallet: p.wallet, speaking: false };
+          });
+        });
+        // Remove peers who left
+        Object.keys(voice_peers).forEach(function(pid) {
+          if (!currentIds[pid]) voice_removePeer(pid);
+        });
+        voice_paintRoom();
+      });
+
+      voice_channel.on('presence', { event: 'join' }, function(payload) {
+        payload.newPresences.forEach(function(p) {
+          if (p.peerId !== voice_myId) {
+            voice_members[p.peerId] = { name: p.name, wallet: p.wallet, speaking: false };
+          }
+        });
+        voice_paintRoom();
+      });
+
+      voice_channel.on('presence', { event: 'leave' }, function(payload) {
+        payload.leftPresences.forEach(function(p) {
+          voice_removePeer(p.peerId);
+          delete voice_members[p.peerId];
+        });
+        voice_paintRoom();
+      });
+
+      // ── Signaling: WebRTC offer/answer/ice ──
+      voice_channel.on('broadcast', { event: 'signal' }, function(payload) {
+        var msg = payload.payload;
+        if (msg.to !== voice_myId) return; // not for us
+        voice_handleSignal(msg);
+      });
+
+      voice_channel.subscribe(async function(status) {
+        if (status === 'SUBSCRIBED') {
+          // Announce our presence
+          await voice_channel.track({
+            peerId:  voice_myId,
+            name:    voice_myName(),
+            wallet:  voice_myWallet(),
+            muted:   false
+          });
+        }
+      });
+
+      voice_paintRoom();
+      voice_updateTabIndicator();
+    }
+
+    // ── Create a peer connection to another user ──
+    // BOTH sides add tracks first, then onnegotiationneeded fires the offer.
+    // This guarantees the SDP contains tracks in both directions.
+    function voice_createPC(peerId, peerName, peerWallet) {
+      if (voice_peers[peerId]) return voice_peers[peerId];
+
+      var pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+      voice_peers[peerId] = pc;
+      voice_members[peerId] = { name: peerName || peerId, wallet: peerWallet || '', speaking: false };
+
+      // ── Step 1: Add OUR tracks immediately so they're in the SDP ──
+      if (voice_stream) {
+        voice_stream.getTracks().forEach(function(t) { pc.addTrack(t, voice_stream); });
+      }
+
+      // ── Step 2: When we receive THEIR track ──
+      pc.ontrack = function(event) {
+        var audio = document.getElementById('voice_audio_' + peerId);
+        if (!audio) {
+          audio = document.createElement('audio');
+          audio.id = 'voice_audio_' + peerId;
+          audio.autoplay = true;
+          audio.style.display = 'none';
+          document.body.appendChild(audio);
+        }
+        audio.srcObject = event.streams[0];
+
+        // Speaking detection
+        try {
+          var AudioCtx = window.AudioContext || window.webkitAudioContext;
+          var ctx = new AudioCtx();
+          var src = ctx.createMediaStreamSource(event.streams[0]);
+          var analyser = ctx.createAnalyser();
+          analyser.fftSize = 512;
+          src.connect(analyser);
+          var buf = new Uint8Array(analyser.frequencyBinCount);
+          (function checkSpeaking() {
+            if (!voice_peers[peerId]) { ctx.close(); return; }
+            analyser.getByteFrequencyData(buf);
+            var avg = buf.reduce(function(a,b){return a+b;},0) / buf.length;
+            var isSpeaking = avg > 15;
+            if (voice_members[peerId]) voice_members[peerId].speaking = isSpeaking;
+            var dot = document.getElementById('voice_dot_' + peerId);
+            if (dot) dot.style.background = isSpeaking ? '#00ff88' : '#333';
+            requestAnimationFrame(checkSpeaking);
+          })();
+        } catch(e) {}
+      };
+
+      // ── Step 3: ICE candidates ──
+      pc.onicecandidate = function(event) {
+        if (event.candidate) {
+          voice_signal(peerId, { type: 'ice', candidate: event.candidate });
+        }
+      };
+
+      pc.onconnectionstatechange = function() { voice_paintRoom(); };
+
+      return pc;
+    }
+
+    // Initiator: create PC with tracks, then let onnegotiationneeded fire offer
+    async function voice_connectToPeer(peerId, peerName, peerWallet) {
+      if (voice_peers[peerId]) return;
+      var pc = voice_createPC(peerId, peerName, peerWallet);
+
+      // onnegotiationneeded fires after addTrack — this is the correct moment to offer
+      pc.onnegotiationneeded = async function() {
+        try {
+          var offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
+          voice_signal(peerId, { type: 'offer', sdp: pc.localDescription });
+        } catch(e) { console.warn('voice offer error:', e); }
+      };
+    }
+
+    // ── Handle incoming signal ──
+    async function voice_handleSignal(msg) {
+      var peerId = msg.from;
+
+      if (msg.data.type === 'offer') {
+        // Create PC and add OUR tracks BEFORE answering —
+        // this is what was broken before: answerer's tracks must be in the PC
+        // prior to createAnswer so the SDP contains both directions.
+        var pc = voice_peers[peerId] || voice_createPC(peerId, msg.fromName, msg.fromWallet);
+        try {
+          await pc.setRemoteDescription(new RTCSessionDescription(msg.data.sdp));
+          var answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          voice_signal(peerId, { type: 'answer', sdp: pc.localDescription });
+        } catch(e) { console.warn('voice answer error:', e); }
+      }
+
+      else if (msg.data.type === 'answer') {
+        var pc2 = voice_peers[peerId];
+        if (pc2 && pc2.signalingState !== 'stable') {
+          try { await pc2.setRemoteDescription(new RTCSessionDescription(msg.data.sdp)); } catch(e) { console.warn('voice setRemote answer error:', e); }
+        }
+      }
+
+      else if (msg.data.type === 'ice') {
+        var pc3 = voice_peers[peerId];
+        if (pc3 && msg.data.candidate) {
+          try { await pc3.addIceCandidate(new RTCIceCandidate(msg.data.candidate)); } catch(e) {}
+        }
+      }
+    }
+
+    // ── Send a signal to a specific peer via Supabase broadcast ──
+    function voice_signal(toPeerId, data) {
+      if (!voice_channel) return;
+      voice_channel.send({
+        type:    'broadcast',
+        event:   'signal',
+        payload: {
+          to:          toPeerId,
+          from:        voice_myId,
+          fromName:    voice_myName(),
+          fromWallet:  voice_myWallet(),
+          data:        data
+        }
+      });
+    }
+
+    // ── Remove a peer cleanly ──
+    function voice_removePeer(peerId) {
+      var pc = voice_peers[peerId];
+      if (pc) { try { pc.close(); } catch(e) {} delete voice_peers[peerId]; }
+      var audio = document.getElementById('voice_audio_' + peerId);
+      if (audio) { audio.srcObject = null; audio.remove(); }
+      delete voice_members[peerId];
+    }
+
+    // ── Leave the current room ──
+    async function voice_leave() {
+      if (!voice_roomId && !voice_channel) return;
+
+      // Close all peer connections
+      Object.keys(voice_peers).forEach(function(pid) { voice_removePeer(pid); });
+      voice_peers = {};
+      voice_members = {};
+
+      // Stop mic
+      if (voice_stream) {
+        voice_stream.getTracks().forEach(function(t) { t.stop(); });
+        voice_stream = null;
+      }
+
+      // Unsubscribe from channel
+      if (voice_channel) {
+        try { getSupaClient().removeChannel(voice_channel); } catch(e) {}
+        voice_channel = null;
+      }
+
+      voice_roomId = null;
+      voice_myId   = null;
+
+      // Repaint if still on voice tab
+      if (session.currentView === 'voice') voice_paintRoom();
+      voice_updateTabIndicator();
+    }
+
+    // ── Toggle mute ──
+    function voice_toggleMute() {
+      if (!voice_stream) return;
+      voice_muted = !voice_muted;
+      voice_stream.getAudioTracks().forEach(function(t) { t.enabled = !voice_muted; });
+      if (voice_channel) voice_channel.track({ peerId: voice_myId, name: voice_myName(), wallet: voice_myWallet(), muted: voice_muted });
+      voice_paintRoom();
+    }
+
+    // ── Paint just the dynamic room state (members, mute button) ──
+    function voice_paintRoom() {
+      var roomBody = document.getElementById('voice_room_body');
+      if (!roomBody) return;
+
+      if (!voice_roomId) {
+        roomBody.innerHTML = '';
+        return;
+      }
+
+      var room = VOICE_ROOMS.find(function(r){ return r.id === voice_roomId; }) || { name: voice_roomId };
+      var peerCount = Object.keys(voice_members).length;
+
+      // Build member list — include ourselves
+      var allMembers = [{ peerId: voice_myId, name: voice_myName(), wallet: voice_myWallet(), isMe: true }];
+      Object.keys(voice_members).forEach(function(pid) {
+        allMembers.push({ peerId: pid, name: voice_members[pid].name, wallet: voice_members[pid].wallet, isMe: false });
+      });
+
+      var membersHtml = allMembers.map(function(m) {
+        var color = walletColor(m.wallet);
+        var badge = m.isMe ? '' : shop_getBadge(m.wallet);
+        var speakColor = (m.isMe && !voice_muted) ? '#00ff88' : '#333';
+        return '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.04);border-radius:10px;">'
+          + '<div id="voice_dot_' + m.peerId + '" style="width:10px;height:10px;border-radius:50%;background:' + speakColor + ';flex-shrink:0;transition:background 0.1s;box-shadow:0 0 8px ' + speakColor + ';"></div>'
+          + '<div style="font-weight:700;font-size:0.82rem;color:' + color + ';flex:1;">' + escapeHtml(m.name) + (badge ? ' ' + badge : '') + (m.isMe ? ' <span style="font-size:0.55rem;color:#333;letter-spacing:1px;">YOU</span>' : '') + '</div>'
+          + (m.isMe ? '<span style="font-size:0.65rem;color:' + (voice_muted ? '#ff3c5c' : '#00ff88') + ';letter-spacing:1px;">' + (voice_muted ? '🔇 MUTED' : '🎙️ LIVE') + '</span>' : '')
+          + '</div>';
+      }).join('');
+
+      roomBody.innerHTML =
+        // Active room header
+        '<div style="background:rgba(0,255,136,0.04);border:1px solid rgba(0,255,136,0.15);border-radius:12px;padding:1rem 1.2rem;margin-bottom:1.2rem;">'
+          + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.8rem;">'
+            + '<div>'
+              + '<div style="font-weight:700;font-size:1rem;color:#e0e0ff;">' + escapeHtml(room.name) + '</div>'
+              + '<div style="font-size:0.65rem;color:#444;letter-spacing:1px;margin-top:2px;">' + (peerCount + 1) + ' member' + (peerCount !== 0 ? 's' : '') + ' connected</div>'
+            + '</div>'
+            + '<div style="display:flex;gap:8px;">'
+              + '<button onclick="voice_toggleMute()" style="background:' + (voice_muted ? 'rgba(255,60,92,0.12)' : 'rgba(0,255,136,0.08)') + ';border:1px solid ' + (voice_muted ? 'rgba(255,60,92,0.4)' : 'rgba(0,255,136,0.35)') + ';color:' + (voice_muted ? '#ff3c5c' : '#00ff88') + ';padding:8px 18px;border-radius:8px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.75rem;letter-spacing:1px;text-transform:uppercase;transition:all 0.2s;">'
+                + (voice_muted ? '🔇 UNMUTE' : '🎙️ MUTE')
+              + '</button>'
+              + '<button onclick="voice_leave()" style="background:rgba(255,60,92,0.08);border:1px solid rgba(255,60,92,0.3);color:#ff3c5c;padding:8px 18px;border-radius:8px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.75rem;letter-spacing:1px;text-transform:uppercase;transition:all 0.2s;">✕ LEAVE</button>'
+            + '</div>'
+          + '</div>'
+        + '</div>'
+        // Members list
+        + '<div style="display:flex;flex-direction:column;gap:6px;">' + membersHtml + '</div>';
+    }
+
+    // ── Main render — called when switching to voice tab ──
+    function renderVoiceUI() {
+      var view = document.getElementById('view-voice');
+      if (!view) return;
+
+      var roomListHtml = VOICE_ROOMS.map(function(room) {
+        var active = voice_roomId === room.id;
+        return '<div style="background:' + (active ? 'rgba(0,212,255,0.06)' : '#0a0a1a') + ';border:1px solid ' + (active ? 'rgba(0,212,255,0.3)' : '#1a1a30') + ';border-radius:12px;padding:1.1rem 1.4rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;transition:all 0.2s;">'
+          + '<div>'
+            + '<div style="font-weight:700;font-size:0.9rem;color:#e0e0ff;">' + escapeHtml(room.name) + '</div>'
+            + '<div style="font-size:0.65rem;color:#444;margin-top:3px;">' + escapeHtml(room.desc) + '</div>'
+          + '</div>'
+          + (active
+              ? '<span style="font-size:0.65rem;color:#00d4ff;font-weight:700;letter-spacing:1px;">CONNECTED</span>'
+              : '<button onclick="voice_join(\'' + room.id + '\')" style="background:transparent;border:1px solid rgba(0,212,255,0.35);color:#00d4ff;padding:7px 18px;border-radius:8px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1px;text-transform:uppercase;transition:all 0.2s;">JOIN</button>')
+        + '</div>';
+      }).join('');
+
+      view.innerHTML =
+        '<style>'
+          + '@keyframes voice_pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.6;transform:scale(0.95)}}'
+        + '</style>'
+
+        // Header
+        + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.4rem;flex-wrap:wrap;gap:0.6rem;">'
+          + '<div>'
+            + '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.5rem;letter-spacing:3px;color:#e0e0ff;">🎙️ VOICE ROOMS</div>'
+            + '<div style="font-size:0.7rem;color:#444;letter-spacing:1px;margin-top:2px;">Live voice chat for LNL holders · No account needed · Browser only</div>'
+          + '</div>'
+          + (voice_roomId
+            ? '<div style="display:flex;align-items:center;gap:6px;font-size:0.7rem;color:#00ff88;"><div style="width:7px;height:7px;border-radius:50%;background:#00ff88;box-shadow:0 0 6px rgba(0,255,136,0.7);animation:voice_pulse 1.5s infinite;"></div>LIVE</div>'
+            : '')
+        + '</div>'
+
+        // Active room state (members, mute, leave)
+        + '<div id="voice_room_body"></div>'
+
+        // Room list
+        + '<div style="background:#0f0f22;border:1px solid #1e1e3a;border-radius:14px;padding:1.2rem;margin-bottom:1.2rem;">'
+          + '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:0.9rem;letter-spacing:3px;color:#555;margin-bottom:1rem;">VOICE ROOMS</div>'
+          + '<div style="display:flex;flex-direction:column;gap:8px;">' + roomListHtml + '</div>'
+        + '</div>'
+
+        // How it works
+        + '<div style="background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.04);border-radius:10px;padding:1rem 1.2rem;">'
+          + '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:0.75rem;letter-spacing:2px;color:#333;margin-bottom:0.7rem;">HOW IT WORKS</div>'
+          + '<div style="font-size:0.65rem;color:#2a2a44;line-height:2;letter-spacing:0.5px;">'
+            + '🎙️ Click JOIN and allow microphone access in your browser<br>'
+            + '🔊 Your voice streams directly to everyone else in the room (peer-to-peer)<br>'
+            + '🔇 Mute / unmute yourself anytime — green dot means speaking<br>'
+            + '🚪 Leave anytime — mic is released immediately<br>'
+            + '🔒 Voice is not recorded or stored anywhere'
+          + '</div>'
+        + '</div>';
+
+      // Paint the active room state
+      voice_paintRoom();
     }
 
   </script>
