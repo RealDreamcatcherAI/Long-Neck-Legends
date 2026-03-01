@@ -1233,8 +1233,7 @@ a.plink:hover{
         pfpMint: "",
         pfpImage: "",
         x: "",
-        discord: "",
-        discord_id: "",
+        discord: "": "",
         ledger: ""
       },
       secondWallet: { address: "" },
@@ -2294,7 +2293,7 @@ var nextTierRow = nextTier
       if (linkRes.data && linkRes.data.profile_id) {
         var profRes = await db
           .from("profiles")
-          .select("id, username, avatar_url, discord_id, discord_username, created_at")
+          .select("id, username, avatar_url, created_at")
           .eq("id", linkRes.data.profile_id)
           .single();
         if (profRes.error) throw profRes.error;
@@ -2308,7 +2307,7 @@ var nextTierRow = nextTier
           username: (session && session.profile && session.profile.username) ? session.profile.username : null,
           avatar_url: (session && session.profile && session.profile.pfpImage) ? session.profile.pfpImage : null
         })
-        .select("id, username, avatar_url, discord_id, discord_username, created_at")
+        .select("id, username, avatar_url, created_at")
         .single();
 
       if (newProfRes.error) throw newProfRes.error;
@@ -2330,7 +2329,7 @@ var nextTierRow = nextTier
 
       var finalProf = await db
         .from("profiles")
-        .select("id, username, avatar_url, discord_id, discord_username, created_at")
+        .select("id, username, avatar_url, created_at")
         .eq("id", finalLink.data.profile_id)
         .single();
       if (finalProf.error) throw finalProf.error;
@@ -2387,9 +2386,7 @@ var nextTierRow = nextTier
       // Map existing dashboard profile fields -> DB columns that exist
       var payload = {
         username: (session.profile && session.profile.username) ? session.profile.username : null,
-        avatar_url: (session.profile && session.profile.pfpImage) ? session.profile.pfpImage : null,
-        discord_id: (session.profile && session.profile.discord_id) ? session.profile.discord_id : null,
-        discord_username: (session.profile && session.profile.discord) ? session.profile.discord : null
+        avatar_url: (session.profile && session.profile.pfpImage) ? session.profile.pfpImage : null: (session.profile && session.profile.discord_id) ? session.profile.discord_id : null: (session.profile && session.profile.discord) ? session.profile.discord : null
       };
       var res = await db
         .from("profiles")
@@ -7034,109 +7031,7 @@ var nextTierRow = nextTier
        No new tables needed. Just plug in your URL + anon key below.
     ================================================================ */
 
-    var LNL_SYNC = (function() {
-
-      // ── PLUG YOUR DETAILS IN HERE ──────────────────────────────────
-      var YOUR_SUPA_URL = 'https://iogvpjjhpigvvlcoqzre.supabase.co';   // e.g. https://xyzxyz.supabase.co
-      var YOUR_SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlvZ3ZwampocGlndnZsY29xenJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwNDIzMzIsImV4cCI6MjA4NzYxODMzMn0.5GqxnrVvxiNBqDkE0wcqy1F9VGBNhxkMEqPbHfy87Pg';
-      // ───────────────────────────────────────────────────────────────
-
-      var _client = null;
-      var _syncTimer = null;
-
-      function getClient() {
-        if (!_client) {
-          try {
-            _client = supabase.createClient(YOUR_SUPA_URL, YOUR_SUPA_KEY);
-          } catch(e) {
-            console.warn('[LNL_SYNC] Failed to create client:', e);
-          }
-        }
-        return _client;
-      }
-
-      function isConfigured() {
-        return YOUR_SUPA_URL.startsWith('https://') && YOUR_SUPA_KEY.startsWith('eyJ');
-      }
-
-      function getPayload() {
-        var primary    = walletPublicKey ? walletPublicKey.toBase58() : null;
-        var discordId  = (session && session.profile && session.profile.discord_id)
-                           ? session.profile.discord_id : null;
-        var discordTag = (session && session.profile && session.profile.discord)
-                           ? session.profile.discord : null;
-        return { primary: primary, discordId: discordId, discordTag: discordTag };
-      }
-
-      async function push() {
-        if (!isConfigured()) {
-          console.info('[LNL_SYNC] Not configured — add your Supabase URL + key.');
-          return;
-        }
-        var p = getPayload();
-        if (!p.primary) return;
-
-        var db = getClient();
-        if (!db) return;
-
-        try {
-          // Step 1: resolve profile_id from wallet_links
-          var linkRes = await db
-            .from('wallet_links')
-            .select('profile_id')
-            .eq('wallet_address', p.primary)
-            .maybeSingle();
-
-          if (linkRes.error) {
-            console.warn('[LNL_SYNC] wallet_links lookup error:', linkRes.error.message);
-            return;
-          }
-          if (!linkRes.data || !linkRes.data.profile_id) {
-            console.info('[LNL_SYNC] No profile_id yet for wallet — will retry on next sync.');
-            return;
-          }
-
-          var profileId = linkRes.data.profile_id;
-
-          // Step 2: only update discord fields — never touches anything else
-          var updatePayload = {};
-          if (p.discordId)  updatePayload.discord_user_id = p.discordId;
-          if (p.discordTag) updatePayload.discord_tag     = p.discordTag;
-
-          if (Object.keys(updatePayload).length === 0) {
-            console.info('[LNL_SYNC] No Discord data to sync yet.');
-            return;
-          }
-
-          var updateRes = await db
-            .from('profiles')
-            .update(updatePayload)
-            .eq('id', profileId);
-
-          if (updateRes.error) {
-            console.warn('[LNL_SYNC] profiles update error:', updateRes.error.message);
-          } else {
-            console.info('[LNL_SYNC] ✅ Synced to profiles:',
-              'discord_user_id=' + (p.discordId || '—'),
-              '| discord_tag=' + (p.discordTag || '—'),
-              '| profile=' + profileId.slice(0,8) + '…'
-            );
-          }
-        } catch(e) {
-          console.warn('[LNL_SYNC] push() error:', e);
-        }
-      }
-
-      // Debounce — wallet connect + discord connect may fire close together
-      function queueSync() {
-        if (_syncTimer) clearTimeout(_syncTimer);
-        _syncTimer = setTimeout(push, 800);
-      }
-
-      return { push: push, queueSync: queueSync };
-
-    })();
-
-  </script>
+    var LNL_SYNC = null; // removed (single Supabase only)
+</script>
 </body>
 </html>
