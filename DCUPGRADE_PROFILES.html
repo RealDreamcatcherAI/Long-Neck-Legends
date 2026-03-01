@@ -990,8 +990,10 @@ a.plink:hover{
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tweetnacl@1.0.3/nacl.min.js"></script>
+  <!-- Polyfills required by @solana/web3.js in browser -->
+  <script>window.global=window;window.process=window.process||{env:{},version:''};</script>
   <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.min.js"></script>
-  <script>if(typeof window.Buffer==='undefined'&&typeof buffer!=='undefined')window.Buffer=buffer.Buffer;</script>
+  <script>window.Buffer=window.Buffer||buffer.Buffer;</script>
   <script src="https://unpkg.com/@solana/web3.js@1.95.8/lib/index.iife.min.js"></script>
 </head>
 
@@ -1235,7 +1237,8 @@ a.plink:hover{
         pfpMint: "",
         pfpImage: "",
         x: "",
-        discord: "": "",
+        discord: "",
+        discord_id: "",
         ledger: ""
       },
       secondWallet: { address: "" },
@@ -1296,7 +1299,7 @@ a.plink:hover{
           session.profile.pfpImage = data.pfpImage || "";
           session.profile.x = data.x || "";
           session.profile.discord = data.discord || "";
-          session.profile/*discord_id_removed*/undefined = data/*discord_id_removed*/undefined || "";
+          session.profile.discord_id = data.discord_id || "";
           session.profile.ledger = data.ledger || "";
         }
       } catch (e) {}
@@ -2200,12 +2203,12 @@ var nextTierRow = nextTier
         session.profile.discord = data.username
           ? (data.username + (data.discriminator ? ("#" + data.discriminator) : ""))
           : "";
-        session.profile/*discord_id_removed*/undefined = data.id || data/*discord_id_removed*/undefined || ""; // capture the snowflake ID
+        session.profile.discord_id = data.id || data.discord_id || ""; // capture the snowflake ID
         saveProfileToStorage();
         refreshBanner();
         // ── LNL_SYNC: push updated discord ID to your Supabase ──
         try { LNL_SYNC.queueSync(); } catch(e) {}
-        alert("Discord connected: " + (session.profile.discord || "connected") + (session.profile/*discord_id_removed*/undefined ? " (ID: " + session.profile/*discord_id_removed*/undefined + ")" : ""));
+        alert("Discord connected: " + (session.profile.discord || "connected") + (session.profile.discord_id ? " (ID: " + session.profile.discord_id + ")" : ""));
       }
 
       if (data.type === "x_error" || data.type === "discord_error") {
@@ -2295,7 +2298,7 @@ var nextTierRow = nextTier
       if (linkRes.data && linkRes.data.profile_id) {
         var profRes = await db
           .from("profiles")
-          .select("id, username, avatar_url, created_at")
+          .select("id, username, avatar_url, discord_id, discord_username, created_at")
           .eq("id", linkRes.data.profile_id)
           .single();
         if (profRes.error) throw profRes.error;
@@ -2309,7 +2312,7 @@ var nextTierRow = nextTier
           username: (session && session.profile && session.profile.username) ? session.profile.username : null,
           avatar_url: (session && session.profile && session.profile.pfpImage) ? session.profile.pfpImage : null
         })
-        .select("id, username, avatar_url, created_at")
+        .select("id, username, avatar_url, discord_id, discord_username, created_at")
         .single();
 
       if (newProfRes.error) throw newProfRes.error;
@@ -2331,7 +2334,7 @@ var nextTierRow = nextTier
 
       var finalProf = await db
         .from("profiles")
-        .select("id, username, avatar_url, created_at")
+        .select("id, username, avatar_url, discord_id, discord_username, created_at")
         .eq("id", finalLink.data.profile_id)
         .single();
       if (finalProf.error) throw finalProf.error;
@@ -2388,7 +2391,9 @@ var nextTierRow = nextTier
       // Map existing dashboard profile fields -> DB columns that exist
       var payload = {
         username: (session.profile && session.profile.username) ? session.profile.username : null,
-        avatar_url: (session.profile && session.profile.pfpImage) ? session.profile.pfpImage : null: (session.profile && session.profile/*discord_id_removed*/undefined) ? session.profile/*discord_id_removed*/undefined : null: (session.profile && session.profile.discord) ? session.profile.discord : null
+        avatar_url: (session.profile && session.profile.pfpImage) ? session.profile.pfpImage : null,
+        discord_id: (session.profile && session.profile.discord_id) ? session.profile.discord_id : null,
+        discord_username: (session.profile && session.profile.discord) ? session.profile.discord : null
       };
       var res = await db
         .from("profiles")
@@ -2405,8 +2410,8 @@ var nextTierRow = nextTier
         // Prefer Supabase values when present
         if (profile.username) session.profile.username = profile.username;
         if (profile.avatar_url) session.profile.pfpImage = profile.avatar_url;
-        if (profile/*discord_id_removed*/undefined) session.profile/*discord_id_removed*/undefined = profile/*discord_id_removed*/undefined;
-        if (profile/*discord_username_removed*/undefined) session.profile.discord = profile/*discord_username_removed*/undefined;
+        if (profile.discord_id) session.profile.discord_id = profile.discord_id;
+        if (profile.discord_username) session.profile.discord = profile.discord_username;
 
         // Pull linked wallets and set 2nd wallet UI value (first non-primary wallet)
         var wallets = await loadLinkedWallets(profile.id);
@@ -3176,7 +3181,7 @@ var nextTierRow = nextTier
         if (sendJson.error) throw new Error(sendJson.error.message || 'TX failed');
         return sendJson.result;
       } else {
-        throw new Error('Solana Web3 library not loaded. Please refresh the page and try again.');
+        throw new Error('Solana Web3 not loaded — refresh the page and try again.');
       }
     }
 
@@ -7060,8 +7065,8 @@ var nextTierRow = nextTier
 
       function getPayload() {
         var primary    = walletPublicKey ? walletPublicKey.toBase58() : null;
-        var discordId  = (session && session.profile && session.profile/*discord_id_removed*/undefined)
-                           ? session.profile/*discord_id_removed*/undefined : null;
+        var discordId  = (session && session.profile && session.profile.discord_id)
+                           ? session.profile.discord_id : null;
         var discordTag = (session && session.profile && session.profile.discord)
                            ? session.profile.discord : null;
         return { primary: primary, discordId: discordId, discordTag: discordTag };
