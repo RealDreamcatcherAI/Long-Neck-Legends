@@ -3160,14 +3160,19 @@ var nextTierRow = nextTier
 
       var connection = new Connection(CONFIG.RPC_URL, 'confirmed');
 
+      // walletPublicKey comes from the wallet extension's own bundled web3.js.
+      // Rebuilding it from the address string ensures it belongs to OUR imported
+      // web3.js version — this is what prevents "b.fill is not a function".
+      var fromPubkey = new PublicKey(walletPublicKey.toBase58());
+
       var tx = new Transaction().add(
         SystemProgram.transfer({
-          fromPubkey: walletPublicKey,
+          fromPubkey: fromPubkey,
           toPubkey:   new PublicKey(g_SOL_TREASURY),
           lamports:   lamports
         })
       );
-      tx.feePayer = walletPublicKey;
+      tx.feePayer = fromPubkey;
 
       var bhResult = await connection.getLatestBlockhash('confirmed');
       tx.recentBlockhash = bhResult.blockhash;
