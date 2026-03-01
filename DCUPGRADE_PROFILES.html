@@ -990,13 +990,61 @@ a.plink:hover{
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tweetnacl@1.0.3/nacl.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/buffer.min.js"></script>
+  <!-- Robust Buffer + Solana web3 loader (plain HTML, no build step) -->
   <script>
-    // Buffer polyfill (global) for @solana/web3.js in plain HTML deployments
-    // buffer.min.js defines global Buffer; this line is just a safety net.
-    if (typeof window.Buffer === "undefined" && typeof Buffer !== "undefined") window.Buffer = Buffer;
+    (function () {
+      function loadScript(src) {
+        return new Promise(function (resolve, reject) {
+          var s = document.createElement("script");
+          s.src = src;
+          s.async = false; // keep predictable order
+          s.onload = function () { resolve(src); };
+          s.onerror = function () { reject(new Error("Failed to load " + src)); };
+          document.head.appendChild(s);
+        });
+      }
+
+      async function ensureBuffer() {
+        // If Buffer already exists and has .from, we're good.
+        if (typeof window.Buffer !== "undefined" && typeof window.Buffer.from === "function") return;
+
+        // Try multiple CDNs / builds. Some environments block a CDN intermittently.
+        var candidates = [
+          "https://cdn.jsdelivr.net/npm/buffer@6.0.3/buffer.min.js",
+          "https://unpkg.com/buffer@6.0.3/index.js",
+          "https://cdnjs.cloudflare.com/ajax/libs/buffer/6.0.3/buffer.min.js"
+        ];
+
+        for (var i = 0; i < candidates.length; i++) {
+          try {
+            await loadScript(candidates[i]);
+          } catch (e) {}
+          // buffer libs may expose global Buffer, or global `buffer` object with .Buffer
+          if (typeof window.Buffer === "undefined" && typeof window.buffer !== "undefined" && window.buffer && window.buffer.Buffer) {
+            window.Buffer = window.buffer.Buffer;
+          }
+          if (typeof window.Buffer !== "undefined" && typeof window.Buffer.from === "function") return;
+        }
+
+        throw new Error("Buffer polyfill failed to load. Check adblock/CSP or blocked CDN.");
+      }
+
+      async function loadSolanaWeb3() {
+        if (window.solanaWeb3) return;
+        // Load web3 only after Buffer exists to prevent early crash.
+        await loadScript("https://unpkg.com/@solana/web3.js@1.95.8/lib/index.iife.min.js");
+        if (!window.solanaWeb3) throw new Error("@solana/web3.js failed to initialize");
+      }
+
+      // Kick off immediately
+      ensureBuffer()
+        .then(loadSolanaWeb3)
+        .catch(function (err) {
+          console.error("LNL wallet libs failed to load:", err);
+        });
+    })();
   </script>
-  <script src="https://unpkg.com/@solana/web3.js@1.95.8/lib/index.iife.min.js"></script>
+
 </head>
 
 <body>
