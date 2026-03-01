@@ -7023,40 +7023,27 @@ var nextTierRow = nextTier
 
     /* ================================================================
        LNL_SYNC — Your independent holder-sync module
-       Captures: primary wallet, secondary wallet, discord_id, discord_username
-       into YOUR Supabase. Runs completely isolated from Golf's tables.
+       Writes discord_tag + discord_user_id into YOUR Supabase `profiles`
+       table, looked up via `wallet_links`. Completely isolated from
+       Golf's client — shares the supabase-js lib on the page but uses
+       your own URL + key.
 
-       TO ACTIVATE: Replace the placeholder values below with your real
-       Supabase URL and anon key, then deploy.
+       Matches YOUR existing table columns:
+         profiles.discord_tag      text  ← e.g. "glitcheddream#0"
+         profiles.discord_user_id  text  ← Discord snowflake e.g. "996297..."
 
-       Your `holders` table should have these columns:
-         id              uuid primary key default gen_random_uuid()
-         primary_wallet  text unique not null
-         secondary_wallet text
-         discord_id      text
-         discord_username text
-         updated_at      timestamptz default now()
+       Resolves profile via:
+         wallet_links.wallet       text  ← primary wallet address
+         wallet_links.profile_id   uuid  ← FK to profiles.id
 
-       SQL to create it (run in Supabase SQL editor):
-         CREATE TABLE IF NOT EXISTS holders (
-           id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-           primary_wallet   text UNIQUE NOT NULL,
-           secondary_wallet text,
-           discord_id       text,
-           discord_username text,
-           updated_at       timestamptz DEFAULT now()
-         );
-         ALTER TABLE holders ENABLE ROW LEVEL SECURITY;
-         CREATE POLICY "anon insert" ON holders FOR INSERT TO anon WITH CHECK (true);
-         CREATE POLICY "anon update" ON holders FOR UPDATE TO anon USING (true) WITH CHECK (true);
-         CREATE POLICY "anon select" ON holders FOR SELECT TO anon USING (true);
+       No new tables needed. Just plug in your URL + anon key below.
     ================================================================ */
 
     var LNL_SYNC = (function() {
 
       // ── PLUG YOUR DETAILS IN HERE ──────────────────────────────────
-      var YOUR_SUPA_URL  = 'YOUR_SUPABASE_URL_HERE';   // e.g. https://xyzxyz.supabase.co
-      var YOUR_SUPA_KEY  = 'YOUR_SUPABASE_ANON_KEY_HERE';
+      var YOUR_SUPA_URL = 'YOUR_SUPABASE_URL_HERE';   // e.g. https://xyzxyz.supabase.co
+      var YOUR_SUPA_KEY = 'YOUR_SUPABASE_ANON_KEY_HERE';
       // ───────────────────────────────────────────────────────────────
 
       var _client = null;
@@ -7074,60 +7061,82 @@ var nextTierRow = nextTier
       }
 
       function isConfigured() {
-        return YOUR_SUPA_URL  !== 'https://iogvpjjhpigvvlcoqzre.supabase.co' &&
-               YOUR_SUPA_KEY  !== 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlvZ3ZwampocGlndnZsY29xenJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwNDIzMzIsImV4cCI6MjA4NzYxODMzMn0.5GqxnrVvxiNBqDkE0wcqy1F9VGBNhxkMEqPbHfy87Pg';
+        return YOUR_SUPA_URL !== 'https://iogvpjjhpigvvlcoqzre.supabase.co' &&
+               YOUR_SUPA_KEY !== 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlvZ3ZwampocGlndnZsY29xenJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwNDIzMzIsImV4cCI6MjA4NzYxODMzMn0.5GqxnrVvxiNBqDkE0wcqy1F9VGBNhxkMEqPbHfy87Pg';
       }
 
       function getPayload() {
-        var primary   = walletPublicKey ? walletPublicKey.toBase58() : null;
-        var secondary = (session && session.secondWallet && session.secondWallet.address)
-                          ? session.secondWallet.address : null;
-        var discordId   = (session && session.profile && session.profile.discord_id)
-                            ? session.profile.discord_id   : null;
-        var discordName = (session && session.profile && session.profile.discord)
-                            ? session.profile.discord      : null;
-        return { primary: primary, secondary: secondary, discordId: discordId, discordName: discordName };
+        var primary    = walletPublicKey ? walletPublicKey.toBase58() : null;
+        var discordId  = (session && session.profile && session.profile.discord_id)
+                           ? session.profile.discord_id : null;
+        var discordTag = (session && session.profile && session.profile.discord)
+                           ? session.profile.discord : null;
+        return { primary: primary, discordId: discordId, discordTag: discordTag };
       }
 
       async function push() {
         if (!isConfigured()) {
-          console.info('[LNL_SYNC] Not configured — skipping sync. Add your Supabase URL + key.');
+          console.info('[LNL_SYNC] Not configured — add your Supabase URL + key.');
           return;
         }
         var p = getPayload();
-        if (!p.primary) return; // no wallet = nothing to sync
+        if (!p.primary) return;
 
         var db = getClient();
         if (!db) return;
 
         try {
-          var row = {
-            primary_wallet:   p.primary,
-            secondary_wallet: p.secondary || null,
-            discord_id:       p.discordId || null,
-            discord_username: p.discordName || null,
-            updated_at:       new Date().toISOString()
-          };
-          var res = await db
-            .from('holders')
-            .upsert(row, { onConflict: 'primary_wallet' });
+          // Step 1: resolve profile_id from wallet_links
+          var linkRes = await db
+            .from('wallet_links')
+            .select('profile_id')
+            .eq('wallet', p.primary)
+            .maybeSingle();
 
-          if (res.error) {
-            console.warn('[LNL_SYNC] Upsert error:', res.error.message);
+          if (linkRes.error) {
+            console.warn('[LNL_SYNC] wallet_links lookup error:', linkRes.error.message);
+            return;
+          }
+          if (!linkRes.data || !linkRes.data.profile_id) {
+            console.info('[LNL_SYNC] No profile_id yet for wallet — will retry on next sync.');
+            return;
+          }
+
+          var profileId = linkRes.data.profile_id;
+
+          // Step 2: only update discord fields — never touches anything else
+          var updatePayload = {};
+          if (p.discordId)  updatePayload.discord_user_id = p.discordId;
+          if (p.discordTag) updatePayload.discord_tag     = p.discordTag;
+
+          if (Object.keys(updatePayload).length === 0) {
+            console.info('[LNL_SYNC] No Discord data to sync yet.');
+            return;
+          }
+
+          var updateRes = await db
+            .from('profiles')
+            .update(updatePayload)
+            .eq('id', profileId);
+
+          if (updateRes.error) {
+            console.warn('[LNL_SYNC] profiles update error:', updateRes.error.message);
           } else {
-            console.info('[LNL_SYNC] Synced holder:', p.primary.slice(0,6) + '…',
-              p.secondary ? '| 2nd: ' + p.secondary.slice(0,6) + '…' : '',
-              p.discordId ? '| Discord: ' + p.discordId : '');
+            console.info('[LNL_SYNC] ✅ Synced to profiles:',
+              'discord_user_id=' + (p.discordId || '—'),
+              '| discord_tag=' + (p.discordTag || '—'),
+              '| profile=' + profileId.slice(0,8) + '…'
+            );
           }
         } catch(e) {
           console.warn('[LNL_SYNC] push() error:', e);
         }
       }
 
-      // Debounce so rapid changes (wallet + discord in quick succession) only send once
+      // Debounce — wallet connect + discord connect may fire close together
       function queueSync() {
         if (_syncTimer) clearTimeout(_syncTimer);
-        _syncTimer = setTimeout(push, 600);
+        _syncTimer = setTimeout(push, 800);
       }
 
       return { push: push, queueSync: queueSync };
