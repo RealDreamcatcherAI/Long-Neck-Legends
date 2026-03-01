@@ -4038,7 +4038,6 @@ var nextTierRow = nextTier
       bj_state = 'play';
 
       bj_paint(false);
-      bj_btns();
 
       // Auto-stand on natural 21
       if(bj_hv(bj_hands[0].cards) === 21){
@@ -4046,6 +4045,7 @@ var nextTierRow = nextTier
         await bj_advanceHand();
       }
       bj_busy = false;
+      bj_btns();  // enable buttons AFTER bj_busy is cleared
     }
 
     // HIT
@@ -4057,7 +4057,6 @@ var nextTierRow = nextTier
       bj_busy = true;
       hand.cards.push(bj_deck.pop());
       bj_paint(false);
-      bj_btns();
 
       if(bj_hv(hand.cards) > 21){
         hand.status = 'bust';
@@ -4068,6 +4067,7 @@ var nextTierRow = nextTier
         await bj_advanceHand();
       }
       bj_busy = false;
+      bj_btns();
     }
 
     // STAND
@@ -4080,6 +4080,7 @@ var nextTierRow = nextTier
       hand.status = 'stand';
       await bj_advanceHand();
       bj_busy = false;
+      bj_btns();
     }
 
     // DOUBLE DOWN
@@ -4103,6 +4104,7 @@ var nextTierRow = nextTier
       }
       await bj_advanceHand();
       bj_busy = false;
+      bj_btns();
     }
 
     // SPLIT
@@ -4129,7 +4131,6 @@ var nextTierRow = nextTier
       bj_hands.splice(bj_activeIdx + 1, 0, handB);
 
       bj_paint(false);
-      bj_btns();
 
       // If split aces, each gets one card and auto-stands
       if(BJ_SPLIT_ACE_ONE_CARD && card1.v === 'A'){
@@ -4138,6 +4139,7 @@ var nextTierRow = nextTier
         bj_paint(false);
         await bj_advanceHand();
         bj_busy = false;
+        bj_btns();
         return;
       }
 
@@ -4147,6 +4149,7 @@ var nextTierRow = nextTier
         await bj_advanceHand();
       }
       bj_busy = false;
+      bj_btns();
     }
 
     // RESOLVE ALL HANDS — runs after dealer is done
