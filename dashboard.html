@@ -990,7 +990,9 @@ a.plink:hover{
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tweetnacl@1.0.3/nacl.min.js"></script>
-  <script src="https://unpkg.com/@solana/web3.js@1.95.8/lib/index.iife.min.js" async></script>
+  <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.min.js"></script>
+  <script>if(typeof window.Buffer==='undefined'&&typeof buffer!=='undefined')window.Buffer=buffer.Buffer;</script>
+  <script src="https://unpkg.com/@solana/web3.js@1.95.8/lib/index.iife.min.js"></script>
 </head>
 
 <body>
@@ -1534,9 +1536,7 @@ a.plink:hover{
       var tabLeaderboard = document.getElementById("tabLeaderboard");
       var tabStore = document.getElementById("tabStore");
       if (tabMissions) tabMissions.classList.remove("active");
-      var tabLeaderboard = document.getElementById("tabLeaderboard");
       if (tabLeaderboard) tabLeaderboard.classList.remove("active");
-      var tabStore = document.getElementById("tabStore");
       if (tabStore) tabStore.classList.remove("active");
       var tabVoice = document.getElementById("tabVoice");
       if (tabVoice) tabVoice.classList.remove("active");
@@ -1568,6 +1568,8 @@ a.plink:hover{
       var tabChat    = document.getElementById("tabChat");
       var tabGames   = document.getElementById("tabGames");
       var tabMissions = document.getElementById("tabMissions");
+      var tabLeaderboard = document.getElementById("tabLeaderboard");
+      var tabStore = document.getElementById("tabStore");
       if (tabProfile) tabProfile.classList.remove("active");
       if (tabChat)    tabChat.classList.remove("active");
       if (tabGames)   tabGames.classList.remove("active");
@@ -3177,12 +3179,7 @@ var nextTierRow = nextTier
         if (sendJson.error) throw new Error(sendJson.error.message || 'TX failed');
         return sendJson.result;
       } else {
-        // Fallback: build raw transaction bytes for system transfer
-        var fromBytes = g_b58Decode(from);
-        var toBytes   = g_b58Decode(to);
-        var txBytes   = g_buildSystemTransferTx(fromBytes, toBytes, lamports, g_b58Decode(blockhash));
-        var signed2   = await walletProvider.signTransaction({ serializeMessage: function(){ return txBytes; } });
-        throw new Error('Please include @solana/web3.js for SOL transfers.');
+        throw new Error('Solana Web3 library not loaded. Please refresh the page and try again.');
       }
     }
 
