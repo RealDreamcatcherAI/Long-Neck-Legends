@@ -7089,7 +7089,7 @@ var nextTierRow = nextTier
           var linkRes = await db
             .from('wallet_links')
             .select('profile_id')
-            .eq('wallet', p.primary)
+            .eq('wallet_address', p.primary)
             .maybeSingle();
 
           if (linkRes.error) {
