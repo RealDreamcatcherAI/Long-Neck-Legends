@@ -991,7 +991,11 @@ a.plink:hover{
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tweetnacl@1.0.3/nacl.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.min.js"></script>
-  <script>if(typeof window.Buffer==='undefined'&&typeof buffer!=='undefined')window.Buffer=buffer.Buffer;</script>
+  <script>
+    // Buffer polyfill for browser builds (needed by @solana/web3.js)
+    // Do NOT change app logic — just ensure Buffer is available before web3 loads.
+    window.Buffer = window.Buffer || (window.buffer && (window.buffer.Buffer || window.buffer));
+  </script>
   <script src="https://unpkg.com/@solana/web3.js@1.95.8/lib/index.iife.min.js"></script>
 </head>
 
