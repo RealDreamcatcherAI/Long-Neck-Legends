@@ -990,7 +990,52 @@ a.plink:hover{
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tweetnacl@1.0.3/nacl.min.js"></script>
-  <script src="https://unpkg.com/@solana/web3.js@1.95.8/lib/index.iife.min.js" async></script>
+  <script>
+    // Buffer polyfill — must be defined BEFORE solana/web3.js loads.
+    // We inline a minimal Buffer.from/alloc shim so Phantom's lockdown
+    // script cannot interfere with an external CDN load.
+    (function() {
+      if (typeof window.Buffer !== 'undefined' && typeof window.Buffer.from === 'function') return;
+      var B = {};
+      function fromArray(arr) {
+        var u = new Uint8Array(arr.length);
+        for (var i = 0; i < arr.length; i++) u[i] = arr[i] & 255;
+        return u;
+      }
+      B.from = function(data, enc) {
+        if (typeof data === 'string') {
+          enc = enc || 'utf8';
+          if (enc === 'hex') {
+            var bytes = [];
+            for (var i = 0; i < data.length; i += 2) bytes.push(parseInt(data.substr(i,2),16));
+            return fromArray(bytes);
+          }
+          var str = unescape(encodeURIComponent(data));
+          var out = new Uint8Array(str.length);
+          for (var i = 0; i < str.length; i++) out[i] = str.charCodeAt(i);
+          return out;
+        }
+        if (data instanceof Uint8Array || Array.isArray(data)) return fromArray(data);
+        if (typeof data === 'number') return new Uint8Array(data);
+        return new Uint8Array(0);
+      };
+      B.alloc = function(size, fill) {
+        var u = new Uint8Array(size);
+        if (fill !== undefined) u.fill(fill);
+        return u;
+      };
+      B.allocUnsafe = function(size) { return new Uint8Array(size); };
+      B.isBuffer = function(b) { return b instanceof Uint8Array; };
+      B.concat = function(list, len) {
+        var total = len || list.reduce(function(s,b){ return s + b.length; }, 0);
+        var out = new Uint8Array(total), offset = 0;
+        list.forEach(function(b){ out.set(b, offset); offset += b.length; });
+        return out;
+      };
+      window.Buffer = B;
+    })();
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.73.2/lib/index.iife.min.js"></script>
 </head>
 
 <body>
@@ -1489,8 +1534,7 @@ a.plink:hover{
 
         await loadDashboard();
 
-        // ── LNL_SYNC: push wallet data to your Supabase ──
-        try { LNL_SYNC.queueSync(); } catch(e) {}
+
       } catch (err) {
         console.error("Connect error:", err);
         if (err.code === 4001 || (err.message && err.message.toLowerCase().includes("user rejected"))) {
@@ -1534,9 +1578,7 @@ a.plink:hover{
       var tabLeaderboard = document.getElementById("tabLeaderboard");
       var tabStore = document.getElementById("tabStore");
       if (tabMissions) tabMissions.classList.remove("active");
-      var tabLeaderboard = document.getElementById("tabLeaderboard");
       if (tabLeaderboard) tabLeaderboard.classList.remove("active");
-      var tabStore = document.getElementById("tabStore");
       if (tabStore) tabStore.classList.remove("active");
       var tabVoice = document.getElementById("tabVoice");
       if (tabVoice) tabVoice.classList.remove("active");
@@ -1568,6 +1610,8 @@ a.plink:hover{
       var tabChat    = document.getElementById("tabChat");
       var tabGames   = document.getElementById("tabGames");
       var tabMissions = document.getElementById("tabMissions");
+      var tabLeaderboard = document.getElementById("tabLeaderboard");
+      var tabStore = document.getElementById("tabStore");
       if (tabProfile) tabProfile.classList.remove("active");
       if (tabChat)    tabChat.classList.remove("active");
       if (tabGames)   tabGames.classList.remove("active");
@@ -2129,8 +2173,7 @@ var nextTierRow = nextTier
 
         hideSecondWalletModal();
         alert("2nd wallet linked: " + shortAddr(addr));
-        // ── LNL_SYNC: update your Supabase with new secondary wallet ──
-        try { LNL_SYNC.queueSync(); } catch(e) {}
+
         } catch (err) {
         console.error("Second wallet connect error:", err);
         alert("Failed to link 2nd wallet: " + (err.message || err));
@@ -2202,8 +2245,7 @@ var nextTierRow = nextTier
         session.profile.discord_id = data.id || data.discord_id || ""; // capture the snowflake ID
         saveProfileToStorage();
         refreshBanner();
-        // ── LNL_SYNC: push updated discord ID to your Supabase ──
-        try { LNL_SYNC.queueSync(); } catch(e) {}
+
         alert("Discord connected: " + (session.profile.discord || "connected") + (session.profile.discord_id ? " (ID: " + session.profile.discord_id + ")" : ""));
       }
 
@@ -3169,20 +3211,16 @@ var nextTierRow = nextTier
         }));
         var signed = await walletProvider.signTransaction(tx);
         var rawTx = signed.serialize();
+        var rawTxB64 = btoa(Array.prototype.map.call(rawTx, function(b){ return String.fromCharCode(b); }).join(''));
         var sendRes = await fetch(CONFIG.RPC_URL, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'sendTransaction', params: [btoa(String.fromCharCode(...rawTx)), { encoding: 'base64' }] })
+          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'sendTransaction', params: [rawTxB64, { encoding: 'base64' }] })
         });
         var sendJson = await sendRes.json();
         if (sendJson.error) throw new Error(sendJson.error.message || 'TX failed');
         return sendJson.result;
       } else {
-        // Fallback: build raw transaction bytes for system transfer
-        var fromBytes = g_b58Decode(from);
-        var toBytes   = g_b58Decode(to);
-        var txBytes   = g_buildSystemTransferTx(fromBytes, toBytes, lamports, g_b58Decode(blockhash));
-        var signed2   = await walletProvider.signTransaction({ serializeMessage: function(){ return txBytes; } });
-        throw new Error('Please include @solana/web3.js for SOL transfers.');
+        throw new Error('Solana Web3 library not loaded. Please refresh the page and try again.');
       }
     }
 
@@ -4000,7 +4038,6 @@ var nextTierRow = nextTier
       bj_state = 'play';
 
       bj_paint(false);
-      bj_btns();
 
       // Auto-stand on natural 21
       if(bj_hv(bj_hands[0].cards) === 21){
@@ -4008,6 +4045,7 @@ var nextTierRow = nextTier
         await bj_advanceHand();
       }
       bj_busy = false;
+      bj_btns();  // enable buttons AFTER bj_busy is cleared
     }
 
     // HIT
@@ -4019,7 +4057,6 @@ var nextTierRow = nextTier
       bj_busy = true;
       hand.cards.push(bj_deck.pop());
       bj_paint(false);
-      bj_btns();
 
       if(bj_hv(hand.cards) > 21){
         hand.status = 'bust';
@@ -4030,6 +4067,7 @@ var nextTierRow = nextTier
         await bj_advanceHand();
       }
       bj_busy = false;
+      bj_btns();
     }
 
     // STAND
@@ -4042,6 +4080,7 @@ var nextTierRow = nextTier
       hand.status = 'stand';
       await bj_advanceHand();
       bj_busy = false;
+      bj_btns();
     }
 
     // DOUBLE DOWN
@@ -4065,6 +4104,7 @@ var nextTierRow = nextTier
       }
       await bj_advanceHand();
       bj_busy = false;
+      bj_btns();
     }
 
     // SPLIT
@@ -4091,7 +4131,6 @@ var nextTierRow = nextTier
       bj_hands.splice(bj_activeIdx + 1, 0, handB);
 
       bj_paint(false);
-      bj_btns();
 
       // If split aces, each gets one card and auto-stands
       if(BJ_SPLIT_ACE_ONE_CARD && card1.v === 'A'){
@@ -4100,6 +4139,7 @@ var nextTierRow = nextTier
         bj_paint(false);
         await bj_advanceHand();
         bj_busy = false;
+        bj_btns();
         return;
       }
 
@@ -4109,6 +4149,7 @@ var nextTierRow = nextTier
         await bj_advanceHand();
       }
       bj_busy = false;
+      bj_btns();
     }
 
     // RESOLVE ALL HANDS — runs after dealer is done
@@ -7021,126 +7062,7 @@ var nextTierRow = nextTier
       voice_paintRoom();
     }
 
-    /* ================================================================
-       LNL_SYNC — Your independent holder-sync module
-       Writes discord_tag + discord_user_id into YOUR Supabase `profiles`
-       table, looked up via `wallet_links`. Completely isolated from
-       Golf's client — shares the supabase-js lib on the page but uses
-       your own URL + key.
-
-       Matches YOUR existing table columns:
-         profiles.discord_tag      text  ← e.g. "glitcheddream#0"
-         profiles.discord_user_id  text  ← Discord snowflake e.g. "996297..."
-
-       Resolves profile via:
-         wallet_links.wallet       text  ← primary wallet address
-         wallet_links.profile_id   uuid  ← FK to profiles.id
-
-       No new tables needed. Just plug in your URL + anon key below.
-    ================================================================ */
-
-    var LNL_SYNC = (function() {
-
-      // ── PLUG YOUR DETAILS IN HERE ──────────────────────────────────
-      var YOUR_SUPA_URL = 'https://iogvpjjhpigvvlcoqzre.supabase.co';   // e.g. https://xyzxyz.supabase.co
-      var YOUR_SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlvZ3ZwampocGlndnZsY29xenJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwNDIzMzIsImV4cCI6MjA4NzYxODMzMn0.5GqxnrVvxiNBqDkE0wcqy1F9VGBNhxkMEqPbHfy87Pg';
-      // ───────────────────────────────────────────────────────────────
-
-      var _client = null;
-      var _syncTimer = null;
-
-      function getClient() {
-        if (!_client) {
-          try {
-            _client = supabase.createClient(YOUR_SUPA_URL, YOUR_SUPA_KEY);
-          } catch(e) {
-            console.warn('[LNL_SYNC] Failed to create client:', e);
-          }
-        }
-        return _client;
-      }
-
-      function isConfigured() {
-        return YOUR_SUPA_URL.startsWith('https://') && YOUR_SUPA_KEY.startsWith('eyJ');
-      }
-
-      function getPayload() {
-        var primary    = walletPublicKey ? walletPublicKey.toBase58() : null;
-        var discordId  = (session && session.profile && session.profile.discord_id)
-                           ? session.profile.discord_id : null;
-        var discordTag = (session && session.profile && session.profile.discord)
-                           ? session.profile.discord : null;
-        return { primary: primary, discordId: discordId, discordTag: discordTag };
-      }
-
-      async function push() {
-        if (!isConfigured()) {
-          console.info('[LNL_SYNC] Not configured — add your Supabase URL + key.');
-          return;
-        }
-        var p = getPayload();
-        if (!p.primary) return;
-
-        var db = getClient();
-        if (!db) return;
-
-        try {
-          // Step 1: resolve profile_id from wallet_links
-          var linkRes = await db
-            .from('wallet_links')
-            .select('profile_id')
-            .eq('wallet_address', p.primary)
-            .maybeSingle();
-
-          if (linkRes.error) {
-            console.warn('[LNL_SYNC] wallet_links lookup error:', linkRes.error.message);
-            return;
-          }
-          if (!linkRes.data || !linkRes.data.profile_id) {
-            console.info('[LNL_SYNC] No profile_id yet for wallet — will retry on next sync.');
-            return;
-          }
-
-          var profileId = linkRes.data.profile_id;
-
-          // Step 2: only update discord fields — never touches anything else
-          var updatePayload = {};
-          if (p.discordId)  updatePayload.discord_user_id = p.discordId;
-          if (p.discordTag) updatePayload.discord_tag     = p.discordTag;
-
-          if (Object.keys(updatePayload).length === 0) {
-            console.info('[LNL_SYNC] No Discord data to sync yet.');
-            return;
-          }
-
-          var updateRes = await db
-            .from('profiles')
-            .update(updatePayload)
-            .eq('id', profileId);
-
-          if (updateRes.error) {
-            console.warn('[LNL_SYNC] profiles update error:', updateRes.error.message);
-          } else {
-            console.info('[LNL_SYNC] ✅ Synced to profiles:',
-              'discord_user_id=' + (p.discordId || '—'),
-              '| discord_tag=' + (p.discordTag || '—'),
-              '| profile=' + profileId.slice(0,8) + '…'
-            );
-          }
-        } catch(e) {
-          console.warn('[LNL_SYNC] push() error:', e);
-        }
-      }
-
-      // Debounce — wallet connect + discord connect may fire close together
-      function queueSync() {
-        if (_syncTimer) clearTimeout(_syncTimer);
-        _syncTimer = setTimeout(push, 800);
-      }
-
-      return { push: push, queueSync: queueSync };
-
-    })();
+  
 
   </script>
 </body>
