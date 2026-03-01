@@ -993,8 +993,27 @@ a.plink:hover{
   <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.min.js"></script>
   <script>
     // Buffer polyfill for browser builds (needed by @solana/web3.js)
-    // Do NOT change app logic — just ensure Buffer is available before web3 loads.
-    window.Buffer = window.Buffer || (window.buffer && (window.buffer.Buffer || window.buffer));
+    // Do NOT change app logic — just ensure Buffer.from exists before web3 loads.
+    (function () {
+      // Prefer already-present Buffer
+      if (typeof window.Buffer !== "undefined" && typeof window.Buffer.from === "function") return;
+
+      // jsdelivr buffer UMD often exposes a global `buffer` object (lowercase)
+      try {
+        if (typeof buffer !== "undefined" && buffer && buffer.Buffer && typeof buffer.Buffer.from === "function") {
+          window.Buffer = buffer.Buffer;
+          return;
+        }
+      } catch (e) {}
+
+      // Fallback: if buffer attached to window
+      try {
+        if (window.buffer && window.buffer.Buffer && typeof window.buffer.Buffer.from === "function") {
+          window.Buffer = window.buffer.Buffer;
+          return;
+        }
+      } catch (e) {}
+    })();
   </script>
   <script src="https://unpkg.com/@solana/web3.js@1.95.8/lib/index.iife.min.js"></script>
 </head>
