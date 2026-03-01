@@ -991,8 +991,17 @@ a.plink:hover{
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tweetnacl@1.0.3/nacl.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.min.js"></script>
-  <script>if(typeof window.Buffer==='undefined'&&typeof buffer!=='undefined')window.Buffer=buffer.Buffer;</script>
-  <script src="https://unpkg.com/@solana/web3.js@1.95.8/lib/index.iife.min.js"></script>
+  <script>
+    // Ensure window.Buffer is set before solana/web3.js loads — it needs it internally
+    if (typeof window.Buffer === 'undefined') {
+      if (typeof buffer !== 'undefined' && buffer.Buffer) {
+        window.Buffer = buffer.Buffer;
+      } else if (typeof Buffer !== 'undefined') {
+        window.Buffer = Buffer;
+      }
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.95.8/lib/index.iife.min.js"></script>
 </head>
 
 <body>
@@ -3168,9 +3177,10 @@ var nextTierRow = nextTier
         }));
         var signed = await walletProvider.signTransaction(tx);
         var rawTx = signed.serialize();
+        var rawTxB64 = btoa(Array.prototype.map.call(rawTx, function(b){ return String.fromCharCode(b); }).join(''));
         var sendRes = await fetch(CONFIG.RPC_URL, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'sendTransaction', params: [btoa(String.fromCharCode(...rawTx)), { encoding: 'base64' }] })
+          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'sendTransaction', params: [rawTxB64, { encoding: 'base64' }] })
         });
         var sendJson = await sendRes.json();
         if (sendJson.error) throw new Error(sendJson.error.message || 'TX failed');
