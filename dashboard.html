@@ -990,18 +990,52 @@ a.plink:hover{
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tweetnacl@1.0.3/nacl.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.min.js"></script>
   <script>
-    // Ensure window.Buffer is set before solana/web3.js loads — it needs it internally
-    if (typeof window.Buffer === 'undefined') {
-      if (typeof buffer !== 'undefined' && buffer.Buffer) {
-        window.Buffer = buffer.Buffer;
-      } else if (typeof Buffer !== 'undefined') {
-        window.Buffer = Buffer;
+    // Buffer polyfill — must be defined BEFORE solana/web3.js loads.
+    // We inline a minimal Buffer.from/alloc shim so Phantom's lockdown
+    // script cannot interfere with an external CDN load.
+    (function() {
+      if (typeof window.Buffer !== 'undefined' && typeof window.Buffer.from === 'function') return;
+      var B = {};
+      function fromArray(arr) {
+        var u = new Uint8Array(arr.length);
+        for (var i = 0; i < arr.length; i++) u[i] = arr[i] & 255;
+        return u;
       }
-    }
+      B.from = function(data, enc) {
+        if (typeof data === 'string') {
+          enc = enc || 'utf8';
+          if (enc === 'hex') {
+            var bytes = [];
+            for (var i = 0; i < data.length; i += 2) bytes.push(parseInt(data.substr(i,2),16));
+            return fromArray(bytes);
+          }
+          var str = unescape(encodeURIComponent(data));
+          var out = new Uint8Array(str.length);
+          for (var i = 0; i < str.length; i++) out[i] = str.charCodeAt(i);
+          return out;
+        }
+        if (data instanceof Uint8Array || Array.isArray(data)) return fromArray(data);
+        if (typeof data === 'number') return new Uint8Array(data);
+        return new Uint8Array(0);
+      };
+      B.alloc = function(size, fill) {
+        var u = new Uint8Array(size);
+        if (fill !== undefined) u.fill(fill);
+        return u;
+      };
+      B.allocUnsafe = function(size) { return new Uint8Array(size); };
+      B.isBuffer = function(b) { return b instanceof Uint8Array; };
+      B.concat = function(list, len) {
+        var total = len || list.reduce(function(s,b){ return s + b.length; }, 0);
+        var out = new Uint8Array(total), offset = 0;
+        list.forEach(function(b){ out.set(b, offset); offset += b.length; });
+        return out;
+      };
+      window.Buffer = B;
+    })();
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.95.8/lib/index.iife.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.73.2/lib/index.iife.min.js"></script>
 </head>
 
 <body>
