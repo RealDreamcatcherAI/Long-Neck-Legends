@@ -990,61 +990,9 @@ a.plink:hover{
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tweetnacl@1.0.3/nacl.min.js"></script>
-  <!-- Robust Buffer + Solana web3 loader (plain HTML, no build step) -->
-  <script>
-    (function () {
-      function loadScript(src) {
-        return new Promise(function (resolve, reject) {
-          var s = document.createElement("script");
-          s.src = src;
-          s.async = false; // keep predictable order
-          s.onload = function () { resolve(src); };
-          s.onerror = function () { reject(new Error("Failed to load " + src)); };
-          document.head.appendChild(s);
-        });
-      }
-
-      async function ensureBuffer() {
-        // If Buffer already exists and has .from, we're good.
-        if (typeof window.Buffer !== "undefined" && typeof window.Buffer.from === "function") return;
-
-        // Try multiple CDNs / builds. Some environments block a CDN intermittently.
-        var candidates = [
-          "https://cdn.jsdelivr.net/npm/buffer@6.0.3/buffer.min.js",
-          "https://unpkg.com/buffer@6.0.3/index.js",
-          "https://cdnjs.cloudflare.com/ajax/libs/buffer/6.0.3/buffer.min.js"
-        ];
-
-        for (var i = 0; i < candidates.length; i++) {
-          try {
-            await loadScript(candidates[i]);
-          } catch (e) {}
-          // buffer libs may expose global Buffer, or global `buffer` object with .Buffer
-          if (typeof window.Buffer === "undefined" && typeof window.buffer !== "undefined" && window.buffer && window.buffer.Buffer) {
-            window.Buffer = window.buffer.Buffer;
-          }
-          if (typeof window.Buffer !== "undefined" && typeof window.Buffer.from === "function") return;
-        }
-
-        throw new Error("Buffer polyfill failed to load. Check adblock/CSP or blocked CDN.");
-      }
-
-      async function loadSolanaWeb3() {
-        if (window.solanaWeb3) return;
-        // Load web3 only after Buffer exists to prevent early crash.
-        await loadScript("https://unpkg.com/@solana/web3.js@1.95.8/lib/index.iife.min.js");
-        if (!window.solanaWeb3) throw new Error("@solana/web3.js failed to initialize");
-      }
-
-      // Kick off immediately
-      ensureBuffer()
-        .then(loadSolanaWeb3)
-        .catch(function (err) {
-          console.error("LNL wallet libs failed to load:", err);
-        });
-    })();
-  </script>
-
+  <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.min.js"></script>
+  <script>if(typeof window.Buffer==='undefined'&&typeof buffer!=='undefined')window.Buffer=buffer.Buffer;</script>
+  <script src="https://unpkg.com/@solana/web3.js@1.95.8/lib/index.iife.min.js"></script>
 </head>
 
 <body>
@@ -1288,7 +1236,6 @@ a.plink:hover{
         pfpImage: "",
         x: "",
         discord: "",
-        discord_id: "",
         ledger: ""
       },
       secondWallet: { address: "" },
@@ -1349,8 +1296,7 @@ a.plink:hover{
           session.profile.pfpImage = data.pfpImage || "";
           session.profile.x = data.x || "";
           session.profile.discord = data.discord || "";
-          session.profile.discord_id = data.discord_id || "";
-          session.profile.ledger = data.ledger || "";
+session.profile.ledger = data.ledger || "";
         }
       } catch (e) {}
     }
@@ -1543,9 +1489,6 @@ a.plink:hover{
 
         await loadDashboard();
 
-        // ── LNL_SYNC: push wallet data to your Supabase ──
-        try { LNL_SYNC.queueSync(); } catch(e) {}
-      } catch (err) {
         console.error("Connect error:", err);
         if (err.code === 4001 || (err.message && err.message.toLowerCase().includes("user rejected"))) {
           // User cancelled — no alert needed
@@ -2183,9 +2126,6 @@ var nextTierRow = nextTier
 
         hideSecondWalletModal();
         alert("2nd wallet linked: " + shortAddr(addr));
-        // ── LNL_SYNC: update your Supabase with new secondary wallet ──
-        try { LNL_SYNC.queueSync(); } catch(e) {}
-        } catch (err) {
         console.error("Second wallet connect error:", err);
         alert("Failed to link 2nd wallet: " + (err.message || err));
       }
@@ -2229,13 +2169,6 @@ var nextTierRow = nextTier
       var url = "/api/auth/x/start?wallet=" + encodeURIComponent(walletPublicKey.toBase58());
       openAuthPopup(url, "Connect X");
     }
-
-    function connectDiscord(){
-      if (!walletPublicKey) return alert("Connect wallet first.");
-      var url = "/api/auth/discord/start?wallet=" + encodeURIComponent(walletPublicKey.toBase58());
-      openAuthPopup(url, "Connect Discord");
-    }
-
     window.addEventListener("message", function(ev){
       if (ev.origin !== window.location.origin) return;
 
@@ -2248,17 +2181,8 @@ var nextTierRow = nextTier
         refreshBanner();
         alert("X connected: @" + (data.username || "unknown"));
       }
-
-      if (data.type === "discord_connected") {
-        session.profile.discord = data.username
-          ? (data.username + (data.discriminator ? ("#" + data.discriminator) : ""))
-          : "";
-        session.profile.discord_id = data.id || data.discord_id || ""; // capture the snowflake ID
-        saveProfileToStorage();
-        refreshBanner();
-        // ── LNL_SYNC: push updated discord ID to your Supabase ──
-        try { LNL_SYNC.queueSync(); } catch(e) {}
-        alert("Discord connected: " + (session.profile.discord || "connected") + (session.profile.discord_id ? " (ID: " + session.profile.discord_id + ")" : ""));
+catch(e) {}
+        alert("Discord connected: " + (session.profile.discord || "connected"));
       }
 
       if (data.type === "x_error" || data.type === "discord_error") {
@@ -2348,7 +2272,7 @@ var nextTierRow = nextTier
       if (linkRes.data && linkRes.data.profile_id) {
         var profRes = await db
           .from("profiles")
-          .select("id, username, avatar_url, discord_id, discord_username, created_at")
+          .select("id, username, avatar_url, created_at")
           .eq("id", linkRes.data.profile_id)
           .single();
         if (profRes.error) throw profRes.error;
@@ -2362,7 +2286,7 @@ var nextTierRow = nextTier
           username: (session && session.profile && session.profile.username) ? session.profile.username : null,
           avatar_url: (session && session.profile && session.profile.pfpImage) ? session.profile.pfpImage : null
         })
-        .select("id, username, avatar_url, discord_id, discord_username, created_at")
+        .select("id, username, avatar_url, created_at")
         .single();
 
       if (newProfRes.error) throw newProfRes.error;
@@ -2384,7 +2308,7 @@ var nextTierRow = nextTier
 
       var finalProf = await db
         .from("profiles")
-        .select("id, username, avatar_url, discord_id, discord_username, created_at")
+        .select("id, username, avatar_url, created_at")
         .eq("id", finalLink.data.profile_id)
         .single();
       if (finalProf.error) throw finalProf.error;
@@ -2441,10 +2365,7 @@ var nextTierRow = nextTier
       // Map existing dashboard profile fields -> DB columns that exist
       var payload = {
         username: (session.profile && session.profile.username) ? session.profile.username : null,
-        avatar_url: (session.profile && session.profile.pfpImage) ? session.profile.pfpImage : null,
-        discord_id: (session.profile && session.profile.discord_id) ? session.profile.discord_id : null,
-        discord_username: (session.profile && session.profile.discord) ? session.profile.discord : null
-      };
+        avatar_url: (session.profile && session.profile.pfpImage) ? session.profile.pfpImage : null };
       var res = await db
         .from("profiles")
         .update(payload)
@@ -2460,10 +2381,7 @@ var nextTierRow = nextTier
         // Prefer Supabase values when present
         if (profile.username) session.profile.username = profile.username;
         if (profile.avatar_url) session.profile.pfpImage = profile.avatar_url;
-        if (profile.discord_id) session.profile.discord_id = profile.discord_id;
-        if (profile.discord_username) session.profile.discord = profile.discord_username;
-
-        // Pull linked wallets and set 2nd wallet UI value (first non-primary wallet)
+// Pull linked wallets and set 2nd wallet UI value (first non-primary wallet)
         var wallets = await loadLinkedWallets(profile.id);
         var second = "";
         for (var i = 0; i < wallets.length; i++) {
@@ -3199,84 +3117,41 @@ var nextTierRow = nextTier
     // ── On-chain SOL transfer ──
     async function g_sendSolBet(lamports) {
       if (!walletPublicKey || !walletProvider) throw new Error('Wallet not connected');
-      if (!window.solanaWeb3) throw new Error('Solana Web3 library not loaded. Please refresh the page and try again.');
-
-      // 1) Fetch latest blockhash (kept lightweight; avoids creating a Connection object)
       var res = await fetch(CONFIG.RPC_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: 1,
-          method: 'getLatestBlockhash',
-          params: [{ commitment: 'finalized' }]
-        })
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getLatestBlockhash', params: [{ commitment: 'finalized' }] })
       });
       var bh = await res.json();
-      if (bh && bh.error) throw new Error(bh.error.message || 'RPC getLatestBlockhash failed');
       var blockhash = bh.result.value.blockhash;
       var lastValidBlockHeight = bh.result.value.lastValidBlockHeight;
 
-      // 2) Build a simple SOL transfer tx (legacy Transaction)
-      var tx = new solanaWeb3.Transaction();
-      tx.recentBlockhash = blockhash;
-      tx.feePayer = walletPublicKey;
-      tx.add(solanaWeb3.SystemProgram.transfer({
-        fromPubkey: walletPublicKey,
-        toPubkey: new solanaWeb3.PublicKey(g_SOL_TREASURY),
-        lamports: lamports
-      }));
+      // Build transfer instruction bytes manually
+      var from = walletPublicKey.toBase58();
+      var to   = g_SOL_TREASURY;
 
-      // 3) Prefer wallet-native sign+send if available (best compatibility across Phantom/Solflare/Backpack/MagicEden)
-      //    Fallback to signTransaction + sendTransaction via RPC.
-      var signature = null;
-
-      if (typeof walletProvider.signAndSendTransaction === 'function') {
-        // Most wallets will pop an approval modal here
-        var out = await walletProvider.signAndSendTransaction(tx);
-        signature = out && (out.signature || out);
-      } else if (typeof walletProvider.signTransaction === 'function') {
-        var signed = await walletProvider.signTransaction(tx); // should trigger approval
-        var rawTx = signed.serialize(); // Uint8Array
-        // base64 encode without Buffer dependency
-        var b64 = btoa(String.fromCharCode.apply(null, Array.from(rawTx)));
+      // Use solanaWeb3 if available, else base64 raw tx approach
+      if (window.solanaWeb3) {
+        var tx = new solanaWeb3.Transaction();
+        tx.recentBlockhash = blockhash;
+        tx.feePayer = walletPublicKey;
+        tx.add(solanaWeb3.SystemProgram.transfer({
+          fromPubkey: walletPublicKey,
+          toPubkey: new solanaWeb3.PublicKey(to),
+          lamports: lamports
+        }));
+        var signed = await walletProvider.signTransaction(tx);
+        var rawTx = signed.serialize();
         var sendRes = await fetch(CONFIG.RPC_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            jsonrpc: '2.0',
-            id: 1,
-            method: 'sendTransaction',
-            params: [b64, { encoding: 'base64' }]
-          })
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'sendTransaction', params: [btoa(String.fromCharCode(...rawTx)), { encoding: 'base64' }] })
         });
         var sendJson = await sendRes.json();
-        if (sendJson && sendJson.error) throw new Error(sendJson.error.message || 'TX failed');
-        signature = sendJson.result;
+        if (sendJson.error) throw new Error(sendJson.error.message || 'TX failed');
+        return sendJson.result;
       } else {
-        throw new Error('Wallet does not support signing transactions. Try Phantom/Solflare/Backpack.');
+        throw new Error('Solana Web3 library not loaded. Please refresh the page and try again.');
       }
-
-      if (!signature) throw new Error('No signature returned from wallet');
-
-      // 4) Best-effort confirmation (does not block UI too long)
-      try {
-        await fetch(CONFIG.RPC_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            jsonrpc: '2.0',
-            id: 1,
-            method: 'confirmTransaction',
-            params: [{ signature: signature, blockhash: blockhash, lastValidBlockHeight: lastValidBlockHeight }, 'confirmed']
-          })
-        });
-      } catch (e) {}
-
-      return signature;
     }
-
-    // b58 decode helper
 
     // b58 decode helper
     var g_B58_CHARS = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
@@ -7114,7 +6989,6 @@ var nextTierRow = nextTier
     }
 
     /* ================================================================
-       LNL_SYNC — Your independent holder-sync module
        Writes discord_tag + discord_user_id into YOUR Supabase `profiles`
        table, looked up via `wallet_links`. Completely isolated from
        Golf's client — shares the supabase-js lib on the page but uses
@@ -7130,110 +7004,6 @@ var nextTierRow = nextTier
 
        No new tables needed. Just plug in your URL + anon key below.
     ================================================================ */
-
-    var LNL_SYNC = (function() {
-
-      // ── PLUG YOUR DETAILS IN HERE ──────────────────────────────────
-      var YOUR_SUPA_URL = 'https://iogvpjjhpigvvlcoqzre.supabase.co';   // e.g. https://xyzxyz.supabase.co
-      var YOUR_SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlvZ3ZwampocGlndnZsY29xenJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwNDIzMzIsImV4cCI6MjA4NzYxODMzMn0.5GqxnrVvxiNBqDkE0wcqy1F9VGBNhxkMEqPbHfy87Pg';
-      // ───────────────────────────────────────────────────────────────
-
-      var _client = null;
-      var _syncTimer = null;
-
-      function getClient() {
-        if (!_client) {
-          try {
-            _client = supabase.createClient(YOUR_SUPA_URL, YOUR_SUPA_KEY);
-          } catch(e) {
-            console.warn('[LNL_SYNC] Failed to create client:', e);
-          }
-        }
-        return _client;
-      }
-
-      function isConfigured() {
-        return YOUR_SUPA_URL.startsWith('https://') && YOUR_SUPA_KEY.startsWith('eyJ');
-      }
-
-      function getPayload() {
-        var primary    = walletPublicKey ? walletPublicKey.toBase58() : null;
-        var discordId  = (session && session.profile && session.profile.discord_id)
-                           ? session.profile.discord_id : null;
-        var discordTag = (session && session.profile && session.profile.discord)
-                           ? session.profile.discord : null;
-        return { primary: primary, discordId: discordId, discordTag: discordTag };
-      }
-
-      async function push() {
-        if (!isConfigured()) {
-          console.info('[LNL_SYNC] Not configured — add your Supabase URL + key.');
-          return;
-        }
-        var p = getPayload();
-        if (!p.primary) return;
-
-        var db = getClient();
-        if (!db) return;
-
-        try {
-          // Step 1: resolve profile_id from wallet_links
-          var linkRes = await db
-            .from('wallet_links')
-            .select('profile_id')
-            .eq('wallet_address', p.primary)
-            .maybeSingle();
-
-          if (linkRes.error) {
-            console.warn('[LNL_SYNC] wallet_links lookup error:', linkRes.error.message);
-            return;
-          }
-          if (!linkRes.data || !linkRes.data.profile_id) {
-            console.info('[LNL_SYNC] No profile_id yet for wallet — will retry on next sync.');
-            return;
-          }
-
-          var profileId = linkRes.data.profile_id;
-
-          // Step 2: only update discord fields — never touches anything else
-          var updatePayload = {};
-          if (p.discordId)  updatePayload.discord_user_id = p.discordId;
-          if (p.discordTag) updatePayload.discord_tag     = p.discordTag;
-
-          if (Object.keys(updatePayload).length === 0) {
-            console.info('[LNL_SYNC] No Discord data to sync yet.');
-            return;
-          }
-
-          var updateRes = await db
-            .from('profiles')
-            .update(updatePayload)
-            .eq('id', profileId);
-
-          if (updateRes.error) {
-            console.warn('[LNL_SYNC] profiles update error:', updateRes.error.message);
-          } else {
-            console.info('[LNL_SYNC] ✅ Synced to profiles:',
-              'discord_user_id=' + (p.discordId || '—'),
-              '| discord_tag=' + (p.discordTag || '—'),
-              '| profile=' + profileId.slice(0,8) + '…'
-            );
-          }
-        } catch(e) {
-          console.warn('[LNL_SYNC] push() error:', e);
-        }
-      }
-
-      // Debounce — wallet connect + discord connect may fire close together
-      function queueSync() {
-        if (_syncTimer) clearTimeout(_syncTimer);
-        _syncTimer = setTimeout(push, 800);
-      }
-
-      return { push: push, queueSync: queueSync };
-
-    })();
-
   </script>
 </body>
 </html>
