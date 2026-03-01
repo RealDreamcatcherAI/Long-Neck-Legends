@@ -3113,7 +3113,7 @@ var nextTierRow = nextTier
         var res = await fetch(CONFIG.RPC_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getBalance', params: [walletPublicKey.toBase58(), { commitment: 'confirmed' }] })
+          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getBalance', params: [walletPublicKey.toBase58()] })
         });
         var json = await res.json();
         return (json && json.result && json.result.value != null) ? json.result.value / 1e9 : null;
@@ -3145,49 +3145,42 @@ var nextTierRow = nextTier
     }
 
     // ── On-chain SOL transfer ──
-    // Uses the same dynamic-import pattern as store.html (confirmed working).
     async function g_sendSolBet(lamports) {
       if (!walletPublicKey || !walletProvider) throw new Error('Wallet not connected');
-      if (!walletProvider.signTransaction) throw new Error('Your wallet does not support signTransaction. Try Phantom or Solflare.');
+      var res = await fetch(CONFIG.RPC_URL, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getLatestBlockhash', params: [{ commitment: 'finalized' }] })
+      });
+      var bh = await res.json();
+      var blockhash = bh.result.value.blockhash;
+      var lastValidBlockHeight = bh.result.value.lastValidBlockHeight;
 
-      // Dynamic import — same as store.html, which is the confirmed-working pattern.
-      // This avoids all issues with the IIFE global and manual base64 encoding.
-      var web3 = await import('https://esm.sh/@solana/web3.js@1.95.2');
-      var Connection    = web3.Connection;
-      var PublicKey     = web3.PublicKey;
-      var Transaction   = web3.Transaction;
-      var SystemProgram = web3.SystemProgram;
+      // Build transfer instruction bytes manually
+      var from = walletPublicKey.toBase58();
+      var to   = g_SOL_TREASURY;
 
-      var connection = new Connection(CONFIG.RPC_URL, 'confirmed');
-
-      // walletPublicKey comes from the wallet extension's own bundled web3.js.
-      // Rebuilding it from the address string ensures it belongs to OUR imported
-      // web3.js version — this is what prevents "b.fill is not a function".
-      var fromPubkey = new PublicKey(walletPublicKey.toBase58());
-
-      var tx = new Transaction().add(
-        SystemProgram.transfer({
-          fromPubkey: fromPubkey,
-          toPubkey:   new PublicKey(g_SOL_TREASURY),
-          lamports:   lamports
-        })
-      );
-      tx.feePayer = fromPubkey;
-
-      var bhResult = await connection.getLatestBlockhash('confirmed');
-      tx.recentBlockhash = bhResult.blockhash;
-
-      var signed = await walletProvider.signTransaction(tx);
-      var sig    = await connection.sendRawTransaction(signed.serialize());
-
-      // Wait for on-chain confirmation before returning
-      await connection.confirmTransaction({
-        signature:            sig,
-        blockhash:            bhResult.blockhash,
-        lastValidBlockHeight: bhResult.lastValidBlockHeight
-      }, 'confirmed');
-
-      return sig;
+      // Use solanaWeb3 if available, else base64 raw tx approach
+      if (window.solanaWeb3) {
+        var tx = new solanaWeb3.Transaction();
+        tx.recentBlockhash = blockhash;
+        tx.feePayer = walletPublicKey;
+        tx.add(solanaWeb3.SystemProgram.transfer({
+          fromPubkey: walletPublicKey,
+          toPubkey: new solanaWeb3.PublicKey(to),
+          lamports: lamports
+        }));
+        var signed = await walletProvider.signTransaction(tx);
+        var rawTx = signed.serialize();
+        var sendRes = await fetch(CONFIG.RPC_URL, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'sendTransaction', params: [btoa(String.fromCharCode(...rawTx)), { encoding: 'base64' }] })
+        });
+        var sendJson = await sendRes.json();
+        if (sendJson.error) throw new Error(sendJson.error.message || 'TX failed');
+        return sendJson.result;
+      } else {
+        throw new Error('Solana Web3 library not loaded. Please refresh the page and try again.');
+      }
     }
 
     // b58 decode helper
@@ -3678,20 +3671,15 @@ var nextTierRow = nextTier
     }
 
     async function g_runBet(betAmt, currency) {
-      if (!walletPublicKey || !walletProvider) throw new Error('Wallet not connected — please connect your wallet first.');
-      if (isNaN(betAmt) || betAmt <= 0) throw new Error('Invalid bet amount.');
-
+      // Validate
       if (currency === 'sol') {
         var solBal = await g_fetchSolBalance();
-        if (solBal === null) throw new Error('Could not read SOL balance — check your connection and try again.');
-        var needed = betAmt + 0.002;
-        if (solBal < needed) throw new Error('Not enough SOL — need ' + needed.toFixed(3) + ' ◎ (you have ' + solBal.toFixed(3) + ' ◎)');
+        if (solBal === null || solBal < betAmt + 0.002) throw new Error('Insufficient SOL (need ' + (betAmt+0.002).toFixed(3) + ' ◎ incl. fee)');
         var lamports = Math.round(betAmt * 1e9);
         await g_sendSolBet(lamports);
       } else {
         var cabBal = await g_fetchCabbageBalance();
-        if (cabBal === null) throw new Error('Could not read Cabbage balance — try again in a moment.');
-        if (cabBal < betAmt) throw new Error('Not enough Cabbage — need ' + betAmt.toLocaleString() + ' 🥬 (you have ' + Math.floor(cabBal).toLocaleString() + ' 🥬)');
+        if (cabBal === null || cabBal < betAmt) throw new Error('Insufficient Cabbage balance (' + Math.floor(cabBal||0) + ' 🥬)');
         await g_spendCabbage(betAmt);
       }
     }
