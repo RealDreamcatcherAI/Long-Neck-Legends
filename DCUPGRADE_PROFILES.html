@@ -990,6 +990,8 @@ a.plink:hover{
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tweetnacl@1.0.3/nacl.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.min.js"></script>
+  <script>if(typeof window.Buffer==='undefined'&&typeof buffer!=='undefined')window.Buffer=buffer.Buffer;</script>
   <script src="https://unpkg.com/@solana/web3.js@1.95.8/lib/index.iife.min.js"></script>
 </head>
 
@@ -2994,7 +2996,12 @@ var nextTierRow = nextTier
         var sb = g_getSb();
         var stR = await sb.from('prize_state').select('sol_round,cab_round').eq('id', 1).maybeSingle();
         var round = 1;
-        if (stR.data) round = currency === 'sol' ? stR.data.sol_round : stR.data.cab_round;
+        if (stR.data) {
+          round = currency === 'sol' ? stR.data.sol_round : stR.data.cab_round;
+        } else {
+          // Initialize prize_state row if it doesn't exist
+          try { await sb.from('prize_state').insert({ id: 1, sol_round: 1, cab_round: 1 }); } catch(e2) {}
+        }
         await sb.from('game_bets').insert({
           wallet:       walletPublicKey.toBase58(),
           game:         game,
@@ -3111,11 +3118,14 @@ var nextTierRow = nextTier
         var res = await fetch(CONFIG.RPC_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getBalance', params: [walletPublicKey.toBase58()] })
+          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getBalance',
+            params: [walletPublicKey.toBase58(), { commitment: 'confirmed' }] })
         });
+        if (!res.ok) { console.warn('g_fetchSolBalance HTTP', res.status); return null; }
         var json = await res.json();
+        if (json.error) { console.warn('g_fetchSolBalance RPC error:', json.error); return null; }
         return (json && json.result && json.result.value != null) ? json.result.value / 1e9 : null;
-      } catch(e) { return null; }
+      } catch(e) { console.warn('g_fetchSolBalance error:', e); return null; }
     }
 
     async function g_fetchCabbageBalance() {
@@ -3145,40 +3155,53 @@ var nextTierRow = nextTier
     // ── On-chain SOL transfer ──
     async function g_sendSolBet(lamports) {
       if (!walletPublicKey || !walletProvider) throw new Error('Wallet not connected');
-      var res = await fetch(CONFIG.RPC_URL, {
+      if (!walletProvider.signTransaction) throw new Error('This wallet does not support transaction signing. Try Phantom or Solflare.');
+
+      // @solana/web3.js IIFE exposes as window.solanaWeb3
+      var web3 = window.solanaWeb3;
+      if (!web3 || !web3.Transaction) throw new Error('Solana Web3 library not loaded. Please refresh the page.');
+
+      // Fetch latest blockhash
+      var bhRes = await fetch(CONFIG.RPC_URL, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getLatestBlockhash', params: [{ commitment: 'finalized' }] })
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getLatestBlockhash', params: [{ commitment: 'confirmed' }] })
       });
-      var bh = await res.json();
-      var blockhash = bh.result.value.blockhash;
-      var lastValidBlockHeight = bh.result.value.lastValidBlockHeight;
+      var bhJson = await bhRes.json();
+      if (bhJson.error) throw new Error('Could not fetch blockhash: ' + (bhJson.error.message || 'RPC error'));
+      var blockhash = bhJson.result.value.blockhash;
+      var lastValidBlockHeight = bhJson.result.value.lastValidBlockHeight;
 
-      // Build transfer instruction bytes manually
-      var from = walletPublicKey.toBase58();
-      var to   = g_SOL_TREASURY;
+      // Build the transfer transaction
+      var tx = new web3.Transaction();
+      tx.recentBlockhash = blockhash;
+      tx.feePayer = walletPublicKey;
+      tx.add(web3.SystemProgram.transfer({
+        fromPubkey: walletPublicKey,
+        toPubkey: new web3.PublicKey(g_SOL_TREASURY),
+        lamports: lamports
+      }));
 
-      // Use solanaWeb3 if available, else base64 raw tx approach
-      if (window.solanaWeb3) {
-        var tx = new solanaWeb3.Transaction();
-        tx.recentBlockhash = blockhash;
-        tx.feePayer = walletPublicKey;
-        tx.add(solanaWeb3.SystemProgram.transfer({
-          fromPubkey: walletPublicKey,
-          toPubkey: new solanaWeb3.PublicKey(to),
-          lamports: lamports
-        }));
-        var signed = await walletProvider.signTransaction(tx);
-        var rawTx = signed.serialize();
-        var sendRes = await fetch(CONFIG.RPC_URL, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'sendTransaction', params: [btoa(String.fromCharCode(...rawTx)), { encoding: 'base64' }] })
-        });
-        var sendJson = await sendRes.json();
-        if (sendJson.error) throw new Error(sendJson.error.message || 'TX failed');
-        return sendJson.result;
-      } else {
-        throw new Error('Solana Web3 library not loaded. Please refresh the page and try again.');
+      // Sign
+      var signed = await walletProvider.signTransaction(tx);
+      var rawTx = signed.serialize();
+
+      // IMPORTANT: Do NOT use spread (...rawTx) — it crashes for arrays > ~125k elements.
+      // Convert Uint8Array to base64 safely using chunked approach.
+      var chunks = [];
+      for (var i = 0; i < rawTx.length; i += 8192) {
+        chunks.push(String.fromCharCode.apply(null, rawTx.subarray(i, i + 8192)));
       }
+      var rawB64 = btoa(chunks.join(''));
+
+      // Send
+      var sendRes = await fetch(CONFIG.RPC_URL, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'sendTransaction',
+          params: [rawB64, { encoding: 'base64', skipPreflight: false, preflightCommitment: 'confirmed' }] })
+      });
+      var sendJson = await sendRes.json();
+      if (sendJson.error) throw new Error('Transaction failed: ' + (sendJson.error.message || JSON.stringify(sendJson.error)));
+      return sendJson.result; // tx signature
     }
 
     // b58 decode helper
@@ -3669,15 +3692,21 @@ var nextTierRow = nextTier
     }
 
     async function g_runBet(betAmt, currency) {
-      // Validate
+      // Guard: wallet must be connected
+      if (!walletPublicKey || !walletProvider) throw new Error('Wallet not connected. Connect your wallet first.');
+      if (isNaN(betAmt) || betAmt <= 0) throw new Error('Invalid bet amount.');
+
       if (currency === 'sol') {
         var solBal = await g_fetchSolBalance();
-        if (solBal === null || solBal < betAmt + 0.002) throw new Error('Insufficient SOL (need ' + (betAmt+0.002).toFixed(3) + ' ◎ incl. fee)');
+        if (solBal === null) throw new Error('Could not read SOL balance — check your connection and try again.');
+        var needed = betAmt + 0.002;
+        if (solBal < needed) throw new Error('Insufficient SOL — need ' + needed.toFixed(3) + ' ◎ (have ' + solBal.toFixed(3) + ' ◎)');
         var lamports = Math.round(betAmt * 1e9);
         await g_sendSolBet(lamports);
       } else {
         var cabBal = await g_fetchCabbageBalance();
-        if (cabBal === null || cabBal < betAmt) throw new Error('Insufficient Cabbage balance (' + Math.floor(cabBal||0) + ' 🥬)');
+        if (cabBal === null) throw new Error('Could not read Cabbage balance — try again in a moment.');
+        if (cabBal < betAmt) throw new Error('Insufficient Cabbage — need ' + betAmt.toLocaleString() + ' 🥬 (have ' + Math.floor(cabBal).toLocaleString() + ' 🥬)');
         await g_spendCabbage(betAmt);
       }
     }
