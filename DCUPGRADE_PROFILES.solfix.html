@@ -990,17 +990,52 @@ a.plink:hover{
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tweetnacl@1.0.3/nacl.min.js"></script>
-  <!-- Polyfills required by @solana/web3.js in browser -->
-  <script>window.global=window;window.process=window.process||{env:{},version:''};</script>
-  <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.min.js"></script>
-  <script>window.Buffer=window.Buffer||buffer.Buffer;</script>
-  <script src="https://unpkg.com/@solana/web3.js@1.95.8/lib/index.iife.min.js"></script>
-
-  <!-- Solana web3 (UMD) + Buffer polyfill for browser-only deployments -->
-  <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.min.js"></script>
-  <script>window.Buffer = window.Buffer || (window.buffer && window.buffer.Buffer);</script>
-  <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.95.8/lib/index.iife.min.js"></script>
-
+  <script>
+    // Buffer polyfill — must be defined BEFORE solana/web3.js loads.
+    // We inline a minimal Buffer.from/alloc shim so Phantom's lockdown
+    // script cannot interfere with an external CDN load.
+    (function() {
+      if (typeof window.Buffer !== 'undefined' && typeof window.Buffer.from === 'function') return;
+      var B = {};
+      function fromArray(arr) {
+        var u = new Uint8Array(arr.length);
+        for (var i = 0; i < arr.length; i++) u[i] = arr[i] & 255;
+        return u;
+      }
+      B.from = function(data, enc) {
+        if (typeof data === 'string') {
+          enc = enc || 'utf8';
+          if (enc === 'hex') {
+            var bytes = [];
+            for (var i = 0; i < data.length; i += 2) bytes.push(parseInt(data.substr(i,2),16));
+            return fromArray(bytes);
+          }
+          var str = unescape(encodeURIComponent(data));
+          var out = new Uint8Array(str.length);
+          for (var i = 0; i < str.length; i++) out[i] = str.charCodeAt(i);
+          return out;
+        }
+        if (data instanceof Uint8Array || Array.isArray(data)) return fromArray(data);
+        if (typeof data === 'number') return new Uint8Array(data);
+        return new Uint8Array(0);
+      };
+      B.alloc = function(size, fill) {
+        var u = new Uint8Array(size);
+        if (fill !== undefined) u.fill(fill);
+        return u;
+      };
+      B.allocUnsafe = function(size) { return new Uint8Array(size); };
+      B.isBuffer = function(b) { return b instanceof Uint8Array; };
+      B.concat = function(list, len) {
+        var total = len || list.reduce(function(s,b){ return s + b.length; }, 0);
+        var out = new Uint8Array(total), offset = 0;
+        list.forEach(function(b){ out.set(b, offset); offset += b.length; });
+        return out;
+      };
+      window.Buffer = B;
+    })();
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.73.2/lib/index.iife.min.js"></script>
 </head>
 
 <body>
@@ -1028,6 +1063,7 @@ a.plink:hover{
         <button class="dash-tab" id="tabStore" onclick="switchView('store')">🛒 Store</button>
         <button class="dash-tab" id="tabLeaderboard" onclick="switchView('leaderboard')">🏆</button>
         <button class="dash-tab" id="tabVoice" onclick="switchView('voice')">🎙️ Voice</button>
+        <button class="dash-tab" id="tabPets" onclick="switchView('pets')">🥚 Pets</button>
       </div>
 
       <div class="dash-right">
@@ -1061,6 +1097,7 @@ a.plink:hover{
     <div class="view" id="view-leaderboard"></div>
     <div class="view" id="view-store"></div>
     <div class="view" id="view-voice"></div>
+    <div class="view" id="view-pets"></div>
   </div>
 
   <!-- PFP MODAL -->
@@ -1499,8 +1536,7 @@ a.plink:hover{
 
         await loadDashboard();
 
-        // ── LNL_SYNC: push wallet data to your Supabase ──
-        try { LNL_SYNC.queueSync(); } catch(e) {}
+
       } catch (err) {
         console.error("Connect error:", err);
         if (err.code === 4001 || (err.message && err.message.toLowerCase().includes("user rejected"))) {
@@ -1531,6 +1567,7 @@ a.plink:hover{
       var vl = document.getElementById("view-leaderboard"); if (vl) vl.classList.remove("show");
       var vs = document.getElementById("view-store"); if (vs) vs.classList.remove("show");
       var vv = document.getElementById("view-voice"); if (vv) vv.classList.remove("show");
+      var vpe = document.getElementById("view-pets"); if (vpe) vpe.classList.remove("show");
       voice_leave();
 
       session.profilePanelOpen = false;
@@ -1563,6 +1600,7 @@ a.plink:hover{
       var vl = document.getElementById("view-leaderboard");
       var vs = document.getElementById("view-store");
       var vv = document.getElementById("view-voice");
+      var vpe = document.getElementById("view-pets");
       if (vp) vp.classList.remove("show");
       if (vc) vc.classList.remove("show");
       if (vg) vg.classList.remove("show");
@@ -1570,6 +1608,7 @@ a.plink:hover{
       if (vl) vl.classList.remove("show");
       if (vs) vs.classList.remove("show");
       if (vv) vv.classList.remove("show");
+      if (vpe) vpe.classList.remove("show");
 
       // Deactivate all tabs
       var tabProfile = document.getElementById("tabProfile");
@@ -1586,6 +1625,8 @@ a.plink:hover{
       if (tabStore) tabStore.classList.remove("active");
       var tabVoice = document.getElementById("tabVoice");
       if (tabVoice) tabVoice.classList.remove("active");
+      var tabPets = document.getElementById("tabPets");
+      if (tabPets) tabPets.classList.remove("active");
 
       if (viewName === "profile") {
         stopChatPoll();
@@ -1632,6 +1673,13 @@ a.plink:hover{
         if (vv) vv.classList.add("show");
         if (tabVoice) tabVoice.classList.add("active");
         renderVoiceUI();
+      }
+
+      if (viewName === "pets") {
+        stopChatPoll();
+        if (vpe) vpe.classList.add("show");
+        if (tabPets) tabPets.classList.add("active");
+        renderPetsUI();
       }
 
       // Update voice tab indicator — show live dot whenever in a room, regardless of active tab
@@ -2139,8 +2187,7 @@ var nextTierRow = nextTier
 
         hideSecondWalletModal();
         alert("2nd wallet linked: " + shortAddr(addr));
-        // ── LNL_SYNC: update your Supabase with new secondary wallet ──
-        try { LNL_SYNC.queueSync(); } catch(e) {}
+
         } catch (err) {
         console.error("Second wallet connect error:", err);
         alert("Failed to link 2nd wallet: " + (err.message || err));
@@ -2212,8 +2259,7 @@ var nextTierRow = nextTier
         session.profile.discord_id = data.id || data.discord_id || ""; // capture the snowflake ID
         saveProfileToStorage();
         refreshBanner();
-        // ── LNL_SYNC: push updated discord ID to your Supabase ──
-        try { LNL_SYNC.queueSync(); } catch(e) {}
+
         alert("Discord connected: " + (session.profile.discord || "connected") + (session.profile.discord_id ? " (ID: " + session.profile.discord_id + ")" : ""));
       }
 
@@ -2263,7 +2309,7 @@ var nextTierRow = nextTier
     ================================================================ */
 
     var SUPA_URL = 'https://hypqndasopdkrqvkllvc.supabase.co';
-    var SUPA_KEY = 'sb_publishable_DwaaLS_hFJAOZ6M9VmYKYA_AQvyfgv1';
+    var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5cHFuZGFzb3Bka3JxdmtsbHZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5NTI1NjEsImV4cCI6MjA4NzUyODU2MX0.jXLaLfFudJf-xytfHAvMe5oV0DVeWi7xNB53Ib0GD_s';
     var supaClient  = null;
     var chatChannel = null;   // real-time subscription
     var chatMsgs    = [];     // [{id, wallet, username, text, created_at}]
@@ -2304,7 +2350,7 @@ var nextTierRow = nextTier
       if (linkRes.data && linkRes.data.profile_id) {
         var profRes = await db
           .from("profiles")
-          .select("id, username, avatar_url, created_at")
+          .select("id, username, avatar_url, discord_id, discord_username, created_at")
           .eq("id", linkRes.data.profile_id)
           .single();
         if (profRes.error) throw profRes.error;
@@ -2318,7 +2364,7 @@ var nextTierRow = nextTier
           username: (session && session.profile && session.profile.username) ? session.profile.username : null,
           avatar_url: (session && session.profile && session.profile.pfpImage) ? session.profile.pfpImage : null
         })
-        .select("id, username, avatar_url, created_at")
+        .select("id, username, avatar_url, discord_id, discord_username, created_at")
         .single();
 
       if (newProfRes.error) throw newProfRes.error;
@@ -2340,7 +2386,7 @@ var nextTierRow = nextTier
 
       var finalProf = await db
         .from("profiles")
-        .select("id, username, avatar_url, created_at")
+        .select("id, username, avatar_url, discord_id, discord_username, created_at")
         .eq("id", finalLink.data.profile_id)
         .single();
       if (finalProf.error) throw finalProf.error;
@@ -3179,15 +3225,16 @@ var nextTierRow = nextTier
         }));
         var signed = await walletProvider.signTransaction(tx);
         var rawTx = signed.serialize();
+        var rawTxB64 = btoa(Array.prototype.map.call(rawTx, function(b){ return String.fromCharCode(b); }).join(''));
         var sendRes = await fetch(CONFIG.RPC_URL, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'sendTransaction', params: [btoa(String.fromCharCode(...rawTx)), { encoding: 'base64' }] })
+          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'sendTransaction', params: [rawTxB64, { encoding: 'base64' }] })
         });
         var sendJson = await sendRes.json();
         if (sendJson.error) throw new Error(sendJson.error.message || 'TX failed');
         return sendJson.result;
       } else {
-        throw new Error('Solana Web3 not loaded — refresh the page and try again.');
+        throw new Error('Solana Web3 library not loaded. Please refresh the page and try again.');
       }
     }
 
@@ -4005,7 +4052,6 @@ var nextTierRow = nextTier
       bj_state = 'play';
 
       bj_paint(false);
-      bj_btns();
 
       // Auto-stand on natural 21
       if(bj_hv(bj_hands[0].cards) === 21){
@@ -4013,6 +4059,7 @@ var nextTierRow = nextTier
         await bj_advanceHand();
       }
       bj_busy = false;
+      bj_btns();  // enable buttons AFTER bj_busy is cleared
     }
 
     // HIT
@@ -4024,7 +4071,6 @@ var nextTierRow = nextTier
       bj_busy = true;
       hand.cards.push(bj_deck.pop());
       bj_paint(false);
-      bj_btns();
 
       if(bj_hv(hand.cards) > 21){
         hand.status = 'bust';
@@ -4035,6 +4081,7 @@ var nextTierRow = nextTier
         await bj_advanceHand();
       }
       bj_busy = false;
+      bj_btns();
     }
 
     // STAND
@@ -4047,6 +4094,7 @@ var nextTierRow = nextTier
       hand.status = 'stand';
       await bj_advanceHand();
       bj_busy = false;
+      bj_btns();
     }
 
     // DOUBLE DOWN
@@ -4070,6 +4118,7 @@ var nextTierRow = nextTier
       }
       await bj_advanceHand();
       bj_busy = false;
+      bj_btns();
     }
 
     // SPLIT
@@ -4096,7 +4145,6 @@ var nextTierRow = nextTier
       bj_hands.splice(bj_activeIdx + 1, 0, handB);
 
       bj_paint(false);
-      bj_btns();
 
       // If split aces, each gets one card and auto-stands
       if(BJ_SPLIT_ACE_ONE_CARD && card1.v === 'A'){
@@ -4105,6 +4153,7 @@ var nextTierRow = nextTier
         bj_paint(false);
         await bj_advanceHand();
         bj_busy = false;
+        bj_btns();
         return;
       }
 
@@ -4114,6 +4163,7 @@ var nextTierRow = nextTier
         await bj_advanceHand();
       }
       bj_busy = false;
+      bj_btns();
     }
 
     // RESOLVE ALL HANDS — runs after dealer is done
@@ -7027,125 +7077,686 @@ var nextTierRow = nextTier
     }
 
     /* ================================================================
-       LNL_SYNC — Your independent holder-sync module
-       Writes discord_tag + discord_user_id into YOUR Supabase `profiles`
-       table, looked up via `wallet_links`. Completely isolated from
-       Golf's client — shares the supabase-js lib on the page but uses
-       your own URL + key.
+       🥚 PETS — Egg mint detection + XP growth system
+       ---------------------------------------------------------------
+       Stages (by total XP):
+         0–99    → Egg          (pet_egg.gif)
+         100–499 → Cracked Egg  (pet_crackedegg.gif)
+         500–999 → Hatchling    (pet_hatchling.gif)
+        1000–2999→ Juvenile     (pet_juvenile.gif)
+        3000+    → Legend       (pet_legend.gif)
 
-       Matches YOUR existing table columns:
-         profiles.discord_tag      text  ← e.g. "glitcheddream#0"
-         profiles.discord_user_id  text  ← Discord snowflake e.g. "996297..."
+       XP Sources:
+         - Feed: costs 10 🥬 Cabbage → +25 XP (1hr cooldown)
+         - Passive: +2 XP per LNL NFT held per day (ticked on tab open)
 
-       Resolves profile via:
-         wallet_links.wallet       text  ← primary wallet address
-         wallet_links.profile_id   uuid  ← FK to profiles.id
+       Supabase table: pet_xp
+         wallet text PK, xp int, last_fed_at timestamptz,
+         passive_start timestamptz, last_passive_at timestamptz
 
-       No new tables needed. Just plug in your URL + anon key below.
+       Candy Machine: set CONFIG.EGG_CANDY_MACHINE when ready.
+       Egg collection: set CONFIG.EGG_COLLECTION_MINT when ready.
     ================================================================ */
 
-    var LNL_SYNC = (function() {
+    // ── CONFIG additions (fill these in when Sugar deploy is done) ──
+    CONFIG.EGG_CANDY_MACHINE  = "";   // ← paste Candy Machine ID here
+    CONFIG.EGG_COLLECTION_MINT = "";  // ← paste egg collection mint here
 
-      // ── PLUG YOUR DETAILS IN HERE ──────────────────────────────────
-      var YOUR_SUPA_URL = 'https://iogvpjjhpigvvlcoqzre.supabase.co';   // e.g. https://xyzxyz.supabase.co
-      var YOUR_SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlvZ3ZwampocGlndnZsY29xenJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwNDIzMzIsImV4cCI6MjA4NzYxODMzMn0.5GqxnrVvxiNBqDkE0wcqy1F9VGBNhxkMEqPbHfy87Pg';
-      // ───────────────────────────────────────────────────────────────
+    // ── Supabase Storage GIF URLs ──
+    var PET_BASE = "https://hypqndasopdkrqvkllvc.supabase.co/storage/v1/object/public/pets/";
+    var PET_STAGES = [
+      { name: "Egg",         minXP: 0,    gif: PET_BASE + "pet_egg.gif" },
+      { name: "Cracked Egg", minXP: 100,  gif: PET_BASE + "pet_crackedegg.gif" },
+      { name: "Hatchling",   minXP: 500,  gif: PET_BASE + "pet_hatchling.gif" },
+      { name: "Juvenile",    minXP: 1000, gif: PET_BASE + "pet_juvenile.gif" },
+      { name: "Legend",      minXP: 3000, gif: PET_BASE + "pet_legend.gif" }
+    ];
 
-      var _client = null;
-      var _syncTimer = null;
+    var PET_FEED_COST     = 10;   // cabbage per feed
+    var PET_FEED_XP       = 25;   // XP awarded per feed
+    var PET_FEED_COOLDOWN = 60;   // minutes between feeds
+    var PET_PASSIVE_XP_PER_NFT_PER_DAY = 2;
 
-      function getClient() {
-        if (!_client) {
-          try {
-            _client = supabase.createClient(YOUR_SUPA_URL, YOUR_SUPA_KEY);
-          } catch(e) {
-            console.warn('[LNL_SYNC] Failed to create client:', e);
-          }
+    // ── Runtime state ──
+    var pet_data = null;   // { xp, last_fed_at, last_passive_at }
+    var pet_eggNFT = null; // the egg NFT found in wallet, or null
+
+    // ── Helpers ──
+    function pet_getStage(xp) {
+      var stage = PET_STAGES[0];
+      for (var i = PET_STAGES.length - 1; i >= 0; i--) {
+        if (xp >= PET_STAGES[i].minXP) { stage = PET_STAGES[i]; break; }
+      }
+      return stage;
+    }
+
+    function pet_getNextStage(currentStage) {
+      var idx = PET_STAGES.findIndex(function(s) { return s.name === currentStage.name; });
+      return idx < PET_STAGES.length - 1 ? PET_STAGES[idx + 1] : null;
+    }
+
+    function pet_xpToNextStage(xp) {
+      var next = pet_getNextStage(pet_getStage(xp));
+      return next ? next.minXP - xp : 0;
+    }
+
+    function pet_feedCooldownRemaining(lastFedAt) {
+      if (!lastFedAt) return 0;
+      var last = new Date(lastFedAt).getTime();
+      var cooldownMs = PET_FEED_COOLDOWN * 60 * 1000;
+      var remaining = cooldownMs - (Date.now() - last);
+      return Math.max(0, remaining);
+    }
+
+    function pet_fmtCooldown(ms) {
+      if (ms <= 0) return "";
+      var totalSec = Math.ceil(ms / 1000);
+      var m = Math.floor(totalSec / 60);
+      var s = totalSec % 60;
+      return m + "m " + s + "s";
+    }
+
+    // ── Scan wallet for an egg NFT ──
+    async function pet_findEggNFT(ownerAddress) {
+      try {
+        var res = await fetch(CONFIG.RPC_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0", id: "pet",
+            method: "getAssetsByOwner",
+            params: { ownerAddress: ownerAddress, page: 1, limit: 1000,
+                      displayOptions: { showCollectionMetadata: true } }
+          })
+        });
+        var json = await res.json();
+        var items = (json && json.result && json.result.items) ? json.result.items : [];
+
+        // Filter by egg collection mint (when available)
+        var eggs = [];
+        if (CONFIG.EGG_COLLECTION_MINT) {
+          eggs = items.filter(function(a) {
+            var groups = a.grouping || [];
+            var g = groups.find(function(x) { return x.group_key === "collection"; });
+            return g && g.group_value === CONFIG.EGG_COLLECTION_MINT;
+          });
+        } else {
+          // Dev/whitelist fallback: match by symbol LNLEGG or name containing "egg"
+          eggs = items.filter(function(a) {
+            var sym = (a.content && a.content.metadata && a.content.metadata.symbol) || "";
+            var name = ((a.content && a.content.metadata && a.content.metadata.name) || "").toLowerCase();
+            return sym === "LNLEGG" || name.indexOf("lnl egg") !== -1 || name.indexOf("lnlegg") !== -1;
+          });
         }
-        return _client;
+
+        if (eggs.length === 0) return null;
+
+        var a = eggs[0];
+        var name  = (a.content && a.content.metadata && a.content.metadata.name) || "LNL Egg";
+        var image = (a.content && a.content.links && a.content.links.image) ||
+                    (a.content && a.content.files && a.content.files[0] && a.content.files[0].uri) || "";
+        var mint  = a.id || "";
+        return { name: name, image: image, mint: mint };
+      } catch(e) {
+        console.warn("pet_findEggNFT error:", e);
+        return null;
+      }
+    }
+
+    // ── Load XP row from Supabase ──
+    async function pet_loadXP(wallet) {
+      try {
+        var db = getSupaClient();
+        var res = await db.from("pet_xp").select("*").eq("wallet", wallet).maybeSingle();
+        if (res.error) { console.warn("pet_loadXP:", res.error); return null; }
+        return res.data;
+      } catch(e) { console.warn("pet_loadXP exception:", e); return null; }
+    }
+
+    // ── Upsert XP row (create if missing) ──
+    async function pet_saveXP(wallet, xp, lastFedAt, lastPassiveAt) {
+      try {
+        var db = getSupaClient();
+        var row = {
+          wallet: wallet,
+          xp: xp,
+          updated_at: new Date().toISOString()
+        };
+        if (lastFedAt    !== undefined) row.last_fed_at    = lastFedAt;
+        if (lastPassiveAt !== undefined) row.last_passive_at = lastPassiveAt;
+        var res = await db.from("pet_xp").upsert(row, { onConflict: "wallet" });
+        if (res.error) console.warn("pet_saveXP:", res.error);
+      } catch(e) { console.warn("pet_saveXP exception:", e); }
+    }
+
+    // ── Tick passive XP (called on tab open) ──
+    async function pet_tickPassive(wallet) {
+      if (!pet_data) return 0;
+      var lastPassive = pet_data.last_passive_at
+        ? new Date(pet_data.last_passive_at).getTime()
+        : new Date(pet_data.passive_start || Date.now()).getTime();
+
+      var elapsedMs   = Date.now() - lastPassive;
+      var elapsedDays = elapsedMs / (1000 * 60 * 60 * 24);
+      var nftCount    = session.loadedNFTs ? session.loadedNFTs.length : 0;
+      var earnedXP    = Math.floor(elapsedDays * nftCount * PET_PASSIVE_XP_PER_NFT_PER_DAY);
+
+      if (earnedXP <= 0) return 0;
+
+      var newXP = (pet_data.xp || 0) + earnedXP;
+      var now   = new Date().toISOString();
+      pet_data.xp = newXP;
+      pet_data.last_passive_at = now;
+      await pet_saveXP(wallet, newXP, undefined, now);
+      return earnedXP;
+    }
+
+    // ── Feed the pet ──
+    async function pet_feed() {
+      if (!walletPublicKey) return;
+      var wallet = walletPublicKey.toBase58();
+
+      // Cooldown check
+      var remaining = pet_feedCooldownRemaining(pet_data ? pet_data.last_fed_at : null);
+      if (remaining > 0) {
+        alert("Your pet isn't hungry yet! Feed again in " + pet_fmtCooldown(remaining));
+        return;
       }
 
-      function isConfigured() {
-        return YOUR_SUPA_URL.startsWith('https://') && YOUR_SUPA_KEY.startsWith('eyJ');
+      // Spend cabbage
+      var feedBtn = document.getElementById("pet_feedBtn");
+      if (feedBtn) { feedBtn.disabled = true; feedBtn.textContent = "Feeding…"; }
+
+      try {
+        await g_spendCabbage(PET_FEED_COST);
+      } catch(e) {
+        alert("Not enough Cabbage to feed! You need " + PET_FEED_COST + " 🥬.");
+        if (feedBtn) { feedBtn.disabled = false; feedBtn.textContent = "🍀 Feed (-" + PET_FEED_COST + " 🥬)"; }
+        return;
       }
 
-      function getPayload() {
-        var primary    = walletPublicKey ? walletPublicKey.toBase58() : null;
-        var discordId  = (session && session.profile && session.profile.discord_id)
-                           ? session.profile.discord_id : null;
-        var discordTag = (session && session.profile && session.profile.discord)
-                           ? session.profile.discord : null;
-        return { primary: primary, discordId: discordId, discordTag: discordTag };
+      // Award XP
+      var newXP  = (pet_data ? pet_data.xp : 0) + PET_FEED_XP;
+      var now    = new Date().toISOString();
+      var oldStage = pet_getStage(pet_data ? pet_data.xp : 0);
+      if (!pet_data) pet_data = { xp: 0, last_fed_at: null, last_passive_at: now };
+      pet_data.xp         = newXP;
+      pet_data.last_fed_at = now;
+
+      await pet_saveXP(wallet, newXP, now, undefined);
+
+      // Check for stage evolution
+      var newStage = pet_getStage(newXP);
+      var evolved  = newStage.name !== oldStage.name;
+
+      // Re-render
+      pet_paintUI(evolved ? newStage.name : null);
+
+      if (feedBtn) { feedBtn.disabled = false; feedBtn.textContent = "🍀 Feed (-" + PET_FEED_COST + " 🥬)"; }
+    }
+
+    // ── Mint button handler (active once Candy Machine ID is set) ──
+    async function pet_mintEgg() {
+      if (!walletPublicKey) { alert("Connect your wallet first."); return; }
+      if (!CONFIG.EGG_CANDY_MACHINE) {
+        alert("Mint is coming soon! The Candy Machine is being set up. Check back shortly.");
+        return;
+      }
+      // TODO: integrate @metaplex-foundation/js candy machine mint call here
+      // For now, open the mint page if you have a hosted one
+      window.open("https://magiceden.us/launchpad/" + CONFIG.EGG_CANDY_MACHINE, "_blank");
+    }
+
+    // ── Paint / refresh the pets tab UI ──
+    function pet_paintUI(evolvedStageName) {
+      var xp     = pet_data ? (pet_data.xp || 0) : 0;
+      var stage  = pet_getStage(xp);
+      var next   = pet_getNextStage(stage);
+      var toNext = next ? next.minXP - xp : 0;
+      var pct    = next ? Math.min(100, ((xp - stage.minXP) / (next.minXP - stage.minXP)) * 100) : 100;
+      var cooldownMs = pet_feedCooldownRemaining(pet_data ? pet_data.last_fed_at : null);
+
+      // Update GIF
+      var gifEl = document.getElementById("pet_gif");
+      if (gifEl && gifEl.src !== stage.gif) {
+        gifEl.src = stage.gif;
       }
 
-      async function push() {
-        if (!isConfigured()) {
-          console.info('[LNL_SYNC] Not configured — add your Supabase URL + key.');
-          return;
+      // Update stage name + XP
+      var stageEl = document.getElementById("pet_stageName");
+      if (stageEl) stageEl.textContent = stage.name.toUpperCase();
+
+      var xpEl = document.getElementById("pet_xpNum");
+      if (xpEl) xpEl.textContent = xp.toLocaleString() + " XP";
+
+      var nextEl = document.getElementById("pet_toNext");
+      if (nextEl) nextEl.textContent = next ? (toNext + " XP to " + next.name) : "MAX STAGE 👑";
+
+      // Update progress bar
+      var barEl = document.getElementById("pet_xpBar");
+      if (barEl) barEl.style.width = pct + "%";
+
+      // Update feed button cooldown
+      var feedBtn = document.getElementById("pet_feedBtn");
+      if (feedBtn) {
+        if (cooldownMs > 0) {
+          feedBtn.disabled = true;
+          feedBtn.textContent = "⏳ " + pet_fmtCooldown(cooldownMs);
+          // Live countdown ticker
+          if (window._petFeedTimer) clearInterval(window._petFeedTimer);
+          window._petFeedTimer = setInterval(function() {
+            var rem = pet_feedCooldownRemaining(pet_data ? pet_data.last_fed_at : null);
+            if (rem <= 0) {
+              clearInterval(window._petFeedTimer);
+              if (feedBtn) { feedBtn.disabled = false; feedBtn.textContent = "🍀 Feed (-" + PET_FEED_COST + " 🥬)"; }
+            } else {
+              if (feedBtn) feedBtn.textContent = "⏳ " + pet_fmtCooldown(rem);
+            }
+          }, 1000);
+        } else {
+          feedBtn.disabled = false;
+          feedBtn.textContent = "🍀 Feed (-" + PET_FEED_COST + " 🥬)";
         }
-        var p = getPayload();
-        if (!p.primary) return;
+      }
 
-        var db = getClient();
-        if (!db) return;
-
-        try {
-          // Step 1: resolve profile_id from wallet_links
-          var linkRes = await db
-            .from('wallet_links')
-            .select('profile_id')
-            .eq('wallet_address', p.primary)
-            .maybeSingle();
-
-          if (linkRes.error) {
-            console.warn('[LNL_SYNC] wallet_links lookup error:', linkRes.error.message);
-            return;
-          }
-          if (!linkRes.data || !linkRes.data.profile_id) {
-            console.info('[LNL_SYNC] No profile_id yet for wallet — will retry on next sync.');
-            return;
-          }
-
-          var profileId = linkRes.data.profile_id;
-
-          // Step 2: only update discord fields — never touches anything else
-          var updatePayload = {};
-          if (p.discordId)  updatePayload.discord_user_id = p.discordId;
-          if (p.discordTag) updatePayload.discord_tag     = p.discordTag;
-
-          if (Object.keys(updatePayload).length === 0) {
-            console.info('[LNL_SYNC] No Discord data to sync yet.');
-            return;
-          }
-
-          var updateRes = await db
-            .from('profiles')
-            .update(updatePayload)
-            .eq('id', profileId);
-
-          if (updateRes.error) {
-            console.warn('[LNL_SYNC] profiles update error:', updateRes.error.message);
-          } else {
-            console.info('[LNL_SYNC] ✅ Synced to profiles:',
-              'discord_user_id=' + (p.discordId || '—'),
-              '| discord_tag=' + (p.discordTag || '—'),
-              '| profile=' + profileId.slice(0,8) + '…'
-            );
-          }
-        } catch(e) {
-          console.warn('[LNL_SYNC] push() error:', e);
+      // Stage evolution flash
+      if (evolvedStageName) {
+        var flash = document.getElementById("pet_evolveFlash");
+        if (flash) {
+          flash.textContent = "✨ EVOLVED TO " + evolvedStageName.toUpperCase() + "! ✨";
+          flash.style.opacity = "1";
+          flash.style.transform = "scale(1.1)";
+          setTimeout(function() {
+            flash.style.opacity = "0";
+            flash.style.transform = "scale(1)";
+          }, 3000);
         }
       }
+    }
 
-      // Debounce — wallet connect + discord connect may fire close together
-      function queueSync() {
-        if (_syncTimer) clearTimeout(_syncTimer);
-        _syncTimer = setTimeout(push, 800);
+    // ── Cooldown ticker that keeps the button live after render ──
+    function pet_startCooldownTicker() {
+      if (window._petFeedTimer) clearInterval(window._petFeedTimer);
+      var feedBtn = document.getElementById("pet_feedBtn");
+      if (!feedBtn) return;
+      var rem = pet_feedCooldownRemaining(pet_data ? pet_data.last_fed_at : null);
+      if (rem <= 0) return;
+      window._petFeedTimer = setInterval(function() {
+        var r = pet_feedCooldownRemaining(pet_data ? pet_data.last_fed_at : null);
+        if (r <= 0) {
+          clearInterval(window._petFeedTimer);
+          if (feedBtn) { feedBtn.disabled = false; feedBtn.textContent = "🍀 Feed (-" + PET_FEED_COST + " 🥬)"; }
+        } else {
+          if (feedBtn) { feedBtn.disabled = true; feedBtn.textContent = "⏳ " + pet_fmtCooldown(r); }
+        }
+      }, 1000);
+    }
+
+    // ── Main render: injects full HTML then loads data ──
+    async function renderPetsUI() {
+      var view = document.getElementById("view-pets");
+      if (!view) return;
+
+      // Show loading shell immediately
+      view.innerHTML = `
+        <style>
+          #pets-wrap {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0.5rem 0 3rem;
+          }
+          .pet-panel {
+            background: #111125;
+            border: 1px solid #1e1e3a;
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 1.4rem;
+          }
+          .pet-stage-box {
+            width: 340px;
+            max-width: 90vw;
+            height: 340px;
+            position: relative;
+            background: radial-gradient(ellipse at 50% 60%, rgba(0,212,255,0.07) 0%, #0a0a1a 75%);
+            border: 1px solid #1e1e3a;
+            border-radius: 20px;
+            overflow: hidden;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+          }
+          #pet_gif {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            image-rendering: crisp-edges;
+          }
+          #pet_evolveFlash {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.4rem;
+            letter-spacing: 3px;
+            color: #ffd700;
+            text-shadow: 0 0 30px rgba(255,215,0,0.8);
+            opacity: 0;
+            transition: opacity 0.4s, transform 0.4s;
+            pointer-events: none;
+            text-align: center;
+            padding: 1rem;
+          }
+          .pet-info-col {
+            flex: 1;
+            min-width: 220px;
+          }
+          .pet-stage-label {
+            font-size: 0.65rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: #555;
+            margin-bottom: 4px;
+          }
+          #pet_stageName {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 2.4rem;
+            letter-spacing: 4px;
+            color: #00d4ff;
+            line-height: 1;
+            margin-bottom: 6px;
+          }
+          #pet_xpNum {
+            font-size: 0.85rem;
+            color: #888;
+            margin-bottom: 1rem;
+          }
+          .pet-xp-wrap { margin-bottom: 1.2rem; }
+          .pet-xp-top {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.65rem;
+            color: #444;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+          }
+          .pet-xp-track {
+            height: 8px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 4px;
+            overflow: hidden;
+          }
+          #pet_xpBar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #00d4ff, #7b68ee);
+            border-radius: 4px;
+            box-shadow: 0 0 12px rgba(0,212,255,0.5);
+            transition: width 0.8s cubic-bezier(0.16,1,0.3,1);
+          }
+          #pet_toNext {
+            font-size: 0.68rem;
+            color: #555;
+            letter-spacing: 1px;
+            margin-top: 6px;
+          }
+          .pet-stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.6rem 0;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            font-size: 0.82rem;
+          }
+          .pet-stat-row:last-child { border-bottom: none; }
+          .pet-stat-label { color: #666; }
+          .pet-stat-val { font-weight: 700; color: #e0e0ff; }
+          .pet-stat-val.cyan { color: #00d4ff; }
+          .pet-stat-val.green { color: #00ff88; }
+          .pet-stat-val.gold { color: #ffd700; }
+          #pet_feedBtn {
+            background: linear-gradient(135deg, rgba(0,255,136,0.12), rgba(0,212,255,0.08));
+            border: 1px solid rgba(0,255,136,0.35);
+            color: #00ff88;
+            padding: 12px 28px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            font-size: 0.82rem;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            transition: all 0.2s;
+            width: 100%;
+            margin-top: 1rem;
+          }
+          #pet_feedBtn:hover:not(:disabled) {
+            background: linear-gradient(135deg, rgba(0,255,136,0.2), rgba(0,212,255,0.14));
+            box-shadow: 0 0 24px rgba(0,255,136,0.2);
+            transform: translateY(-1px);
+          }
+          #pet_feedBtn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+          }
+          .pet-mint-panel {
+            text-align: center;
+            padding: 3rem 2rem;
+          }
+          .pet-mint-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 2.2rem;
+            letter-spacing: 4px;
+            color: #e0e0ff;
+            margin-bottom: 0.5rem;
+          }
+          .pet-mint-sub {
+            color: #555;
+            font-size: 0.85rem;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+          }
+          .pet-mint-egg-preview {
+            width: 160px;
+            height: 160px;
+            margin: 0 auto 1.5rem;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid #1e1e3a;
+            background: #0a0a1a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          .pet-mint-egg-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+          }
+          #pet_mintBtn {
+            background: linear-gradient(135deg, #00d4ff 0%, #7b68ee 100%);
+            color: #000;
+            border: none;
+            padding: 16px 48px;
+            font-weight: 700;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            cursor: pointer;
+            font-family: 'Space Grotesk', sans-serif;
+            border-radius: 6px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 30px rgba(0,212,255,0.3);
+          }
+          #pet_mintBtn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 40px rgba(0,212,255,0.5);
+          }
+          .pet-loading {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #444;
+            font-size: 0.8rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+          }
+          @keyframes pet_evolve_pulse {
+            0%,100% { box-shadow: 0 0 20px rgba(0,212,255,0.2), inset 0 0 20px rgba(0,212,255,0.05); }
+            50%      { box-shadow: 0 0 50px rgba(0,212,255,0.5), inset 0 0 40px rgba(0,212,255,0.1); }
+          }
+          .pet-stage-box.evolving {
+            animation: pet_evolve_pulse 0.8s ease-in-out 3;
+          }
+          @media (max-width: 640px) {
+            .pet-stage-box { width: 260px; height: 260px; }
+            #pet_stageName { font-size: 1.8rem; }
+          }
+        </style>
+
+        <div id="pets-wrap">
+          <div class="pet-panel pet-loading" id="pet_loadingState">
+            <div class="loading-spinner"></div>
+            <div style="margin-top:1rem;">Scanning your wallet for eggs…</div>
+          </div>
+        </div>
+      `;
+
+      // Now do the async work
+      if (!walletPublicKey) return;
+      var wallet = walletPublicKey.toBase58();
+
+      // Scan wallet for egg NFT
+      pet_eggNFT = await pet_findEggNFT(wallet);
+
+      // Load XP data
+      pet_data = await pet_loadXP(wallet);
+
+      // If no egg found → show mint panel
+      if (!pet_eggNFT) {
+        document.getElementById("pets-wrap").innerHTML = `
+          <div class="pet-panel pet-mint-panel">
+            <div class="pet-mint-egg-preview">
+              <img src="${PET_BASE}pet_egg.gif" alt="LNL Egg"
+                   onerror="this.style.display='none';this.parentElement.innerHTML='🥚'">
+            </div>
+            <div class="pet-mint-title">HATCH YOUR PET</div>
+            <div class="pet-mint-sub">
+              You don't have an LNL Egg in this wallet.<br>
+              Mint one to grow your own Long Neck Legend ostrich — feed it Cabbage to evolve.
+            </div>
+            <button id="pet_mintBtn" onclick="pet_mintEgg()">🥚 MINT YOUR EGG</button>
+            <div style="margin-top:1.2rem;font-size:0.7rem;color:#333;letter-spacing:1px;">
+              ${CONFIG.EGG_CANDY_MACHINE ? "Mint is live · Pay in SOL" : "Mint coming soon · Setting up Candy Machine"}
+            </div>
+          </div>
+          <div class="pet-panel" style="opacity:0.5;">
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:3px;color:#333;margin-bottom:0.8rem;">GROWTH STAGES</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;">
+              ${PET_STAGES.map(function(s) {
+                return '<div style="background:#0a0a1a;border:1px solid #1a1a30;border-radius:10px;padding:14px;text-align:center;">'
+                  + '<div style="font-weight:700;font-size:0.75rem;color:#555;letter-spacing:1px;margin-bottom:4px;">' + s.name.toUpperCase() + '</div>'
+                  + '<div style="font-size:0.6rem;color:#333;letter-spacing:1px;">' + s.minXP.toLocaleString() + ' XP</div>'
+                  + '</div>';
+              }).join("")}
+            </div>
+          </div>
+        `;
+        return;
       }
 
-      return { push: push, queueSync: queueSync };
+      // If first time (no XP row), create one
+      if (!pet_data) {
+        var now = new Date().toISOString();
+        pet_data = { wallet: wallet, xp: 0, last_fed_at: null, last_passive_at: now, passive_start: now };
+        await pet_saveXP(wallet, 0, null, now);
+      }
 
-    })();
+      // Tick passive XP silently
+      await pet_tickPassive(wallet);
+
+      var xp    = pet_data.xp || 0;
+      var stage = pet_getStage(xp);
+      var next  = pet_getNextStage(stage);
+      var pct   = next ? Math.min(100, ((xp - stage.minXP) / (next.minXP - stage.minXP)) * 100) : 100;
+      var nftCount = session.loadedNFTs ? session.loadedNFTs.length : 0;
+      var passivePerDay = nftCount * PET_PASSIVE_XP_PER_NFT_PER_DAY;
+
+      document.getElementById("pets-wrap").innerHTML = `
+        <div class="pet-panel" style="display:flex;gap:2rem;flex-wrap:wrap;align-items:flex-start;">
+
+          <!-- LEFT: animated pet -->
+          <div>
+            <div class="pet-stage-box" id="pet_stageBox">
+              <img id="pet_gif" src="${stage.gif}" alt="${stage.name}"
+                   onerror="this.style.fontSize='6rem';this.style.lineHeight='340px';this.alt='🥚'">
+              <div id="pet_evolveFlash"></div>
+            </div>
+            <div style="text-align:center;margin-top:0.7rem;font-size:0.62rem;color:#333;letter-spacing:2px;text-transform:uppercase;">
+              ${escapeHtml(pet_eggNFT.name)}
+            </div>
+          </div>
+
+          <!-- RIGHT: stats + feed -->
+          <div class="pet-info-col">
+            <div class="pet-stage-label">Current Stage</div>
+            <div id="pet_stageName">${stage.name.toUpperCase()}</div>
+            <div id="pet_xpNum">${xp.toLocaleString()} XP</div>
+
+            <div class="pet-xp-wrap">
+              <div class="pet-xp-top">
+                <span>${stage.name}</span>
+                <span>${next ? next.name + " (" + next.minXP.toLocaleString() + " XP)" : "MAX ♛"}</span>
+              </div>
+              <div class="pet-xp-track">
+                <div id="pet_xpBar" style="width:${pct}%"></div>
+              </div>
+              <div id="pet_toNext">${next ? ((next.minXP - xp).toLocaleString() + " XP to " + next.name) : "MAX STAGE REACHED 👑"}</div>
+            </div>
+
+            <div class="pet-stat-row">
+              <span class="pet-stat-label">Passive Earn</span>
+              <span class="pet-stat-val cyan">+${passivePerDay} XP / day</span>
+            </div>
+            <div class="pet-stat-row">
+              <span class="pet-stat-label">From LNL NFTs</span>
+              <span class="pet-stat-val">${nftCount} held × ${PET_PASSIVE_XP_PER_NFT_PER_DAY} XP</span>
+            </div>
+            <div class="pet-stat-row">
+              <span class="pet-stat-label">Feed Reward</span>
+              <span class="pet-stat-val green">+${PET_FEED_XP} XP per feed</span>
+            </div>
+            <div class="pet-stat-row">
+              <span class="pet-stat-label">Feed Cost</span>
+              <span class="pet-stat-val gold">${PET_FEED_COST} 🥬 Cabbage</span>
+            </div>
+
+            <button id="pet_feedBtn" onclick="pet_feed()">🍀 Feed (-${PET_FEED_COST} 🥬)</button>
+          </div>
+        </div>
+
+        <!-- Stage roadmap -->
+        <div class="pet-panel">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:3px;color:#555;margin-bottom:1rem;">GROWTH STAGES</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;">
+            ${PET_STAGES.map(function(s) {
+              var isCurrent = s.name === stage.name;
+              var isPast    = xp >= s.minXP;
+              return '<div style="background:' + (isCurrent ? 'rgba(0,212,255,0.07)' : '#0a0a1a') + ';border:1px solid ' + (isCurrent ? 'rgba(0,212,255,0.4)' : '#1a1a30') + ';border-radius:10px;padding:14px;text-align:center;opacity:' + (isPast ? '1' : '0.4') + ';">'
+                + '<div style="font-weight:700;font-size:0.75rem;color:' + (isCurrent ? '#00d4ff' : '#888') + ';letter-spacing:1px;margin-bottom:4px;">' + s.name.toUpperCase() + (isCurrent ? ' ◀' : '') + '</div>'
+                + '<div style="font-size:0.6rem;color:#444;letter-spacing:1px;">' + s.minXP.toLocaleString() + ' XP</div>'
+                + '</div>';
+            }).join("")}
+          </div>
+        </div>
+      `;
+
+      // Start cooldown ticker
+      pet_startCooldownTicker();
+    }
 
   </script>
 </body>
