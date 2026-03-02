@@ -7403,7 +7403,7 @@ var nextTierRow = nextTier
           #pets-wrap {
             max-width: 900px;
             margin: 0 auto;
-            padding: 0.5rem 0 3rem;
+            padding: 0 0 3rem;
           }
           .pet-panel {
             background: #111125;
@@ -7545,37 +7545,56 @@ var nextTierRow = nextTier
           }
           .pet-mint-panel {
             text-align: center;
-            padding: 3rem 2rem;
-          }
-          .pet-mint-title {
-            font-family: 'Bebas Neue', sans-serif;
-            font-size: 2.2rem;
-            letter-spacing: 4px;
-            color: #e0e0ff;
-            margin-bottom: 0.5rem;
-          }
-          .pet-mint-sub {
-            color: #555;
-            font-size: 0.85rem;
-            margin-bottom: 2rem;
-            line-height: 1.6;
+            padding: 0;
+            overflow: hidden;
+            background: #0a0a1a !important;
+            border: none !important;
           }
           .pet-mint-egg-preview {
-            width: 160px;
-            height: 160px;
-            margin: 0 auto 1.5rem;
-            border-radius: 16px;
+            width: 100%;
+            height: 480px;
+            margin: 0;
+            border-radius: 0;
             overflow: hidden;
-            border: 1px solid #1e1e3a;
-            background: #0a0a1a;
+            border: none;
+            background: transparent;
             display: flex;
             align-items: center;
             justify-content: center;
+            position: relative;
           }
           .pet-mint-egg-preview img {
             width: 100%;
             height: 100%;
-            object-fit: contain;
+            object-fit: cover;
+            object-position: center;
+            image-rendering: crisp-edges;
+          }
+          .pet-mint-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to bottom, transparent 40%, #0a0a1a 100%);
+            pointer-events: none;
+          }
+          .pet-mint-content {
+            padding: 1.5rem 2rem 2.5rem;
+          }
+          .pet-mint-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 3rem;
+            letter-spacing: 6px;
+            color: #e0e0ff;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 40px rgba(0,212,255,0.3);
+          }
+          .pet-mint-sub {
+            color: #666;
+            font-size: 0.88rem;
+            margin-bottom: 2rem;
+            line-height: 1.7;
+            max-width: 420px;
+            margin-left: auto;
+            margin-right: auto;
           }
           #pet_mintBtn {
             background: linear-gradient(135deg, #00d4ff 0%, #7b68ee 100%);
@@ -7641,16 +7660,19 @@ var nextTierRow = nextTier
           <div class="pet-panel pet-mint-panel">
             <div class="pet-mint-egg-preview">
               <img src="${PET_BASE}pet_egg.gif" alt="LNL Egg"
-                   onerror="this.style.display='none';this.parentElement.innerHTML='🥚'">
+                   onerror="this.style.fontSize='8rem';this.alt='🥚';this.style.background='transparent'">
+              <div class="pet-mint-overlay"></div>
             </div>
-            <div class="pet-mint-title">HATCH YOUR PET</div>
-            <div class="pet-mint-sub">
-              You don't have an LNL Egg in this wallet.<br>
-              Mint one to grow your own Long Neck Legend ostrich — feed it Cabbage to evolve.
-            </div>
-            <button id="pet_mintBtn" onclick="pet_mintEgg()">🥚 MINT YOUR EGG</button>
-            <div style="margin-top:1.2rem;font-size:0.7rem;color:#333;letter-spacing:1px;">
-              ${CONFIG.EGG_CANDY_MACHINE ? "Mint is live · Pay in SOL" : "Mint coming soon · Setting up Candy Machine"}
+            <div class="pet-mint-content">
+              <div class="pet-mint-title">HATCH YOUR PET</div>
+              <div class="pet-mint-sub">
+                You don't have an LNL Egg in this wallet.<br>
+                Mint one to grow your own Long Neck Legend ostrich — feed it Cabbage to evolve.
+              </div>
+              <button id="pet_mintBtn" onclick="pet_mintEgg()">🥚 MINT YOUR EGG</button>
+              <div style="margin-top:1.2rem;font-size:0.7rem;color:#333;letter-spacing:1px;">
+                ${CONFIG.EGG_CANDY_MACHINE ? "Mint is live · Pay in SOL" : "Mint coming soon · Setting up Candy Machine"}
+              </div>
             </div>
           </div>
           <div class="pet-panel" style="opacity:0.5;">
