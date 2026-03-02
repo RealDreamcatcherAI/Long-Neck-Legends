@@ -4759,50 +4759,93 @@ var nextTierRow = nextTier
       var myW=walletPublicKey?walletPublicKey.toBase58():'';
       var me=pk_plrs.find(function(p){return p.wallet===myW;});
       if(!me)return;
+      var bb=t.big_blind||2;
       var cur=t.current_bet||0;
-      var minRaise=Math.max(cur*2,cur+(t.big_blind||2));
-      var maxRaise=me.current_bet+me.chips;
-      var a=prompt('Raise TO (min '+minRaise+', max '+maxRaise+'):',String(minRaise));
+      // minRaise: must raise by at least 1 big blind above the current bet
+      var minRaiseTo=cur>0?cur*2:bb;
+      var maxRaiseTo=me.current_bet+me.chips; // total chips I can put in (raise TO this total)
+      if(maxRaiseTo<=cur){return alert('Not enough chips to raise.');}
+      minRaiseTo=Math.min(minRaiseTo,maxRaiseTo); // cap if short-stacked
+      var a=prompt('Raise TO how much? (min '+minRaiseTo+', max '+maxRaiseTo+' | you have '+me.chips+' chips):',String(minRaiseTo));
       if(!a)return;
       var r=parseFloat(a);
-      if(isNaN(r))return;
-      r=Math.max(minRaise,Math.min(r,maxRaise));
-      pk_act('raise',Math.floor(r));
+      if(isNaN(r)||r<=0)return;
+      // Clamp to valid range
+      r=Math.max(minRaiseTo,Math.min(r,maxRaiseTo));
+      pk_act('raise',Math.floor(r*1000)/1000); // avoid float weirdness
     }
 
     async function pk_act(action,raiseAmt){
       if(!pk_tid||!pk_tbl||pk_acting)return;
       var sb=getSupaClient();
       var w=walletPublicKey.toBase58();
-      var me=pk_plrs.find(function(p){return p.wallet===w;});
-      if(!me||pk_tbl.action_seat!==me.seat)return;
+      // Always re-read fresh state before acting to avoid stale data race
+      var freshT=await sb.from('poker_tables').select('*').eq('id',pk_tid).single();
+      if(freshT.error)return;
+      var t=freshT.data;
+      var freshP=await sb.from('poker_players').select('*').eq('table_id',pk_tid).eq('wallet',w).eq('is_active',true).maybeSingle();
+      if(!freshP.data)return;
+      var me=freshP.data;
+      if(t.action_seat!==me.seat)return;
       if(me.folded||me.all_in)return;
       pk_acting=true;
       try{
-        var t=pk_tbl;
         var potAdd=0;
         if(action==='fold'){
           await sb.from('poker_players').update({folded:true}).eq('id',me.id);
+
         }else if(action==='check'){
-          if((t.current_bet||0)>me.current_bet){pk_acting=false;return alert('Cannot check \u2014 there is a bet to call.');}
+          if((t.current_bet||0)>me.current_bet){
+            pk_acting=false;
+            return alert('Cannot check — there is a bet of '+(t.current_bet)+' to call.');
+          }
+          // no chips move
+
         }else if(action==='call'){
           var toCall=Math.min(Math.max(0,(t.current_bet||0)-me.current_bet),me.chips);
           var newChips=me.chips-toCall;
-          await sb.from('poker_players').update({chips:newChips,current_bet:me.current_bet+toCall,total_bet:me.total_bet+toCall,all_in:newChips<=0}).eq('id',me.id);
+          await sb.from('poker_players').update({
+            chips:newChips,
+            current_bet:me.current_bet+toCall,
+            total_bet:me.total_bet+toCall,
+            all_in:newChips<=0
+          }).eq('id',me.id);
           potAdd=toCall;
+
         }else if(action==='raise'){
+          // raiseAmt = the total amount the player wants to raise TO
+          // e.g. if current_bet=0.1 and player raises to 0.4, raiseAmt=0.4
           var raiseTo=raiseAmt;
+          // How many more chips does the player need to put in?
           var need=raiseTo-me.current_bet;
           var put=Math.min(need,me.chips);
           var newChips2=me.chips-put;
-          var newCurBet=me.current_bet+put;
-          await sb.from('poker_players').update({chips:newChips2,current_bet:newCurBet,total_bet:me.total_bet+put,all_in:newChips2<=0}).eq('id',me.id);
+          var myNewBet=me.current_bet+put; // what my total bet is now this street
+          await sb.from('poker_players').update({
+            chips:newChips2,
+            current_bet:myNewBet,
+            total_bet:me.total_bet+put,
+            all_in:newChips2<=0
+          }).eq('id',me.id);
           potAdd=put;
-          await sb.from('poker_tables').update({current_bet:newCurBet,round_starter:me.seat}).eq('id',pk_tid);
+          // Update the table's current_bet to my new bet level, reset round_starter to me
+          // so everyone else must act again
+          await sb.from('poker_tables').update({
+            current_bet:myNewBet,
+            round_starter:me.seat,
+            pot:(t.pot||0)+potAdd,
+            updated_at:new Date().toISOString()
+          }).eq('id',pk_tid);
+          potAdd=0; // already added to pot above
         }
+
         if(potAdd>0){
-          await sb.from('poker_tables').update({pot:(t.pot||0)+potAdd}).eq('id',pk_tid);
+          // Read fresh pot to avoid overwrite race
+          var potR=await sb.from('poker_tables').select('pot').eq('id',pk_tid).single();
+          var freshPot=potR.data?potR.data.pot:t.pot||0;
+          await sb.from('poker_tables').update({pot:freshPot+potAdd,updated_at:new Date().toISOString()}).eq('id',pk_tid);
         }
+
         await pk_advance(me.seat,action);
       }catch(e){console.error('pk_act error',e);}
       pk_acting=false;
@@ -4810,27 +4853,38 @@ var nextTierRow = nextTier
 
     async function pk_advance(actedSeat,action){
       var sb=getSupaClient();
+      // Always read FRESH state after all writes have landed
       var pR=await sb.from('poker_players').select('*').eq('table_id',pk_tid).eq('is_active',true).order('seat');
       var plrs=pR.data||[];
       var tR=await sb.from('poker_tables').select('*').eq('id',pk_tid).single();
       var t=tR.data;
-      // Safety: if action_seat is -1 we're in runout mode, don't advance manually
-      if(!t||t.action_seat===-1)return;
+      if(!t||t.action_seat===-1)return; // runout mode — don't interfere
+
       var nf=plrs.filter(function(p){return !p.folded;});
       if(nf.length<=1){await pk_award(nf,t.pot||0);return;}
+
       var canAct=plrs.filter(function(p){return !p.folded&&!p.all_in;});
       if(canAct.length===0){await pk_nextPhase(true);return;}
+
       var seats=pk_seatsOf(canAct);
-      var nextSeat=pk_nextSeat(seats,actedSeat);
       var curBet=t.current_bet||0;
-      var rs=t.round_starter;
+      var rs=t.round_starter; // seat of last aggressor (or first to act)
       var bbSeat=t.bb_seat;
       var phase=t.phase;
+
+      // Find next player to act after the one who just acted
+      var nextSeat=pk_nextSeat(seats,actedSeat);
+
+      // Have all active players matched the current bet?
       var allMatched=canAct.every(function(p){return p.current_bet>=curBet;});
-      if(nextSeat===rs&&allMatched){
-        if(phase==='preflop'&&bbSeat!==undefined&&bbSeat!==null&&seats.indexOf(bbSeat)!==-1){
-          var bbP=canAct.find(function(p){return p.seat===bbSeat;});
-          if(bbP&&bbP.current_bet===curBet&&nextSeat===bbSeat&&action!=='raise'){
+
+      // Betting round is over when we've gone full circle back to the aggressor and all bets match
+      if(allMatched&&nextSeat===rs){
+        // Special case: preflop BB option — if no one raised above BB, BB gets to check or raise
+        if(phase==='preflop'&&bbSeat!==undefined&&bbSeat!==null){
+          var bbInCanAct=canAct.find(function(p){return p.seat===bbSeat;});
+          if(bbInCanAct&&nextSeat===bbSeat&&action!=='raise'&&curBet<=(t.big_blind||2)*1.001){
+            // BB hasn't acted yet this street (they only posted) — give them their option
             await sb.from('poker_tables').update({action_seat:bbSeat,updated_at:new Date().toISOString()}).eq('id',pk_tid);
             return;
           }
@@ -4838,6 +4892,13 @@ var nextTierRow = nextTier
         await pk_nextPhase(false);
         return;
       }
+
+      // Skip to next phase if only one person can act and they've already matched
+      if(canAct.length===1&&canAct[0].current_bet>=curBet){
+        await pk_nextPhase(false);
+        return;
+      }
+
       await sb.from('poker_tables').update({action_seat:nextSeat,updated_at:new Date().toISOString()}).eq('id',pk_tid);
     }
 
