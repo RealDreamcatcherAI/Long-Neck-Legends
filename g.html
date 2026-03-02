@@ -4316,16 +4316,9 @@ var nextTierRow = nextTier
             +'</div>'
             +(full
               ?'<span style="font-size:0.65rem;color:#555;letter-spacing:1px;">FULL</span>'
-              :'<button class="g_btn g_btn-primary pk_sitBtn" data-tid="'+t.id+'">SIT DOWN</button>')
+              :'<button class="g_btn g_btn-primary" onclick="pk_join(\''+t.id+'\')">SIT DOWN</button>')
             +'</div>';
         }).join('')||'<div style="color:#444;font-size:0.78rem;text-align:center;padding:1rem;">No tables available.</div>';
-      // Wire up sit buttons after render — avoids all inline onclick quote issues
-      var sitBtns=el.querySelectorAll('.pk_sitBtn');
-      for(var si=0;si<sitBtns.length;si++){
-        (function(btn){
-          btn.addEventListener('click',function(){pk_showBuyIn(btn.getAttribute('data-tid'));});
-        })(sitBtns[si]);
-      }
       }catch(e){
         var el2=document.getElementById('pk_lobby');
         if(el2)el2.innerHTML='<div style="color:#ff3c5c;font-size:0.78rem;">Error loading tables: '+(e.message||e)+'</div>';
@@ -4404,134 +4397,44 @@ var nextTierRow = nextTier
       }catch(e){console.warn('[Poker] timeout kick error',e);}
     }
 
-    // ── Buy-in modal — shown when player clicks SIT DOWN ──
-    function pk_showBuyIn(tid){
+    async function pk_join(tid){
       if(!walletPublicKey)return alert('Connect your wallet first.');
-      // Remove any existing modal
-      var old=document.getElementById('pk_buyInModal');if(old)old.remove();
-
-      var tbl=pk_tables.find(function(t){return t.id===tid;});
-      if(!tbl){
-        // Live fetch then re-show
-        getSupaClient().from('poker_tables').select('*').eq('id',tid).single().then(function(r){
-          if(r.error||!r.data)return alert('Table not found.');
-          pk_tables.push(r.data);
-          pk_showBuyIn(tid);
-        });
-        return;
-      }
-
-      var sym=tbl.currency==='sol'?'◎':'🥬';
-      var bal=g_cabBalance||0;
-      var minBuy=tbl.buy_in||10;
-      var maxBuy=Math.min(bal, minBuy*10); // cap at 10x buy-in or their balance
-      if(maxBuy<minBuy)maxBuy=minBuy; // allow even if short, server will validate
-
-      var modal=document.createElement('div');
-      modal.id='pk_buyInModal';
-      modal.dataset.tid=tid;
-      modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1.5rem;';
-      var sym2=tbl.currency==='sol'?'SOL':'Cabbage';
-      var inner=document.createElement('div');
-      inner.style.cssText='background:linear-gradient(135deg,#111125,#0d0d20);border:1px solid #1e1e3a;border-radius:16px;padding:2rem;max-width:380px;width:100%;text-align:center;box-shadow:0 0 40px rgba(0,212,255,0.1);';
-      inner.innerHTML=
-        '<div style="font-family:Bebas Neue,sans-serif;font-size:1.6rem;letter-spacing:3px;color:#00d4ff;margin-bottom:0.3rem;">BUY IN</div>'
-        +'<div style="font-size:0.78rem;color:#555;margin-bottom:1.2rem;">'+escapeHtml(tbl.name||'Table')+'&nbsp;&middot;&nbsp;Blinds: '+tbl.small_blind+'/'+tbl.big_blind+' '+sym2+'</div>'
-        +'<div style="font-size:0.68rem;color:#444;margin-bottom:1.4rem;">Balance: <span style="color:#00ff88;font-weight:700;">'+bal.toLocaleString()+' Cabbage</span></div>'
-        +'<div style="margin-bottom:1.2rem;">'
-          +'<label style="font-size:0.65rem;color:#555;letter-spacing:1px;display:block;margin-bottom:6px;">CHIPS TO BUY (min '+minBuy+')</label>'
-          +'<input id="pk_buyInAmt" type="number" min="'+minBuy+'" max="'+maxBuy+'" step="1" value="'+minBuy+'" style="width:100%;background:#0a0a18;border:1px solid #2a2a4a;border-radius:8px;padding:10px 14px;color:#fff;font-size:1.1rem;text-align:center;outline:none;box-sizing:border-box;">'
-        +'</div>'
-        +'<div style="display:flex;gap:10px;justify-content:center;">'
-          +'<button id="pk_buyInCancel" class="g_btn" style="flex:1;">CANCEL</button>'
-          +'<button id="pk_buyInConfirm" class="g_btn g_btn-primary" style="flex:1;">SIT DOWN</button>'
-        +'</div>'
-        +'<div id="pk_buyInErr" style="font-size:0.68rem;color:#ff3c5c;margin-top:0.8rem;min-height:1rem;"></div>';
-      modal.appendChild(inner);
-      document.body.appendChild(modal);
-      document.getElementById('pk_buyInCancel').onclick=function(){modal.remove();};
-      document.getElementById('pk_buyInConfirm').onclick=function(){pk_confirmBuyIn();};
-      // Focus input
-      setTimeout(function(){var i=document.getElementById('pk_buyInAmt');if(i)i.focus();},50);
-    }
-
-    async function pk_confirmBuyIn(){
-      var modal=document.getElementById('pk_buyInModal');
-      if(!modal)return;
-      var tid=modal.dataset.tid;
-      var amtEl=document.getElementById('pk_buyInAmt');
-      var errEl=document.getElementById('pk_buyInErr');
-      var btn=document.getElementById('pk_buyInConfirm');
-      if(!amtEl||!tid)return;
-      var chips=parseFloat(amtEl.value);
-      var tbl=pk_tables.find(function(t){return t.id===tid;});
-      if(!tbl)return;
-      var minBuy=tbl.buy_in||10;
-      if(isNaN(chips)||chips<minBuy){
-        if(errEl)errEl.textContent='Minimum buy-in is '+minBuy+' 🥬';
-        return;
-      }
-      var bal=g_cabBalance||0;
-      if(chips>bal){
-        if(errEl)errEl.textContent='Not enough 🥬 (you have '+bal+')';
-        return;
-      }
-      if(btn){btn.disabled=true;btn.textContent='Sitting down…';}
-      if(errEl)errEl.textContent='';
-      try{
-        // Deduct cabbage upfront
-        await g_spendCabbage(chips);
-        await g_loadGameBalances();
-        // Now join the table with that chip count
-        await pk_join(tid, chips);
-        // Close modal
-        var modal=document.getElementById('pk_buyInModal');
-        if(modal)modal.remove();
-      }catch(e){
-        if(btn){btn.disabled=false;btn.textContent='SIT DOWN →';}
-        if(errEl)errEl.textContent=e.message||'Error joining table';
-        // Refund if join failed after spend
-        try{await g_creditCabbage(chips);}catch(e2){}
-      }
-    }
-
-    async function pk_join(tid, buyInChips){
-      if(!walletPublicKey)return;
       // Try local cache first, fall back to a live fetch if stale/empty
       var tbl=pk_tables.find(function(t){return t.id===tid;});
       if(!tbl){
         try{
           var sb2=getSupaClient();
           var tr2=await sb2.from('poker_tables').select('*').eq('id',tid).single();
-          if(tr2.error||!tr2.data)throw new Error('Table not found.');
+          if(tr2.error||!tr2.data)return alert('Table not found. Please refresh the lobby.');
           tbl=tr2.data;
+          // Update local cache
           var idx=pk_tables.findIndex(function(t){return t.id===tid;});
           if(idx>=0)pk_tables[idx]=tbl; else pk_tables.push(tbl);
-        }catch(e){throw e;}
+        }catch(e){return alert('Could not load table: '+(e.message||e));}
       }
-      var sb=getSupaClient();
-      var w=walletPublicKey.toBase58();
-      var un=(session&&session.profile&&session.profile.username)||w.slice(0,4)+'\u2026'+w.slice(-4);
-      // Already seated? Just re-open
-      var ex=await sb.from('poker_players').select('*').eq('table_id',tid).eq('wallet',w).eq('is_active',true).maybeSingle();
-      if(ex.data){pk_tid=tid;pk_mySeat=ex.data.seat;await pk_open();return;}
-      // Clear any stale row
-      await sb.from('poker_players').delete().eq('table_id',tid).eq('wallet',w);
-      // Find open seat
-      var sR=await sb.from('poker_players').select('seat').eq('table_id',tid).eq('is_active',true);
-      var taken=(sR.data||[]).map(function(p){return p.seat;});
-      var open=-1;
-      for(var i=0;i<5;i++){if(taken.indexOf(i)===-1){open=i;break;}}
-      if(open===-1)throw new Error('Table is full.');
-      // Use provided buy-in chips (already deducted from cabbage balance)
-      var chips=buyInChips||tbl.buy_in;
-      await sb.from('poker_players').insert({
-        table_id:tid,wallet:w,username:un,seat:open,
-        chips:chips,is_active:true,
-        hole_cards:'[]',current_bet:0,total_bet:0,folded:false,all_in:false
-      });
-      pk_tid=tid;pk_mySeat=open;
-      await pk_open();
+      try{
+        var sb=getSupaClient();
+        var w=walletPublicKey.toBase58();
+        var un=(session&&session.profile&&session.profile.username)||w.slice(0,4)+'\u2026'+w.slice(-4);
+        var ex=await sb.from('poker_players').select('*').eq('table_id',tid).eq('wallet',w).eq('is_active',true).maybeSingle();
+        if(ex.data){pk_tid=tid;pk_mySeat=ex.data.seat;await pk_open();return;}
+        await sb.from('poker_players').delete().eq('table_id',tid).eq('wallet',w);
+        var sR=await sb.from('poker_players').select('seat').eq('table_id',tid).eq('is_active',true);
+        var taken=(sR.data||[]).map(function(p){return p.seat;});
+        var open=-1;
+        for(var i=0;i<5;i++){if(taken.indexOf(i)===-1){open=i;break;}}
+        if(open===-1)return alert('Table is full.');
+        // Check if this wallet has a stored chip balance from a previous session at this table
+        var prevR=await sb.from('poker_players').select('chips').eq('table_id',tid).eq('wallet',w).order('chips',{ascending:false}).limit(1);
+        var prevChips=(prevR.data&&prevR.data[0]&&prevR.data[0].chips>0)?prevR.data[0].chips:tbl.buy_in;
+        await sb.from('poker_players').insert({
+          table_id:tid,wallet:w,username:un,seat:open,
+          chips:prevChips,is_active:true,
+          hole_cards:'[]',current_bet:0,total_bet:0,folded:false,all_in:false
+        });
+        pk_tid=tid;pk_mySeat=open;
+        await pk_open();
+      }catch(e){alert('Error joining table: '+(e.message||e));}
     }
 
     async function pk_open(){
@@ -4573,13 +4476,9 @@ var nextTierRow = nextTier
       var w=walletPublicKey.toBase58();
       var me=pk_plrs.find(function(p){return p.wallet===w;});
       if(me&&me.chips>0){
-        // Cash out remaining chips back to cabbage wallet
         var isSol=pk_tbl&&pk_tbl.currency==='sol';
         var cab=isSol?me.chips*g_SOL_TO_CABBAGE:me.chips;
-        try{
-          await g_creditCabbage(cab);
-          await g_loadGameBalances();
-        }catch(e){console.warn('cashout error',e);}
+        try{await g_creditCabbage(cab);}catch(e){console.warn('cashout error',e);}
       }
       await sb.from('poker_players').delete().eq('table_id',pk_tid).eq('wallet',w);
       pk_unsub();pk_tid=null;pk_tbl=null;pk_plrs=[];pk_mySeat=-1;
