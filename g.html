@@ -4424,9 +4424,12 @@ var nextTierRow = nextTier
         var open=-1;
         for(var i=0;i<5;i++){if(taken.indexOf(i)===-1){open=i;break;}}
         if(open===-1)return alert('Table is full.');
+        // Check if this wallet has a stored chip balance from a previous session at this table
+        var prevR=await sb.from('poker_players').select('chips').eq('table_id',tid).eq('wallet',w).order('chips',{ascending:false}).limit(1);
+        var prevChips=(prevR.data&&prevR.data[0]&&prevR.data[0].chips>0)?prevR.data[0].chips:tbl.buy_in;
         await sb.from('poker_players').insert({
           table_id:tid,wallet:w,username:un,seat:open,
-          chips:tbl.buy_in,is_active:true,
+          chips:prevChips,is_active:true,
           hole_cards:'[]',current_bet:0,total_bet:0,folded:false,all_in:false
         });
         pk_tid=tid;pk_mySeat=open;
@@ -4643,21 +4646,46 @@ var nextTierRow = nextTier
       pk_acting=true;
       try{
         var sb=getSupaClient();
-        var t=pk_tbl;
+        // Always re-read fresh table state
+        var tR2=await sb.from('poker_tables').select('*').eq('id',pk_tid).single();
+        if(tR2.error){pk_acting=false;return;}
+        var t=tR2.data;
         if(t.status==='playing'){pk_acting=false;return;}
-        var busted=pk_plrs.filter(function(p){return p.chips<=0;});
+
+        // Re-read fresh player list
+        var pR=await sb.from('poker_players').select('*').eq('table_id',pk_tid).eq('is_active',true).order('seat',{ascending:true});
+        var ap=pR.data||[];
+
+        // Top up any player whose chips fell below the big blind so they can always play
+        // (persistent chips — only top-up if they're short-stacked, never reset a healthy stack)
+        var bb=t.big_blind||2;
+        for(var ti=0;ti<ap.length;ti++){
+          var pp=ap[ti];
+          if(pp.chips<bb){
+            // Give them exactly the buy-in amount fresh
+            var newChips=t.buy_in||bb*10;
+            await sb.from('poker_players').update({chips:newChips}).eq('id',pp.id);
+            ap[ti]=Object.assign({},pp,{chips:newChips});
+          }
+        }
+
+        // Remove anyone still at 0 after top-up (shouldn't happen but safety net)
+        var busted=ap.filter(function(p){return p.chips<=0;});
         for(var bi=0;bi<busted.length;bi++){
           await sb.from('poker_players').delete().eq('id',busted[bi].id);
         }
-        var pR=await sb.from('poker_players').select('*').eq('table_id',pk_tid).eq('is_active',true).order('seat',{ascending:true});
-        var ap=pR.data||[];
+        ap=ap.filter(function(p){return p.chips>0;});
+
         if(ap.length<2){pk_acting=false;return alert('Need at least 2 players to deal.');}
+
         var seats=pk_seatsOf(ap);
         var deck=pk_shuffle(pk_fullDeck());
-        var oldDS=(t.dealer_seat!==undefined&&t.dealer_seat!==null)?t.dealer_seat:-1;
+        var oldDS=(t.dealer_seat!==undefined&&t.dealer_seat!==null&&t.dealer_seat>=0)?t.dealer_seat:-1;
         var newDS=pk_nextSeat(seats,oldDS);
+
         var sbSeat,bbSeat,firstActSeat;
         if(ap.length===2){
+          // Heads-up: dealer = SB, acts first preflop
           sbSeat=newDS;
           bbSeat=pk_nextSeat(seats,sbSeat);
           firstActSeat=sbSeat;
@@ -4666,30 +4694,61 @@ var nextTierRow = nextTier
           bbSeat=pk_nextSeat(seats,sbSeat);
           firstActSeat=pk_nextSeat(seats,bbSeat);
         }
+
         var sbP=ap.find(function(p){return p.seat===sbSeat;});
         var bbP=ap.find(function(p){return p.seat===bbSeat;});
-        var sba=Math.min(t.small_blind||1,sbP.chips);
-        var bba=Math.min(t.big_blind||2,bbP.chips);
+        var sb_amt=Math.min(t.small_blind||1,sbP.chips);
+        var bb_amt=Math.min(t.big_blind||2,bbP.chips);
+
+        // Reset all hands first
         for(var i=0;i<ap.length;i++){
           var h=[deck.pop(),deck.pop()];
           await sb.from('poker_players').update({
             hole_cards:JSON.stringify(h),current_bet:0,total_bet:0,folded:false,all_in:false
           }).eq('id',ap[i].id);
         }
+
+        // Post blinds
         await sb.from('poker_players').update({
-          current_bet:sba,total_bet:sba,chips:sbP.chips-sba,all_in:sbP.chips-sba<=0
+          current_bet:sb_amt,total_bet:sb_amt,
+          chips:sbP.chips-sb_amt,
+          all_in:(sbP.chips-sb_amt)<=0
         }).eq('id',sbP.id);
         await sb.from('poker_players').update({
-          current_bet:bba,total_bet:bba,chips:bbP.chips-bba,all_in:bbP.chips-bba<=0
+          current_bet:bb_amt,total_bet:bb_amt,
+          chips:bbP.chips-bb_amt,
+          all_in:(bbP.chips-bb_amt)<=0
         }).eq('id',bbP.id);
+
+        // If both blinds made both players all-in, go straight to runout
+        var sbAllIn=(sbP.chips-sb_amt)<=0;
+        var bbAllIn=(bbP.chips-bb_amt)<=0;
+        var firstPhase='preflop';
+        var actSeat=firstActSeat;
+        // If every player is all-in from blinds, skip action entirely
+        var nonAllinSeats=ap.filter(function(p){
+          var newChips=p.seat===sbSeat?(sbP.chips-sb_amt):(p.seat===bbSeat?(bbP.chips-bb_amt):p.chips);
+          return newChips>0;
+        });
+        if(nonAllinSeats.length<=1){
+          // Everyone all-in — set action_seat to -1, let pk_nextPhase run it out
+          actSeat=-1;
+        }
+
         await sb.from('poker_tables').update({
-          status:'playing',phase:'preflop',community:'[]',
-          pot:sba+bba,current_bet:bba,
-          dealer_seat:newDS,action_seat:firstActSeat,round_starter:firstActSeat,
+          status:'playing',phase:firstPhase,community:'[]',
+          pot:sb_amt+bb_amt,current_bet:bb_amt,
+          dealer_seat:newDS,action_seat:actSeat,round_starter:actSeat,
           bb_seat:bbSeat,
           deck:JSON.stringify(deck),hand_num:(t.hand_num||0)+1,
           last_winner_msg:'',updated_at:new Date().toISOString()
         }).eq('id',pk_tid);
+
+        // If everyone is all-in, auto-advance to showdown
+        if(actSeat===-1){
+          setTimeout(function(){pk_nextPhase(true);},800);
+        }
+
       }catch(e){console.error('pk_deal error',e);}
       pk_acting=false;
     }
@@ -4755,6 +4814,8 @@ var nextTierRow = nextTier
       var plrs=pR.data||[];
       var tR=await sb.from('poker_tables').select('*').eq('id',pk_tid).single();
       var t=tR.data;
+      // Safety: if action_seat is -1 we're in runout mode, don't advance manually
+      if(!t||t.action_seat===-1)return;
       var nf=plrs.filter(function(p){return !p.folded;});
       if(nf.length<=1){await pk_award(nf,t.pot||0);return;}
       var canAct=plrs.filter(function(p){return !p.folded&&!p.all_in;});
