@@ -3631,8 +3631,14 @@ var nextTierRow = nextTier
 
         // ── Texas Hold\'em Poker Lobby ──
         '<div class="g_card">' +
-          '<div class="g_title">🃏 TEXAS HOLD\'EM — LIVE TABLES</div>' +
-          '<div style="font-size:0.72rem;color:#444;margin-bottom:1rem;">Sit down with up to 5 players. Buy in with 🥬. Winner takes the pot.</div>' +
+          '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.6rem;">' +
+            '<div class="g_title" style="margin:0;">🃏 TEXAS HOLD\'EM — LIVE TABLES</div>' +
+            '<div style="display:flex;gap:6px;">' +
+              '<button class="g_btn" onclick="pk_loadLobby()" style="font-size:0.65rem;padding:5px 10px;">↻ REFRESH</button>' +
+              '<button class="g_btn" onclick="pk_clearDeadSeats()" style="font-size:0.65rem;padding:5px 10px;border-color:rgba(255,60,92,0.3);color:#ff6b6b;">🧹 CLEAR DEAD SEATS</button>' +
+            '</div>' +
+          '</div>' +
+          '<div style="font-size:0.68rem;color:#444;margin-bottom:1rem;">Sit down with up to 5 players · Buy in with 🥬 · Players auto-kicked after 45s of inaction</div>' +
           '<div id="pk_lobby"><div style="text-align:center;padding:1rem;color:#252540;font-size:0.78rem;">Loading tables…</div></div>' +
         '</div>' +
 
@@ -4319,6 +4325,77 @@ var nextTierRow = nextTier
       }
     }
 
+
+    // ── Clear dead/stuck seats across all tables ──
+    async function pk_clearDeadSeats(){
+      var btn=event&&event.target?event.target:null;
+      if(btn){btn.disabled=true;btn.textContent='Clearing…';}
+      try{
+        var sb=getSupaClient();
+        // Delete any player rows that have been inactive for 10+ minutes
+        // (updated_at not set on players, so we use a broad sweep: not in an active hand = safe to clear)
+        // Strategy: for each table not currently 'playing', delete all player rows
+        var tR=await sb.from('poker_tables').select('id,status');
+        var tables=tR.data||[];
+        var cleared=0;
+        for(var ti=0;ti<tables.length;ti++){
+          var t=tables[ti];
+          // For non-playing tables, remove everyone (they were just squatting)
+          if(t.status!=='playing'){
+            var dR=await sb.from('poker_players').delete().eq('table_id',t.id).eq('is_active',true);
+            if(!dR.error)cleared++;
+          }
+        }
+        if(btn){btn.disabled=false;btn.textContent='🧹 CLEAR DEAD SEATS';}
+        alert('Done! Cleared stuck seats from '+(cleared)+' table(s). Refreshing lobby…');
+        pk_loadLobby();
+      }catch(e){
+        if(btn){btn.disabled=false;btn.textContent='🧹 CLEAR DEAD SEATS';}
+        alert('Error: '+(e.message||e));
+      }
+    }
+
+    // ── Auto-kick timeout: if the action hasn't moved in 45s, fold the active player ──
+    var pk_timeoutInterval=null;
+    var PK_TURN_TIMEOUT=45000; // 45 seconds
+
+    function pk_startTimeout(){
+      pk_stopTimeout();
+      pk_timeoutInterval=setInterval(pk_checkTimeout,5000);
+    }
+    function pk_stopTimeout(){
+      if(pk_timeoutInterval){clearInterval(pk_timeoutInterval);pk_timeoutInterval=null;}
+    }
+
+    async function pk_checkTimeout(){
+      if(!pk_tid||!pk_tbl)return;
+      var t=pk_tbl;
+      if(t.status!=='playing')return;
+      if(!t.updated_at)return;
+      var age=Date.now()-new Date(t.updated_at).getTime();
+      if(age<PK_TURN_TIMEOUT)return;
+      // Turn has been sitting too long — find the player whose turn it is
+      var activeSeat=t.action_seat;
+      if(activeSeat===-1||activeSeat===undefined||activeSeat===null)return;
+      var stuck=pk_plrs.find(function(p){return p.seat===activeSeat&&p.is_active&&!p.folded&&!p.all_in;});
+      if(!stuck)return;
+      console.log('[Poker] Auto-folding inactive player at seat',activeSeat,'after',Math.round(age/1000)+'s');
+      try{
+        var sb=getSupaClient();
+        var myW=walletPublicKey?walletPublicKey.toBase58():'';
+        // Any seated player can trigger the timeout kick (first one to notice fires it)
+        // To avoid race conditions, only trigger if I'm seated at this table
+        var iAmSeated=pk_plrs.some(function(p){return p.wallet===myW&&p.is_active;});
+        if(!iAmSeated)return;
+        // Mark them folded
+        await sb.from('poker_players').update({folded:true}).eq('id',stuck.id);
+        // Touch updated_at so we don't immediately re-trigger
+        await sb.from('poker_tables').update({updated_at:new Date().toISOString()}).eq('id',pk_tid);
+        // Advance the action
+        await pk_advance(activeSeat,'fold');
+      }catch(e){console.warn('[Poker] timeout kick error',e);}
+    }
+
     async function pk_join(tid){
       if(!walletPublicKey)return alert('Connect your wallet first.');
       var tbl=pk_tables.find(function(t){return t.id===tid;});
@@ -4349,6 +4426,7 @@ var nextTierRow = nextTier
       document.getElementById('pk_gameWrap').style.display='';
       await pk_refresh();
       pk_sub();
+      pk_startTimeout();
     }
 
     async function pk_refresh(){
@@ -4378,6 +4456,7 @@ var nextTierRow = nextTier
 
     async function pk_leaveTable(){
       if(!pk_tid)return;
+      pk_stopTimeout();
       var sb=getSupaClient();
       var w=walletPublicKey.toBase58();
       var me=pk_plrs.find(function(p){return p.wallet===w;});
@@ -4504,7 +4583,47 @@ var nextTierRow = nextTier
       if(isPlay&&me&&!me.folded&&!me.all_in&&!isMyTurn){
         html+='<div style="text-align:center;font-size:0.65rem;color:#333;margin-top:0.5rem;letter-spacing:1px;">Waiting for other players\u2026</div>';
       }
+      // Kick buttons — any seated player can remove someone stuck at the table
+      if(me&&active.length>1){
+        var kickable=pk_plrs.filter(function(p){return p.is_active&&p.wallet!==myW;});
+        if(kickable.length>0){
+          html+='<div style="margin-top:1rem;padding-top:0.8rem;border-top:1px solid rgba(255,255,255,0.04);">'
+            +'<div style="font-size:0.58rem;color:#333;letter-spacing:1px;margin-bottom:6px;text-align:center;">KICK INACTIVE PLAYER</div>'
+            +'<div style="display:flex;justify-content:center;gap:6px;flex-wrap:wrap;">';
+          kickable.forEach(function(p){
+            var dn=p.username||(p.wallet.slice(0,4)+'\u2026');
+            html+='<button class="g_btn" onclick="pk_kickPlayer(\''+p.id+'\')" '
+              +'style="font-size:0.6rem;padding:4px 10px;border-color:rgba(255,60,92,0.25);color:#ff6b6b;">'
+              +'\u2715 '+escapeHtml(dn)+'</button>';
+          });
+          html+='</div></div>';
+        }
+      }
+
       area.innerHTML=html;
+    }
+
+    // ── Kick a player from the table (manual or auto) ──
+    async function pk_kickPlayer(playerId){
+      if(!pk_tid)return;
+      var sb=getSupaClient();
+      try{
+        // Find the player being kicked
+        var kicked=pk_plrs.find(function(p){return p.id===playerId;});
+        if(!kicked)return;
+        var dn=kicked.username||(kicked.wallet.slice(0,4)+'…');
+        // If it's their turn, fold them first then advance
+        var t=pk_tbl;
+        var isTheirTurn=t&&t.status==='playing'&&t.action_seat===kicked.seat&&!kicked.folded&&!kicked.all_in;
+        if(isTheirTurn){
+          await sb.from('poker_players').update({folded:true}).eq('id',playerId);
+          await sb.from('poker_tables').update({updated_at:new Date().toISOString()}).eq('id',pk_tid);
+          await pk_advance(kicked.seat,'fold');
+        }
+        // Remove them from the table entirely
+        await sb.from('poker_players').delete().eq('id',playerId);
+        console.log('[Poker] Kicked player',dn);
+      }catch(e){console.warn('[Poker] kick error',e);}
     }
 
     async function pk_deal(){
