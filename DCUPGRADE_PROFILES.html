@@ -990,7 +990,52 @@ a.plink:hover{
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tweetnacl@1.0.3/nacl.min.js"></script>
-  <script src="https://unpkg.com/@solana/web3.js@1.95.8/lib/index.iife.min.js" async></script>
+  <script>
+    // Buffer polyfill — must be defined BEFORE solana/web3.js loads.
+    // We inline a minimal Buffer.from/alloc shim so Phantom's lockdown
+    // script cannot interfere with an external CDN load.
+    (function() {
+      if (typeof window.Buffer !== 'undefined' && typeof window.Buffer.from === 'function') return;
+      var B = {};
+      function fromArray(arr) {
+        var u = new Uint8Array(arr.length);
+        for (var i = 0; i < arr.length; i++) u[i] = arr[i] & 255;
+        return u;
+      }
+      B.from = function(data, enc) {
+        if (typeof data === 'string') {
+          enc = enc || 'utf8';
+          if (enc === 'hex') {
+            var bytes = [];
+            for (var i = 0; i < data.length; i += 2) bytes.push(parseInt(data.substr(i,2),16));
+            return fromArray(bytes);
+          }
+          var str = unescape(encodeURIComponent(data));
+          var out = new Uint8Array(str.length);
+          for (var i = 0; i < str.length; i++) out[i] = str.charCodeAt(i);
+          return out;
+        }
+        if (data instanceof Uint8Array || Array.isArray(data)) return fromArray(data);
+        if (typeof data === 'number') return new Uint8Array(data);
+        return new Uint8Array(0);
+      };
+      B.alloc = function(size, fill) {
+        var u = new Uint8Array(size);
+        if (fill !== undefined) u.fill(fill);
+        return u;
+      };
+      B.allocUnsafe = function(size) { return new Uint8Array(size); };
+      B.isBuffer = function(b) { return b instanceof Uint8Array; };
+      B.concat = function(list, len) {
+        var total = len || list.reduce(function(s,b){ return s + b.length; }, 0);
+        var out = new Uint8Array(total), offset = 0;
+        list.forEach(function(b){ out.set(b, offset); offset += b.length; });
+        return out;
+      };
+      window.Buffer = B;
+    })();
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.73.2/lib/index.iife.min.js"></script>
 </head>
 
 <body>
@@ -1018,6 +1063,7 @@ a.plink:hover{
         <button class="dash-tab" id="tabStore" onclick="switchView('store')">🛒 Store</button>
         <button class="dash-tab" id="tabLeaderboard" onclick="switchView('leaderboard')">🏆</button>
         <button class="dash-tab" id="tabVoice" onclick="switchView('voice')">🎙️ Voice</button>
+        <button class="dash-tab" id="tabPets" onclick="switchView('pets')">🥚 Pets</button>
       </div>
 
       <div class="dash-right">
@@ -1051,6 +1097,7 @@ a.plink:hover{
     <div class="view" id="view-leaderboard"></div>
     <div class="view" id="view-store"></div>
     <div class="view" id="view-voice"></div>
+    <div class="view" id="view-pets"></div>
   </div>
 
   <!-- PFP MODAL -->
@@ -1234,6 +1281,7 @@ a.plink:hover{
         pfpImage: "",
         x: "",
         discord: "",
+        discord_id: "",
         ledger: ""
       },
       secondWallet: { address: "" },
@@ -1294,6 +1342,7 @@ a.plink:hover{
           session.profile.pfpImage = data.pfpImage || "";
           session.profile.x = data.x || "";
           session.profile.discord = data.discord || "";
+          session.profile.discord_id = data.discord_id || "";
           session.profile.ledger = data.ledger || "";
         }
       } catch (e) {}
@@ -1486,6 +1535,8 @@ a.plink:hover{
         applyProfilePanelUI();
 
         await loadDashboard();
+
+
       } catch (err) {
         console.error("Connect error:", err);
         if (err.code === 4001 || (err.message && err.message.toLowerCase().includes("user rejected"))) {
@@ -1516,6 +1567,7 @@ a.plink:hover{
       var vl = document.getElementById("view-leaderboard"); if (vl) vl.classList.remove("show");
       var vs = document.getElementById("view-store"); if (vs) vs.classList.remove("show");
       var vv = document.getElementById("view-voice"); if (vv) vv.classList.remove("show");
+      var vpe2 = document.getElementById("view-pets"); if (vpe2) vpe2.classList.remove("show");
       voice_leave();
 
       session.profilePanelOpen = false;
@@ -1529,9 +1581,7 @@ a.plink:hover{
       var tabLeaderboard = document.getElementById("tabLeaderboard");
       var tabStore = document.getElementById("tabStore");
       if (tabMissions) tabMissions.classList.remove("active");
-      var tabLeaderboard = document.getElementById("tabLeaderboard");
       if (tabLeaderboard) tabLeaderboard.classList.remove("active");
-      var tabStore = document.getElementById("tabStore");
       if (tabStore) tabStore.classList.remove("active");
       var tabVoice = document.getElementById("tabVoice");
       if (tabVoice) tabVoice.classList.remove("active");
@@ -1550,6 +1600,7 @@ a.plink:hover{
       var vl = document.getElementById("view-leaderboard");
       var vs = document.getElementById("view-store");
       var vv = document.getElementById("view-voice");
+      var vpe = document.getElementById("view-pets");
       if (vp) vp.classList.remove("show");
       if (vc) vc.classList.remove("show");
       if (vg) vg.classList.remove("show");
@@ -1557,12 +1608,15 @@ a.plink:hover{
       if (vl) vl.classList.remove("show");
       if (vs) vs.classList.remove("show");
       if (vv) vv.classList.remove("show");
+      if (vpe) vpe.classList.remove("show");
 
       // Deactivate all tabs
       var tabProfile = document.getElementById("tabProfile");
       var tabChat    = document.getElementById("tabChat");
       var tabGames   = document.getElementById("tabGames");
       var tabMissions = document.getElementById("tabMissions");
+      var tabLeaderboard = document.getElementById("tabLeaderboard");
+      var tabStore = document.getElementById("tabStore");
       if (tabProfile) tabProfile.classList.remove("active");
       if (tabChat)    tabChat.classList.remove("active");
       if (tabGames)   tabGames.classList.remove("active");
@@ -1571,6 +1625,8 @@ a.plink:hover{
       if (tabStore) tabStore.classList.remove("active");
       var tabVoice = document.getElementById("tabVoice");
       if (tabVoice) tabVoice.classList.remove("active");
+      var tabPets = document.getElementById("tabPets");
+      if (tabPets) tabPets.classList.remove("active");
 
       if (viewName === "profile") {
         stopChatPoll();
@@ -1617,6 +1673,14 @@ a.plink:hover{
         if (vv) vv.classList.add("show");
         if (tabVoice) tabVoice.classList.add("active");
         renderVoiceUI();
+      }
+
+      if (viewName === "pets") {
+        stopChatPoll();
+        if (vpe) vpe.classList.add("show");
+        if (tabPets) tabPets.classList.add("active");
+        renderPetsUI();
+        petsInit();
       }
 
       // Update voice tab indicator — show live dot whenever in a room, regardless of active tab
@@ -2124,6 +2188,7 @@ var nextTierRow = nextTier
 
         hideSecondWalletModal();
         alert("2nd wallet linked: " + shortAddr(addr));
+
         } catch (err) {
         console.error("Second wallet connect error:", err);
         alert("Failed to link 2nd wallet: " + (err.message || err));
@@ -2192,9 +2257,11 @@ var nextTierRow = nextTier
         session.profile.discord = data.username
           ? (data.username + (data.discriminator ? ("#" + data.discriminator) : ""))
           : "";
+        session.profile.discord_id = data.id || data.discord_id || ""; // capture the snowflake ID
         saveProfileToStorage();
         refreshBanner();
-        alert("Discord connected: " + (session.profile.discord || "connected"));
+
+        alert("Discord connected: " + (session.profile.discord || "connected") + (session.profile.discord_id ? " (ID: " + session.profile.discord_id + ")" : ""));
       }
 
       if (data.type === "x_error" || data.type === "discord_error") {
@@ -2243,7 +2310,7 @@ var nextTierRow = nextTier
     ================================================================ */
 
     var SUPA_URL = 'https://hypqndasopdkrqvkllvc.supabase.co';
-    var SUPA_KEY = 'sb_publishable_DwaaLS_hFJAOZ6M9VmYKYA_AQvyfgv1';
+    var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5cHFuZGFzb3Bka3JxdmtsbHZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5NTI1NjEsImV4cCI6MjA4NzUyODU2MX0.jXLaLfFudJf-xytfHAvMe5oV0DVeWi7xNB53Ib0GD_s';
     var supaClient  = null;
     var chatChannel = null;   // real-time subscription
     var chatMsgs    = [];     // [{id, wallet, username, text, created_at}]
@@ -2284,7 +2351,7 @@ var nextTierRow = nextTier
       if (linkRes.data && linkRes.data.profile_id) {
         var profRes = await db
           .from("profiles")
-          .select("id, username, avatar_url, created_at")
+          .select("id, username, avatar_url, discord_id, discord_username, created_at")
           .eq("id", linkRes.data.profile_id)
           .single();
         if (profRes.error) throw profRes.error;
@@ -2298,7 +2365,7 @@ var nextTierRow = nextTier
           username: (session && session.profile && session.profile.username) ? session.profile.username : null,
           avatar_url: (session && session.profile && session.profile.pfpImage) ? session.profile.pfpImage : null
         })
-        .select("id, username, avatar_url, created_at")
+        .select("id, username, avatar_url, discord_id, discord_username, created_at")
         .single();
 
       if (newProfRes.error) throw newProfRes.error;
@@ -2320,7 +2387,7 @@ var nextTierRow = nextTier
 
       var finalProf = await db
         .from("profiles")
-        .select("id, username, avatar_url, created_at")
+        .select("id, username, avatar_url, discord_id, discord_username, created_at")
         .eq("id", finalLink.data.profile_id)
         .single();
       if (finalProf.error) throw finalProf.error;
@@ -2377,7 +2444,9 @@ var nextTierRow = nextTier
       // Map existing dashboard profile fields -> DB columns that exist
       var payload = {
         username: (session.profile && session.profile.username) ? session.profile.username : null,
-        avatar_url: (session.profile && session.profile.pfpImage) ? session.profile.pfpImage : null
+        avatar_url: (session.profile && session.profile.pfpImage) ? session.profile.pfpImage : null,
+        discord_id: (session.profile && session.profile.discord_id) ? session.profile.discord_id : null,
+        discord_username: (session.profile && session.profile.discord) ? session.profile.discord : null
       };
       var res = await db
         .from("profiles")
@@ -2394,6 +2463,8 @@ var nextTierRow = nextTier
         // Prefer Supabase values when present
         if (profile.username) session.profile.username = profile.username;
         if (profile.avatar_url) session.profile.pfpImage = profile.avatar_url;
+        if (profile.discord_id) session.profile.discord_id = profile.discord_id;
+        if (profile.discord_username) session.profile.discord = profile.discord_username;
 
         // Pull linked wallets and set 2nd wallet UI value (first non-primary wallet)
         var wallets = await loadLinkedWallets(profile.id);
@@ -3155,20 +3226,16 @@ var nextTierRow = nextTier
         }));
         var signed = await walletProvider.signTransaction(tx);
         var rawTx = signed.serialize();
+        var rawTxB64 = btoa(Array.prototype.map.call(rawTx, function(b){ return String.fromCharCode(b); }).join(''));
         var sendRes = await fetch(CONFIG.RPC_URL, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'sendTransaction', params: [btoa(String.fromCharCode(...rawTx)), { encoding: 'base64' }] })
+          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'sendTransaction', params: [rawTxB64, { encoding: 'base64' }] })
         });
         var sendJson = await sendRes.json();
         if (sendJson.error) throw new Error(sendJson.error.message || 'TX failed');
         return sendJson.result;
       } else {
-        // Fallback: build raw transaction bytes for system transfer
-        var fromBytes = g_b58Decode(from);
-        var toBytes   = g_b58Decode(to);
-        var txBytes   = g_buildSystemTransferTx(fromBytes, toBytes, lamports, g_b58Decode(blockhash));
-        var signed2   = await walletProvider.signTransaction({ serializeMessage: function(){ return txBytes; } });
-        throw new Error('Please include @solana/web3.js for SOL transfers.');
+        throw new Error('Solana Web3 library not loaded. Please refresh the page and try again.');
       }
     }
 
@@ -3986,7 +4053,6 @@ var nextTierRow = nextTier
       bj_state = 'play';
 
       bj_paint(false);
-      bj_btns();
 
       // Auto-stand on natural 21
       if(bj_hv(bj_hands[0].cards) === 21){
@@ -3994,6 +4060,7 @@ var nextTierRow = nextTier
         await bj_advanceHand();
       }
       bj_busy = false;
+      bj_btns();  // enable buttons AFTER bj_busy is cleared
     }
 
     // HIT
@@ -4005,7 +4072,6 @@ var nextTierRow = nextTier
       bj_busy = true;
       hand.cards.push(bj_deck.pop());
       bj_paint(false);
-      bj_btns();
 
       if(bj_hv(hand.cards) > 21){
         hand.status = 'bust';
@@ -4016,6 +4082,7 @@ var nextTierRow = nextTier
         await bj_advanceHand();
       }
       bj_busy = false;
+      bj_btns();
     }
 
     // STAND
@@ -4028,6 +4095,7 @@ var nextTierRow = nextTier
       hand.status = 'stand';
       await bj_advanceHand();
       bj_busy = false;
+      bj_btns();
     }
 
     // DOUBLE DOWN
@@ -4051,6 +4119,7 @@ var nextTierRow = nextTier
       }
       await bj_advanceHand();
       bj_busy = false;
+      bj_btns();
     }
 
     // SPLIT
@@ -4077,7 +4146,6 @@ var nextTierRow = nextTier
       bj_hands.splice(bj_activeIdx + 1, 0, handB);
 
       bj_paint(false);
-      bj_btns();
 
       // If split aces, each gets one card and auto-stands
       if(BJ_SPLIT_ACE_ONE_CARD && card1.v === 'A'){
@@ -4086,6 +4154,7 @@ var nextTierRow = nextTier
         bj_paint(false);
         await bj_advanceHand();
         bj_busy = false;
+        bj_btns();
         return;
       }
 
@@ -4095,6 +4164,7 @@ var nextTierRow = nextTier
         await bj_advanceHand();
       }
       bj_busy = false;
+      bj_btns();
     }
 
     // RESOLVE ALL HANDS — runs after dealer is done
@@ -7005,6 +7075,490 @@ var nextTierRow = nextTier
 
       // Paint the active room state
       voice_paintRoom();
+    }
+
+  
+
+    /* ================================================================
+       PETS — Animated pet + clothing overlay system
+       Tables: items, pet_inventory, pet_equipped
+    ================================================================ */
+
+    var pets_closetOpen = false;
+    var pets_inventory  = {};   // { shirt:[], hat:[], chain:[], aura:[] }
+    var pets_equipped   = {};   // { shirt:{id,image_url}, hat:{...}, ... }
+
+    var PETS_SLOTS = ['shirt','hat','chain','aura'];
+
+    // ── Helpers ──
+    function getConnectedWalletAddress() {
+      return walletPublicKey ? walletPublicKey.toBase58() : "";
+    }
+
+    function getPetKey() {
+      return getConnectedWalletAddress(); // MVP: wallet = pet_key
+    }
+
+    // ── Render the Pets tab UI into #view-pets ──
+    function renderPetsUI() {
+      var view = document.getElementById("view-pets");
+      if (!view) return;
+
+      view.style.display = "block";
+
+      view.innerHTML = `
+        <style>
+          .pets-wrap {
+            display: flex;
+            gap: 2rem;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0.5rem 0 2rem;
+          }
+          .pet-stage-col { flex: 0 0 auto; }
+          .pet-stage {
+            width: 512px;
+            max-width: 90vw;
+            height: 512px;
+            max-height: 90vw;
+            position: relative;
+            background: radial-gradient(ellipse at 50% 60%, rgba(0,212,255,0.06) 0%, #0a0a1a 80%);
+            border: 1px solid #1e1e3a;
+            border-radius: 20px;
+            overflow: hidden;
+          }
+          .pet-stage img {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+          }
+          .pet-stage img.pet-overlay {
+            pointer-events: none;
+          }
+          .pet-info-col {
+            flex: 1 1 280px;
+            min-width: 260px;
+            display: flex;
+            flex-direction: column;
+            gap: 1.1rem;
+          }
+          .pet-stat-card {
+            background: #111125;
+            border: 1px solid #1e1e3a;
+            border-radius: 14px;
+            padding: 1.4rem 1.6rem;
+          }
+          .pet-name-line {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 2rem;
+            letter-spacing: 4px;
+            color: #00d4ff;
+            line-height: 1;
+            margin-bottom: 2px;
+          }
+          .pet-stage-line {
+            font-size: 0.7rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #555;
+            margin-bottom: 1rem;
+          }
+          .pet-xp-bar-wrap { margin-bottom: 1rem; }
+          .pet-xp-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.68rem;
+            color: #555;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+          }
+          .pet-xp-bar {
+            height: 6px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 3px;
+            overflow: hidden;
+          }
+          .pet-xp-fill {
+            height: 100%;
+            width: 35%;
+            background: linear-gradient(90deg,#00d4ff,#7b68ee);
+            border-radius: 3px;
+            box-shadow: 0 0 10px rgba(0,212,255,0.4);
+            transition: width 0.8s cubic-bezier(0.16,1,0.3,1);
+          }
+          .pet-btns {
+            display: flex;
+            gap: 0.7rem;
+            flex-wrap: wrap;
+          }
+          .pet-btn {
+            background: transparent;
+            border: 1px solid rgba(0,212,255,0.35);
+            color: #00d4ff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            font-size: 0.75rem;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            transition: all 0.2s;
+          }
+          .pet-btn:hover {
+            background: rgba(0,212,255,0.08);
+            box-shadow: 0 0 18px rgba(0,212,255,0.15);
+            transform: translateY(-1px);
+          }
+          .pet-btn.active {
+            background: rgba(0,212,255,0.12);
+            border-color: rgba(0,212,255,0.7);
+            box-shadow: 0 0 20px rgba(0,212,255,0.2);
+          }
+          .pet-btn.feed-btn {
+            border-color: rgba(0,255,136,0.35);
+            color: #00ff88;
+          }
+          .pet-btn.feed-btn:hover {
+            background: rgba(0,255,136,0.08);
+            box-shadow: 0 0 18px rgba(0,255,136,0.15);
+          }
+
+          /* ── Closet ── */
+          .pets-closet {
+            background: #0f0f22;
+            border: 1px solid #1e1e3a;
+            border-radius: 14px;
+            padding: 1.4rem 1.6rem;
+            display: none;
+          }
+          .pets-closet.open { display: block; }
+          .closet-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.1rem;
+            letter-spacing: 3px;
+            color: #555;
+            margin-bottom: 1.1rem;
+          }
+          .closet-section { margin-bottom: 1.2rem; }
+          .closet-slot-label {
+            font-size: 0.65rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #444;
+            margin-bottom: 0.55rem;
+          }
+          .closet-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+          }
+          .closet-item {
+            width: 72px;
+            height: 72px;
+            border-radius: 10px;
+            border: 2px solid #1e1e3a;
+            background: #0a0a1a;
+            cursor: pointer;
+            overflow: hidden;
+            transition: all 0.2s;
+            position: relative;
+            flex-shrink: 0;
+          }
+          .closet-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            padding: 4px;
+          }
+          .closet-item:hover {
+            border-color: rgba(0,212,255,0.5);
+            box-shadow: 0 0 14px rgba(0,212,255,0.18);
+            transform: translateY(-2px);
+          }
+          .closet-item.equipped {
+            border-color: #00d4ff;
+            box-shadow: 0 0 16px rgba(0,212,255,0.3);
+          }
+          .closet-item.equipped::after {
+            content: '✓';
+            position: absolute;
+            bottom: 3px;
+            right: 5px;
+            font-size: 0.6rem;
+            color: #00d4ff;
+            font-weight: 900;
+          }
+          .closet-unequip {
+            background: transparent;
+            border: 1px solid rgba(255,60,92,0.25);
+            color: #555;
+            padding: 5px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.6rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            font-family: 'Space Grotesk', sans-serif;
+            transition: all 0.2s;
+            margin-top: 4px;
+          }
+          .closet-unequip:hover { border-color: rgba(255,60,92,0.6); color: #ff3c5c; }
+          .closet-empty {
+            font-size: 0.7rem;
+            color: #2a2a44;
+            letter-spacing: 1px;
+          }
+          @media (max-width: 600px) {
+            .pet-stage { width: 300px; height: 300px; }
+          }
+        </style>
+
+        <div class="pets-wrap">
+          <!-- LEFT: Pet Stage -->
+          <div class="pet-stage-col">
+            <div class="pet-stage" id="petStage">
+              <img id="petBase" src="/pets/hatchling.gif" alt="Your Pet"
+                   onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 200 200%22><text y=%22.9em%22 font-size=%22180%22>🥚</text></svg>'">
+              <img id="petOverlayShirt" class="pet-overlay" src="" alt="" style="display:none;">
+              <img id="petOverlayHat"   class="pet-overlay" src="" alt="" style="display:none;">
+              <img id="petOverlayChain" class="pet-overlay" src="" alt="" style="display:none;">
+              <img id="petOverlayAura"  class="pet-overlay" src="" alt="" style="display:none;">
+            </div>
+          </div>
+
+          <!-- RIGHT: Stats + Controls -->
+          <div class="pet-info-col">
+            <div class="pet-stat-card">
+              <div class="pet-name-line" id="petNameDisplay">HATCHLING</div>
+              <div class="pet-stage-line">Stage 1 · Level 1</div>
+              <div class="pet-xp-bar-wrap">
+                <div class="pet-xp-labels">
+                  <span>0 XP</span>
+                  <span>100 XP</span>
+                </div>
+                <div class="pet-xp-bar">
+                  <div class="pet-xp-fill" id="petXpFill"></div>
+                </div>
+              </div>
+              <div class="pet-btns">
+                <button class="pet-btn feed-btn" onclick="petsFeed()">🍀 Feed</button>
+                <button class="pet-btn" id="closetToggleBtn" onclick="petsToggleCloset()">👕 Closet</button>
+              </div>
+            </div>
+
+            <!-- Closet panel (hidden by default) -->
+            <div class="pets-closet" id="petsCloset">
+              <div class="closet-title">👕 CLOSET</div>
+              <div id="closetBody">
+                <div style="color:#444;font-size:0.8rem;letter-spacing:1px;">Loading inventory…</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // ── Toggle the closet panel ──
+    function petsToggleCloset() {
+      pets_closetOpen = !pets_closetOpen;
+      var panel = document.getElementById("petsCloset");
+      var btn   = document.getElementById("closetToggleBtn");
+      if (panel) panel.classList.toggle("open", pets_closetOpen);
+      if (btn)   btn.classList.toggle("active", pets_closetOpen);
+      if (pets_closetOpen) petsLoadInventory();
+    }
+
+    // ── Feed stub ──
+    function petsFeed() {
+      var btn = document.querySelector(".pet-btn.feed-btn");
+      if (btn) {
+        btn.textContent = "🍀 Fed!";
+        btn.disabled = true;
+        setTimeout(function(){ btn.textContent = "🍀 Feed"; btn.disabled = false; }, 2000);
+      }
+    }
+
+    // ── Apply overlay images based on pets_equipped map ──
+    function petsApplyOverlays() {
+      PETS_SLOTS.forEach(function(slot) {
+        var el = document.getElementById("petOverlay" + slot.charAt(0).toUpperCase() + slot.slice(1));
+        if (!el) return;
+        var eq = pets_equipped[slot];
+        if (eq && eq.image_url) {
+          el.src = eq.image_url;
+          el.style.display = "block";
+        } else {
+          el.src = "";
+          el.style.display = "none";
+        }
+      });
+    }
+
+    // ── Load equipped items from Supabase ──
+    async function petsLoadEquipped() {
+      var pk = getPetKey();
+      if (!pk) return;
+      try {
+        var db = getSupaClient();
+        var res = await db
+          .from("pet_equipped")
+          .select("slot, item_id, items(image_url, name)")
+          .eq("pet_key", pk);
+
+        if (res.error) { console.warn("petsLoadEquipped error:", res.error); return; }
+
+        pets_equipped = {};
+        (res.data || []).forEach(function(row) {
+          pets_equipped[row.slot] = {
+            id:        row.item_id,
+            image_url: row.items ? row.items.image_url : "",
+            name:      row.items ? row.items.name      : ""
+          };
+        });
+
+        petsApplyOverlays();
+      } catch(e) { console.warn("petsLoadEquipped exception:", e); }
+    }
+
+    // ── Render closet HTML ──
+    function petsPaintCloset() {
+      var body = document.getElementById("closetBody");
+      if (!body) return;
+
+      var html = "";
+      PETS_SLOTS.forEach(function(slot) {
+        var items = pets_inventory[slot] || [];
+        var equippedId = pets_equipped[slot] ? pets_equipped[slot].id : null;
+
+        var slotLabel = slot.charAt(0).toUpperCase() + slot.slice(1) + "s";
+        var thumbsHtml = "";
+
+        if (items.length === 0) {
+          thumbsHtml = '<span class="closet-empty">None owned yet</span>';
+        } else {
+          items.forEach(function(item) {
+            var isEq = (equippedId === item.id);
+            thumbsHtml +=
+              '<div class="closet-item' + (isEq ? " equipped" : "") + '" '
+              + 'title="' + escapeHtml(item.name) + '" '
+              + 'onclick="petsEquipItem(\'' + escapeHtml(slot) + '\',\'' + escapeHtml(item.id) + '\')">'
+              + '<img src="' + escapeHtml(item.image_url) + '" alt="' + escapeHtml(item.name) + '" loading="lazy">'
+              + '</div>';
+          });
+          if (equippedId) {
+            thumbsHtml +=
+              '<div style="width:100%;margin-top:2px;">'
+              + '<button class="closet-unequip" onclick="petsUnequip(\'' + escapeHtml(slot) + '\')">✕ Remove</button>'
+              + '</div>';
+          }
+        }
+
+        html +=
+          '<div class="closet-section">'
+          + '<div class="closet-slot-label">' + escapeHtml(slotLabel) + '</div>'
+          + '<div class="closet-grid">' + thumbsHtml + '</div>'
+          + '</div>';
+      });
+
+      body.innerHTML = html || '<div style="color:#444;font-size:0.8rem;letter-spacing:1px;">No items found.</div>';
+    }
+
+    // ── Load inventory from Supabase ──
+    async function petsLoadInventory() {
+      var pk = getPetKey();
+      var wallet = getConnectedWalletAddress();
+      if (!pk || !wallet) return;
+      try {
+        var db = getSupaClient();
+        var res = await db
+          .from("pet_inventory")
+          .select("item_id, items(id, name, slot, image_url)")
+          .eq("wallet", wallet)
+          .eq("pet_key", pk);
+
+        if (res.error) { console.warn("petsLoadInventory error:", res.error); return; }
+
+        // Reset
+        pets_inventory = { shirt: [], hat: [], chain: [], aura: [] };
+
+        (res.data || []).forEach(function(row) {
+          if (!row.items) return;
+          var s = row.items.slot;
+          if (!pets_inventory[s]) pets_inventory[s] = [];
+          // Avoid duplicates
+          var already = pets_inventory[s].some(function(i){ return i.id === row.items.id; });
+          if (!already) {
+            pets_inventory[s].push({
+              id:        row.items.id,
+              name:      row.items.name,
+              slot:      row.items.slot,
+              image_url: row.items.image_url
+            });
+          }
+        });
+
+        petsPaintCloset();
+      } catch(e) { console.warn("petsLoadInventory exception:", e); }
+    }
+
+    // ── Equip an item (upsert) ──
+    async function petsEquipItem(slot, itemId) {
+      var pk = getPetKey();
+      if (!pk) return;
+      try {
+        var db = getSupaClient();
+        var res = await db
+          .from("pet_equipped")
+          .upsert(
+            { pet_key: pk, slot: slot, item_id: itemId, updated_at: new Date().toISOString() },
+            { onConflict: "pet_key,slot" }
+          );
+
+        if (res.error) { console.warn("petsEquipItem error:", res.error); return; }
+
+        // Find the item in inventory to get image_url immediately
+        var found = (pets_inventory[slot] || []).find(function(i){ return i.id === itemId; });
+        pets_equipped[slot] = found
+          ? { id: itemId, image_url: found.image_url, name: found.name }
+          : { id: itemId, image_url: "", name: "" };
+
+        petsApplyOverlays();
+        petsPaintCloset();
+      } catch(e) { console.warn("petsEquipItem exception:", e); }
+    }
+
+    // ── Unequip a slot ──
+    async function petsUnequip(slot) {
+      var pk = getPetKey();
+      if (!pk) return;
+      try {
+        var db = getSupaClient();
+        await db
+          .from("pet_equipped")
+          .delete()
+          .eq("pet_key", pk)
+          .eq("slot", slot);
+
+        delete pets_equipped[slot];
+        petsApplyOverlays();
+        petsPaintCloset();
+      } catch(e) { console.warn("petsUnequip exception:", e); }
+    }
+
+    // ── Init (called every time Pets tab is opened) ──
+    function petsInit() {
+      pets_closetOpen = false;
+      var panel = document.getElementById("petsCloset");
+      var btn   = document.getElementById("closetToggleBtn");
+      if (panel) panel.classList.remove("open");
+      if (btn)   btn.classList.remove("active");
+      petsLoadEquipped();
     }
 
   </script>
