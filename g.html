@@ -4425,17 +4425,17 @@ var nextTierRow = nextTier
       modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1.5rem;';
       modal.innerHTML=
         '<div style="background:linear-gradient(135deg,#111125,#0d0d20);border:1px solid #1e1e3a;border-radius:16px;padding:2rem;max-width:380px;width:100%;text-align:center;box-shadow:0 0 40px rgba(0,212,255,0.1);">'
-          +'<div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:3px;color:#00d4ff;margin-bottom:0.3rem;">BUY IN</div>'
-          +'<div style="font-size:0.78rem;color:#555;margin-bottom:1.2rem;">'+escapeHtml(tbl.name||'Table')+'&nbsp;&nbsp;·&nbsp;&nbsp;Blinds: '+tbl.small_blind+'/'+tbl.big_blind+' '+sym+'</div>'
-          +'<div style="font-size:0.68rem;color:#444;margin-bottom:1.4rem;">Your balance: <span style="color:#00ff88;font-weight:700;">'+bal.toLocaleString()+' 🥬</span></div>'
+          +'<div style="font-family:Bebas Neue,sans-serif;font-size:1.6rem;letter-spacing:3px;color:#00d4ff;margin-bottom:0.3rem;">BUY IN</div>'
+          +'<div style="font-size:0.78rem;color:#555;margin-bottom:1.2rem;">'+escapeHtml(tbl.name||'Table')+'&nbsp;&nbsp;&middot;&nbsp;&nbsp;Blinds: '+tbl.small_blind+'/'+tbl.big_blind+' '+sym+'</div>'
+          +'<div style="font-size:0.68rem;color:#444;margin-bottom:1.4rem;">Your balance: <span style="color:#00ff88;font-weight:700;">'+bal.toLocaleString()+' Cabbage</span></div>'
           +'<div style="margin-bottom:1.2rem;">'
             +'<label style="font-size:0.65rem;color:#555;letter-spacing:1px;display:block;margin-bottom:6px;">CHIPS TO BUY (min '+minBuy+')</label>'
-            +'<input id="pk_buyInAmt" type="number" min="'+minBuy+'" max="'+maxBuy+'" step="'+minBuy+'" value="'+minBuy+'" '
+            +'<input id="pk_buyInAmt" type="number" min="'+minBuy+'" max="'+maxBuy+'" step="1" value="'+minBuy+'" '
               +'style="width:100%;background:#0a0a18;border:1px solid #2a2a4a;border-radius:8px;padding:10px 14px;color:#fff;font-size:1.1rem;text-align:center;outline:none;box-sizing:border-box;">'
           +'</div>'
           +'<div style="display:flex;gap:10px;justify-content:center;">'
-            +'<button class="g_btn" onclick="document.getElementById('pk_buyInModal').remove()" style="flex:1;">CANCEL</button>'
-            +'<button class="g_btn g_btn-primary" onclick="pk_confirmBuyIn(''+tid+'')" style="flex:1;" id="pk_buyInConfirm">SIT DOWN →</button>'
+            +'<button class="g_btn" onclick="document.getElementById(\'pk_buyInModal\').remove()" style="flex:1;">CANCEL</button>'
+            +'<button class="g_btn g_btn-primary" onclick="pk_confirmBuyIn(\''+tid+'\')" style="flex:1;" id="pk_buyInConfirm">SIT DOWN</button>'
           +'</div>'
           +'<div id="pk_buyInErr" style="font-size:0.68rem;color:#ff3c5c;margin-top:0.8rem;min-height:1rem;"></div>'
         +'</div>';
