@@ -4316,9 +4316,16 @@ var nextTierRow = nextTier
             +'</div>'
             +(full
               ?'<span style="font-size:0.65rem;color:#555;letter-spacing:1px;">FULL</span>'
-              :'<button class="g_btn g_btn-primary" onclick="pk_showBuyIn(\''+t.id+'\')">SIT DOWN</button>')
+              :'<button class="g_btn g_btn-primary pk_sitBtn" data-tid="'+t.id+'">SIT DOWN</button>')
             +'</div>';
         }).join('')||'<div style="color:#444;font-size:0.78rem;text-align:center;padding:1rem;">No tables available.</div>';
+      // Wire up sit buttons after render — avoids all inline onclick quote issues
+      var sitBtns=el.querySelectorAll('.pk_sitBtn');
+      for(var si=0;si<sitBtns.length;si++){
+        (function(btn){
+          btn.addEventListener('click',function(){pk_showBuyIn(btn.getAttribute('data-tid'));});
+        })(sitBtns[si]);
+      }
       }catch(e){
         var el2=document.getElementById('pk_lobby');
         if(el2)el2.innerHTML='<div style="color:#ff3c5c;font-size:0.78rem;">Error loading tables: '+(e.message||e)+'</div>';
