@@ -4332,23 +4332,24 @@ var nextTierRow = nextTier
       if(btn){btn.disabled=true;btn.textContent='Clearing…';}
       try{
         var sb=getSupaClient();
-        // Delete any player rows that have been inactive for 10+ minutes
-        // (updated_at not set on players, so we use a broad sweep: not in an active hand = safe to clear)
-        // Strategy: for each table not currently 'playing', delete all player rows
         var tR=await sb.from('poker_tables').select('id,status');
         var tables=tR.data||[];
         var cleared=0;
         for(var ti=0;ti<tables.length;ti++){
           var t=tables[ti];
-          // For non-playing tables, remove everyone (they were just squatting)
           if(t.status!=='playing'){
-            var dR=await sb.from('poker_players').delete().eq('table_id',t.id).eq('is_active',true);
-            if(!dR.error)cleared++;
+            await sb.from('poker_players').delete().eq('table_id',t.id);
+            await sb.from('poker_tables').update({
+              status:'idle',phase:'',pot:0,current_bet:0,
+              action_seat:-1,round_starter:-1,
+              community:'[]',deck:'[]',last_winner_msg:''
+            }).eq('id',t.id);
+            cleared++;
           }
         }
         if(btn){btn.disabled=false;btn.textContent='🧹 CLEAR DEAD SEATS';}
-        alert('Done! Cleared stuck seats from '+(cleared)+' table(s). Refreshing lobby…');
-        pk_loadLobby();
+        alert('Cleared '+cleared+' table(s). Refreshing…');
+        await pk_loadLobby();
       }catch(e){
         if(btn){btn.disabled=false;btn.textContent='🧹 CLEAR DEAD SEATS';}
         alert('Error: '+(e.message||e));
@@ -4398,8 +4399,19 @@ var nextTierRow = nextTier
 
     async function pk_join(tid){
       if(!walletPublicKey)return alert('Connect your wallet first.');
+      // Try local cache first, fall back to a live fetch if stale/empty
       var tbl=pk_tables.find(function(t){return t.id===tid;});
-      if(!tbl)return;
+      if(!tbl){
+        try{
+          var sb2=getSupaClient();
+          var tr2=await sb2.from('poker_tables').select('*').eq('id',tid).single();
+          if(tr2.error||!tr2.data)return alert('Table not found. Please refresh the lobby.');
+          tbl=tr2.data;
+          // Update local cache
+          var idx=pk_tables.findIndex(function(t){return t.id===tid;});
+          if(idx>=0)pk_tables[idx]=tbl; else pk_tables.push(tbl);
+        }catch(e){return alert('Could not load table: '+(e.message||e));}
+      }
       try{
         var sb=getSupaClient();
         var w=walletPublicKey.toBase58();
