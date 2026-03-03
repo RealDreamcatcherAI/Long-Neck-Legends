@@ -4409,6 +4409,7 @@ var nextTierRow = nextTier
       var tR=await sb.from('poker_tables').select('*').eq('id',pk_viewTid).single();
       if(tR.error)return;
       pk_tbl=tR.data;
+      pk_syncTurnClock(pk_tbl); // sync local turn clock whenever DB state arrives
       var myW=walletPublicKey?walletPublicKey.toBase58():'';
       var pR=await sb.from('poker_players').select('*').eq('table_id',pk_viewTid).eq('is_active',true).order('seat',{ascending:true});
       pk_plrs=pR.data||[];
@@ -4455,137 +4456,159 @@ var nextTierRow = nextTier
         // ── Turn countdown + auto-fold + 3-strike stand-up ──
     var pk_timeoutInterval=null;
     var pk_countdownInterval=null;
-    var PK_TURN_TIMEOUT=20000;   // 20 seconds to act
-    var PK_STRIKE_LIMIT=3;       // stand up after 3 consecutive timeouts
-    var pk_strikeMap={};         // wallet -> consecutive timeout count
-    var pk_lastActionSeat=-1;    // track seat changes for countdown reset
+    var PK_TURN_SECS=20;         // seconds per turn
+    var PK_TURN_TIMEOUT=PK_TURN_SECS*1000;
+    var PK_STRIKE_LIMIT=3;
+    var pk_strikeMap={};
+
+    // Client-local turn clock — set when we first see a given action_seat become active.
+    // Decoupled from updated_at (which changes for many reasons: pot updates, etc.)
+    var pk_turnClockSeat=-1;      // which seat the clock is running for
+    var pk_turnClockStart=0;      // Date.now() when that seat's turn began
+    var pk_enforcedAt='';         // updated_at snapshot we already enforced — prevents double-fire
 
     function pk_startTimeout(){
       pk_stopTimeout();
       pk_timeoutInterval=setInterval(pk_checkTimeout,1000);
-      pk_countdownInterval=setInterval(pk_tickCountdown,1000);
+      pk_countdownInterval=setInterval(pk_tickCountdown,200); // 5fps for smooth ring
     }
     function pk_stopTimeout(){
       if(pk_timeoutInterval){clearInterval(pk_timeoutInterval);pk_timeoutInterval=null;}
       if(pk_countdownInterval){clearInterval(pk_countdownInterval);pk_countdownInterval=null;}
       pk_clearCountdownUI();
     }
-
     function pk_clearCountdownUI(){
       var el=document.getElementById('pk_countdown');
       if(el)el.remove();
     }
 
+    // Called from pk_refreshView whenever table state changes — resets local clock if seat changed
+    function pk_syncTurnClock(t){
+      if(!t||t.status!=='playing'||t.action_seat===-1||t.action_seat===undefined){
+        pk_turnClockSeat=-1;
+        pk_turnClockStart=0;
+        return;
+      }
+      if(t.action_seat!==pk_turnClockSeat){
+        // New player's turn — reset local clock now
+        pk_turnClockSeat=t.action_seat;
+        pk_turnClockStart=Date.now();
+        pk_enforcedAt=''; // new turn, allow enforcement again
+        console.log('[Poker] Turn clock reset for seat',t.action_seat);
+      }
+    }
+
     function pk_tickCountdown(){
-      // Only render countdown when it's someone's turn
       var t=pk_tbl;
-      if(!t||t.status!=='playing'||!t.updated_at||t.action_seat===-1)return pk_clearCountdownUI();
-      var age=Date.now()-new Date(t.updated_at).getTime();
-      var remaining=Math.max(0,Math.ceil((PK_TURN_TIMEOUT-age)/1000));
+      if(!t||t.status!=='playing'||pk_turnClockSeat===-1||pk_turnClockStart===0){
+        return pk_clearCountdownUI();
+      }
+      var elapsed=Date.now()-pk_turnClockStart;
+      var remaining=Math.max(0,Math.ceil((PK_TURN_TIMEOUT-elapsed)/1000));
+      var pct=Math.max(0,1-(elapsed/PK_TURN_TIMEOUT));
+      var col=remaining>10?'#00ff88':(remaining>5?'#ffd700':'#ff3c5c');
+
       var area=document.getElementById('pk_gameArea');
       if(!area)return;
       var el=document.getElementById('pk_countdown');
       if(!el){
         el=document.createElement('div');
         el.id='pk_countdown';
-        el.style.cssText='position:absolute;top:12px;right:12px;z-index:10;';
+        el.style.cssText='position:absolute;top:10px;right:10px;z-index:10;pointer-events:none;';
         area.style.position='relative';
         area.appendChild(el);
       }
-      var pct=remaining/20;
-      var col=remaining>10?'#00ff88':(remaining>5?'#ffd700':'#ff3c5c');
-      el.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;gap:2px;">'+
-        '<svg width="44" height="44" viewBox="0 0 44 44">'+
-          '<circle cx="22" cy="22" r="18" fill="none" stroke="#1a1a30" stroke-width="4"/>'+
-          '<circle cx="22" cy="22" r="18" fill="none" stroke="'+col+'" stroke-width="4"'+
-            ' stroke-dasharray="'+Math.PI*36+'"'+
-            ' stroke-dashoffset="'+Math.PI*36*(1-pct)+'"'+
-            ' stroke-linecap="round"'+
-            ' transform="rotate(-90 22 22)"'+
-            ' style="transition:stroke-dashoffset 0.9s linear;"/>'+
-          '<text x="22" y="27" text-anchor="middle" fill="'+col+'" font-size="13" font-weight="bold" font-family="monospace">'+remaining+'</text>'+
-        '</svg>'+
-        '<div style="font-size:0.48rem;color:'+col+';letter-spacing:1px;">TURN</div>'+
-      '</div>';
+      var r=18,circ=2*Math.PI*r;
+      el.innerHTML=
+        '<div style="display:flex;flex-direction:column;align-items:center;gap:1px;">'+
+          '<svg width="46" height="46" viewBox="0 0 46 46">'+
+            '<circle cx="23" cy="23" r="'+r+'" fill="rgba(0,0,0,0.5)" stroke="#1a1a30" stroke-width="3"/>'+
+            '<circle cx="23" cy="23" r="'+r+'" fill="none" stroke="'+col+'" stroke-width="3"'+
+              ' stroke-dasharray="'+circ+'"'+
+              ' stroke-dashoffset="'+(circ*(1-pct)).toFixed(2)+'"'+
+              ' stroke-linecap="round"'+
+              ' transform="rotate(-90 23 23)"/>'+
+            '<text x="23" y="28" text-anchor="middle" fill="'+col+'" font-size="13" font-weight="900" font-family="monospace">'+remaining+'</text>'+
+          '</svg>'+
+          '<div style="font-size:0.42rem;color:'+col+';letter-spacing:2px;font-weight:700;">TURN</div>'+
+        '</div>';
     }
 
     async function pk_checkTimeout(){
-      // Use pk_tid OR pk_viewTid — spectators help enforce timeouts too
       var activeTid=pk_tid||pk_viewTid;
-      if(!activeTid)return;
+      if(!activeTid||!pk_tbl)return;
       var t=pk_tbl;
-      if(!t||t.status!=='playing'||!t.updated_at)return;
 
       // ── Solo-player deadlock rescue ──
-      // If there's only 1 active non-folded player and the game is stuck, reset the table
-      if(typeof pk_plrs!=='undefined'&&pk_plrs.length>0){
+      if(pk_plrs&&pk_plrs.length>0&&t.status==='playing'){
         var nonFolded=pk_plrs.filter(function(p){return p.is_active&&!p.folded;});
-        if(nonFolded.length===1&&t.status==='playing'){
-          var age0=Date.now()-new Date(t.updated_at).getTime();
-          if(age0>10000){ // 10s grace period before rescue
-            console.log('[Poker] Solo-player deadlock detected — awarding pot and resetting');
-            try{
-              // Award the solo survivor the pot
-              await pk_award(nonFolded,t.pot||0);
-            }catch(e){console.warn('[Poker] deadlock rescue error',e);}
+        if(nonFolded.length===1){
+          var soloAge=pk_turnClockStart>0?Date.now()-pk_turnClockStart:0;
+          if(soloAge>10000){
+            console.log('[Poker] Solo deadlock — awarding pot');
+            try{await pk_award(nonFolded,t.pot||0);}catch(e){console.warn(e);}
             return;
           }
         }
       }
 
-      var age=Date.now()-new Date(t.updated_at).getTime();
-      if(age<PK_TURN_TIMEOUT)return;
+      if(t.status!=='playing'||pk_turnClockSeat===-1||pk_turnClockStart===0)return;
+      var elapsed=Date.now()-pk_turnClockStart;
+      if(elapsed<PK_TURN_TIMEOUT)return;
 
       var activeSeat=t.action_seat;
-      if(activeSeat===-1||activeSeat===undefined||activeSeat===null)return;
-      var stuck=pk_plrs.find(function(p){return p.seat===activeSeat&&p.is_active&&!p.folded&&!p.all_in;});
+      if(activeSeat===-1||activeSeat===undefined)return;
+      var stuck=pk_plrs&&pk_plrs.find(function(p){return p.seat===activeSeat&&p.is_active&&!p.folded&&!p.all_in;});
       if(!stuck)return;
 
-      // Deduplicate: only the seated player at this table OR the spectator-viewer fires this,
-      // but stamp updated_at first to prevent double-fire
+      // Client-side dedup: only fire enforcement once per turn (keyed on seat+clockStart)
+      var turnKey=activeSeat+'_'+pk_turnClockStart;
+      if(pk_enforcedAt===turnKey){return;} // already fired this turn from this client
+      pk_enforcedAt=turnKey; // claim it immediately before any await
+
       var sb=getSupaClient();
       try{
-        // Re-fetch updated_at to guard against race
-        var freshT=await sb.from('poker_tables').select('updated_at,status').eq('id',activeTid).single();
-        if(freshT.error)return;
-        if(freshT.data.status!=='playing')return;
-        var freshAge=Date.now()-new Date(freshT.data.updated_at).getTime();
-        if(freshAge<PK_TURN_TIMEOUT-500)return; // someone else already acted
+        // Server-side dedup: re-read action_seat to verify it hasn't changed
+        var freshT=await sb.from('poker_tables').select('action_seat,status,updated_at').eq('id',activeTid).single();
+        if(freshT.error||!freshT.data){pk_enforcedAt='';return;}
+        if(freshT.data.status!=='playing'){pk_enforcedAt='';return;}
+        if(freshT.data.action_seat!==activeSeat){pk_enforcedAt='';return;} // seat moved, not stuck
 
-        console.log('[Poker] Auto-folding',stuck.username||stuck.wallet.slice(0,8),'after',Math.round(freshAge/1000)+'s');
+        // Check server-side elapsed using updated_at as a fallback signal
+        var serverAge=Date.now()-new Date(freshT.data.updated_at).getTime();
+        if(serverAge<PK_TURN_TIMEOUT-2000){
+          // Server says turn started less than (timeout - 2s) ago — trust server, reset clock
+          pk_turnClockStart=Date.now()-serverAge;
+          pk_enforcedAt='';
+          return;
+        }
 
-        // Touch updated_at first to prevent other clients racing
-        await sb.from('poker_tables').update({updated_at:new Date().toISOString()}).eq('id',activeTid);
+        console.log('[Poker] Timeout: folding seat',activeSeat,stuck.username||stuck.wallet.slice(0,6));
 
-        // Track strikes for this wallet
         var w=stuck.wallet;
         pk_strikeMap[w]=(pk_strikeMap[w]||0)+1;
         var strikes=pk_strikeMap[w];
 
         if(strikes>=PK_STRIKE_LIMIT){
-          // Stand them up — remove from table entirely
-          console.log('[Poker] 3 strikes —',stuck.username||w.slice(0,8),'stood up');
+          console.log('[Poker] 3 strikes — standing up',stuck.username||w.slice(0,6));
           pk_strikeMap[w]=0;
-          // Cash out their chips first
           if(stuck.chips>0){
             var isSol=t.currency==='sol';
             var cab=isSol?stuck.chips*g_SOL_TO_CABBAGE:stuck.chips;
-            try{
-              // Only credit if this is our own wallet (can't credit others)
-              var myW=walletPublicKey?walletPublicKey.toBase58():'';
-              if(w===myW)await g_creditCabbage(cab);
-            }catch(e){}
+            var myW=walletPublicKey?walletPublicKey.toBase58():'';
+            if(w===myW){try{await g_creditCabbage(cab);}catch(e){}}
           }
           await sb.from('poker_players').delete().eq('id',stuck.id);
-          // Advance the game from the now-removed seat
-          pk_tid=(pk_tid===activeTid)?activeTid:pk_tid;
-          await pk_advance(activeSeat,'fold');
         }else{
-          // Fold only
           await sb.from('poker_players').update({folded:true}).eq('id',stuck.id);
-          await pk_advance(activeSeat,'fold');
         }
-      }catch(e){console.warn('[Poker] timeout error',e);}
+        // Advance — this touches updated_at which all other clients will see and reset their clocks
+        pk_tid=pk_tid||activeTid;
+        await pk_advance(activeSeat,'fold');
+      }catch(e){
+        console.warn('[Poker] timeout enforcement error',e);
+        pk_enforcedAt=''; // allow retry on error
+      }
     }
 
     // ── Buy-in modal state ──
@@ -4852,6 +4875,7 @@ var nextTierRow = nextTier
         if(myMaxRaise>0){
           html+='<button class="g_btn" onclick="pk_doRaise()">RAISE</button>';
         }
+        html+='<button class="g_btn" style="border-color:rgba(255,165,0,0.5);color:#ff9900;font-weight:900;" onclick="pk_act(\'allin\')">ALL IN &#9889;</button>';
         html+='<button class="g_btn" style="border-color:rgba(255,60,92,0.35);color:#ff3c5c;" onclick="pk_act(\'fold\')">FOLD</button>';
       }
       html+='</div>';
@@ -5082,13 +5106,11 @@ var nextTierRow = nextTier
 
         }else if(action==='raise'){
           // raiseAmt = the total amount the player wants to raise TO
-          // e.g. if current_bet=0.1 and player raises to 0.4, raiseAmt=0.4
           var raiseTo=raiseAmt;
-          // How many more chips does the player need to put in?
           var need=raiseTo-me.current_bet;
           var put=Math.min(need,me.chips);
           var newChips2=me.chips-put;
-          var myNewBet=me.current_bet+put; // what my total bet is now this street
+          var myNewBet=me.current_bet+put;
           await sb.from('poker_players').update({
             chips:newChips2,
             current_bet:myNewBet,
@@ -5096,15 +5118,39 @@ var nextTierRow = nextTier
             all_in:newChips2<=0
           }).eq('id',me.id);
           potAdd=put;
-          // Update the table's current_bet to my new bet level, reset round_starter to me
-          // so everyone else must act again
           await sb.from('poker_tables').update({
             current_bet:myNewBet,
             round_starter:me.seat,
             pot:(t.pot||0)+potAdd,
             updated_at:new Date().toISOString()
           }).eq('id',pk_tid);
-          potAdd=0; // already added to pot above
+          potAdd=0;
+
+        }else if(action==='allin'){
+          // Push every remaining chip in
+          var allInChips=me.chips;
+          if(allInChips<=0){pk_acting=false;return;}
+          var allInBet=me.current_bet+allInChips;
+          var newTableBet=t.current_bet||0;
+          var isRaise=allInBet>newTableBet;
+          if(isRaise)newTableBet=allInBet;
+          await sb.from('poker_players').update({
+            chips:0,
+            current_bet:allInBet,
+            total_bet:me.total_bet+allInChips,
+            all_in:true
+          }).eq('id',me.id);
+          potAdd=allInChips;
+          if(isRaise){
+            // All-in raise: update table bet and round_starter so others must re-act
+            await sb.from('poker_tables').update({
+              current_bet:newTableBet,
+              round_starter:me.seat,
+              pot:(t.pot||0)+potAdd,
+              updated_at:new Date().toISOString()
+            }).eq('id',pk_tid);
+            potAdd=0;
+          }
         }
 
         if(potAdd>0){
