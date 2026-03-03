@@ -4377,6 +4377,7 @@ var nextTierRow = nextTier
         .on('postgres_changes',{event:'*',schema:'public',table:'poker_players',filter:'table_id=eq.'+tid},function(){pk_refreshView();})
         .subscribe();
       await pk_refreshView();
+      pk_startTimeout(); // countdown visible to all watchers; enforcement fires from seated player or first viewer
       var wrap=document.getElementById('pk_gameWrap');
       if(wrap){wrap.style.display='';setTimeout(function(){wrap.scrollIntoView({behavior:'smooth',block:'nearest'});},50);}
     }
@@ -4420,6 +4421,7 @@ var nextTierRow = nextTier
     function pk_sitFromSpectate(){if(pk_viewTid)pk_join(pk_viewTid);}
 
     function pk_closePanel(){
+      pk_stopTimeout();
       pk_unsub();pk_viewTid=null;
       if(!pk_tid){pk_tbl=null;pk_plrs=[];}
       document.getElementById('pk_gameWrap').style.display='none';
@@ -4450,45 +4452,140 @@ var nextTierRow = nextTier
       }
     }
 
-        // ── Auto-kick timeout: if the action hasn't moved in 45s, fold the active player ──
+        // ── Turn countdown + auto-fold + 3-strike stand-up ──
     var pk_timeoutInterval=null;
-    var PK_TURN_TIMEOUT=45000; // 45 seconds
+    var pk_countdownInterval=null;
+    var PK_TURN_TIMEOUT=20000;   // 20 seconds to act
+    var PK_STRIKE_LIMIT=3;       // stand up after 3 consecutive timeouts
+    var pk_strikeMap={};         // wallet -> consecutive timeout count
+    var pk_lastActionSeat=-1;    // track seat changes for countdown reset
 
     function pk_startTimeout(){
       pk_stopTimeout();
-      pk_timeoutInterval=setInterval(pk_checkTimeout,5000);
+      pk_timeoutInterval=setInterval(pk_checkTimeout,1000);
+      pk_countdownInterval=setInterval(pk_tickCountdown,1000);
     }
     function pk_stopTimeout(){
       if(pk_timeoutInterval){clearInterval(pk_timeoutInterval);pk_timeoutInterval=null;}
+      if(pk_countdownInterval){clearInterval(pk_countdownInterval);pk_countdownInterval=null;}
+      pk_clearCountdownUI();
+    }
+
+    function pk_clearCountdownUI(){
+      var el=document.getElementById('pk_countdown');
+      if(el)el.remove();
+    }
+
+    function pk_tickCountdown(){
+      // Only render countdown when it's someone's turn
+      var t=pk_tbl;
+      if(!t||t.status!=='playing'||!t.updated_at||t.action_seat===-1)return pk_clearCountdownUI();
+      var age=Date.now()-new Date(t.updated_at).getTime();
+      var remaining=Math.max(0,Math.ceil((PK_TURN_TIMEOUT-age)/1000));
+      var area=document.getElementById('pk_gameArea');
+      if(!area)return;
+      var el=document.getElementById('pk_countdown');
+      if(!el){
+        el=document.createElement('div');
+        el.id='pk_countdown';
+        el.style.cssText='position:absolute;top:12px;right:12px;z-index:10;';
+        area.style.position='relative';
+        area.appendChild(el);
+      }
+      var pct=remaining/20;
+      var col=remaining>10?'#00ff88':(remaining>5?'#ffd700':'#ff3c5c');
+      el.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;gap:2px;">'+
+        '<svg width="44" height="44" viewBox="0 0 44 44">'+
+          '<circle cx="22" cy="22" r="18" fill="none" stroke="#1a1a30" stroke-width="4"/>'+
+          '<circle cx="22" cy="22" r="18" fill="none" stroke="'+col+'" stroke-width="4"'+
+            ' stroke-dasharray="'+Math.PI*36+'"'+
+            ' stroke-dashoffset="'+Math.PI*36*(1-pct)+'"'+
+            ' stroke-linecap="round"'+
+            ' transform="rotate(-90 22 22)"'+
+            ' style="transition:stroke-dashoffset 0.9s linear;"/>'+
+          '<text x="22" y="27" text-anchor="middle" fill="'+col+'" font-size="13" font-weight="bold" font-family="monospace">'+remaining+'</text>'+
+        '</svg>'+
+        '<div style="font-size:0.48rem;color:'+col+';letter-spacing:1px;">TURN</div>'+
+      '</div>';
     }
 
     async function pk_checkTimeout(){
-      if(!pk_tid||!pk_tbl)return;
+      // Use pk_tid OR pk_viewTid — spectators help enforce timeouts too
+      var activeTid=pk_tid||pk_viewTid;
+      if(!activeTid)return;
       var t=pk_tbl;
-      if(t.status!=='playing')return;
-      if(!t.updated_at)return;
+      if(!t||t.status!=='playing'||!t.updated_at)return;
+
+      // ── Solo-player deadlock rescue ──
+      // If there's only 1 active non-folded player and the game is stuck, reset the table
+      if(typeof pk_plrs!=='undefined'&&pk_plrs.length>0){
+        var nonFolded=pk_plrs.filter(function(p){return p.is_active&&!p.folded;});
+        if(nonFolded.length===1&&t.status==='playing'){
+          var age0=Date.now()-new Date(t.updated_at).getTime();
+          if(age0>10000){ // 10s grace period before rescue
+            console.log('[Poker] Solo-player deadlock detected — awarding pot and resetting');
+            try{
+              // Award the solo survivor the pot
+              await pk_award(nonFolded,t.pot||0);
+            }catch(e){console.warn('[Poker] deadlock rescue error',e);}
+            return;
+          }
+        }
+      }
+
       var age=Date.now()-new Date(t.updated_at).getTime();
       if(age<PK_TURN_TIMEOUT)return;
-      // Turn has been sitting too long — find the player whose turn it is
+
       var activeSeat=t.action_seat;
       if(activeSeat===-1||activeSeat===undefined||activeSeat===null)return;
       var stuck=pk_plrs.find(function(p){return p.seat===activeSeat&&p.is_active&&!p.folded&&!p.all_in;});
       if(!stuck)return;
-      console.log('[Poker] Auto-folding inactive player at seat',activeSeat,'after',Math.round(age/1000)+'s');
+
+      // Deduplicate: only the seated player at this table OR the spectator-viewer fires this,
+      // but stamp updated_at first to prevent double-fire
+      var sb=getSupaClient();
       try{
-        var sb=getSupaClient();
-        var myW=walletPublicKey?walletPublicKey.toBase58():'';
-        // Any seated player can trigger the timeout kick (first one to notice fires it)
-        // To avoid race conditions, only trigger if I'm seated at this table
-        var iAmSeated=pk_plrs.some(function(p){return p.wallet===myW&&p.is_active;});
-        if(!iAmSeated)return;
-        // Mark them folded
-        await sb.from('poker_players').update({folded:true}).eq('id',stuck.id);
-        // Touch updated_at so we don't immediately re-trigger
-        await sb.from('poker_tables').update({updated_at:new Date().toISOString()}).eq('id',pk_tid);
-        // Advance the action
-        await pk_advance(activeSeat,'fold');
-      }catch(e){console.warn('[Poker] timeout kick error',e);}
+        // Re-fetch updated_at to guard against race
+        var freshT=await sb.from('poker_tables').select('updated_at,status').eq('id',activeTid).single();
+        if(freshT.error)return;
+        if(freshT.data.status!=='playing')return;
+        var freshAge=Date.now()-new Date(freshT.data.updated_at).getTime();
+        if(freshAge<PK_TURN_TIMEOUT-500)return; // someone else already acted
+
+        console.log('[Poker] Auto-folding',stuck.username||stuck.wallet.slice(0,8),'after',Math.round(freshAge/1000)+'s');
+
+        // Touch updated_at first to prevent other clients racing
+        await sb.from('poker_tables').update({updated_at:new Date().toISOString()}).eq('id',activeTid);
+
+        // Track strikes for this wallet
+        var w=stuck.wallet;
+        pk_strikeMap[w]=(pk_strikeMap[w]||0)+1;
+        var strikes=pk_strikeMap[w];
+
+        if(strikes>=PK_STRIKE_LIMIT){
+          // Stand them up — remove from table entirely
+          console.log('[Poker] 3 strikes —',stuck.username||w.slice(0,8),'stood up');
+          pk_strikeMap[w]=0;
+          // Cash out their chips first
+          if(stuck.chips>0){
+            var isSol=t.currency==='sol';
+            var cab=isSol?stuck.chips*g_SOL_TO_CABBAGE:stuck.chips;
+            try{
+              // Only credit if this is our own wallet (can't credit others)
+              var myW=walletPublicKey?walletPublicKey.toBase58():'';
+              if(w===myW)await g_creditCabbage(cab);
+            }catch(e){}
+          }
+          await sb.from('poker_players').delete().eq('id',stuck.id);
+          // Advance the game from the now-removed seat
+          pk_tid=(pk_tid===activeTid)?activeTid:pk_tid;
+          await pk_advance(activeSeat,'fold');
+        }else{
+          // Fold only
+          await sb.from('poker_players').update({folded:true}).eq('id',stuck.id);
+          await pk_advance(activeSeat,'fold');
+        }
+      }catch(e){console.warn('[Poker] timeout error',e);}
     }
 
     // ── Buy-in modal state ──
@@ -4604,7 +4701,6 @@ var nextTierRow = nextTier
     async function pk_open(){
       // After sitting down, open the view panel for this table
       if(pk_tid){pk_viewTid=pk_tid;await pk_viewTable(pk_tid);}
-      pk_startTimeout();
       pk_renderTables();
     }
 
@@ -4714,7 +4810,11 @@ var nextTierRow = nextTier
           if(pl.current_bet>0&&!isShowdown)html+='<div style="font-size:0.55rem;color:#ffd700;">bet: '+pl.current_bet+'</div>';
           if(folded)html+='<div style="font-size:0.55rem;color:#ff3c5c;">FOLDED</div>';
           else if(allIn)html+='<div style="font-size:0.55rem;color:#ff9900;font-weight:700;">ALL-IN</div>';
-          if(isTurn&&!isMe)html+='<div style="font-size:0.5rem;color:#ffd700;animation:g_pulse 1s infinite;">THINKING\u2026</div>';
+          if(isTurn&&!isMe){
+            var strikesOnThem=(pk_strikeMap&&pk_strikeMap[pl.wallet])||0;
+            var strikeStr=strikesOnThem>0?(' <span style="color:#ff3c5c;">'+('\u26A0\uFE0F'.repeat(strikesOnThem))+'</span>'):'';
+            html+='<div style="font-size:0.5rem;color:#ffd700;animation:g_pulse 1s infinite;">THINKING\u2026'+strikeStr+'</div>';
+          }
           if(isTurn&&isMe)html+='<div style="font-size:0.5rem;color:#00ff88;font-weight:700;animation:g_pulse 1s infinite;">YOUR TURN \u25b6</div>';
           if(isShowdown&&hole.length===2&&!folded&&comm.length>=3){
             var sc=pk_score(hole.concat(comm));
@@ -5014,6 +5114,9 @@ var nextTierRow = nextTier
           await sb.from('poker_tables').update({pot:freshPot+potAdd,updated_at:new Date().toISOString()}).eq('id',pk_tid);
         }
 
+        // Successful action — clear this player's strike counter
+        var myActW=walletPublicKey?walletPublicKey.toBase58():'';
+        if(myActW&&pk_strikeMap)pk_strikeMap[myActW]=0;
         await pk_advance(me.seat,action);
       }catch(e){console.error('pk_act error',e);}
       pk_acting=false;
