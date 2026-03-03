@@ -4397,9 +4397,11 @@ var nextTierRow = nextTier
       }catch(e){console.warn('[Poker] timeout kick error',e);}
     }
 
+    // ── Buy-in modal state ──
+    var _pkBuyInTid=null, _pkBuyInTbl=null;
+
     async function pk_join(tid){
       if(!walletPublicKey)return alert('Connect your wallet first.');
-      // Try local cache first, fall back to a live fetch if stale/empty
       var tbl=pk_tables.find(function(t){return t.id===tid;});
       if(!tbl){
         try{
@@ -4407,7 +4409,6 @@ var nextTierRow = nextTier
           var tr2=await sb2.from('poker_tables').select('*').eq('id',tid).single();
           if(tr2.error||!tr2.data)return alert('Table not found. Please refresh the lobby.');
           tbl=tr2.data;
-          // Update local cache
           var idx=pk_tables.findIndex(function(t){return t.id===tid;});
           if(idx>=0)pk_tables[idx]=tbl; else pk_tables.push(tbl);
         }catch(e){return alert('Could not load table: '+(e.message||e));}
@@ -4415,24 +4416,117 @@ var nextTierRow = nextTier
       try{
         var sb=getSupaClient();
         var w=walletPublicKey.toBase58();
-        var un=(session&&session.profile&&session.profile.username)||w.slice(0,4)+'\u2026'+w.slice(-4);
         var ex=await sb.from('poker_players').select('*').eq('table_id',tid).eq('wallet',w).eq('is_active',true).maybeSingle();
         if(ex.data){pk_tid=tid;pk_mySeat=ex.data.seat;await pk_open();return;}
-        await sb.from('poker_players').delete().eq('table_id',tid).eq('wallet',w);
         var sR=await sb.from('poker_players').select('seat').eq('table_id',tid).eq('is_active',true);
         var taken=(sR.data||[]).map(function(p){return p.seat;});
         var open=-1;
         for(var i=0;i<5;i++){if(taken.indexOf(i)===-1){open=i;break;}}
         if(open===-1)return alert('Table is full.');
-        // Check if this wallet has a stored chip balance from a previous session at this table
-        var prevR=await sb.from('poker_players').select('chips').eq('table_id',tid).eq('wallet',w).order('chips',{ascending:false}).limit(1);
-        var prevChips=(prevR.data&&prevR.data[0]&&prevR.data[0].chips>0)?prevR.data[0].chips:tbl.buy_in;
+        _pkBuyInTid=tid;
+        _pkBuyInTbl=tbl;
+        pkBuyInShow(tbl);
+      }catch(e){alert('Error joining table: '+(e.message||e));}
+    }
+
+    function pkBuyInShow(tbl){
+      var isSol=tbl.currency==='SOL';
+      var sym=isSol?'◎ SOL':'🥬';
+      var minBuy=tbl.buy_in||10;
+      var maxBuy=minBuy*10;
+      var infoEl=document.getElementById('pkBuyInTableInfo');
+      if(infoEl) infoEl.innerHTML=
+        '<span style="color:#e0e0ff;font-weight:700;">'+escapeHtml(tbl.name||'Poker Table')+'</span><br>'
+        +'Blinds: <span style="color:#00d4ff;">'+tbl.small_blind+' / '+tbl.big_blind+' '+sym+'</span>'
+        +'&nbsp;&nbsp;·&nbsp;&nbsp;Min buy-in: <span style="color:#00d4ff;">'+minBuy+' '+sym+'</span>';
+      var symEl=document.getElementById('pkBuyInSym');
+      if(symEl) symEl.textContent=sym;
+      var presets=[minBuy,minBuy*2,minBuy*5,maxBuy];
+      var labels=['MIN','2×','5×','MAX'];
+      var presetsEl=document.getElementById('pkBuyInPresets');
+      if(presetsEl){
+        presetsEl.innerHTML=presets.map(function(v,i){
+          return '<button onclick="pkBuyInSetPreset('+v+')" style="'
+            +'background:rgba(0,212,255,0.07);border:1px solid rgba(0,212,255,0.2);'
+            +'color:#00d4ff;padding:7px 14px;border-radius:8px;cursor:pointer;'
+            +'font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:0.72rem;'
+            +'letter-spacing:1px;transition:all 0.2s;white-space:nowrap;"'
+            +' onmouseover="this.style.borderColor='rgba(0,212,255,0.55)'"'
+            +' onmouseout="this.style.borderColor='rgba(0,212,255,0.2)'">'
+            +'<span style="font-size:0.55rem;color:#555;display:block;letter-spacing:2px;margin-bottom:2px;">'+labels[i]+'</span>'
+            +v+' '+sym
+            +'</button>';
+        }).join('');
+      }
+      var inp=document.getElementById('pkBuyInInput');
+      if(inp){inp.value=minBuy;inp.min=minBuy;inp.max=maxBuy;}
+      var warnEl=document.getElementById('pkBuyInWarn');
+      if(warnEl) warnEl.textContent='';
+      var btn=document.getElementById('pkBuyInConfirm');
+      if(btn){btn.disabled=false;btn.style.opacity='1';}
+      var bd=document.getElementById('pkBuyInBackdrop');
+      if(bd) bd.style.display='flex';
+    }
+
+    function pkBuyInSetPreset(val){
+      var inp=document.getElementById('pkBuyInInput');
+      if(inp) inp.value=val;
+      pkBuyInSync(val);
+    }
+
+    function pkBuyInSync(val){
+      if(!_pkBuyInTbl) return;
+      var min=_pkBuyInTbl.buy_in||10;
+      var max=min*10;
+      var n=parseFloat(val);
+      var warnEl=document.getElementById('pkBuyInWarn');
+      var btn=document.getElementById('pkBuyInConfirm');
+      if(!n||n<min){
+        if(warnEl) warnEl.textContent='Minimum buy-in is '+min+'.';
+        if(btn){btn.disabled=true;btn.style.opacity='0.4';}
+      } else if(n>max){
+        if(warnEl) warnEl.textContent='Maximum buy-in is '+max+'.';
+        if(btn){btn.disabled=true;btn.style.opacity='0.4';}
+      } else {
+        if(warnEl) warnEl.textContent='';
+        if(btn){btn.disabled=false;btn.style.opacity='1';}
+      }
+    }
+
+    function pkBuyInCancel(){
+      var bd=document.getElementById('pkBuyInBackdrop');
+      if(bd) bd.style.display='none';
+      _pkBuyInTid=null;_pkBuyInTbl=null;
+    }
+
+    async function pkBuyInConfirm(){
+      if(!_pkBuyInTid||!_pkBuyInTbl) return;
+      var inp=document.getElementById('pkBuyInInput');
+      var chips=parseFloat(inp?inp.value:0);
+      var min=_pkBuyInTbl.buy_in||10;
+      var max=min*10;
+      if(!chips||chips<min||chips>max){
+        return alert('Please enter an amount between '+min+' and '+max+'.');
+      }
+      var bd=document.getElementById('pkBuyInBackdrop');
+      if(bd) bd.style.display='none';
+      try{
+        var sb=getSupaClient();
+        var w=walletPublicKey.toBase58();
+        var un=(session&&session.profile&&session.profile.username)||w.slice(0,4)+'…'+w.slice(-4);
+        await sb.from('poker_players').delete().eq('table_id',_pkBuyInTid).eq('wallet',w);
+        var sR2=await sb.from('poker_players').select('seat').eq('table_id',_pkBuyInTid).eq('is_active',true);
+        var taken2=(sR2.data||[]).map(function(p){return p.seat;});
+        var open2=-1;
+        for(var i=0;i<5;i++){if(taken2.indexOf(i)===-1){open2=i;break;}}
+        if(open2===-1){_pkBuyInTid=null;_pkBuyInTbl=null;return alert('Table just filled up. Try another table.');}
         await sb.from('poker_players').insert({
-          table_id:tid,wallet:w,username:un,seat:open,
-          chips:prevChips,is_active:true,
+          table_id:_pkBuyInTid,wallet:w,username:un,seat:open2,
+          chips:chips,is_active:true,
           hole_cards:'[]',current_bet:0,total_bet:0,folded:false,all_in:false
         });
-        pk_tid=tid;pk_mySeat=open;
+        pk_tid=_pkBuyInTid;pk_mySeat=open2;
+        _pkBuyInTid=null;_pkBuyInTbl=null;
         await pk_open();
       }catch(e){alert('Error joining table: '+(e.message||e));}
     }
@@ -7531,5 +7625,55 @@ var nextTierRow = nextTier
   
 
   </script>
+
+  <!-- ══ POKER BUY-IN MODAL ══ -->
+  <div class="modal-backdrop" id="pkBuyInBackdrop" style="display:none;align-items:center;justify-content:center;">
+    <div class="modal" onclick="event.stopPropagation()" style="width:min(480px,96%);max-height:90vh;">
+      <div class="modal-head">
+        <div class="modal-title">🃏 Take Your Seat</div>
+        <button class="modal-close" onclick="pkBuyInCancel()">✕</button>
+      </div>
+      <div class="modal-body" style="padding:1.6rem;">
+
+        <div id="pkBuyInTableInfo" style="background:rgba(0,212,255,0.04);border:1px solid rgba(0,212,255,0.15);border-radius:10px;padding:0.9rem 1.1rem;margin-bottom:1.4rem;font-size:0.78rem;color:#888;line-height:1.9;"></div>
+
+        <div style="margin-bottom:1.4rem;">
+          <div style="font-size:0.7rem;letter-spacing:2px;color:#555;text-transform:uppercase;margin-bottom:0.8rem;font-weight:700;">How Much Are You Bringing to the Table?</div>
+
+          <!-- Quick preset chips -->
+          <div id="pkBuyInPresets" style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:1rem;"></div>
+
+          <!-- Custom amount input -->
+          <div style="display:flex;align-items:center;gap:0.6rem;">
+            <input
+              id="pkBuyInInput"
+              type="number"
+              min="1"
+              placeholder="Custom amount…"
+              style="flex:1;background:#0a0a1a;border:1px solid rgba(255,255,255,0.12);border-radius:8px;color:#e0e0ff;padding:10px 14px;font-family:'Space Grotesk',sans-serif;font-size:0.9rem;font-weight:600;outline:none;transition:border-color 0.2s;"
+              oninput="pkBuyInSync(this.value)"
+              onfocus="this.style.borderColor='rgba(0,212,255,0.5)'"
+              onblur="this.style.borderColor='rgba(255,255,255,0.12)'"
+            />
+            <span id="pkBuyInSym" style="font-size:0.85rem;color:#555;white-space:nowrap;">🥬</span>
+          </div>
+          <div id="pkBuyInWarn" style="margin-top:0.5rem;font-size:0.68rem;color:#ff3c5c;min-height:1em;"></div>
+        </div>
+
+        <button
+          id="pkBuyInConfirm"
+          onclick="pkBuyInConfirm()"
+          style="width:100%;padding:14px;background:linear-gradient(135deg,rgba(0,212,255,0.18),rgba(0,212,255,0.08));border:1px solid rgba(0,212,255,0.5);border-radius:10px;color:#00d4ff;font-family:'Orbitron',sans-serif;font-weight:900;font-size:0.82rem;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;"
+          onmouseover="this.style.background='linear-gradient(135deg,rgba(0,212,255,0.28),rgba(0,212,255,0.14))'"
+          onmouseout="this.style.background='linear-gradient(135deg,rgba(0,212,255,0.18),rgba(0,212,255,0.08))'"
+        >
+          Sit Down ↓
+        </button>
+
+      </div>
+    </div>
+  </div>
+  <!-- ══ END BUY-IN MODAL ══ -->
+
 </body>
 </html>
