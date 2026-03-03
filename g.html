@@ -4446,13 +4446,10 @@ var nextTierRow = nextTier
       var presetsEl=document.getElementById('pkBuyInPresets');
       if(presetsEl){
         presetsEl.innerHTML=presets.map(function(v,i){
-          return '<button onclick="pkBuyInSetPreset('+v+')" style="'
-            +'background:rgba(0,212,255,0.07);border:1px solid rgba(0,212,255,0.2);'
-            +'color:#00d4ff;padding:7px 14px;border-radius:8px;cursor:pointer;'
-            +'font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:0.72rem;'
-            +'letter-spacing:1px;transition:all 0.2s;white-space:nowrap;"'
-            +' onmouseover="this.style.borderColor='rgba(0,212,255,0.55)'"'
-            +' onmouseout="this.style.borderColor='rgba(0,212,255,0.2)'">'
+          var s='background:rgba(0,212,255,0.07);border:1px solid rgba(0,212,255,0.2);color:#00d4ff;padding:7px 14px;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.72rem;letter-spacing:1px;transition:all 0.2s;white-space:nowrap;cursor:pointer;';
+          return '<button onclick="pkBuyInSetPreset('+v+')" style="'+s+'"'
+            +' onmouseover="this.style.borderColor=\'rgba(0,212,255,0.55)\'"'
+            +' onmouseout="this.style.borderColor=\'rgba(0,212,255,0.2)\'">'
             +'<span style="font-size:0.55rem;color:#555;display:block;letter-spacing:2px;margin-bottom:2px;">'+labels[i]+'</span>'
             +v+' '+sym
             +'</button>';
