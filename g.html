@@ -3250,7 +3250,7 @@ var nextTierRow = nextTier
             pfpHtml +
             "<div style=\"flex:1;min-width:0;\">" +
               "<div style=\"display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;\">" +
-                "<span style=\"font-size:0.58rem;background:linear-gradient(135deg,#ffd700,#ff8c00);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:900;\">FOUNDER</span>" +
+                "<span style=\"font-size:0.58rem;background:linear-gradient(135deg,#ffd700,#ff8c00);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:900;\">TEAM</span>" +
                 "<span style=\"font-size:0.72rem;color:#ffb000;font-weight:700;\">" + escapeHtml(name) + "</span>" +
                 "<span style=\"color:#383828;font-size:0.6rem;\">" + dateStr + "</span>" +
                 delHtml +
@@ -7387,32 +7387,73 @@ var nextTierRow = nextTier
       if (lb_cache.cabbage && Date.now() - lb_cacheTime < 60000) return lb_cache;
       var sb = getSupaClient();
       try {
-        // Top Cabbage Holders
+
+        // ── Top Cabbage: balance from cabbage_accounts, username from profiles via wallet_links ──
         var cR = await sb.from('cabbage_accounts').select('wallet,balance').order('balance', { ascending: false }).limit(20);
-        lb_cache.cabbage = (cR.data || []).filter(function(r) { return r.balance > 0; });
+        var cData = (cR.data || []).filter(function(r) { return r.balance > 0; });
+        // Enrich with usernames: look up profile for each wallet
+        var cWallets = cData.map(function(r) { return r.wallet; });
+        var wlR = await sb.from('wallet_links').select('wallet,profile_id').in('wallet', cWallets);
+        var wlMap = {};
+        (wlR.data || []).forEach(function(wl) { wlMap[wl.wallet] = wl.profile_id; });
+        var profIds = Object.values(wlMap).filter(function(v,i,a){ return v && a.indexOf(v)===i; });
+        var profMap = {};
+        if (profIds.length > 0) {
+          var pR = await sb.from('profiles').select('id,username,avatar_url').in('id', profIds);
+          (pR.data || []).forEach(function(p) { profMap[p.id] = p; });
+        }
+        lb_cache.cabbage = cData.map(function(r) {
+          var pid = wlMap[r.wallet];
+          var prof = pid ? profMap[pid] : null;
+          return { wallet: r.wallet, balance: r.balance, username: prof ? prof.username : null, avatar: prof ? prof.avatar_url : null };
+        });
 
-        // Casino total winnings (payout from game_bets where house_profit < 0 means player won)
-        var gR = await sb.from('game_bets').select('wallet,bet_amount,house_profit,game').order('played_at', { ascending: false }).limit(2000);
+        // ── Casino Wins (Total PNL) ──
+        // house_profit convention: 0 = player won (house kept nothing), bet_amount = player lost
+        // PNL per wallet = sum(bet_amount where hp=0) - sum(bet_amount where hp>0)
+        var gR = await sb.from('game_bets').select('wallet,bet_amount,house_profit,game,currency').order('played_at', { ascending: false }).limit(5000);
         var gData = gR.data || [];
-
-        // Aggregate wins per wallet
-        var winMap = {};
+        var pnlMap = {};
         var bigWins = [];
         gData.forEach(function(b) {
-          if (Number(b.house_profit) <= 0) {
-            // Player won — profit is the negative of house_profit
-            var profit = Math.abs(Number(b.house_profit));
-            if (!winMap[b.wallet]) winMap[b.wallet] = { wallet: b.wallet, total: 0, count: 0 };
-            winMap[b.wallet].total += profit;
-            winMap[b.wallet].count++;
-            bigWins.push({ wallet: b.wallet, amount: Number(b.bet_amount) + profit, game: b.game });
+          var hp  = Number(b.house_profit || 0);
+          var bet = Number(b.bet_amount   || 0);
+          if (!pnlMap[b.wallet]) pnlMap[b.wallet] = { wallet: b.wallet, pnl: 0, wins: 0, losses: 0 };
+          if (hp === 0) {
+            // Player won — they get their bet back (net +bet)
+            pnlMap[b.wallet].pnl += bet;
+            pnlMap[b.wallet].wins++;
+            bigWins.push({ wallet: b.wallet, amount: bet * 2, game: b.game, currency: b.currency });
+          } else {
+            // Player lost — net -bet
+            pnlMap[b.wallet].pnl -= bet;
+            pnlMap[b.wallet].losses++;
           }
         });
-        lb_cache.winners = Object.values(winMap).sort(function(a, b) { return b.total - a.total; }).slice(0, 20);
+        // Enrich winners with usernames too
+        var gWallets = Object.keys(pnlMap);
+        var gwlR = await sb.from('wallet_links').select('wallet,profile_id').in('wallet', gWallets);
+        var gwlMap = {};
+        (gwlR.data || []).forEach(function(wl) { gwlMap[wl.wallet] = wl.profile_id; });
+        var gProfIds = Object.values(gwlMap).filter(function(v,i,a){ return v && a.indexOf(v)===i; });
+        var gProfMap = {};
+        if (gProfIds.length > 0) {
+          var gpR = await sb.from('profiles').select('id,username').in('id', gProfIds);
+          (gpR.data || []).forEach(function(p) { gProfMap[p.id] = p; });
+        }
+        lb_cache.winners = Object.values(pnlMap)
+          .map(function(r) {
+            var pid = gwlMap[r.wallet];
+            var prof = pid ? gProfMap[pid] : null;
+            return { wallet: r.wallet, pnl: r.pnl, wins: r.wins, losses: r.losses, username: prof ? prof.username : null };
+          })
+          .sort(function(a, b) { return b.pnl - a.pnl; })
+          .slice(0, 20);
+
         lb_cache.bigwins = bigWins.sort(function(a, b) { return b.amount - a.amount; }).slice(0, 20);
 
-        // Most Active Chatters
-        var chR = await sb.from('chat_messages').select('wallet,username').order('created_at', { ascending: false }).limit(2000);
+        // ── Most Active Chatters ──
+        var chR = await sb.from('chat_messages').select('wallet,username').order('created_at', { ascending: false }).limit(5000);
         var chatMap = {};
         (chR.data || []).forEach(function(m) {
           if (!chatMap[m.wallet]) chatMap[m.wallet] = { wallet: m.wallet, username: m.username, count: 0 };
@@ -7421,9 +7462,8 @@ var nextTierRow = nextTier
         });
         lb_cache.chatters = Object.values(chatMap).sort(function(a, b) { return b.count - a.count; }).slice(0, 20);
 
-        // OG Holders (earliest stakers)
-        var hR = await sb.from('cabbage_accounts').select('wallet,started_at').not('started_at', 'is', null).order('started_at', { ascending: true }).limit(20);
-        lb_cache.holders = (hR.data || []).filter(function(r) { return r.started_at; });
+        // OG Holders — coming soon
+        lb_cache.holders = [];
 
         lb_cacheTime = Date.now();
       } catch(e) { console.warn('lb_fetchAll error:', e); }
@@ -7509,6 +7549,15 @@ var nextTierRow = nextTier
       var body = document.getElementById('lb_body');
       if (!body) return;
       var data = lb_cache[lb_activeTab] || [];
+      if (lb_activeTab === 'holders') {
+        body.innerHTML =
+          '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.8rem;padding:3rem;">' +
+            '<div style="font-size:2rem;">\uD83EDD96</div>' +
+            '<div style="font-size:1.2rem;letter-spacing:3px;color:#444;font-weight:700;">COMING SOON</div>' +
+            '<div style="font-size:0.72rem;color:#333;letter-spacing:1px;text-align:center;">OG Holder rankings are being prepared.<br>Check back soon.</div>' +
+          '</div>';
+        return;
+      }
       if (data.length === 0) {
         body.innerHTML = '<div class="lb_loading">No data yet — keep playing!</div>';
         return;
@@ -7517,7 +7566,7 @@ var nextTierRow = nextTier
       var html = '<table class="lb_table"><thead><tr><th>#</th><th>Player</th><th style="text-align:right;">';
 
       if (lb_activeTab === 'cabbage') html += 'Balance</th></tr></thead><tbody>';
-      else if (lb_activeTab === 'winners') html += 'Total Won</th></tr></thead><tbody>';
+      else if (lb_activeTab === 'winners') html += 'Total PNL</th></tr></thead><tbody>';
       else if (lb_activeTab === 'chatters') html += 'Messages</th></tr></thead><tbody>';
       else if (lb_activeTab === 'holders') html += 'Holding Since</th></tr></thead><tbody>';
       else if (lb_activeTab === 'bigwins') html += 'Win Amount</th></tr></thead><tbody>';
@@ -7542,16 +7591,17 @@ var nextTierRow = nextTier
         if (lb_activeTab === 'cabbage') {
           html += '<span style="color:#00ff88;">' + Math.floor(row.balance).toLocaleString() + ' 🥬</span>';
         } else if (lb_activeTab === 'winners') {
-          html += '<span style="color:#ffd700;">' + row.total.toFixed(2) + ' 🥬</span>';
-          html += '<div style="font-size:0.58rem;color:#555;">' + row.count + ' wins</div>';
+          var pnlColor = row.pnl >= 0 ? '#00ff88' : '#ff3c5c';
+          var pnlSign  = row.pnl >= 0 ? '+' : '';
+          html += '<span style="color:' + pnlColor + ';">' + pnlSign + Math.floor(row.pnl).toLocaleString() + ' 🥬</span>';
+          html += '<div style="font-size:0.58rem;color:#555;">' + row.wins + 'W / ' + row.losses + 'L</div>';
         } else if (lb_activeTab === 'chatters') {
           html += '<span style="color:#7b68ee;">' + row.count.toLocaleString() + '</span>';
         } else if (lb_activeTab === 'holders') {
-          var days = lb_daysSince(row.started_at);
-          html += '<span style="color:#00d4ff;">' + days + ' days</span>';
-          html += '<div style="font-size:0.55rem;color:#333;">' + new Date(row.started_at).toLocaleDateString() + '</div>';
+          html += '<span style="color:#555;">—</span>';
         } else if (lb_activeTab === 'bigwins') {
-          html += '<span style="color:#ffd700;">' + row.amount.toFixed(2) + ' 🥬</span>';
+          var bigSym = row.currency === 'sol' ? '◎' : '🥬';
+          html += '<span style="color:#ffd700;">' + row.amount.toFixed(2) + ' ' + bigSym + '</span>';
           html += '<div style="font-size:0.58rem;color:#555;">' + (row.game || '') + '</div>';
         }
 
