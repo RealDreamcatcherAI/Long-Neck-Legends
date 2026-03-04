@@ -316,6 +316,10 @@ a.plink:hover{
       display: block;
       grid-template-columns: unset;
     }
+    #view-leaderboard.show {
+      display: block;
+      grid-template-columns: unset;
+    }
     @media (max-width: 800px) {
       .view.show { grid-template-columns: 1fr; }
       .dashboard{ padding: 1.4rem 1rem 3rem; }
@@ -3114,7 +3118,7 @@ var nextTierRow = nextTier
         return;
       }
 
-      var myWallet  = walletPublicKey ? walletPublicKey.toBase58() : null;
+      var myWallet  = getCanonicalWallet() || (walletPublicKey ? walletPublicKey.toBase58() : null);
       var prevWallet = null;
       var html = '';
 
@@ -3290,7 +3294,7 @@ var nextTierRow = nextTier
       try {
         var sb  = getSupaClient();
         var res = await sb.from('announcements').insert({
-          wallet:   walletPublicKey.toBase58(),
+          wallet:   getCanonicalWallet() || walletPublicKey.toBase58(),
           username: session.profile.username || null,
           pfp_url:  session.profile.pfpImage || null,
           text:     text
@@ -3321,7 +3325,7 @@ var nextTierRow = nextTier
       btn.disabled = true;
       btn.textContent = '…';
 
-      var wallet   = walletPublicKey.toBase58();
+      var wallet   = getCanonicalWallet() || walletPublicKey.toBase58();
       var username = session.profile.username || null;
 
       try {
@@ -3397,7 +3401,7 @@ var nextTierRow = nextTier
         // Update server async (fire-and-forget)
         if (walletPublicKey) {
           getSupaClient().from('user_items').update({ data: b.data })
-            .eq('wallet', walletPublicKey.toBase58()).eq('item_id', 'lucky_boost')
+            .eq('wallet', getCanonicalWallet() || walletPublicKey.toBase58()).eq('item_id', 'lucky_boost')
             .then(function(){}).catch(function(){});
         }
       }
@@ -3422,7 +3426,7 @@ var nextTierRow = nextTier
         var round = 1;
         if (stR.data) round = currency === 'sol' ? stR.data.sol_round : stR.data.cab_round;
         await sb.from('game_bets').insert({
-          wallet:       walletPublicKey.toBase58(),
+          wallet:       getCanonicalWallet() || walletPublicKey.toBase58(),
           game:         game,
           bet_amount:   betAmt,
           currency:     currency,
@@ -3547,7 +3551,7 @@ var nextTierRow = nextTier
     async function g_fetchCabbageBalance() {
       if (!walletPublicKey) return null;
       try {
-        var res = await fetch(SUPA_URL.replace(/\/+$/,'') + '/functions/v1/cabbage?wallet=' + encodeURIComponent(walletPublicKey.toBase58()), {
+        var res = await fetch(SUPA_URL.replace(/\/+$/,'') + '/functions/v1/cabbage?wallet=' + encodeURIComponent(getCanonicalWallet() || walletPublicKey.toBase58()), {
           headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
         });
         var data = await res.json();
@@ -3631,7 +3635,7 @@ var nextTierRow = nextTier
       var res = await fetch(SUPA_URL.replace(/\/+$/,'') + '/functions/v1/cabbage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY },
-        body: JSON.stringify({ action: 'spend', wallet: walletPublicKey.toBase58(), amount: amount })
+        body: JSON.stringify({ action: 'spend', wallet: getCanonicalWallet() || walletPublicKey.toBase58(), amount: amount })
       });
       var data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Spend failed');
@@ -4696,7 +4700,7 @@ var nextTierRow = nextTier
         var ids=pk_tables.map(function(t){return t.id;});
         var pR=ids.length?await sb.from('poker_players').select('*').in('table_id',ids).eq('is_active',true):{data:[]};
         var allPlayers=pR.data||[];
-        var myW=walletPublicKey?walletPublicKey.toBase58():'';
+        var myW=walletPublicKey?(getCanonicalWallet()||walletPublicKey.toBase58()):'';
         el.innerHTML=pk_tables.map(function(t){
           var players=allPlayers.filter(function(p){return p.table_id===t.id;});
           var cnt=players.length;
@@ -4767,7 +4771,7 @@ var nextTierRow = nextTier
     }
 
     function pk_updatePanelHeader(){
-      var myW=walletPublicKey?walletPublicKey.toBase58():'';
+      var myW=walletPublicKey?(getCanonicalWallet()||walletPublicKey.toBase58()):'';
       var iAmSeated=pk_plrs.some(function(p){return p.wallet===myW;});
       var tbl=pk_tables.find(function(t){return t.id===pk_viewTid;})||pk_tbl;
       var tn=document.getElementById('pk_tableName');
@@ -4794,7 +4798,7 @@ var nextTierRow = nextTier
       if(tR.error)return;
       pk_tbl=tR.data;
       pk_syncTurnClock(pk_tbl); // sync local turn clock whenever DB state arrives
-      var myW=walletPublicKey?walletPublicKey.toBase58():'';
+      var myW=walletPublicKey?(getCanonicalWallet()||walletPublicKey.toBase58()):'';
       var pR=await sb.from('poker_players').select('*').eq('table_id',pk_viewTid).eq('is_active',true).order('seat',{ascending:true});
       pk_plrs=pR.data||[];
       var me=pk_plrs.find(function(p){return p.wallet===myW;});
@@ -4979,7 +4983,7 @@ var nextTierRow = nextTier
           if(stuck.chips>0){
             var isSol=t.currency==='sol';
             var cab=isSol?stuck.chips*g_SOL_TO_CABBAGE:stuck.chips;
-            var myW=walletPublicKey?walletPublicKey.toBase58():'';
+            var myW=walletPublicKey?(getCanonicalWallet()||walletPublicKey.toBase58()):'';
             if(w===myW){try{await g_creditCabbage(cab);}catch(e){}}
           }
           await sb.from('poker_players').delete().eq('id',stuck.id);
@@ -5013,7 +5017,7 @@ var nextTierRow = nextTier
       }
       try{
         var sb=getSupaClient();
-        var w=walletPublicKey.toBase58();
+        var w=getCanonicalWallet()||walletPublicKey.toBase58();
         var ex=await sb.from('poker_players').select('*').eq('table_id',tid).eq('wallet',w).eq('is_active',true).maybeSingle();
         if(ex.data){pk_tid=tid;pk_mySeat=ex.data.seat;pk_viewTid=tid;await pk_open();return;}
         var sR=await sb.from('poker_players').select('seat').eq('table_id',tid).eq('is_active',true);
@@ -5090,7 +5094,7 @@ var nextTierRow = nextTier
       var bd=document.getElementById('pkBuyInBackdrop');if(bd)bd.style.display='none';
       try{
         var sb=getSupaClient();
-        var w=walletPublicKey.toBase58();
+        var w=getCanonicalWallet()||walletPublicKey.toBase58();
         var un=(session&&session.profile&&session.profile.username)||w.slice(0,4)+'\u2026'+w.slice(-4);
         await sb.from('poker_players').delete().eq('table_id',_pkBuyInTid).eq('wallet',w);
         var sR2=await sb.from('poker_players').select('seat').eq('table_id',_pkBuyInTid).eq('is_active',true);
@@ -5128,7 +5132,7 @@ var nextTierRow = nextTier
       if(!confirm('Stand up and leave the table? Your chips will be cashed out.'))return;
       pk_stopTimeout();
       var sb=getSupaClient();
-      var w=walletPublicKey.toBase58();
+      var w=getCanonicalWallet()||walletPublicKey.toBase58();
       var me=pk_plrs.find(function(p){return p.wallet===w;});
       if(me&&me.chips>0){
         var isSol=pk_tbl&&pk_tbl.currency==='sol';
@@ -5166,7 +5170,7 @@ var nextTierRow = nextTier
       var area=document.getElementById('pk_gameArea');
       if(!area||!pk_tbl)return;
       var t=pk_tbl;
-      var myW=walletPublicKey?walletPublicKey.toBase58():'';
+      var myW=walletPublicKey?(getCanonicalWallet()||walletPublicKey.toBase58()):'';
       var isSol=t.currency==='sol';
       var sym=isSol?'\u25ce':'\uD83E\uDD6C';
       var chipCol=isSol?'#00d4ff':'#00ff88';
@@ -5432,7 +5436,7 @@ var nextTierRow = nextTier
     function pk_doRaise(){
       if(!pk_tbl||!pk_plrs)return;
       var t=pk_tbl;
-      var myW=walletPublicKey?walletPublicKey.toBase58():'';
+      var myW=walletPublicKey?(getCanonicalWallet()||walletPublicKey.toBase58()):'';
       var me=pk_plrs.find(function(p){return p.wallet===myW;});
       if(!me)return;
       var bb=t.big_blind||2;
@@ -5454,7 +5458,7 @@ var nextTierRow = nextTier
     async function pk_act(action,raiseAmt){
       if(!pk_tid||!pk_tbl||pk_acting)return;
       var sb=getSupaClient();
-      var w=walletPublicKey.toBase58();
+      var w=getCanonicalWallet()||walletPublicKey.toBase58();
       // Always re-read fresh state before acting to avoid stale data race
       var freshT=await sb.from('poker_tables').select('*').eq('id',pk_tid).single();
       if(freshT.error)return;
@@ -5545,7 +5549,7 @@ var nextTierRow = nextTier
         }
 
         // Successful action — clear this player's strike counter
-        var myActW=walletPublicKey?walletPublicKey.toBase58():'';
+        var myActW=walletPublicKey?(getCanonicalWallet()||walletPublicKey.toBase58()):'';
         if(myActW&&pk_strikeMap)pk_strikeMap[myActW]=0;
         await pk_advance(me.seat,action);
       }catch(e){console.error('pk_act error',e);}
@@ -6643,7 +6647,7 @@ var nextTierRow = nextTier
       if (pp_loaded && pp_stats) return pp_stats;
       if (!walletPublicKey) return null;
       var sb = getSupaClient();
-      var w = walletPublicKey.toBase58();
+      var w = getCanonicalWallet() || walletPublicKey.toBase58();
       var stats = { gamesPlayed: 0, gamesWon: 0, gamesLost: 0, totalWagered: 0, totalWon: 0, totalLost: 0, biggestWin: 0, biggestWinGame: '', chatMsgs: 0, totalCabbageEarned: 0, joinDate: null, daysHeld: 0, luckyGame: '', itemsOwned: 0, solLost: 0, solWagered: 0, winStreak: 0, maxWinStreak: 0, lossStreak: 0, maxLossStreak: 0 };
 
       try {
@@ -6953,7 +6957,7 @@ var nextTierRow = nextTier
     async function ach_save(unlocked) {
       if (!walletPublicKey || unlocked.length === 0) return;
       var sb = getSupaClient();
-      var w = walletPublicKey.toBase58();
+      var w = getCanonicalWallet() || walletPublicKey.toBase58();
       try {
         // Fetch what's already saved to avoid re-saving
         var existing = await sb.from('user_items').select('item_id').eq('wallet', w).like('item_id', 'ach_%');
@@ -7094,7 +7098,7 @@ var nextTierRow = nextTier
     async function shop_loadMyItems() {
       if (!walletPublicKey) return;
       var sb = getSupaClient();
-      var w = walletPublicKey.toBase58();
+      var w = getCanonicalWallet() || walletPublicKey.toBase58();
       try {
         var res = await sb.from('user_items').select('*').eq('wallet', w);
         shop_items = {};
@@ -7183,7 +7187,7 @@ var nextTierRow = nextTier
         await g_spendCabbage(cat.price);
 
         var sb = getSupaClient();
-        var w = walletPublicKey.toBase58();
+        var w = getCanonicalWallet() || walletPublicKey.toBase58();
         var itemData = {};
 
         if (itemId === 'lucky_boost') {
@@ -7229,7 +7233,7 @@ var nextTierRow = nextTier
         var res = await sb.from('raffles').select('*').eq('status', 'open').order('created_at', { ascending: false }).limit(1).maybeSingle();
         shop_raffleCurrent = res.data || null;
         if (shop_raffleCurrent && walletPublicKey) {
-          var w = walletPublicKey.toBase58();
+          var w = getCanonicalWallet() || walletPublicKey.toBase58();
           var eR = await sb.from('raffle_entries').select('tickets').eq('raffle_id', shop_raffleCurrent.id).eq('wallet', w).maybeSingle();
           shop_raffleMyTickets = eR.data ? eR.data.tickets : 0;
           // Total entries
@@ -7371,7 +7375,7 @@ var nextTierRow = nextTier
 
       body.innerHTML = html;
     }
-    var lb_cache = {};
+    var lb_cache = { cabbage: null, winners: null, chatters: null, holders: null, bigwins: null };
     var lb_cacheTime = 0;
     var lb_activeTab = 'cabbage';
     var LB_TABS = [
@@ -7383,36 +7387,80 @@ var nextTierRow = nextTier
     ];
 
     async function lb_fetchAll() {
-      // Cache for 60s
-      if (lb_cache.cabbage && Date.now() - lb_cacheTime < 60000) return lb_cache;
+      // Cache for 60s (null = never fetched, [] = fetched but empty)
+      if (lb_cache.cabbage !== null && Date.now() - lb_cacheTime < 60000) return lb_cache;
       var sb = getSupaClient();
       try {
-        // Top Cabbage Holders
+
+        // ── Top Cabbage: balance from cabbage_accounts, username from profiles via wallet_links ──
         var cR = await sb.from('cabbage_accounts').select('wallet,balance').order('balance', { ascending: false }).limit(20);
-        lb_cache.cabbage = (cR.data || []).filter(function(r) { return r.balance > 0; });
+        console.log('[LB] cabbage_accounts raw:', cR.error || (cR.data ? cR.data.length + ' rows' : 'null'));
+        if (cR.error) throw cR.error;
+        var cData = (cR.data || []).filter(function(r) { return Number(r.balance) > 0; });
+        console.log('[LB] cabbage after filter:', cData.length, 'rows');
+        // Enrich with usernames: look up profile for each wallet
+        var cWallets = cData.map(function(r) { return r.wallet; });
+        var wlR = await sb.from('wallet_links').select('wallet,profile_id').in('wallet', cWallets);
+        var wlMap = {};
+        (wlR.data || []).forEach(function(wl) { wlMap[wl.wallet] = wl.profile_id; });
+        var profIds = Object.values(wlMap).filter(function(v,i,a){ return v && a.indexOf(v)===i; });
+        var profMap = {};
+        if (profIds.length > 0) {
+          var pR = await sb.from('profiles').select('id,username,avatar_url').in('id', profIds);
+          (pR.data || []).forEach(function(p) { profMap[p.id] = p; });
+        }
+        lb_cache.cabbage = cData.map(function(r) {
+          var pid = wlMap[r.wallet];
+          var prof = pid ? profMap[pid] : null;
+          return { wallet: r.wallet, balance: r.balance, username: prof ? prof.username : null, avatar: prof ? prof.avatar_url : null };
+        });
 
-        // Casino total winnings (payout from game_bets where house_profit < 0 means player won)
-        var gR = await sb.from('game_bets').select('wallet,bet_amount,house_profit,game').order('played_at', { ascending: false }).limit(2000);
+        // ── Casino Wins (Total PNL) ──
+        // house_profit convention: 0 = player won (house kept nothing), bet_amount = player lost
+        // PNL per wallet = sum(bet_amount where hp=0) - sum(bet_amount where hp>0)
+        var gR = await sb.from('game_bets').select('wallet,bet_amount,house_profit,game,currency').order('played_at', { ascending: false }).limit(5000);
         var gData = gR.data || [];
-
-        // Aggregate wins per wallet
-        var winMap = {};
+        var pnlMap = {};
         var bigWins = [];
         gData.forEach(function(b) {
-          if (Number(b.house_profit) <= 0) {
-            // Player won — profit is the negative of house_profit
-            var profit = Math.abs(Number(b.house_profit));
-            if (!winMap[b.wallet]) winMap[b.wallet] = { wallet: b.wallet, total: 0, count: 0 };
-            winMap[b.wallet].total += profit;
-            winMap[b.wallet].count++;
-            bigWins.push({ wallet: b.wallet, amount: Number(b.bet_amount) + profit, game: b.game });
+          var hp  = Number(b.house_profit || 0);
+          var bet = Number(b.bet_amount   || 0);
+          if (!pnlMap[b.wallet]) pnlMap[b.wallet] = { wallet: b.wallet, pnl: 0, wins: 0, losses: 0 };
+          if (hp === 0) {
+            // Player won — they get their bet back (net +bet)
+            pnlMap[b.wallet].pnl += bet;
+            pnlMap[b.wallet].wins++;
+            bigWins.push({ wallet: b.wallet, amount: bet * 2, game: b.game, currency: b.currency });
+          } else {
+            // Player lost — net -bet
+            pnlMap[b.wallet].pnl -= bet;
+            pnlMap[b.wallet].losses++;
           }
         });
-        lb_cache.winners = Object.values(winMap).sort(function(a, b) { return b.total - a.total; }).slice(0, 20);
+        // Enrich winners with usernames too
+        var gWallets = Object.keys(pnlMap);
+        var gwlR = await sb.from('wallet_links').select('wallet,profile_id').in('wallet', gWallets);
+        var gwlMap = {};
+        (gwlR.data || []).forEach(function(wl) { gwlMap[wl.wallet] = wl.profile_id; });
+        var gProfIds = Object.values(gwlMap).filter(function(v,i,a){ return v && a.indexOf(v)===i; });
+        var gProfMap = {};
+        if (gProfIds.length > 0) {
+          var gpR = await sb.from('profiles').select('id,username').in('id', gProfIds);
+          (gpR.data || []).forEach(function(p) { gProfMap[p.id] = p; });
+        }
+        lb_cache.winners = Object.values(pnlMap)
+          .map(function(r) {
+            var pid = gwlMap[r.wallet];
+            var prof = pid ? gProfMap[pid] : null;
+            return { wallet: r.wallet, pnl: r.pnl, wins: r.wins, losses: r.losses, username: prof ? prof.username : null };
+          })
+          .sort(function(a, b) { return b.pnl - a.pnl; })
+          .slice(0, 20);
+
         lb_cache.bigwins = bigWins.sort(function(a, b) { return b.amount - a.amount; }).slice(0, 20);
 
-        // Most Active Chatters
-        var chR = await sb.from('chat_messages').select('wallet,username').order('created_at', { ascending: false }).limit(2000);
+        // ── Most Active Chatters ──
+        var chR = await sb.from('chat_messages').select('wallet,username').order('created_at', { ascending: false }).limit(5000);
         var chatMap = {};
         (chR.data || []).forEach(function(m) {
           if (!chatMap[m.wallet]) chatMap[m.wallet] = { wallet: m.wallet, username: m.username, count: 0 };
@@ -7421,9 +7469,8 @@ var nextTierRow = nextTier
         });
         lb_cache.chatters = Object.values(chatMap).sort(function(a, b) { return b.count - a.count; }).slice(0, 20);
 
-        // OG Holders (earliest stakers)
-        var hR = await sb.from('cabbage_accounts').select('wallet,started_at').not('started_at', 'is', null).order('started_at', { ascending: true }).limit(20);
-        lb_cache.holders = (hR.data || []).filter(function(r) { return r.started_at; });
+        // OG Holders — coming soon
+        lb_cache.holders = [];
 
         lb_cacheTime = Date.now();
       } catch(e) { console.warn('lb_fetchAll error:', e); }
@@ -7436,7 +7483,8 @@ var nextTierRow = nextTier
     }
 
     function lb_isMe(w) {
-      return walletPublicKey && walletPublicKey.toBase58() === w;
+      var canon = getCanonicalWallet() || (walletPublicKey ? walletPublicKey.toBase58() : null);
+      return !!canon && canon === w;
     }
 
     function lb_daysSince(iso) {
@@ -7509,6 +7557,20 @@ var nextTierRow = nextTier
       var body = document.getElementById('lb_body');
       if (!body) return;
       var data = lb_cache[lb_activeTab] || [];
+      // Still loading
+      if (lb_cache[lb_activeTab] === null) {
+        body.innerHTML = '<div class="lb_loading">Loading…</div>';
+        return;
+      }
+      if (lb_activeTab === 'holders') {
+        body.innerHTML =
+          '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.8rem;padding:3rem;">' +
+            '<div style="font-size:2rem;">🪶</div>' +
+            '<div style="font-size:1.2rem;letter-spacing:3px;color:#444;font-weight:700;">COMING SOON</div>' +
+            '<div style="font-size:0.72rem;color:#333;letter-spacing:1px;text-align:center;">OG Holder rankings are being prepared.<br>Check back soon.</div>' +
+          '</div>';
+        return;
+      }
       if (data.length === 0) {
         body.innerHTML = '<div class="lb_loading">No data yet — keep playing!</div>';
         return;
@@ -7517,7 +7579,7 @@ var nextTierRow = nextTier
       var html = '<table class="lb_table"><thead><tr><th>#</th><th>Player</th><th style="text-align:right;">';
 
       if (lb_activeTab === 'cabbage') html += 'Balance</th></tr></thead><tbody>';
-      else if (lb_activeTab === 'winners') html += 'Total Won</th></tr></thead><tbody>';
+      else if (lb_activeTab === 'winners') html += 'Total PNL</th></tr></thead><tbody>';
       else if (lb_activeTab === 'chatters') html += 'Messages</th></tr></thead><tbody>';
       else if (lb_activeTab === 'holders') html += 'Holding Since</th></tr></thead><tbody>';
       else if (lb_activeTab === 'bigwins') html += 'Win Amount</th></tr></thead><tbody>';
@@ -7542,16 +7604,17 @@ var nextTierRow = nextTier
         if (lb_activeTab === 'cabbage') {
           html += '<span style="color:#00ff88;">' + Math.floor(row.balance).toLocaleString() + ' 🥬</span>';
         } else if (lb_activeTab === 'winners') {
-          html += '<span style="color:#ffd700;">' + row.total.toFixed(2) + ' 🥬</span>';
-          html += '<div style="font-size:0.58rem;color:#555;">' + row.count + ' wins</div>';
+          var pnlColor = row.pnl >= 0 ? '#00ff88' : '#ff3c5c';
+          var pnlSign  = row.pnl >= 0 ? '+' : '';
+          html += '<span style="color:' + pnlColor + ';">' + pnlSign + Math.floor(row.pnl).toLocaleString() + ' 🥬</span>';
+          html += '<div style="font-size:0.58rem;color:#555;">' + row.wins + 'W / ' + row.losses + 'L</div>';
         } else if (lb_activeTab === 'chatters') {
           html += '<span style="color:#7b68ee;">' + row.count.toLocaleString() + '</span>';
         } else if (lb_activeTab === 'holders') {
-          var days = lb_daysSince(row.started_at);
-          html += '<span style="color:#00d4ff;">' + days + ' days</span>';
-          html += '<div style="font-size:0.55rem;color:#333;">' + new Date(row.started_at).toLocaleDateString() + '</div>';
+          html += '<span style="color:#555;">—</span>';
         } else if (lb_activeTab === 'bigwins') {
-          html += '<span style="color:#ffd700;">' + row.amount.toFixed(2) + ' 🥬</span>';
+          var bigSym = row.currency === 'sol' ? '◎' : '🥬';
+          html += '<span style="color:#ffd700;">' + row.amount.toFixed(2) + ' ' + bigSym + '</span>';
           html += '<div style="font-size:0.58rem;color:#555;">' + (row.game || '') + '</div>';
         }
 
@@ -7561,7 +7624,7 @@ var nextTierRow = nextTier
       html += '</tbody></table>';
 
       // Find my position
-      var myW = walletPublicKey ? walletPublicKey.toBase58() : '';
+      var myW = getCanonicalWallet() || (walletPublicKey ? walletPublicKey.toBase58() : '');
       if (myW) {
         var myIdx = data.findIndex(function(r) { return r.wallet === myW; });
         if (myIdx >= 0) {
@@ -7607,7 +7670,7 @@ var nextTierRow = nextTier
     async function mq_load() {
       if (!walletPublicKey) return;
       var sb = getSupaClient();
-      var w = walletPublicKey.toBase58();
+      var w = getCanonicalWallet() || walletPublicKey.toBase58();
       var dk = mq_todayKey();
       var wk = mq_weekKey();
       try {
@@ -7626,7 +7689,7 @@ var nextTierRow = nextTier
     async function mq_track(actionKey) {
       if (!walletPublicKey) return;
       var sb = getSupaClient();
-      var w = walletPublicKey.toBase58();
+      var w = getCanonicalWallet() || walletPublicKey.toBase58();
 
       // Find all missions that match this action key
       var all = MQ_DAILY.concat(MQ_WEEKLY);
@@ -7676,7 +7739,7 @@ var nextTierRow = nextTier
 
       try {
         var sb = getSupaClient();
-        var w = walletPublicKey.toBase58();
+        var w = getCanonicalWallet() || walletPublicKey.toBase58();
         await sb.from('user_missions').update({ claimed: true }).eq('wallet', w).eq('mission_id', missionId).eq('period_key', pk);
         await g_creditCabbage(m.reward);
         mq_data[missionId].claimed = true;
@@ -7849,7 +7912,7 @@ var nextTierRow = nextTier
     }
 
     function voice_myWallet() {
-      return walletPublicKey ? walletPublicKey.toBase58() : 'anon';
+      return getCanonicalWallet() || (walletPublicKey ? walletPublicKey.toBase58() : 'anon');
     }
 
     // ── Keep the tab button showing a live dot when in a room ──
