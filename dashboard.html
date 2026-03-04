@@ -1287,6 +1287,15 @@ a.plink:hover{
       profilePanelOpen: false
     };
 
+    // The primary wallet address for this profile (may differ from walletPublicKey if user
+    // connected via their 2nd wallet). All cabbage/staking calls use this.
+    var pk_canonicalWallet = null;
+
+    function getCanonicalWallet() {
+      // Prefer the resolved canonical (primary) wallet; fall back to connected wallet
+      return pk_canonicalWallet || (walletPublicKey ? walletPublicKey.toBase58() : null);
+    }
+
     function getTier(count) {
       for (var i = TIERS.length - 1; i >= 0; i--) {
         if (count >= TIERS[i].min) return TIERS[i];
@@ -1550,6 +1559,7 @@ a.plink:hover{
       try { if (walletProvider && walletProvider.disconnect) walletProvider.disconnect(); } catch (e) {}
       walletProvider = null;
       walletPublicKey = null;
+      pk_canonicalWallet = null;
 
       document.getElementById("dashNavWrap").classList.remove("show");
       document.getElementById("walletChip").style.display = "none";
@@ -1676,8 +1686,13 @@ a.plink:hover{
       try {
         var primary = walletPublicKey.toBase58();
         var owners = [primary];
-
-        if (session.secondWallet.address) owners.push(session.secondWallet.address);
+        // Include canonical (primary) wallet if user connected via their 2nd wallet
+        if (pk_canonicalWallet && pk_canonicalWallet !== primary && owners.indexOf(pk_canonicalWallet) === -1) {
+          owners.push(pk_canonicalWallet);
+        }
+        if (session.secondWallet.address && owners.indexOf(session.secondWallet.address) === -1) {
+          owners.push(session.secondWallet.address);
+        }
 
         var all = [];
         for (var i=0; i<owners.length; i++){
@@ -1781,7 +1796,13 @@ a.plink:hover{
       var linksHTML = '';
       if (xUrl) linksHTML += '<a class="plink" href="' + xUrl + '" target="_blank">X: @' + normalizeHandle(session.profile.x) + '</a>';
       if (disc) linksHTML += '<span class="plink" style="cursor:default;">Discord: ' + disc + '</span>';
-      if (session.secondWallet.address) linksHTML += '<span class="plink" style="cursor:default;">2nd Wallet: ' + shortAddr(session.secondWallet.address) + '</span>';
+      // Show 2nd wallet
+      if (session.secondWallet.address) linksHTML += '<span class="plink" style="cursor:default;">2nd: ' + shortAddr(session.secondWallet.address) + '</span>';
+      // Show canonical wallet indicator if different from connected wallet
+      var connW = walletPublicKey ? walletPublicKey.toBase58() : '';
+      if (pk_canonicalWallet && pk_canonicalWallet !== connW) {
+        linksHTML += '<span class="plink" style="cursor:default;font-size:0.62rem;color:#555;border-color:rgba(255,255,255,0.06);" title="Your staking and cabbage are tracked on this primary wallet">Primary: ' + shortAddr(pk_canonicalWallet) + '</span>';
+      }
 
       view.innerHTML +=
       '<div class="tier-card ' + tier.cssClass + '">' +
@@ -1997,7 +2018,13 @@ var nextTierRow = nextTier
         var xUrl = session.profile.x ? buildXUrl(session.profile.x) : "";
         if (xUrl) linksHTML += '<a class="plink" href="' + xUrl + '" target="_blank">X: @' + normalizeHandle(session.profile.x) + '</a>';
         if (session.profile.discord) linksHTML += '<span class="plink" style="cursor:default;">Discord: ' + session.profile.discord + '</span>';
-        if (session.secondWallet.address) linksHTML += '<span class="plink" style="cursor:default;">2nd Wallet: ' + shortAddr(session.secondWallet.address) + '</span>';
+        // Show 2nd wallet
+      if (session.secondWallet.address) linksHTML += '<span class="plink" style="cursor:default;">2nd: ' + shortAddr(session.secondWallet.address) + '</span>';
+      // Show canonical wallet indicator if different from connected wallet
+      var connW = walletPublicKey ? walletPublicKey.toBase58() : '';
+      if (pk_canonicalWallet && pk_canonicalWallet !== connW) {
+        linksHTML += '<span class="plink" style="cursor:default;font-size:0.62rem;color:#555;border-color:rgba(255,255,255,0.06);" title="Your staking and cabbage are tracked on this primary wallet">Primary: ' + shortAddr(pk_canonicalWallet) + '</span>';
+      }
         bl.innerHTML = linksHTML;
       }
     }
@@ -2312,105 +2339,235 @@ var nextTierRow = nextTier
     }
 
     /* ===============================
-       PROFILES + WALLET LINKING (Supabase)
-       - Resolves a stable profile for a wallet (creates if missing)
-       - Persists basic profile fields (username + avatar_url)
-       - Remembers linked wallets via wallet_links
+       PROFILES + WALLET LINKING
+       ===============================
+       HOW IT WORKS (read this before touching):
+
+       wallet_links table: wallet (PK) -> profile_id, is_primary
+       profiles table:     id, username, avatar_url, discord_id, discord_username, x_handle
+
+       SCENARIO: Mobile has A+B linked to P1. Desktop had C alone as P2.
+       User signs in on Desktop with B (the common wallet).
+
+       resolveAndMergeProfile(B):
+         1. Look up B in wallet_links -> finds P1
+         2. Collect sibling wallets from localStorage on this device -> finds C
+         3. Look up C in wallet_links -> finds P2
+         4. Two different profile IDs (P1, P2) -> MERGE: oldest wins
+            P1 absorbs C, P1 absorbs any fields missing from P2, P2 deleted
+         5. Return merged P1 with all wallets now linked
+
+       Next sign-in with A, B, or C anywhere -> all land on same profile.
        =============================== */
 
     function getDb() { return getSupaClient(); }
 
-    async function resolveProfileForWallet(wallet) {
-      var db = getDb();
+    var PROF_FIELDS = "id, username, avatar_url, discord_id, discord_username, x_handle, created_at";
 
-      // 1) check link
-      var linkRes = await db
-        .from("wallet_links")
-        .select("profile_id")
-        .eq("wallet", wallet)
-        .maybeSingle();
-
-      if (linkRes.error) throw linkRes.error;
-
-      // 2) if link exists -> load profile
-      if (linkRes.data && linkRes.data.profile_id) {
-        var profRes = await db
-          .from("profiles")
-          .select("id, username, avatar_url, discord_id, discord_username, created_at")
-          .eq("id", linkRes.data.profile_id)
-          .single();
-        if (profRes.error) throw profRes.error;
-        return profRes.data;
-      }
-
-      // 3) create profile
-      var newProfRes = await db
-        .from("profiles")
-        .insert({
-          username: (session && session.profile && session.profile.username) ? session.profile.username : null,
-          avatar_url: (session && session.profile && session.profile.pfpImage) ? session.profile.pfpImage : null
-        })
-        .select("id, username, avatar_url, discord_id, discord_username, created_at")
-        .single();
-
-      if (newProfRes.error) throw newProfRes.error;
-
-      // 4) link wallet -> profile (wallet is unique)
-      var upRes = await db
-        .from("wallet_links")
-        .upsert({ wallet: wallet, profile_id: newProfRes.data.id, is_primary: true }, { onConflict: "wallet" });
-
-      if (upRes.error) throw upRes.error;
-
-      // 5) re-read link (handles race)
-      var finalLink = await db
-        .from("wallet_links")
-        .select("profile_id")
-        .eq("wallet", wallet)
-        .single();
-      if (finalLink.error) throw finalLink.error;
-
-      var finalProf = await db
-        .from("profiles")
-        .select("id, username, avatar_url, discord_id, discord_username, created_at")
-        .eq("id", finalLink.data.profile_id)
-        .single();
-      if (finalProf.error) throw finalProf.error;
-
-      return finalProf.data;
-    }
+    // ── helpers ──────────────────────────────────────────────────
 
     async function loadLinkedWallets(profileId) {
       var db = getDb();
-      var res = await db
-        .from("wallet_links")
-        .select("wallet, is_primary, created_at")
-        .eq("profile_id", profileId)
-        .order("is_primary", { ascending: false });
-
+      var res = await db.from("wallet_links").select("wallet, is_primary, created_at")
+        .eq("profile_id", profileId).order("is_primary", { ascending: false });
       if (res.error) throw res.error;
       return res.data || [];
     }
 
     async function linkWalletToProfile(wallet, profileId, isPrimary) {
       var db = getDb();
-      var res = await db
-        .from("wallet_links")
-        .upsert(
-          { wallet: wallet, profile_id: profileId, is_primary: !!isPrimary },
-          { onConflict: "wallet" }
-        );
+      var res = await db.from("wallet_links")
+        .upsert({ wallet: wallet, profile_id: profileId, is_primary: !!isPrimary }, { onConflict: "wallet" });
       if (res.error) throw res.error;
     }
 
     async function unlinkWallet(wallet) {
       var db = getDb();
-      // If you don't have DELETE policy, this may fail — we still clear local UI.
-      var res = await db
-        .from("wallet_links")
-        .delete()
-        .eq("wallet", wallet);
+      var res = await db.from("wallet_links").delete().eq("wallet", wallet);
       if (res.error) throw res.error;
+    }
+
+    // Look up the profile_id for a single wallet. Returns null if not found.
+    async function getProfileIdForWallet(wallet) {
+      if (!wallet) return null;
+      var r = await getDb().from("wallet_links").select("profile_id").eq("wallet", wallet).maybeSingle();
+      if (r.error || !r.data) return null;
+      return r.data.profile_id;
+    }
+
+    // Merge all profileIds into the oldest one (winner).
+    // All wallet_links from losers are re-pointed to winner.
+    // Missing profile fields on winner are filled from losers.
+    // Loser profile rows are deleted.
+    // Returns the final merged profile (re-fetched).
+    async function mergeProfiles(profileIds) {
+      var db = getDb();
+      if (profileIds.length === 1) {
+        var r = await db.from("profiles").select(PROF_FIELDS).eq("id", profileIds[0]).single();
+        return r.error ? null : r.data;
+      }
+
+      var pr = await db.from("profiles").select(PROF_FIELDS).in("id", profileIds);
+      if (pr.error || !pr.data || pr.data.length === 0) return null;
+
+      // Oldest profile wins
+      var profs = pr.data.slice().sort(function(a, b) {
+        return new Date(a.created_at || 0) - new Date(b.created_at || 0);
+      });
+      var winner = profs[0];
+      var losers = profs.slice(1);
+      var fields = ["username", "avatar_url", "discord_id", "discord_username", "x_handle"];
+
+      console.log("[Profile] Merging", losers.length, "duplicate(s) into", winner.id,
+        "(" + (winner.username || "unnamed") + ")");
+
+      // Fill any blank fields on winner from losers
+      var patch = {};
+      for (var fi = 0; fi < fields.length; fi++) {
+        if (!winner[fields[fi]]) {
+          for (var li = 0; li < losers.length; li++) {
+            if (losers[li][fields[fi]]) { patch[fields[fi]] = losers[li][fields[fi]]; break; }
+          }
+        }
+      }
+      if (Object.keys(patch).length > 0) {
+        var patchRes = await db.from("profiles").update(patch).eq("id", winner.id);
+        if (!patchRes.error) Object.assign(winner, patch);
+      }
+
+      // Re-point all loser wallet_links to winner, then delete loser profiles
+      for (var i = 0; i < losers.length; i++) {
+        var loser = losers[i];
+        var wr = await db.from("wallet_links").select("wallet, is_primary").eq("profile_id", loser.id);
+        var loserWallets = wr.data || [];
+        for (var wi = 0; wi < loserWallets.length; wi++) {
+          await db.from("wallet_links").upsert(
+            { wallet: loserWallets[wi].wallet, profile_id: winner.id, is_primary: false },
+            { onConflict: "wallet" }
+          );
+        }
+        // Delete loser (best-effort; may fail without DELETE policy)
+        db.from("profiles").delete().eq("id", loser.id).then(function(){}).catch(function(){});
+      }
+
+      // Re-fetch winner with any patched data
+      var fr = await db.from("profiles").select(PROF_FIELDS).eq("id", winner.id).single();
+      return fr.error ? winner : fr.data;
+    }
+
+    // ── MAIN entry point called on every wallet connect ──────────
+    //
+    // Given the wallet that just signed in, this function:
+    //   1. Finds its profile (or creates one)
+    //   2. Collects ALL other wallets known on this device (localStorage)
+    //   3. Checks each of those wallets for a profile_id
+    //   4. If multiple distinct profiles found -> MERGE into the oldest one
+    //   5. Sets pk_canonicalWallet to the primary wallet for staking/cabbage
+    //
+    async function resolveAndMergeProfile(connectingWallet) {
+      var db = getDb();
+
+      // Step 1: get profile_id for the connecting wallet
+      var connectingProfileId = await getProfileIdForWallet(connectingWallet);
+
+      // Step 2: collect sibling wallet addresses from localStorage on this device
+      var siblingWallets = [];
+      try {
+        // "lnl_second_wallet_for_X" -> X's saved 2nd wallet
+        var lsRaw = localStorage.getItem("lnl_second_wallet_for_" + connectingWallet);
+        if (lsRaw) {
+          var lsParsed = JSON.parse(lsRaw);
+          if (lsParsed && lsParsed.address) siblingWallets.push(lsParsed.address);
+        }
+        // Also check if this wallet appears as anyone else's saved 2nd wallet on this device
+        for (var ki = 0; ki < localStorage.length; ki++) {
+          var key = localStorage.key(ki);
+          if (key && key.indexOf("lnl_second_wallet_for_") === 0) {
+            try {
+              var v = JSON.parse(localStorage.getItem(key));
+              if (v && v.address === connectingWallet) {
+                var otherWallet = key.replace("lnl_second_wallet_for_", "");
+                if (siblingWallets.indexOf(otherWallet) === -1) siblingWallets.push(otherWallet);
+              }
+            } catch(e2) {}
+          }
+        }
+      } catch(e) {}
+
+      // If we already have a profile loaded in this session, its other linked wallets
+      // are also candidates (handles same-device multi-wallet scenario)
+      if (session.secondWallet && session.secondWallet.address) {
+        if (siblingWallets.indexOf(session.secondWallet.address) === -1) {
+          siblingWallets.push(session.secondWallet.address);
+        }
+      }
+
+      // Step 3: look up profile_ids for all sibling wallets
+      var allProfileIds = [];
+      if (connectingProfileId) allProfileIds.push(connectingProfileId);
+
+      for (var si = 0; si < siblingWallets.length; si++) {
+        var sw = siblingWallets[si];
+        if (!sw || sw === connectingWallet) continue;
+        var swProfileId = await getProfileIdForWallet(sw);
+        if (swProfileId && allProfileIds.indexOf(swProfileId) === -1) {
+          allProfileIds.push(swProfileId);
+        }
+      }
+
+      var profile;
+
+      if (allProfileIds.length === 0) {
+        // Step 4a: No profile found anywhere -> create new one
+        var newR = await db.from("profiles").insert({
+          username:   (session.profile && session.profile.username)  || null,
+          avatar_url: (session.profile && session.profile.pfpImage)  || null
+        }).select(PROF_FIELDS).single();
+        if (newR.error) throw newR.error;
+        await linkWalletToProfile(connectingWallet, newR.data.id, true);
+        profile = newR.data;
+        console.log("[Profile] Created new profile", profile.id);
+
+      } else if (allProfileIds.length === 1) {
+        // Step 4b: Exactly one profile -> ensure connecting wallet is linked to it
+        var pr1 = await db.from("profiles").select(PROF_FIELDS).eq("id", allProfileIds[0]).single();
+        if (pr1.error) throw pr1.error;
+        profile = pr1.data;
+        if (!connectingProfileId) {
+          // connecting wallet wasn't linked yet -> link it now (non-primary)
+          await linkWalletToProfile(connectingWallet, profile.id, false);
+        }
+
+      } else {
+        // Step 4c: Multiple distinct profiles -> MERGE
+        console.log("[Profile] Found", allProfileIds.length, "profiles to merge:", allProfileIds);
+        profile = await mergeProfiles(allProfileIds);
+        if (!profile) throw new Error("mergeProfiles returned null");
+        // Ensure connecting wallet is linked to winner
+        await db.from("wallet_links")
+          .upsert({ wallet: connectingWallet, profile_id: profile.id, is_primary: false },
+                  { onConflict: "wallet" });
+      }
+
+      // Step 5: determine the canonical (primary) wallet for staking/cabbage
+      var allLinks = await db.from("wallet_links").select("wallet, is_primary").eq("profile_id", profile.id);
+      var links = allLinks.data || [];
+      var primaryLink = links.find(function(l) { return l.is_primary; });
+      if (primaryLink) {
+        pk_canonicalWallet = primaryLink.wallet;
+      } else {
+        // No primary set yet -> make connecting wallet primary
+        await db.from("wallet_links")
+          .update({ is_primary: true }).eq("wallet", connectingWallet).eq("profile_id", profile.id);
+        pk_canonicalWallet = connectingWallet;
+      }
+
+      return profile;
+    }
+
+    // Back-compat shim: old code (connectSecondWallet) calls resolveProfileForWallet
+    async function resolveProfileForWallet(wallet) {
+      return resolveAndMergeProfile(wallet);
     }
 
     // Debounced profile saving (keeps your existing localStorage behavior)
@@ -2426,43 +2583,75 @@ var nextTierRow = nextTier
     async function saveProfileToSupabase() {
       if (!session || !session.profileId) return;
       var db = getDb();
-      // Map existing dashboard profile fields -> DB columns that exist
       var payload = {
-        username: (session.profile && session.profile.username) ? session.profile.username : null,
-        avatar_url: (session.profile && session.profile.pfpImage) ? session.profile.pfpImage : null,
-        discord_id: (session.profile && session.profile.discord_id) ? session.profile.discord_id : null,
-        discord_username: (session.profile && session.profile.discord) ? session.profile.discord : null
+        username:          (session.profile && session.profile.username)   || null,
+        avatar_url:        (session.profile && session.profile.pfpImage)   || null,
+        discord_id:        (session.profile && session.profile.discord_id) || null,
+        discord_username:  (session.profile && session.profile.discord)    || null,
+        x_handle:          (session.profile && session.profile.x)          || null
       };
-      var res = await db
-        .from("profiles")
-        .update(payload)
-        .eq("id", session.profileId);
+      var res = await db.from("profiles").update(payload).eq("id", session.profileId);
       if (res.error) throw res.error;
     }
 
-    async function hydrateProfileAndWalletsFromSupabase(primaryWallet) {
+    async function hydrateProfileAndWalletsFromSupabase(connectingWallet) {
       try {
-        var profile = await resolveProfileForWallet(primaryWallet);
+        // Resolve profile — creates, links, or merges as needed
+        var profile = await resolveAndMergeProfile(connectingWallet);
+        if (!profile) throw new Error("resolveAndMergeProfile returned null");
         session.profileId = profile.id;
 
-        // Prefer Supabase values when present
-        if (profile.username) session.profile.username = profile.username;
-        if (profile.avatar_url) session.profile.pfpImage = profile.avatar_url;
-        if (profile.discord_id) session.profile.discord_id = profile.discord_id;
-        if (profile.discord_username) session.profile.discord = profile.discord_username;
+        // DB is authoritative — overwrite any stale localStorage values
+        if (profile.username)         session.profile.username   = profile.username;
+        if (profile.avatar_url)       session.profile.pfpImage   = profile.avatar_url;
+        if (profile.discord_id)       session.profile.discord_id = profile.discord_id;
+        if (profile.discord_username) session.profile.discord    = profile.discord_username;
+        if (profile.x_handle)         session.profile.x          = profile.x_handle;
 
-        // Pull linked wallets and set 2nd wallet UI value (first non-primary wallet)
+        // Pull ALL linked wallets for this profile from DB
         var wallets = await loadLinkedWallets(profile.id);
+
+        // Surface a "second wallet" in UI: first wallet that isn't the connecting or canonical
         var second = "";
         for (var i = 0; i < wallets.length; i++) {
-          if (wallets[i].wallet && wallets[i].wallet !== primaryWallet) { second = wallets[i].wallet; break; }
+          var wl = wallets[i];
+          if (wl.wallet !== connectingWallet && wl.wallet !== pk_canonicalWallet) {
+            second = wl.wallet;
+            break;
+          }
         }
+        // If user connected via non-primary wallet, expose the primary as the "other" wallet
+        if (!second && pk_canonicalWallet && pk_canonicalWallet !== connectingWallet) {
+          second = pk_canonicalWallet;
+        }
+
         if (second) {
           session.secondWallet.address = second;
-          saveSecondWalletToStorage(); // keep your existing local cache
+          saveSecondWalletToStorage();
+        } else {
+          session.secondWallet.address = "";
         }
+
+        // Auto-link any locally-saved 2nd wallet that isn't in DB yet
+        var localSaved = "";
+        try {
+          var ls2 = localStorage.getItem("lnl_second_wallet_for_" + connectingWallet);
+          if (ls2) { var d2 = JSON.parse(ls2); localSaved = d2 && d2.address ? d2.address : ""; }
+        } catch(e) {}
+        if (localSaved && !wallets.find(function(w) { return w.wallet === localSaved; })) {
+          console.log("[Profile] Auto-linking saved 2nd wallet:", localSaved.slice(0, 8));
+          linkWalletToProfile(localSaved, profile.id, false).catch(function(e) {
+            console.warn("[Profile] auto-link error:", e);
+          });
+        }
+
+        saveProfileToStorage();
+        console.log("[Profile] Hydrated. id:", session.profileId,
+          "| canonical:", pk_canonicalWallet ? pk_canonicalWallet.slice(0,8)+"..." : "none",
+          "| connected:", connectingWallet.slice(0,8)+"...",
+          "| total wallets:", wallets.length);
       } catch (e) {
-        console.warn("Hydrate profile/wallets failed (Supabase):", e);
+        console.warn("[Profile] Hydrate failed:", e);
       }
     }
 
@@ -2508,7 +2697,8 @@ var nextTierRow = nextTier
     async function signCabbageMessage(action) {
       if (!walletProvider || !walletPublicKey) throw new Error('Wallet not connected');
       if (!walletProvider.signMessage) throw new Error('Wallet does not support message signing');
-      var wallet = walletPublicKey.toBase58();
+      var wallet = walletPublicKey.toBase58(); // SIGNING wallet (must match key)
+      var canonWallet = getCanonicalWallet() || wallet; // staking record lives here
       var ts = new Date().toISOString();
       var msg = 'LNL Cabbage ' + action.toUpperCase() + '\nWallet: ' + wallet + '\nTime: ' + ts;
       var msgBytes = new TextEncoder().encode(msg);
@@ -2522,7 +2712,8 @@ var nextTierRow = nextTier
     async function refreshCabbageUI() {
       try {
         if (!walletPublicKey) return;
-        var wallet = walletPublicKey.toBase58();
+        var wallet = getCanonicalWallet();
+        if (!wallet) return;
 
         var balEl = document.getElementById('cabbageBalance');
         var rateEl = document.getElementById('cabbageRate');
@@ -2591,7 +2782,7 @@ var nextTierRow = nextTier
         var res = await fetch(cabbageEndpoint(), {
           method: 'POST',
           headers: cabbageAuthHeaders(),
-          body: JSON.stringify({ action: 'start', wallet: payload.wallet, message: payload.message, signature: payload.signature })
+          body: JSON.stringify({ action: 'start', wallet: getCanonicalWallet() || payload.wallet, signing_wallet: payload.wallet, message: payload.message, signature: payload.signature })
         });
 
         var data = await res.json().catch(function(){ return {}; });
@@ -2613,7 +2804,7 @@ var nextTierRow = nextTier
         var res = await fetch(cabbageEndpoint(), {
           method: 'POST',
           headers: cabbageAuthHeaders(),
-          body: JSON.stringify({ action: 'claim', wallet: payload.wallet, message: payload.message, signature: payload.signature })
+          body: JSON.stringify({ action: 'claim', wallet: getCanonicalWallet() || payload.wallet, signing_wallet: payload.wallet, message: payload.message, signature: payload.signature })
         });
 
         var data = await res.json().catch(function(){ return {}; });
@@ -3262,7 +3453,7 @@ var nextTierRow = nextTier
       var res = await fetch(SUPA_URL.replace(/\/+$/,'') + '/functions/v1/cabbage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY },
-        body: JSON.stringify({ action: 'credit', wallet: walletPublicKey.toBase58(), amount: amount })
+        body: JSON.stringify({ action: 'credit', wallet: getCanonicalWallet() || walletPublicKey.toBase58(), amount: amount })
       });
       var data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Credit failed');
