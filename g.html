@@ -316,6 +316,10 @@ a.plink:hover{
       display: block;
       grid-template-columns: unset;
     }
+    #view-leaderboard.show {
+      display: block;
+      grid-template-columns: unset;
+    }
     @media (max-width: 800px) {
       .view.show { grid-template-columns: 1fr; }
       .dashboard{ padding: 1.4rem 1rem 3rem; }
@@ -7552,7 +7556,7 @@ var nextTierRow = nextTier
       if (lb_activeTab === 'holders') {
         body.innerHTML =
           '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.8rem;padding:3rem;">' +
-            '<div style="font-size:2rem;">\uD83EDD96</div>' +
+            '<div style="font-size:2rem;">🪶</div>' +
             '<div style="font-size:1.2rem;letter-spacing:3px;color:#444;font-weight:700;">COMING SOON</div>' +
             '<div style="font-size:0.72rem;color:#333;letter-spacing:1px;text-align:center;">OG Holder rankings are being prepared.<br>Check back soon.</div>' +
           '</div>';
