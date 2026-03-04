@@ -1291,6 +1291,40 @@ a.plink:hover{
     // connected via their 2nd wallet). All cabbage/staking calls use this.
     var pk_canonicalWallet = null;
 
+    // Primary wallets for each announcer account.
+    // Any wallet LINKED to these profiles also gets announcement access.
+    var ANNOUNCER_PRIMARY_WALLETS = [
+      "7uob8wsBH23aKRMVB18PCEZY1Ttwfjj4rhdWJZdgEYDa",  // Glitch
+      "BJikn9kPE2DZRsyxVSRCouNszZtJbQEa5A5f2ZuVDsPn"   // Golf
+    ];
+
+    // Resolved at login: if this session's profile matches an announcer profile, this is set.
+    var _announcerProfileId = null;
+
+    // Call this after hydrateProfileAndWalletsFromSupabase resolves the profile.
+    // Checks whether the connected profile's primary wallet is in ANNOUNCER_PRIMARY_WALLETS.
+    async function resolveAnnouncerAccess() {
+      _announcerProfileId = null;
+      if (!walletPublicKey || !session.profileId) return;
+      try {
+        var db = getDb();
+        // Get ALL linked wallets for this profile, check if any is an announcer primary
+        var r = await db.from('wallet_links').select('wallet, is_primary').eq('profile_id', session.profileId);
+        var linked = r.data || [];
+        for (var i = 0; i < linked.length; i++) {
+          if (ANNOUNCER_PRIMARY_WALLETS.indexOf(linked[i].wallet) !== -1) {
+            _announcerProfileId = session.profileId;
+            break;
+          }
+        }
+        console.log('[Announce] Announcer access:', !!_announcerProfileId);
+      } catch(e) { console.warn('[Announce] resolveAnnouncerAccess error:', e); }
+    }
+
+    function isTeamWallet() {
+      return !!_announcerProfileId;
+    }
+
     function getCanonicalWallet() {
       // Prefer the resolved canonical (primary) wallet; fall back to connected wallet
       return pk_canonicalWallet || (walletPublicKey ? walletPublicKey.toBase58() : null);
@@ -2650,6 +2684,8 @@ var nextTierRow = nextTier
           "| canonical:", pk_canonicalWallet ? pk_canonicalWallet.slice(0,8)+"..." : "none",
           "| connected:", connectingWallet.slice(0,8)+"...",
           "| total wallets:", wallets.length);
+        // Resolve announcer access based on linked wallets
+        resolveAnnouncerAccess().catch(function(){});
       } catch (e) {
         console.warn("[Profile] Hydrate failed:", e);
       }
@@ -2864,8 +2900,22 @@ var nextTierRow = nextTier
           '</div>' +
         '</div>' +
 
+        // ── Announcements (team-only post, visible to all) ──
+        '<div id="chatAnnounceWrap" style="margin-bottom:10px;border:1px solid rgba(255,180,0,0.18);border-radius:10px;background:rgba(255,160,0,0.04);overflow:hidden;">' +
+          '<div id="chatAnnounceBar" style="display:flex;align-items:center;gap:8px;padding:8px 14px;cursor:pointer;user-select:none;" onclick="toggleAnnouncements()">' +
+            '<span style="font-size:0.65rem;">📢</span>' +
+            '<span style="font-size:0.65rem;letter-spacing:2px;color:#aa7700;font-weight:700;text-transform:uppercase;flex:1;">Announcements</span>' +
+            '<span id="chatAnnounceChevron" style="font-size:0.65rem;color:#555;">▲</span>' +
+          '</div>' +
+          '<div id="chatAnnounceList" style="padding:0 14px 10px;"></div>' +
+          '<div id="chatAnnouncePostWrap" style="display:none;padding:0 14px 10px;gap:8px;align-items:center;">' +
+            '<input id="chatAnnounceInput" maxlength="280" placeholder="Post an announcement..." style="flex:1;background:#0a0a18;border:1px solid rgba(255,180,0,0.25);border-radius:8px;color:#e0e0ff;font-family:\'Space Grotesk\',sans-serif;font-size:0.82rem;padding:9px 12px;outline:none;width:100%;box-sizing:border-box;margin-bottom:7px;" />' +
+            '<button id="chatAnnouncePostBtn" onclick="postAnnouncement()" style="background:linear-gradient(135deg,rgba(255,180,0,0.22),rgba(255,100,0,0.18));border:1px solid rgba(255,180,0,0.4);color:#ffb000;padding:8px 18px;border-radius:8px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">📢 Post</button>' +
+          '</div>' +
+        '</div>' +
+
         // ── Messages ──
-        '<div id="chatBox" style="height:440px;overflow-y:auto;background:#06060f;border:1px solid #161628;border-radius:12px;padding:16px;margin-bottom:12px;scroll-behavior:smooth;">' +
+        '<div id="chatBox" style="height:390px;overflow-y:auto;background:#06060f;border:1px solid #161628;border-radius:12px;padding:16px;margin-bottom:12px;scroll-behavior:smooth;">' +
           '<div id="chatInner"></div>' +
         '</div>' +
 
@@ -2904,6 +2954,7 @@ var nextTierRow = nextTier
       shop_loadAllChatItems();
       ach_loadAllUsers();
       loadChatHistory();
+      initAnnouncements();
     }
 
     
@@ -2986,16 +3037,21 @@ var nextTierRow = nextTier
       setLiveDot(false);
       try {
         var sb = getSupaClient();
+        // Fetch newest 100 descending, then reverse so oldest is at top
         var res = await sb
           .from('chat_messages')
           .select('id, wallet, username, text, created_at')
-          .order('created_at', { ascending: true })
-          .limit(200);
+          .order('created_at', { ascending: false })
+          .limit(100);
 
         if (res.error) throw res.error;
-        chatMsgs = res.data || [];
+        // Reverse so messages render oldest→newest (scroll will land at bottom)
+        chatMsgs = (res.data || []).reverse();
         paintMessages();
-        scrollToBottom(true);
+        // Double-defer: first tick for innerHTML, second for reflow
+        setTimeout(function() {
+          setTimeout(function() { scrollToBottom(true); }, 0);
+        }, 0);
       } catch(e) {
         console.error('Chat history error:', e);
         document.getElementById('chatInner').innerHTML =
@@ -3113,6 +3169,143 @@ var nextTierRow = nextTier
       var nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 120;
       if (force || nearBottom) box.scrollTop = box.scrollHeight;
     }
+
+    /* ── ANNOUNCEMENTS ─────────────────────────────────────── */
+
+    var _announceOpen = true;
+    var _announceRows = [];  // cached for re-render after access resolves
+
+    function toggleAnnouncements() {
+      _announceOpen = !_announceOpen;
+      var list     = document.getElementById('chatAnnounceList');
+      var postWrap = document.getElementById('chatAnnouncePostWrap');
+      var chevron  = document.getElementById('chatAnnounceChevron');
+      if (list)    list.style.display = _announceOpen ? '' : 'none';
+      if (chevron) chevron.textContent = _announceOpen ? '▲' : '▼';
+      if (postWrap) postWrap.style.display = (_announceOpen && isTeamWallet()) ? 'flex' : 'none';
+    }
+
+    async function initAnnouncements() {
+      // Show/hide post box based on resolved announcer access
+      var postWrap = document.getElementById('chatAnnouncePostWrap');
+      if (postWrap) postWrap.style.display = isTeamWallet() ? 'flex' : 'none';
+
+      try {
+        var sb  = getSupaClient();
+        var res = await sb
+          .from('announcements')
+          .select('id, wallet, username, pfp_url, text, created_at')
+          .order('created_at', { ascending: false })
+          .limit(10);
+        if (res.error) throw res.error;
+        _announceRows = res.data || [];
+        renderAnnouncements(_announceRows);
+
+        // Subscribe to INSERT and DELETE so the list stays live
+        sb.channel('announcements_live')
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'announcements' },
+            function() { initAnnouncements(); })
+          .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'announcements' },
+            function() { initAnnouncements(); })
+          .subscribe();
+      } catch(e) {
+        console.warn('[Announce] load error:', e);
+        var list = document.getElementById('chatAnnounceList');
+        if (list) list.innerHTML = '<div style="font-size:0.72rem;color:#555;padding:4px 0;">Could not load announcements.</div>';
+      }
+    }
+
+    function renderAnnouncements(rows) {
+      var list = document.getElementById("chatAnnounceList");
+      if (!list) return;
+      if (!rows || rows.length === 0) {
+        list.innerHTML = "<div style=\"font-size:0.72rem;color:#555;font-style:italic;padding:6px 0 4px;\">No announcements yet.</div>";
+        return;
+      }
+      var canDelete = isTeamWallet();
+      var html = "";
+      rows.forEach(function(row) {
+        var name    = row.username || (row.wallet.slice(0,4) + "\u2026" + row.wallet.slice(-4));
+        var d       = new Date(row.created_at);
+        var dateStr = d.toLocaleDateString([], { month: "short", day: "numeric" }) +
+                      " " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+        var pfpHtml = row.pfp_url
+          ? ("<img src=\"" + row.pfp_url + "\" style=\"width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0;border:1px solid rgba(255,180,0,0.25);\" />")
+          : "<div style=\"width:28px;height:28px;border-radius:50%;background:rgba(255,180,0,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:0.7rem;\">\uD83D\uDCE2</div>";
+
+        var delHtml = "";
+        if (canDelete) {
+          delHtml = "<button data-delid=\"" + row.id + "\" " +
+                    "onclick=\"deleteAnnouncement(this.getAttribute('data-delid'))\" " +
+                    "title=\"Delete\" " +
+                    "style=\"background:none;border:none;color:rgba(255,60,60,0.28);font-size:0.68rem;" +
+                    "cursor:pointer;padding:0 0 0 6px;line-height:1;vertical-align:middle;transition:color 0.15s;\" " +
+                    "onmouseover=\"this.style.color='rgba(255,80,60,0.85)'\" " +
+                    "onmouseout=\"this.style.color='rgba(255,60,60,0.28)'\">\u2715</button>";
+        }
+
+        html +=
+          "<div style=\"padding:8px 0;border-bottom:1px solid rgba(255,180,0,0.07);display:flex;gap:9px;align-items:flex-start;\">" +
+            pfpHtml +
+            "<div style=\"flex:1;min-width:0;\">" +
+              "<div style=\"display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;\">" +
+                "<span style=\"font-size:0.58rem;background:linear-gradient(135deg,#ffd700,#ff8c00);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:900;\">FOUNDER</span>" +
+                "<span style=\"font-size:0.72rem;color:#ffb000;font-weight:700;\">" + escapeHtml(name) + "</span>" +
+                "<span style=\"color:#383828;font-size:0.6rem;\">" + dateStr + "</span>" +
+                delHtml +
+              "</div>" +
+              "<div style=\"font-size:0.82rem;color:#d0c090;line-height:1.5;margin-top:3px;word-break:break-word;\">" + escapeHtml(row.text) + "</div>" +
+            "</div>" +
+          "</div>";
+      });
+      list.innerHTML = html;
+    }
+    async function deleteAnnouncement(id) {
+      if (!isTeamWallet()) return;
+      try {
+        var sb  = getSupaClient();
+        var res = await sb.from('announcements').delete().eq('id', id);
+        if (res.error) throw res.error;
+        // optimistic local remove
+        _announceRows = _announceRows.filter(function(r) { return r.id !== id; });
+        renderAnnouncements(_announceRows);
+      } catch(e) {
+        console.error('[Announce] delete error:', e);
+        alert('Delete failed: ' + (e.message || e));
+      }
+    }
+
+    async function postAnnouncement() {
+      if (!isTeamWallet()) return;
+      var inp = document.getElementById('chatAnnounceInput');
+      if (!inp) return;
+      var text = inp.value.trim();
+      if (!text) return;
+
+      var btn = document.getElementById('chatAnnouncePostBtn');
+      if (btn) { btn.disabled = true; btn.textContent = '…'; }
+      inp.value = '';
+
+      try {
+        var sb  = getSupaClient();
+        var res = await sb.from('announcements').insert({
+          wallet:   walletPublicKey.toBase58(),
+          username: session.profile.username || null,
+          pfp_url:  session.profile.pfpImage || null,
+          text:     text
+        });
+        if (res.error) throw res.error;
+        initAnnouncements();
+      } catch(e) {
+        console.error('[Announce] post error:', e);
+        alert('Failed to post: ' + (e.message || e));
+      }
+
+      if (btn) { btn.disabled = false; btn.textContent = '📢 Post'; }
+    }
+
+    /* ────────────────────────────────────────────────────────── */
 
     async function sendChatMessage() {
       if (!walletPublicKey) { alert('Connect your wallet first.'); return; }
