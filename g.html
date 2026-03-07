@@ -5083,7 +5083,7 @@ a.plink:hover{
        - BB gets option preflop
        - All-in side-pot aware
        - Bust between hands only
-       - Mid-hand joiners wait (joined_hand_num tracks this)
+       - Mid-hand joiners sit out current hand (folded=true, no hole cards)
        - No pk_seenInDb hacks — state driven purely by DB
     ================================================================ */
 
@@ -5369,7 +5369,6 @@ a.plink:hover{
         // Check if hand is in progress — if so, record current hand number so we sit out this hand
         var tblR=await sb.from('poker_tables').select('status,hand_num').eq('id',_pkBuyInTid).single();
         var handInProgress=tblR.data&&tblR.data.status==='playing';
-        var joinedHandNum=tblR.data?(tblR.data.hand_num||0):0;
 
         // Deduct chips from cabbage balance
         var isSol=_pkBuyInTbl.currency==='sol';
@@ -5380,11 +5379,13 @@ a.plink:hover{
           return alert('Could not debit: '+(e.message||e));
         }
 
+        // If hand is in progress, mark as folded=true so they sit out this hand
+        // (pk_deal resets folded=false for all eligible players at start of each hand)
         var insertR=await sb.from('poker_players').insert({
           table_id:_pkBuyInTid,wallet:myW,username:un,seat:seat,
           chips:chips,is_active:true,
-          hole_cards:'[]',current_bet:0,total_bet:0,folded:false,all_in:false,
-          joined_hand_num:joinedHandNum  // used to skip first hand if mid-game
+          hole_cards:'[]',current_bet:0,total_bet:0,
+          folded:handInProgress,all_in:false
         });
 
         if(insertR.error){
@@ -5446,8 +5447,9 @@ a.plink:hover{
       var isShowdown=t.phase==='showdown';
       var me=pk_plrs.find(function(p){return p.wallet===myW;});
       var active=pk_plrs.filter(function(p){return p.is_active;});
-      // Mid-hand joiner: if we joined during a hand (joined_hand_num === current hand_num) skip
-      var isSittingOut=me&&isPlay&&(me.joined_hand_num!=null)&&(me.joined_hand_num>=(t.hand_num||0))&&!me.folded&&me.hole_cards==='[]';
+      // Mid-hand joiner: folded=true + no hole cards during play = sitting out
+      // isSittingOut: seated but folded with no hole cards = joined mid-hand, sitting out
+      var isSittingOut=me&&isPlay&&me.folded&&(me.hole_cards==='[]'||me.hole_cards==='null'||!me.hole_cards);
       var isMyTurn=me&&isPlay&&t.action_seat===me.seat&&!me.folded&&!me.all_in&&!isSittingOut;
       var html='';
 
@@ -5479,7 +5481,7 @@ a.plink:hover{
         var folded=pl&&pl.folded;
         var allIn=pl&&pl.all_in;
         var isDealer=pl&&t.dealer_seat===s;
-        var isSB=pl&&t.small_blind_seat===s;
+        var isSB=false; // small_blind_seat not in schema
         var isBB=pl&&t.bb_seat===s;
         var seated=!!pl;
         var borderCol=isTurn?'rgba(0,255,136,0.6)':isMe?'rgba(0,212,255,0.4)':'rgba(255,255,255,0.05)';
@@ -5632,11 +5634,9 @@ a.plink:hover{
         }
         ap=ap.filter(function(p){return p.chips>0;});
 
-        // Players who joined this hand sit out — they joined DURING the previous hand
-        // joined_hand_num === current hand_num means they joined mid-previous-hand, skip them
-        var eligible=ap.filter(function(p){
-          return p.joined_hand_num==null||p.joined_hand_num<handNum;
-        });
+        // All active players with chips are eligible for the next hand
+        // (those who joined mid-hand were marked folded=true with no hole cards — they get reset below)
+        var eligible=ap;
 
         if(eligible.length<2){pk_acting=false;return alert('Need at least 2 players. Others are sitting out.');}
 
@@ -5687,7 +5687,7 @@ a.plink:hover{
         await sb.from('poker_tables').update({
           status:'playing',phase:'preflop',community:'[]',
           pot:sb_amt+bb_amt,current_bet:bb_amt,
-          dealer_seat:newDS,small_blind_seat:sbSeat,bb_seat:bbSeat,
+          dealer_seat:newDS,bb_seat:bbSeat,
           action_seat:actSeat,round_starter:actSeat,
           deck:JSON.stringify(deck),hand_num:handNum,
           last_winner_msg:'',updated_at:new Date().toISOString()
