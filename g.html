@@ -5139,7 +5139,7 @@ a.plink:hover{
       var el=document.getElementById('pk_tableCards');
       if(!el)return;
       var sb=getSupaClient();
-      var tR=await sb.from('poker_tables').select('*').eq('active',true).order('name');
+      var tR=await sb.from('poker_tables').select('*').order('name');
       pk_tables=tR.data||[];
       if(!pk_tables.length){el.innerHTML='<div style="color:#333;font-size:0.78rem;text-align:center;padding:1rem;grid-column:1/-1;">No tables yet.</div>';return;}
       var myW=walletPublicKey?(getCanonicalWallet()||walletPublicKey.toBase58()):'';
