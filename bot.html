@@ -254,9 +254,9 @@
       <hr>
       <div style="text-align:center; padding:20px 0 28px;">
         <p style="font-size:13px; color:var(--muted); line-height:1.8; margin-bottom:28px;">
-          Connect your Twitter / X account so the bot can<br>post on your behalf autonomously.
+          Enter your Twitter / X username so the bot knows<br>who's posting. No login required — you stay in control.
         </p>
-        <button class="btn btn-twitter" id="connect-twitter-btn">🐦 Connect Twitter / X</button>
+        <button class="btn btn-twitter" id="connect-twitter-btn">🐦 Set Twitter Username</button>
       </div>
       <div class="info-box">
         <strong>OAuth 2.0 Security:</strong> We use Twitter's official OAuth 2.0 with PKCE. Your credentials are never stored — only a scoped access token. You can revoke anytime from Twitter settings. Your Solana wallet is never used to sign Twitter actions.
@@ -317,7 +317,7 @@
         </div>
         <div class="row">
           <button class="btn btn-ghost" onclick="generateTweet()">🔄 Regenerate</button>
-          <button class="btn btn-twitter" id="post-btn" onclick="postTweet()">🚀 Post Now</button>
+          <button class="btn btn-twitter" id="post-btn" onclick="postTweet()">🐦 Open in Twitter</button>
         </div>
       </div>
     </div>
@@ -447,28 +447,11 @@ function goToStep(n){
   });
 }
 
-// ─── CHECK FOR TWITTER CALLBACK ───────────────────────────────────────────────
-// When Twitter redirects back, the URL has ?twitter=connected&handle=...&wallet=...
+// ─── CHECK FOR TWITTER CALLBACK — not needed anymore ─────────────────────────
 window.addEventListener('load', () => {
   const params = new URLSearchParams(window.location.search);
-  if (params.get('twitter') === 'connected') {
-    const handle = decodeURIComponent(params.get('handle') || '');
-    const wallet = decodeURIComponent(params.get('wallet') || '');
-    if (handle && wallet) {
-      state.wallet      = wallet;
-      state.twitterConnected = true;
-      state.twitterHandle    = handle;
-      // Clean URL so it looks tidy
-      window.history.replaceState({}, '', window.location.pathname);
-      renderStep2();
-      renderStep3();
-      goToStep(3);
-      toast(`Welcome back ${handle}! Bot is ready 🪶`);
-    }
-  }
   if (params.get('twitter') === 'error') {
     window.history.replaceState({}, '', window.location.pathname);
-    toast('Twitter connection failed. Please try again.', 'error');
   }
 });
 
@@ -546,11 +529,15 @@ function renderStep2(){
   `;
 }
 
-// ─── TWITTER CONNECT — redirects to backend OAuth ────────────────────────────
+// ─── TWITTER CONNECT — no OAuth needed, just save handle ─────────────────────
 document.getElementById('connect-twitter-btn').addEventListener('click', function(){
   if (!state.wallet) { toast('Connect your wallet first', 'error'); return; }
-  // Redirect to backend which kicks off Twitter OAuth
-  window.location.href = `${API}/auth/twitter?wallet=${encodeURIComponent(state.wallet)}`;
+  const handle = prompt('Enter your Twitter/X username (without the @):');
+  if (!handle || !handle.trim()) return;
+  state.twitterConnected = true;
+  state.twitterHandle = '@' + handle.trim().replace('@','');
+  toast(`Twitter set to ${state.twitterHandle} ✓`);
+  setTimeout(()=>{ goToStep(3); renderStep3(); }, 400);
 });
 
 // ─── STEP 3 RENDER ────────────────────────────────────────────────────────────
@@ -621,35 +608,17 @@ async function generateTweet(){
   btn.innerHTML = '⚡ Generate Tweet';
 }
 
-// ─── POST TWEET — calls backend ───────────────────────────────────────────────
+// ─── POST TWEET — opens Twitter with pre-filled tweet ────────────────────────
 async function postTweet(){
-  const btn = document.getElementById('post-btn');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Posting...';
-
-  try {
-    const res = await fetch(`${API}/api/post-tweet`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ walletAddress: state.wallet, text: state.generatedTweet }),
-    });
-    const data = await res.json();
-
-    if (data.success) {
-      state.history.unshift({ text: state.generatedTweet, handle: state.twitterHandle, time: new Date(), mode: state.mode });
-      renderHistory();
-      toast('Tweet posted to X/Twitter! 🚀');
-      document.getElementById('tweet-result').style.display = 'none';
-      state.generatedTweet = '';
-    } else {
-      toast(data.error || 'Failed to post tweet', 'error');
-    }
-  } catch(e){
-    toast('Failed to post tweet. Try again.', 'error');
-  }
-
-  btn.disabled = false;
-  btn.innerHTML = '🚀 Post Now';
+  if (!state.generatedTweet) return;
+  const tweetUrl = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(state.generatedTweet);
+  window.open(tweetUrl, '_blank');
+  // Log to history
+  state.history.unshift({ text: state.generatedTweet, handle: state.twitterHandle, time: new Date(), mode: state.mode });
+  renderHistory();
+  toast('Twitter opened with your tweet — just click Post! 🚀');
+  document.getElementById('tweet-result').style.display = 'none';
+  state.generatedTweet = '';
 }
 
 // ─── HISTORY ─────────────────────────────────────────────────────────────────
