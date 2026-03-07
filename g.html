@@ -5243,29 +5243,27 @@ a.plink:hover{
       pk_plrs=pR.data||[];
       var me=pk_plrs.find(function(p){return p.wallet===myW;});
 
-      // ── Bust detection: was seated, now gone or 0 chips → stand up + show buy-in ──
+      // ── Bust detection: was seated, now gone → auto stand up as spectator + buy-in modal ──
       var wasSitted = pk_tid === pk_viewTid && pk_mySeat >= 0;
-      if(wasSitted && (!me || me.chips <= 0)){
+      if(wasSitted && !me){
         pk_tid=null; pk_mySeat=-1;
         pk_stopTimeout();
         var tbl=pk_tbl;
+        // Show a brief toast
+        (function(){
+          var toast=document.createElement('div');
+          toast.style.cssText='position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:9999;background:#1a0a0f;border:1px solid rgba(255,60,92,0.5);border-radius:10px;padding:12px 28px;color:#ff3c5c;font-family:Space Grotesk,sans-serif;font-weight:700;font-size:0.9rem;letter-spacing:1px;text-align:center;box-shadow:0 4px 30px rgba(255,60,92,0.2);';
+          toast.innerHTML='&#x1F4B8; BUSTED OUT &mdash; now spectating';
+          document.body.appendChild(toast);
+          setTimeout(function(){toast.remove();},3000);
+        })();
+        // Open buy-in modal after brief delay
         if(tbl){
           setTimeout(function(){
-            var area=document.getElementById('pk_gameArea');
-            if(area){
-              area.insertAdjacentHTML('afterbegin',
-                '<div style="text-align:center;padding:1.5rem;background:rgba(255,60,92,0.08);border:1px solid rgba(255,60,92,0.3);border-radius:12px;margin-bottom:1rem;">'
-                +'<div style="font-size:2rem;margin-bottom:0.5rem;">&#x1F4B8;</div>'
-                +'<div style="font-family:Bebas Neue,sans-serif;font-size:1.4rem;color:#ff3c5c;letter-spacing:3px;">BUSTED OUT</div>'
-                +'<div style="color:#888;font-size:0.78rem;margin-top:0.4rem;">You ran out of chips.</div>'
-                +'<button class="g_btn" style="margin-top:1rem;border-color:rgba(0,255,136,0.4);color:#00ff88;" onclick="pkBuyInShow(pk_tbl)">&#x1FA91; RE-BUY &amp; SIT BACK DOWN</button>'
-                +'</div>'
-              );
-            }
             _pkBuyInTid=pk_viewTid;
             _pkBuyInTbl=tbl;
             pkBuyInShow(tbl);
-          }, 400);
+          }, 600);
         }
         pk_updatePanelHeader();
         pk_paint();
@@ -5503,7 +5501,9 @@ a.plink:hover{
       var isSol=tbl.currency==='sol';
       var sym=isSol?'\u25ce SOL':'\uD83E\uDD6C CAB';
       var minBuy=tbl.buy_in||10;
-      var maxBuy=minBuy*10;
+      // Ostrich Lounge: max buy-in is 1 cabbage (not min*10)
+      var tblNameLower=(tbl.name||'').toLowerCase();
+      var maxBuy=tblNameLower.indexOf('ostrich')!==-1 ? 1 : minBuy*10;
       var infoEl=document.getElementById('pkBuyInTableInfo');
       if(infoEl)infoEl.innerHTML='<span style="color:#e0e0ff;font-weight:700;">'+escapeHtml(tbl.name||'Poker Table')+'</span><br>Blinds: <span style="color:#00d4ff;">'+tbl.small_blind+'/'+tbl.big_blind+' '+sym+'</span> &nbsp;\u00b7&nbsp; Min buy-in: <span style="color:#00d4ff;">'+minBuy+' '+sym+'</span>';
       var symEl=document.getElementById('pkBuyInSym');
@@ -5534,7 +5534,7 @@ a.plink:hover{
 
     function pkBuyInSync(val){
       if(!_pkBuyInTbl)return;
-      var min=_pkBuyInTbl.buy_in||10,max=min*10,n=parseFloat(val);
+      var min=_pkBuyInTbl.buy_in||10,max=((_pkBuyInTbl.name||'').toLowerCase().indexOf('ostrich')!==-1?1:min*10),n=parseFloat(val);
       var warnEl=document.getElementById('pkBuyInWarn');
       var btn=document.getElementById('pkBuyInConfirm');
       if(!n||n<min){
@@ -5558,7 +5558,7 @@ a.plink:hover{
       if(!_pkBuyInTid||!_pkBuyInTbl)return;
       var inp=document.getElementById('pkBuyInInput');
       var chips=parseFloat(inp?inp.value:0);
-      var min=_pkBuyInTbl.buy_in||10,max=min*10;
+      var min=_pkBuyInTbl.buy_in||10,max=((_pkBuyInTbl.name||'').toLowerCase().indexOf('ostrich')!==-1?1:min*10);
       if(!chips||chips<min||chips>max)return alert('Enter an amount between '+min+' and '+max+'.');
       var bd=document.getElementById('pkBuyInBackdrop');if(bd)bd.style.display='none';
       try{
