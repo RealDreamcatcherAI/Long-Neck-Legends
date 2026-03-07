@@ -2136,11 +2136,11 @@ a.plink:hover{
             '<div class="stat-row"><span class="stat-label">Last Claim</span><span class="stat-value" id="cabbageLast">—</span></div>' +
             '<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:12px;flex-wrap:wrap;">' +
               '<button class="disconnect-btn" style="border-color:rgba(255,255,255,0.12);" onclick="refreshCabbageUI()">Refresh</button>' +
-              '<button class="disconnect-btn" id="cabbageStartBtn" style="border-color:rgba(0,255,136,0.35);color:#00ff88;" onclick="startCabbage()">Start</button>' +
+              '<button class="disconnect-btn" id="cabbageStartBtn" style="border-color:rgba(0,255,136,0.35);color:#00ff88;" onclick="startCabbage()">Restart</button>' +
               '<button class="disconnect-btn" id="cabbageClaimBtn" style="border-color:rgba(0,212,255,0.35);color:#00d4ff;" onclick="claimCabbage()">Claim</button>' +
             '</div>' +
             '<div style="margin-top:10px;color:#555;font-size:0.72rem;letter-spacing:1px;line-height:1.45;">' +
-              'Soft staking: click <strong>Start</strong> once to begin earning. Each LNL earns <strong>1 \uD83E\uDD6C per week</strong>. Claim anytime.' +
+              'Click <strong>Restart</strong> anytime to re-sync your NFT count. Each LNL earns <strong>1 \uD83E\uDD6C per week</strong>. Claim anytime.' +
             '</div>' +
           '</div>' +
           // Golf Addicts Staking
@@ -2169,13 +2169,16 @@ a.plink:hover{
             '<div class="stat-row"><span class="stat-label">Last Claim</span><span class="stat-value" id="gaCabbageLast">—</span></div>' +
             '<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:12px;flex-wrap:wrap;">' +
               '<button class="disconnect-btn" style="border-color:rgba(255,255,255,0.12);" onclick="refreshGaCabbageUI()">Refresh</button>' +
-              '<button class="disconnect-btn" id="gaCabbageStartBtn" style="border-color:rgba(74,222,128,0.35);color:#4ade80;" onclick="startGaCabbage()">Start</button>' +
+              '<button class="disconnect-btn" id="gaCabbageStartBtn" style="border-color:rgba(74,222,128,0.35);color:#4ade80;" onclick="startGaCabbage()">Restart</button>' +
               '<button class="disconnect-btn" id="gaCabbageClaimBtn" style="border-color:rgba(74,222,128,0.35);color:#4ade80;" onclick="claimGaCabbage()">Claim</button>' +
             '</div>' +
             '<div style="margin-top:10px;color:#555;font-size:0.72rem;letter-spacing:1px;line-height:1.45;">' +
-              'Each Golf Addict earns <strong>5 \uD83E\uDD6C cabbage per week</strong>. Same soft-staking system as LNL.' +
+              'Click <strong>Restart</strong> anytime to re-sync your GA count. Each Golf Addict earns <strong>5 \uD83E\uDD6C per week</strong>.' +
             '</div>' +
           '</div>' +
+        '</div>' +
+        '<div style="display:flex;justify-content:center;margin-top:1rem;">' +
+          '<button class="disconnect-btn" style="border-color:rgba(255,215,0,0.4);color:#ffd700;font-size:0.85rem;padding:10px 32px;letter-spacing:2px;" onclick="claimBoth()">⚡ CLAIM BOTH</button>' +
         '</div>';
 
       // Populate cabbage values after DOM updates
@@ -2400,12 +2403,23 @@ a.plink:hover{
         var claimIsReal = lastClaim && lastClaim.indexOf('1970') !== 0;
         if (lastEl) lastEl.textContent = claimIsReal ? fmtDT(lastClaim) : '—';
         var started = !!startedAt;
-        setBtnState('gaCabbageStartBtn', started, started ? 'Started' : 'Start');
+        setBtnState('gaCabbageStartBtn', false, 'Restart'); // always enabled for re-sync
         setBtnState('gaCabbageClaimBtn', !started, 'Claim');
       } catch(e) {
         setBtnState('gaCabbageStartBtn', false, 'Start');
         setBtnState('gaCabbageClaimBtn', false, 'Claim');
       }
+    }
+
+    async function claimBoth() {
+      var lnlStarted = document.getElementById('cabbageStartBtn') && document.getElementById('cabbageStartBtn').disabled;
+      var gaStarted  = document.getElementById('gaCabbageStartBtn') && document.getElementById('gaCabbageStartBtn').disabled;
+      try {
+        await claimCabbage();
+      } catch(e) { console.warn('claimBoth LNL error:', e); }
+      try {
+        await claimGaCabbage();
+      } catch(e) { console.warn('claimBoth GA error:', e); }
     }
 
     async function startGaCabbage() {
@@ -3215,13 +3229,17 @@ a.plink:hover{
         if (startedEl) startedEl.textContent = startedAt ? fmtDT(startedAt) : 'Not started';
         var claimIsReal = lastClaim && lastClaim.indexOf('1970') !== 0;
         if (lastEl) lastEl.textContent = claimIsReal ? fmtDT(lastClaim) : '—';
-        if (nftCountEl) nftCountEl.textContent = stakedCount.toLocaleString();
+        // Use live on-chain count if available, fallback to backend staked_count
+        var liveCount = (session && session.loadedNFTs) ? session.loadedNFTs.length : stakedCount;
+        if (nftCountEl) nftCountEl.textContent = liveCount.toLocaleString();
+        // Also update the rate display to match live count
+        if (rateEl) rateEl.textContent = (liveCount * 1).toLocaleString() + ' \uD83E\uDD6C / week';
 
         // Button rules:
         // - If NOT started: enable Start, disable Claim
         // - If started: disable Start, enable Claim
         var started = !!startedAt;
-        setBtnState('cabbageStartBtn', started, started ? 'Started' : 'Start');
+        setBtnState('cabbageStartBtn', false, 'Restart'); // always enabled for re-sync
         setBtnState('cabbageClaimBtn', !started, 'Claim');
 
       } catch (e) {
