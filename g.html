@@ -7448,7 +7448,7 @@ a.plink:hover{
           '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:1rem;" id="ach_cats"></div>' +
 
           // Badge grid
-          '<div id="ach_grid" style="display:flex;flex-direction:row;flex-wrap:nowrap;gap:8px;overflow-x:auto;padding-bottom:6px;scrollbar-width:thin;scrollbar-color:rgba(0,212,255,0.3) transparent;"></div>' +
+          '<div id="ach_grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;max-height:460px;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:rgba(0,212,255,0.3) transparent;padding-right:4px;"></div>' +
         '</div>';
 
       return html;
@@ -7473,7 +7473,7 @@ a.plink:hover{
       items.forEach(function(ach) {
         var earned = unlocked.indexOf(ach.id) !== -1;
         var rc = ACH_RARITY_COLORS[ach.rarity] || ACH_RARITY_COLORS.common;
-        gHTML += '<div style="min-width:120px;max-width:140px;flex:0 0 auto;background:' + (earned ? rc.bg : 'rgba(0,0,0,0.3)') + ';border:1px solid ' + (earned ? rc.border : 'rgba(255,255,255,0.03)') + ';border-radius:10px;padding:10px;text-align:center;opacity:' + (earned ? '1' : '0.35') + ';transition:all 0.2s;' + (earned ? '' : 'filter:grayscale(1);') + '">' +
+        gHTML += '<div style="background:' + (earned ? rc.bg : 'rgba(0,0,0,0.3)') + ';border:1px solid ' + (earned ? rc.border : 'rgba(255,255,255,0.03)') + ';border-radius:10px;padding:10px;text-align:center;opacity:' + (earned ? '1' : '0.35') + ';transition:all 0.2s;' + (earned ? '' : 'filter:grayscale(1);') + '">' +
           '<div style="font-size:1.5rem;margin-bottom:4px;">' + ach.icon + '</div>' +
           '<div style="font-size:0.68rem;font-weight:700;color:' + (earned ? '#e0e0ff' : '#444') + ';margin-bottom:2px;">' + ach.name + '</div>' +
           '<div style="font-size:0.55rem;color:' + (earned ? '#666' : '#333') + ';line-height:1.3;margin-bottom:4px;">' + ach.desc + '</div>' +
