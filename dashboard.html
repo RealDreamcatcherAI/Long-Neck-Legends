@@ -1099,6 +1099,7 @@ a.plink:hover{
         <button class="dash-tab" id="tabStore" onclick="switchView('store')">🛒 Store</button>
         <button class="dash-tab" id="tabLeaderboard" onclick="switchView('leaderboard')">🏆</button>
         <button class="dash-tab" id="tabVoice" onclick="switchView('voice')">🎙️ Voice</button>
+        <button class="dash-tab" id="tabBot" onclick="switchView('bot')">🪶 Bot</button>
       </div>
 
       <div class="dash-right">
@@ -1132,6 +1133,7 @@ a.plink:hover{
     <div class="view" id="view-leaderboard"></div>
     <div class="view" id="view-store"></div>
     <div class="view" id="view-voice"></div>
+    <div class="view" id="view-bot"></div>
   </div>
 
   <!-- PFP MODAL -->
@@ -1733,6 +1735,7 @@ a.plink:hover{
       var vl = document.getElementById("view-leaderboard");
       var vs = document.getElementById("view-store");
       var vv = document.getElementById("view-voice");
+      var vb = document.getElementById("view-bot");
       if (vp) vp.classList.remove("show");
       if (vc) vc.classList.remove("show");
       if (vg) vg.classList.remove("show");
@@ -1740,6 +1743,7 @@ a.plink:hover{
       if (vl) vl.classList.remove("show");
       if (vs) vs.classList.remove("show");
       if (vv) vv.classList.remove("show");
+      if (vb) vb.classList.remove("show");
 
       // Deactivate all tabs
       var tabProfile = document.getElementById("tabProfile");
@@ -1802,6 +1806,13 @@ a.plink:hover{
         if (vv) vv.classList.add("show");
         if (tabVoice) tabVoice.classList.add("active");
         renderVoiceUI();
+      }
+
+      if (viewName === "bot") {
+        stopChatPoll();
+        if (vb) vb.classList.add("show");
+        if (tabBot) tabBot.classList.add("active");
+        renderBotUI();
       }
 
       // Update voice tab indicator — show live dot whenever in a room, regardless of active tab
@@ -8771,7 +8782,168 @@ a.plink:hover{
       voice_paintRoom();
     }
 
-  
+    // ═══════════════════════════════════════════════════════════════════
+    // 🪶 BOT TAB
+    // ═══════════════════════════════════════════════════════════════════
+    var BOT_API = 'https://lnl-bot-backend-production.up.railway.app';
+
+    var botState = {
+      wallet: null,
+      nftCount: 0,
+      twitterHandle: '',
+      generatedTweet: '',
+      aiRemaining: 3,
+      history: [],
+      mode: 'hype',
+    };
+
+    function renderBotUI() {
+      var view = document.getElementById('view-bot');
+      if (!view) return;
+
+      // Pull wallet from dashboard session automatically
+      if (session && session.wallet && !botState.wallet) {
+        botState.wallet = session.wallet;
+        botVerifyHolder();
+      }
+
+      view.innerHTML =
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.5rem;letter-spacing:3px;color:#e0e0ff;margin-bottom:0.3rem;">🪶 TWEET BOT</div>' +
+        '<div style="font-size:0.7rem;color:#444;letter-spacing:1px;margin-bottom:1.4rem;">AI-powered tweet engine · Holder exclusive · Long Neck Legends</div>' +
+
+        // Status bar
+        '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:1.4rem;">' +
+          (botState.wallet
+            ? '<span style="background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.3);color:#00ff88;padding:5px 12px;border-radius:20px;font-size:0.7rem;font-weight:700;letter-spacing:1px;">✓ WALLET VERIFIED</span>' +
+              '<span style="background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);color:#00d4ff;padding:5px 12px;border-radius:20px;font-size:0.7rem;font-weight:700;letter-spacing:1px;">🪶 ' + (botState.nftCount || '?') + ' LNL</span>'
+            : '<span style="background:rgba(255,60,92,0.08);border:1px solid rgba(255,60,92,0.3);color:#ff3c5c;padding:5px 12px;border-radius:20px;font-size:0.7rem;font-weight:700;letter-spacing:1px;">⚠ CONNECT WALLET FIRST</span>') +
+          (botState.twitterHandle
+            ? '<span style="background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);color:#00d4ff;padding:5px 12px;border-radius:20px;font-size:0.7rem;font-weight:700;letter-spacing:1px;">🐦 ' + botState.twitterHandle + '</span>' +
+              '<span style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:#888;padding:5px 12px;border-radius:20px;font-size:0.7rem;font-weight:700;letter-spacing:1px;">⚡ ' + botState.aiRemaining + ' AI LEFT TODAY</span>'
+            : '') +
+        '</div>' +
+
+        // Twitter handle input (if not set)
+        (!botState.twitterHandle
+          ? '<div style="background:#0f0f22;border:1px solid #1e1e3a;border-radius:14px;padding:1.2rem;margin-bottom:1.2rem;">' +
+              '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:0.85rem;letter-spacing:3px;color:#555;margin-bottom:0.8rem;">SET TWITTER USERNAME</div>' +
+              '<div style="display:flex;gap:0.6rem;">' +
+                '<input id="bot-twitter-input" placeholder="Your Twitter username (no @)" style="flex:1;background:#0a0a1a;border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#e0e0ff;padding:10px 14px;font-size:0.85rem;font-family:\'Space Grotesk\',sans-serif;outline:none;" />' +
+                '<button onclick="botSetTwitter()" style="background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.4);color:#00d4ff;padding:10px 18px;border-radius:8px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.78rem;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Set ✓</button>' +
+              '</div>' +
+            '</div>'
+          : '') +
+
+        // Generate section
+        '<div style="background:#0f0f22;border:1px solid #1e1e3a;border-radius:14px;padding:1.2rem;margin-bottom:1.2rem;">' +
+          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:0.85rem;letter-spacing:3px;color:#555;margin-bottom:1rem;">GENERATE TWEET</div>' +
+          '<div style="display:flex;gap:6px;margin-bottom:1rem;">' +
+            '<button onclick="botSetMode(\'hype\')" style="' + (botState.mode==='hype' ? 'border-color:rgba(0,212,255,0.5);color:#00d4ff;background:rgba(0,212,255,0.1);' : 'border-color:rgba(255,255,255,0.1);color:#555;background:transparent;') + 'border:1px solid;padding:6px 14px;border-radius:7px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1px;text-transform:uppercase;">⚡ Hype Mode</button>' +
+            '<button onclick="botSetMode(\'custom\')" style="' + (botState.mode==='custom' ? 'border-color:rgba(0,212,255,0.5);color:#00d4ff;background:rgba(0,212,255,0.1);' : 'border-color:rgba(255,255,255,0.1);color:#555;background:transparent;') + 'border:1px solid;padding:6px 14px;border-radius:7px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1px;text-transform:uppercase;">✏️ Custom</button>' +
+          '</div>' +
+          '<div style="display:' + (botState.mode==='hype' ? 'block' : 'none') + ';margin-bottom:1rem;">' +
+            '<select id="bot-topic" style="width:100%;background:#0a0a1a;border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#e0e0ff;padding:10px 14px;font-size:0.85rem;font-family:\'Space Grotesk\',sans-serif;outline:none;">' +
+              '<option value="community">🤝 Community & Flock</option>' +
+              '<option value="rarity">💎 Rarity & Traits</option>' +
+              '<option value="future">🚀 Future & Roadmap</option>' +
+              '<option value="culture">⚡ Solana & Culture</option>' +
+              '<option value="alpha">👀 Alpha & DYOR</option>' +
+              '<option value="general">🪶 General Hype</option>' +
+            '</select>' +
+          '</div>' +
+          '<div style="display:' + (botState.mode==='custom' ? 'block' : 'none') + ';margin-bottom:1rem;">' +
+            '<textarea id="bot-custom-prompt" placeholder="What do you want to tweet about? e.g. just hit 1000 holders..." rows="3" style="width:100%;background:#0a0a1a;border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#e0e0ff;padding:10px 14px;font-size:0.85rem;font-family:\'Space Grotesk\',sans-serif;outline:none;resize:vertical;"></textarea>' +
+          '</div>' +
+          '<button onclick="botGenerate()" id="bot-generate-btn" style="width:100%;background:linear-gradient(135deg,rgba(0,212,255,0.15),rgba(0,212,255,0.06));border:1px solid rgba(0,212,255,0.4);color:#00d4ff;padding:12px;border-radius:10px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.82rem;letter-spacing:2px;text-transform:uppercase;">⚡ GENERATE TWEET</button>' +
+        '</div>' +
+
+        // Tweet preview
+        (botState.generatedTweet
+          ? '<div style="background:#0f0f22;border:1px solid rgba(0,212,255,0.2);border-radius:14px;padding:1.2rem;margin-bottom:1.2rem;">' +
+              '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:0.85rem;letter-spacing:3px;color:#555;margin-bottom:0.8rem;">PREVIEW</div>' +
+              '<div style="font-size:0.9rem;line-height:1.7;color:#e0e0ff;margin-bottom:0.8rem;">' + botState.generatedTweet + '</div>' +
+              '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+                '<span style="font-size:0.7rem;color:#444;">' + botState.generatedTweet.length + '/280</span>' +
+                '<button onclick="botPost()" style="background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.4);color:#00d4ff;padding:9px 20px;border-radius:8px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.78rem;letter-spacing:1px;text-transform:uppercase;">🐦 OPEN IN TWITTER</button>' +
+              '</div>' +
+            '</div>'
+          : '') +
+
+        // History
+        '<div style="background:#0f0f22;border:1px solid #1e1e3a;border-radius:14px;padding:1.2rem;">' +
+          '<div id="bot-history-label" style="font-family:\'Bebas Neue\',sans-serif;font-size:0.85rem;letter-spacing:3px;color:#555;margin-bottom:0.8rem;">HISTORY (0)</div>' +
+          '<div id="bot-history-list"></div>' +
+        '</div>';
+
+      botRenderHistory();
+    }
+
+    async function botVerifyHolder() {
+      if (!botState.wallet) return;
+      try {
+        var res = await fetch(BOT_API + '/api/verify-holder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ walletAddress: botState.wallet })
+        });
+        var data = await res.json();
+        if (data.verified) { botState.nftCount = data.count; renderBotUI(); }
+      } catch(e) {}
+    }
+
+    function botSetTwitter() {
+      var input = document.getElementById('bot-twitter-input');
+      if (!input || !input.value.trim()) return;
+      botState.twitterHandle = '@' + input.value.trim().replace('@','');
+      renderBotUI();
+    }
+
+    function botSetMode(m) { botState.mode = m; renderBotUI(); }
+
+    async function botGenerate() {
+      var btn = document.getElementById('bot-generate-btn');
+      if (btn) { btn.disabled = true; btn.textContent = '⏳ GENERATING...'; }
+      var topic = (document.getElementById('bot-topic') || {}).value || 'general';
+      var customPrompt = (document.getElementById('bot-custom-prompt') || {}).value || '';
+      try {
+        var res = await fetch(BOT_API + '/api/generate-tweet', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ walletAddress: botState.wallet || 'dashboard-user', mode: botState.mode, topic: topic, customPrompt: customPrompt })
+        });
+        var data = await res.json();
+        botState.generatedTweet = data.tweet;
+        botState.aiRemaining = data.aiRemaining;
+      } catch(e) {
+        botState.generatedTweet = '🪶 Long Neck Legends — the flock is strong and the community is built different. Holder-exclusive and proud. #LongNeckLegends #Solana';
+      }
+      renderBotUI();
+    }
+
+    function botPost() {
+      if (!botState.generatedTweet) return;
+      window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(botState.generatedTweet), '_blank');
+      botState.history.unshift({ text: botState.generatedTweet, time: new Date() });
+      botState.generatedTweet = '';
+      renderBotUI();
+    }
+
+    function botRenderHistory() {
+      var el = document.getElementById('bot-history-list');
+      var label = document.getElementById('bot-history-label');
+      if (!el) return;
+      if (label) label.textContent = 'HISTORY (' + botState.history.length + ')';
+      if (!botState.history.length) {
+        el.innerHTML = '<div style="font-size:0.75rem;color:#2a2a44;text-align:center;padding:1rem;">No tweets posted yet 🪶</div>';
+        return;
+      }
+      el.innerHTML = botState.history.map(function(h) {
+        return '<div style="border-top:1px solid rgba(255,255,255,0.04);padding:0.8rem 0;">' +
+          '<div style="font-size:0.8rem;color:#e0e0ff;line-height:1.6;margin-bottom:0.3rem;">' + h.text + '</div>' +
+          '<div style="font-size:0.65rem;color:#333;letter-spacing:0.5px;">' + h.time.toLocaleDateString() + ' at ' + h.time.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) + ' · Opened in Twitter ✓</div>' +
+        '</div>';
+      }).join('');
+    }
 
   </script>
 
