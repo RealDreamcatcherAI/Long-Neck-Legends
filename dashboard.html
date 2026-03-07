@@ -479,6 +479,38 @@ a.plink:hover{
     .tier-shark .tier-progress-fill { background: #00ffcc; box-shadow: 0 0 10px rgba(0,255,204,0.5); }
     .tier-whale .tier-progress-fill { background: #00ffcc; box-shadow: 0 0 10px rgba(0,255,204,0.5); }
 
+    /* ---- GOLF ADDICTS TIER CLASSES ---- */
+    .tier-ga-addict .tier-badge::after { border-color: #4ade80; }
+    .tier-ga-addict .tier-name { color: #4ade80; }
+    .tier-ga-addict .tier-progress-fill { background: #4ade80; box-shadow: 0 0 10px rgba(74,222,128,0.5); }
+    .tier-ga-addict .profile-username { color: #4ade80; }
+    .tier-ga-addict::before { background: radial-gradient(circle, #4ade80, transparent); }
+
+    .tier-ga-legend .tier-badge::after { border-color: #facc15; }
+    .tier-ga-legend .tier-name { color: #facc15; }
+    .tier-ga-legend .tier-progress-fill { background: #facc15; box-shadow: 0 0 10px rgba(250,204,21,0.5); }
+    .tier-ga-legend .profile-username { color: #facc15; }
+    .tier-ga-legend::before { background: radial-gradient(circle, #facc15, transparent); }
+
+    .tier-ga-king .tier-badge::after { border-color: #f97316; }
+    .tier-ga-king .tier-name { color: #f97316; }
+    .tier-ga-king .tier-progress-fill { background: #f97316; box-shadow: 0 0 10px rgba(249,115,22,0.5); }
+    .tier-ga-king .profile-username { color: #f97316; }
+    .tier-ga-king::before { background: radial-gradient(circle, #f97316, transparent); }
+
+    /* Staking boxes side by side on PC */
+    .staking-row {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+    @media (max-width: 800px) {
+      .staking-row { grid-template-columns: 1fr; }
+    }
+
+
+
 /* ---- Username + Social Box (right side of tier card) ---- */
 .profile-name-box{
   flex: 0 0 320px;
@@ -1180,7 +1212,9 @@ a.plink:hover{
     var CONFIG = {
       COLLECTION_MINT: "8Rt3Ayqth4DAiPnW9MDFi63TiQJHmohfTWLMQFHi4KZH",
       RPC_URL: "https://mainnet.helius-rpc.com/?api-key=44cfd082-9089-430d-8de3-cd310c478b1c",
-      MAGIC_EDEN_LINK: "https://magiceden.us/marketplace/long_neck_legends"
+      MAGIC_EDEN_LINK: "https://magiceden.us/marketplace/long_neck_legends",
+      GA_MAGIC_EDEN_LINK: "https://magiceden.us/marketplace/golf_addicts",
+      GA_SYMBOL: "GOLF" // used to filter Golf Addicts NFTs by symbol
     };
 
     var TIERS = [
@@ -1194,6 +1228,53 @@ a.plink:hover{
       { id: "shark", name: "SHARK", min: 75, icon: "\u{1F988}", pointsMultiplier: 8, discount: 35, raffleMultiplier: 8, cssClass: "tier-shark" },
       { id: "whale", name: "WHALE", min: 100, icon: "\u{1F40B}", pointsMultiplier: 10, discount: 40, raffleMultiplier: 10, cssClass: "tier-whale" }
     ];
+
+    // ---- GOLF ADDICTS TIERS ----
+    var GA_TIERS = [
+      { id: "ga_civilian", name: "CIVILIAN", min: 0, icon: "⛳", discount: 0, raffleMultiplier: 0, cssClass: "tier-ga-addict" },
+      { id: "ga_addict",  name: "GOLF ADDICT",  min: 1,  icon: "🏌️", discount: 10, raffleMultiplier: 1, cssClass: "tier-ga-addict" },
+      { id: "ga_legend",  name: "CLUB LEGEND",  min: 5,  icon: "🏆", discount: 15, raffleMultiplier: 2, cssClass: "tier-ga-legend" },
+      { id: "ga_king",    name: "COURSE KING",  min: 15, icon: "👑", discount: 20, raffleMultiplier: 3, cssClass: "tier-ga-king" }
+    ];
+
+    var GA_PERKS = [
+      { icon: "🏌️", name: "Store Discount",  desc: "Get a discount on all store purchases.", reqTier: "ga_addict", dynamic: true },
+      { icon: "🏌️", name: "Raffle Entries",  desc: "Earn entries into exclusive drops and giveaways.", reqTier: "ga_addict", dynamic: true },
+      { icon: "🏌️", name: "IRL Access",      desc: "Entry to LNL & Golf events, listening parties, and tastings.", reqTier: "ga_addict" },
+      { icon: "🏆", name: "Exclusive Merch", desc: "Unlock holder-only merch that never hits the public store.", reqTier: "ga_legend" },
+      { icon: "🏆", name: "Merch Voting",    desc: "Vote on the next apparel drop.", reqTier: "ga_legend" },
+      { icon: "🏆", name: "Flavor Voting",   desc: "Vote on the next hot sauce flavor.", reqTier: "ga_legend" },
+      { icon: "👑", name: "Early Access",    desc: "Get first dibs on new sauce flavors, merch drops, and collections.", reqTier: "ga_king" },
+      { icon: "👑", name: "VIP IRL Access",  desc: "VIP entry to LNL & Golf events, listening parties, and tastings.", reqTier: "ga_king" }
+    ];
+
+    function getGaTier(count) {
+      for (var i = GA_TIERS.length - 1; i >= 0; i--) {
+        if (count >= GA_TIERS[i].min) return GA_TIERS[i];
+      }
+      return GA_TIERS[0];
+    }
+    function getNextGaTier(tier) {
+      var idx = GA_TIERS.findIndex(function(t) { return t.id === tier.id; });
+      return idx < GA_TIERS.length - 1 ? GA_TIERS[idx + 1] : null;
+    }
+
+    // GA SubDAOs are merged into SUBDAOS below — no separate list needed
+    function getGaSubdaoMatches() { return []; } // legacy stub
+
+    function ga_checkAchievements(gaCount) {
+      var unlocked = [];
+      if (gaCount >= 1)  unlocked.push('ga_hold_1');
+      if (gaCount >= 5)  unlocked.push('ga_hold_5');
+      if (gaCount >= 10) unlocked.push('ga_hold_10');
+      if (gaCount >= 15) unlocked.push('ga_hold_15');
+      if (gaCount >= 25) unlocked.push('ga_hold_25');
+      if (gaCount >= 50) unlocked.push('ga_hold_50');
+      if (gaCount >= 77) unlocked.push('ga_hold_77');
+      return unlocked;
+    }
+
+
 
     var PERKS = [
       { icon: "\u{1F995}", name: "Store Discount", desc: "Get a discount on all LNL Store purchases paid in SOL.", reqTier: "neck", dynamic: true },
@@ -1211,17 +1292,21 @@ a.plink:hover{
     ];
 
 
-    // ---- SUBDAO (Trait-based) ----
+    // ---- SUBDAO (Trait-based) — LNL + Golf Addicts combined ----
     var SUBDAOS = [
-      { id:"talltoker",  name:"Tall Toker",     icon:"🚬", reqValues:["Gold Pipe Beak","Blunt Beak"], desc:"Hold at least 1 LNL with Gold Pipe Beak or Blunt Beak." },
-      { id:"jeeterbeater", name:"Jeeter Beater", icon:"🥊", reqValues:["Boxing Gloves"], desc:"Hold at least 1 LNL with Boxing Gloves." },
-      { id:"hoodiegang", name:"Hoodie Gang",    icon:"🧥", reqValues:["Hoodie"], desc:"Hold at least 1 LNL with Hoodie." },
-      { id:"headphones", name:"HeadPhones",     icon:"🎧", reqValues:["Headphones"], desc:"Hold at least 1 LNL with Headphones." },
-      { id:"royalty",    name:"Royalty",        icon:"👑", reqValues:["Golden Crown","Hippie Crown","Gold Grill Beak"], desc:"Hold at least 1 LNL with Golden Crown, Hippie Crown, or Gold Grill Beak." },
-      { id:"wizzy",      name:"Wizzy",          icon:"🧙", reqValues:["Wizard Hat"], desc:"Hold at least 1 LNL with Wizard Hat." },
-      { id:"bob",        name:"BoB",            icon:"🧢", reqValues:["Beanie"], desc:"Hold at least 1 LNL with Beanie." },
-      { id:"frobros",    name:"Fro Bros",       icon:"🦱", reqValues:["Afro"], desc:"Hold at least 1 LNL with Afro." },
-      { id:"goldenticket", name:"Golden Ticket", icon:"🎟️", reqValues:["Golden Ticket"], desc:"Hold at least 1 LNL with Golden Ticket." }
+      { id:"talltoker",    name:"Tall Toker",     icon:"🚬",  reqValues:["Gold Pipe Beak","Blunt Beak"],               desc:"Hold at least 1 LNL with Gold Pipe Beak or Blunt Beak.", src:"lnl" },
+      { id:"jeeterbeater", name:"Jeeter Beater",  icon:"🥊",  reqValues:["Boxing Gloves"],                             desc:"Hold at least 1 LNL with Boxing Gloves.", src:"lnl" },
+      { id:"hoodiegang",   name:"Hoodie Gang",    icon:"🧥",  reqValues:["Hoodie"],                                    desc:"Hold at least 1 LNL with Hoodie.", src:"lnl" },
+      { id:"headphones",   name:"HeadPhones",     icon:"🎧",  reqValues:["Headphones"],                                desc:"Hold at least 1 LNL with Headphones.", src:"lnl" },
+      { id:"royalty",      name:"Royalty",        icon:"👑",  reqValues:["Golden Crown","Hippie Crown","Gold Grill Beak"], desc:"Hold at least 1 LNL with Golden Crown, Hippie Crown, or Gold Grill Beak.", src:"lnl" },
+      { id:"wizzy",        name:"Wizzy",          icon:"🧙",  reqValues:["Wizard Hat"],                                desc:"Hold at least 1 LNL with Wizard Hat.", src:"lnl" },
+      { id:"bob",          name:"BoB",            icon:"🧢",  reqValues:["Beanie"],                                    desc:"Hold at least 1 LNL with Beanie.", src:"lnl" },
+      { id:"frobros",      name:"Fro Bros",       icon:"🦱",  reqValues:["Afro"],                                      desc:"Hold at least 1 LNL with Afro.", src:"lnl" },
+      { id:"goldenticket", name:"Golden Ticket",  icon:"🎟️", reqValues:["Golden Ticket"],                             desc:"Hold at least 1 LNL with Golden Ticket.", src:"lnl" },
+      // Golf Addicts SubDAOs
+      { id:"talltokers_ga", name:"Tall Tokers",   icon:"💨",  reqValues:["Smokin' Lips","Puff Putt Pass"],             desc:"Hold at least 1 GA with Smokin' Lips or Puff Putt Pass.", src:"ga" },
+      { id:"royalty_ga",    name:"Royalty ⛳",    icon:"👑",  reqValues:["Off Course Crown"],                          desc:"Hold at least 1 GA with Off Course Crown.", src:"ga" },
+      { id:"wizzy_ga",      name:"Wizzy ⛳",      icon:"🧙",  reqValues:["Putting Potion Masterr"],                   desc:"Hold at least 1 GA with Putting Potion Masterr.", src:"ga" }
     ];
 
     function normStr(s){
@@ -1243,14 +1328,16 @@ a.plink:hover{
       return set;
     }
 
-    function getSubdaoMatches(nfts){
-      var values = buildTraitValueSet(nfts);
+    function getSubdaoMatches(nfts, gaNfts){
+      var lnlValues = buildTraitValueSet(nfts);
+      var gaValues  = buildTraitValueSet(gaNfts || []);
       return SUBDAOS.map(function(d){
+        var pool = (d.src === 'ga') ? gaValues : lnlValues;
         var hit = "";
         for (var i=0;i<d.reqValues.length;i++){
-          if (values[normStr(d.reqValues[i])]) { hit = d.reqValues[i]; break; }
+          if (pool[normStr(d.reqValues[i])]) { hit = d.reqValues[i]; break; }
         }
-        return { id:d.id, name:d.name, icon:d.icon, unlocked: !!hit, hit: hit, reqValues: d.reqValues, desc: d.desc };
+        return { id:d.id, name:d.name, icon:d.icon, unlocked: !!hit, hit: hit, reqValues: d.reqValues, desc: d.desc, src: d.src };
       });
     }
 
@@ -1276,6 +1363,7 @@ a.plink:hover{
 
     var session = {
       loadedNFTs: [],
+      loadedGolfAddicts: [],
       profileId: null,
       profile: {
         username: "",
@@ -1720,6 +1808,111 @@ a.plink:hover{
       voice_updateTabIndicator();
     }
 
+    // Bootstrap: one known GA mint → resolve collection group_value once, then use it for filtering
+    var _gaCollectionMint = null;
+    var _gaBootstrapped = false;
+
+    async function bootstrapGaCollection() {
+      if (_gaBootstrapped) return;
+      _gaBootstrapped = true;
+      try {
+        var knownMint = "8pktWQUevnrprUjp7Qt7wzY7MQx8tQVKfR6vcce71Hi6";
+        var res = await fetch(CONFIG.RPC_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0", id: "ga_boot",
+            method: "getAsset",
+            params: { id: knownMint, displayOptions: { showCollectionMetadata: true } }
+          })
+        });
+        var json = await res.json();
+        var r = json && json.result ? json.result : {};
+        var groups = r.grouping || [];
+        var cg = groups.find(function(x) { return x.group_key === "collection"; });
+        if (cg && cg.group_value) {
+          _gaCollectionMint = cg.group_value;
+          console.log("[GA] Collection mint resolved:", _gaCollectionMint);
+        }
+        // Also capture symbol/name pattern from this asset
+        var meta = (r.content && r.content.metadata) ? r.content.metadata : {};
+        var jsonMeta = (r.content && r.content.json) ? r.content.json : {};
+        var sym = meta.symbol || jsonMeta.symbol || "";
+        var name = meta.name || jsonMeta.name || "";
+        console.log("[GA] Bootstrap NFT — symbol:", sym, "name:", name, "interface:", r.interface);
+      } catch(e) {
+        console.warn("[GA] bootstrapGaCollection error:", e);
+      }
+    }
+
+    async function fetchGolfAddictsByOwner(ownerAddress) {
+      // Ensure we've resolved the collection mint at least once
+      await bootstrapGaCollection();
+
+      var res = await fetch(CONFIG.RPC_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: "ga",
+          method: "getAssetsByOwner",
+          params: {
+            ownerAddress: ownerAddress,
+            page: 1,
+            limit: 1000,
+            displayOptions: { showCollectionMetadata: true }
+          }
+        })
+      });
+      var json = await res.json();
+      var items = (json && json.result && json.result.items) ? json.result.items : [];
+
+      // Filter: match by resolved collection mint OR symbol/name patterns
+      var picked = items.filter(function(a) {
+        // 1. By resolved collection group value (most reliable)
+        if (_gaCollectionMint) {
+          var groups = a.grouping || [];
+          var cg = groups.find(function(x) { return x.group_key === "collection"; });
+          if (cg && cg.group_value === _gaCollectionMint) return true;
+        }
+        // 2. By symbol variants
+        var sym = ((a.content && a.content.metadata && a.content.metadata.symbol) ||
+                   (a.content && a.content.json && a.content.json.symbol) || "").trim();
+        if (sym === "GA" || sym === "GOLF" || sym === "GOLF_ADDICTS" || sym === "GOLFADDICTS") return true;
+        // 3. By name containing "golf addict" (case insensitive)
+        var name = ((a.content && a.content.metadata && a.content.metadata.name) ||
+                    (a.content && a.content.json && a.content.json.name) || "").toLowerCase();
+        if (name.indexOf("golf addict") !== -1) return true;
+        return false;
+      });
+
+      return picked.map(function(a) {
+        var name = (a.content && a.content.metadata && a.content.metadata.name) ||
+                   (a.content && a.content.json && a.content.json.name) || "Golf Addict";
+        var image = (a.content && a.content.links && a.content.links.image) ||
+                    (a.content && a.content.files && a.content.files[0] && a.content.files[0].uri) ||
+                    (a.content && a.content.json && a.content.json.image) || "";
+        var mint = a.id || "";
+        var attrs = (a.content && a.content.metadata && a.content.metadata.attributes) ||
+                    (a.content && a.content.json && a.content.json.attributes) || [];
+        var norm = [];
+        if (Array.isArray(attrs)) {
+          norm = attrs.map(function(x) {
+            if (!x) return null;
+            if (typeof x === "string") return { trait_type: "Trait", value: x };
+            var tt = x.trait_type || x.traitType || x.type || x.name || "Trait";
+            var vv = x.value != null ? x.value : (x.val != null ? x.val : "");
+            return { trait_type: String(tt || "Trait"), value: String(vv || "") };
+          }).filter(Boolean);
+        } else if (attrs && typeof attrs === "object") {
+          Object.keys(attrs).forEach(function(k) {
+            norm.push({ trait_type: String(k), value: String(attrs[k]) });
+          });
+        }
+        return { name: name, image: image, mint: mint, owner: ownerAddress, attributes: norm };
+      });
+    }
+
     async function loadDashboard() {
       try {
         var primary = walletPublicKey.toBase58();
@@ -1733,9 +1926,12 @@ a.plink:hover{
         }
 
         var all = [];
+        var allGA = [];
         for (var i=0; i<owners.length; i++){
           var arr = await fetchAssetsByOwner(owners[i]);
           all = all.concat(arr);
+          var gaArr = await fetchGolfAddictsByOwner(owners[i]);
+          allGA = allGA.concat(gaArr);
         }
 
         var seen = {};
@@ -1748,7 +1944,18 @@ a.plink:hover{
           merged.push(all[j]);
         }
 
+        var seenGA = {};
+        var mergedGA = [];
+        for (var k=0; k<allGA.length; k++){
+          var mg = allGA[k].mint;
+          if (!mg) continue;
+          if (seenGA[mg]) continue;
+          seenGA[mg] = true;
+          mergedGA.push(allGA[k]);
+        }
+
         session.loadedNFTs = merged;
+        session.loadedGolfAddicts = mergedGA;
 
         if (!session.profile.pfpMint && merged.length > 0) {
           session.profile.pfpMint = merged[0].mint;
@@ -1800,20 +2007,47 @@ a.plink:hover{
 
       var tier = getTier(count);
       var nextTier = getNextTier(tier);
+      var gaCount = (session.loadedGolfAddicts || []).length;
+      var gaTier = getGaTier(gaCount);
+      var nextGaTier = getNextGaTier(gaTier);
+      var totalNFTs = count + gaCount;
       var displayName = session.profile.username ? session.profile.username : shortAddr(walletPublicKey.toBase58());
       var xUrl = session.profile.x ? buildXUrl(session.profile.x) : "";
       var disc = session.profile.discord ? session.profile.discord : "";
 
+      // Determine which progress bar to show - LNL or GA, pick highest tier progression
+      // Show LNL if LNL tier is higher or equal, else show GA
+      var lnlTierIdx = TIERS.findIndex(function(t) { return t.id === tier.id; });
+      var gaTierIdx = GA_TIERS.findIndex(function(t) { return t.id === gaTier.id; });
+      // Normalize: compare by % progress toward next tier (or full if maxed)
+      var lnlPct = nextTier ? ((count - tier.min) / (nextTier.min - tier.min)) * 100 : 100;
+      var gaPct = nextGaTier ? ((gaCount - gaTier.min) / (nextGaTier.min - gaTier.min)) * 100 : 100;
+      // Pick the one with highest tier index first, then best progression %
+      var showGaBar = (gaTierIdx > lnlTierIdx) || (gaTierIdx === lnlTierIdx && gaPct > lnlPct);
+
       var progressHTML = "";
-      if (nextTier) {
-        var progress = ((count - tier.min) / (nextTier.min - tier.min)) * 100;
-        progressHTML =
-          '<div class="tier-progress-wrap">' +
-            '<div class="tier-progress-label"><span>' + tier.name + '</span><span>' + nextTier.name + ' (' + nextTier.min + ' NFTs)</span></div>' +
-            '<div class="tier-progress-bar"><div class="tier-progress-fill" style="width:' + Math.min(progress,100) + '%"></div></div>' +
-          '</div>';
+      if (showGaBar) {
+        if (nextGaTier) {
+          var gp = ((gaCount - gaTier.min) / (nextGaTier.min - gaTier.min)) * 100;
+          progressHTML =
+            '<div class="tier-progress-wrap">' +
+              '<div class="tier-progress-label"><span>⛳ ' + gaTier.name + '</span><span>' + nextGaTier.name + ' (' + nextGaTier.min + ' GA)</span></div>' +
+              '<div class="tier-progress-bar"><div class="tier-progress-fill" style="width:' + Math.min(gp,100) + '%;background:#4ade80;box-shadow:0 0 10px rgba(74,222,128,0.5);"></div></div>' +
+            '</div>';
+        } else {
+          progressHTML = '<div style="color:#f97316;font-size:0.75rem;letter-spacing:2px;text-transform:uppercase;">⛳ MAX GOLF TIER 👑</div>';
+        }
       } else {
-        progressHTML = '<div style="color:#555;font-size:0.75rem;letter-spacing:2px;text-transform:uppercase;">MAX TIER REACHED \u{1F451}</div>';
+        if (nextTier) {
+          var progress = ((count - tier.min) / (nextTier.min - tier.min)) * 100;
+          progressHTML =
+            '<div class="tier-progress-wrap">' +
+              '<div class="tier-progress-label"><span>' + tier.name + '</span><span>' + nextTier.name + ' (' + nextTier.min + ' NFTs)</span></div>' +
+              '<div class="tier-progress-bar"><div class="tier-progress-fill" style="width:' + Math.min(progress,100) + '%"></div></div>' +
+            '</div>';
+        } else {
+          progressHTML = '<div style="color:#555;font-size:0.75rem;letter-spacing:2px;text-transform:uppercase;">MAX TIER REACHED \u{1F451}</div>';
+        }
       }
 
       var badgeInner = "";
@@ -1849,6 +2083,7 @@ a.plink:hover{
           '<div class="tier-label">YOUR TIER</div>' +
           '<div class="tier-name">' + tier.name + '</div>' +
           '<div class="tier-nfts-held">Holding <strong>' + count + '</strong> Long Neck Legend' + (count !== 1 ? "s" : "") + '</div>' +
+          '<div class="tier-nfts-held" style="margin-top:3px;">Holding <strong style="color:#4ade80;">' + gaCount + '</strong> Golf Addict' + (gaCount !== 1 ? "s" : "") + '</div>' +
           progressHTML +
         '</div>' +
         '<div class="profile-name-box">' +
@@ -1872,80 +2107,125 @@ a.plink:hover{
           '</div>' +
         '</div>';
 
+      // ---- STAKING BOXES (side by side on PC) ----
+      view.innerHTML +=
+        '<div style="grid-column:1/-1;display:flex;justify-content:center;margin-bottom:1rem;">' +
+          '<button class="disconnect-btn" style="border-color:rgba(0,255,136,0.4);color:#00ff88;font-size:0.95rem;font-weight:700;padding:12px 48px;letter-spacing:3px;" onclick="claimBoth()">🥬 CLAIM BOTH 🥬</button>' +
+        '</div>';
+      view.innerHTML +=
+        '<div class="staking-row">' +
+          // LNL Staking
+          '<div class="stats-card">' +
+            '<div class="stats-title">🦒 LNL CABBAGE STAKING</div>' +
+            '<div class="points-display">' +
+              '<div class="points-number" id="cabbageBalance">—</div>' +
+              '<div class="points-label">Cabbage Balance</div>' +
+            '</div>' +
+            '<div style="background:rgba(0,255,136,0.04);border:1px solid rgba(0,255,136,0.12);border-radius:10px;padding:14px 16px;margin:10px 0 14px;">' +
+              '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">' +
+                '<span style="color:#888;font-size:0.78rem;">LNLs Earning</span>' +
+                '<span style="font-weight:700;font-size:1.05rem;color:#00ff88;" id="cabbageNftCount">—</span>' +
+              '</div>' +
+              '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">' +
+                '<span style="color:#888;font-size:0.78rem;">Rate Per NFT</span>' +
+                '<span style="font-weight:700;font-size:1.05rem;color:#e0e0ff;">1 \uD83E\uDD6C / week</span>' +
+              '</div>' +
+              '<div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid rgba(0,255,136,0.1);padding-top:8px;">' +
+                '<span style="color:#888;font-size:0.78rem;font-weight:600;">Total Weekly Earn</span>' +
+                '<span style="font-weight:900;font-size:1.15rem;color:#00ff88;" id="cabbageRate">—</span>' +
+              '</div>' +
+            '</div>' +
+            '<div class="stat-row"><span class="stat-label">Pending</span><span class="stat-value cyan" id="cabbagePending">—</span></div>' +
+            '<div class="stat-row"><span class="stat-label">Started</span><span class="stat-value" id="cabbageStarted">—</span></div>' +
+            '<div class="stat-row"><span class="stat-label">Last Claim</span><span class="stat-value" id="cabbageLast">—</span></div>' +
+            '<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:12px;flex-wrap:wrap;">' +
+              '<button class="disconnect-btn" style="border-color:rgba(255,255,255,0.12);" onclick="refreshCabbageUI()">Refresh</button>' +
+              '<button class="disconnect-btn" id="cabbageStartBtn" style="border-color:rgba(0,255,136,0.35);color:#00ff88;" onclick="startCabbage()">Restart</button>' +
+              '<button class="disconnect-btn" id="cabbageClaimBtn" style="border-color:rgba(0,212,255,0.35);color:#00d4ff;" onclick="claimCabbage()">Claim</button>' +
+            '</div>' +
+            '<div style="margin-top:10px;color:#555;font-size:0.72rem;letter-spacing:1px;line-height:1.45;">' +
+              'Click <strong>Restart</strong> anytime to re-sync your NFT count. Each LNL earns <strong>1 \uD83E\uDD6C per week</strong>. Claim anytime.' +
+            '</div>' +
+          '</div>' +
+          // Golf Addicts Staking
+          '<div class="stats-card">' +
+            '<div class="stats-title">⛳ GOLF ADDICTS STAKING</div>' +
+            '<div class="points-display">' +
+              '<div class="points-number" id="gaCabbageBalance">—</div>' +
+              '<div class="points-label">Cabbage Balance (GA)</div>' +
+            '</div>' +
+            '<div style="background:rgba(74,222,128,0.04);border:1px solid rgba(74,222,128,0.12);border-radius:10px;padding:14px 16px;margin:10px 0 14px;">' +
+              '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">' +
+                '<span style="color:#888;font-size:0.78rem;">Golf Addicts Earning</span>' +
+                '<span style="font-weight:700;font-size:1.05rem;color:#4ade80;">' + gaCount + '</span>' +
+              '</div>' +
+              '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">' +
+                '<span style="color:#888;font-size:0.78rem;">Rate Per NFT</span>' +
+                '<span style="font-weight:700;font-size:1.05rem;color:#e0e0ff;">5 \uD83E\uDD6C / week</span>' +
+              '</div>' +
+              '<div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid rgba(74,222,128,0.1);padding-top:8px;">' +
+                '<span style="color:#888;font-size:0.78rem;font-weight:600;">Total Weekly Earn</span>' +
+                '<span style="font-weight:900;font-size:1.15rem;color:#4ade80;">' + (gaCount * 5) + ' \uD83E\uDD6C / week</span>' +
+              '</div>' +
+            '</div>' +
+            '<div class="stat-row"><span class="stat-label">Pending (GA)</span><span class="stat-value" style="color:#4ade80;" id="gaCabbagePending">—</span></div>' +
+            '<div class="stat-row"><span class="stat-label">Started</span><span class="stat-value" id="gaCabbageStarted">—</span></div>' +
+            '<div class="stat-row"><span class="stat-label">Last Claim</span><span class="stat-value" id="gaCabbageLast">—</span></div>' +
+            '<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:12px;flex-wrap:wrap;">' +
+              '<button class="disconnect-btn" style="border-color:rgba(255,255,255,0.12);" onclick="refreshGaCabbageUI()">Refresh</button>' +
+              '<button class="disconnect-btn" id="gaCabbageStartBtn" style="border-color:rgba(74,222,128,0.35);color:#4ade80;" onclick="startGaCabbage()">Restart</button>' +
+              '<button class="disconnect-btn" id="gaCabbageClaimBtn" style="border-color:rgba(74,222,128,0.35);color:#4ade80;" onclick="claimGaCabbage()">Claim</button>' +
+            '</div>' +
+            '<div style="margin-top:10px;color:#555;font-size:0.72rem;letter-spacing:1px;line-height:1.45;">' +
+              'Click <strong>Restart</strong> anytime to re-sync your GA count. Each Golf Addict earns <strong>5 \uD83E\uDD6C per week</strong>.' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+'';
+      view.innerHTML += ''
+
+      // Populate cabbage values after DOM updates
+      setTimeout(function(){ try { refreshCabbageUI(); } catch(e){} }, 50);
+      setTimeout(function(){ try { refreshGaCabbageUI(); } catch(e){} }, 80);
+
       // Compute achievements FIRST (player card needs the count)
       var xp = pp_computeXP(pp_stats);
       var level = pp_levelFromXP(xp);
       ach_myBadges = ach_check(pp_stats, count, level, pp_stats._gamesPlayedMap);
+      // Merge Golf Addicts holder achievements into the unified badge list
+      var gaAchUnlocked = ga_checkAchievements(gaCount);
+      gaAchUnlocked.forEach(function(id) {
+        if (ach_myBadges.indexOf(id) === -1) ach_myBadges.push(id);
+      });
 
-      // Player Progression Card (now has correct ach_myBadges.length)
+      // Player Progression Card + Holder Stats side by side on PC
+      var nextTierRow = nextTier
+        ? '<div class="stat-row"><span class="stat-label">Next LNL Tier At</span><span class="stat-value gold">' + nextTier.min + ' NFTs</span></div>'
+        : '<div class="stat-row"><span class="stat-label">LNL Status</span><span class="stat-value gold">MAXED \u{1F451}</span></div>';
+      var nextGaTierRow = nextGaTier
+        ? '<div class="stat-row"><span class="stat-label">Next GA Tier At</span><span class="stat-value" style="color:#4ade80;">' + nextGaTier.min + ' GA</span></div>'
+        : '<div class="stat-row"><span class="stat-label">GA Status</span><span class="stat-value" style="color:#f97316;">MAXED 👑</span></div>';
+
       view.innerHTML += pp_renderPlayerCard(count, 0);
+
+      // Holder Stats (full width row with level box already added above)
+      view.innerHTML +=
+        '<div class="stats-card">' +
+          '<div class="stats-title">HOLDER STATS</div>' +
+          '<div class="stat-row"><span class="stat-label">Total NFTs Held</span><span class="stat-value cyan">' + totalNFTs + ' <span style="font-size:0.65rem;color:#555;">(LNL: ' + count + ' + GA: ' + gaCount + ')</span></span></div>' +
+          '<div class="stat-row"><span class="stat-label">LNL Tier</span><span class="stat-value">' + tier.name + '</span></div>' +
+          '<div class="stat-row"><span class="stat-label">GA Tier</span><span class="stat-value" style="color:#4ade80;">⛳ ' + gaTier.name + '</span></div>' +
+          '<div class="stat-row"><span class="stat-label">Store Discount</span><span class="stat-value green">' + tier.discount + '%</span></div>' +
+          '<div class="stat-row"><span class="stat-label">Raffle Multiplier</span><span class="stat-value purple">' + tier.raffleMultiplier + 'x</span></div>' +
+          nextTierRow +
+          nextGaTierRow +
+        '</div>';
 
       // Achievement section
       ach_save(ach_myBadges); // persist to DB (fire-and-forget)
       view.innerHTML += ach_renderSection(ach_myBadges);
       setTimeout(function() { ach_paintGrid(ach_myBadges); }, 50);
 
-      view.innerHTML +=
-        '<div class="stats-card">' +
-          '<div class="stats-title">CABBAGE STAKING</div>' +
-          '<div class="points-display">' +
-            '<div class="points-number" id="cabbageBalance">—</div>' +
-            '<div class="points-label">Cabbage Balance</div>' +
-          '</div>' +
-          '<div style="background:rgba(0,255,136,0.04);border:1px solid rgba(0,255,136,0.12);border-radius:10px;padding:14px 16px;margin:10px 0 14px;">' +
-            '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">' +
-              '<span style="color:#888;font-size:0.78rem;">NFTs Earning</span>' +
-              '<span style="font-weight:700;font-size:1.05rem;color:#00ff88;" id="cabbageNftCount">—</span>' +
-            '</div>' +
-            '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">' +
-              '<span style="color:#888;font-size:0.78rem;">Rate Per NFT</span>' +
-              '<span style="font-weight:700;font-size:1.05rem;color:#e0e0ff;">1 \uD83E\uDD6C / week</span>' +
-            '</div>' +
-            '<div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid rgba(0,255,136,0.1);padding-top:8px;">' +
-              '<span style="color:#888;font-size:0.78rem;font-weight:600;">Total Weekly Earn</span>' +
-              '<span style="font-weight:900;font-size:1.15rem;color:#00ff88;" id="cabbageRate">—</span>' +
-            '</div>' +
-          '</div>' +
-          '<div class="stat-row"><span class="stat-label">Pending</span><span class="stat-value cyan" id="cabbagePending">—</span></div>' +
-          '<div class="stat-row"><span class="stat-label">Started</span><span class="stat-value" id="cabbageStarted">—</span></div>' +
-          '<div class="stat-row"><span class="stat-label">Last Claim</span><span class="stat-value" id="cabbageLast">—</span></div>' +
-          '<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:12px;flex-wrap:wrap;">' +
-            '<button class="disconnect-btn" style="border-color:rgba(255,255,255,0.12);" onclick="refreshCabbageUI()">Refresh</button>' +
-            '<button class="disconnect-btn" id="cabbageStartBtn" style="border-color:rgba(0,255,136,0.35);color:#00ff88;" onclick="startCabbage()">Start</button>' +
-            '<button class="disconnect-btn" id="cabbageClaimBtn" style="border-color:rgba(0,212,255,0.35);color:#00d4ff;" onclick="claimCabbage()">Claim</button>' +
-          '</div>' +
-          '<div style="margin-top:10px;color:#555;font-size:0.72rem;letter-spacing:1px;line-height:1.45;">' +
-            'Soft staking: click <strong>Start</strong> once to begin earning. Each NFT in your wallet earns <strong>1 \uD83E\uDD6C cabbage per week</strong>. Claim anytime.' +
-          '</div>' +
-        '</div>';
-
-      // Populate cabbage values after DOM updates
-      setTimeout(function(){ try { refreshCabbageUI(); } catch(e){} }, 50);
-
-var nextTierRow = nextTier
-        ? '<div class="stat-row"><span class="stat-label">Next Tier At</span><span class="stat-value gold">' + nextTier.min + ' NFTs</span></div>'
-        : '<div class="stat-row"><span class="stat-label">Status</span><span class="stat-value gold">MAXED \u{1F451}</span></div>';
-
-      view.innerHTML +=
-        '<div class="stats-card">' +
-          '<div class="stats-title">HOLDER STATS</div>' +
-          '<div class="stat-row"><span class="stat-label">NFTs Held</span><span class="stat-value cyan">' + count + '</span></div>' +
-          '<div class="stat-row"><span class="stat-label">Current Tier</span><span class="stat-value">' + tier.name + '</span></div>' +
-          '<div class="stat-row"><span class="stat-label">Store Discount</span><span class="stat-value green">' + tier.discount + '%</span></div>' +
-          '<div class="stat-row"><span class="stat-label">Raffle Multiplier</span><span class="stat-value purple">' + tier.raffleMultiplier + 'x</span></div>' +
-          nextTierRow +
-        '</div>';
-
-      // ---- SUBDAO STATUS (Trait-based) ----
-      var subdao = getSubdaoMatches(nfts);
-      var subdaoRows = subdao.map(function(s){
-        var req = s.reqValues.join(' / ');
-        return '<div class="stat-row">'
-             + '<span class="stat-label">' + s.icon + ' ' + s.name + '</span>'
-             + '<span class="stat-value ' + (s.unlocked ? 'green' : '') + '">' + (s.unlocked ? 'UNLOCKED' : 'LOCKED') + '</span>'
-             + '</div>'
-             + (s.unlocked ? '' : '<div style="color:#555;font-size:0.7rem;letter-spacing:1px;margin-top:-6px;margin-bottom:10px;">Requires: ' + escapeHtml(req) + '</div>');
-      }).join('');
 
       var tierOrder = TIERS.map(function(t) { return t.id; });
       var currentTierIdx = tierOrder.indexOf(tier.id);
@@ -1971,18 +2251,49 @@ var nextTierRow = nextTier
 
       view.innerHTML +=
         '<div class="perks-card">' +
-          '<div class="stats-title">HOLDER PERKS</div>' +
+          '<div class="stats-title">HOLDER PERKS (LNL)</div>' +
           '<div class="perks-grid">' + perksHTML + '</div>' +
         '</div>';
 
+      // Golf Addicts Perks
+      var gaTierOrder = GA_TIERS.map(function(t) { return t.id; });
+      var gaCurrentTierIdx = gaTierOrder.indexOf(gaTier.id);
+      var gaPerksHTML = GA_PERKS.map(function(perk) {
+        var reqIdx = gaTierOrder.indexOf(perk.reqTier);
+        var unlocked = gaCurrentTierIdx >= reqIdx;
+        var reqTierObj = GA_TIERS.find(function(t) { return t.id === perk.reqTier; });
+        var desc = perk.desc;
+        if (perk.dynamic && perk.name === "Store Discount" && unlocked) desc = gaTier.discount + "% off all store purchases paid in SOL";
+        if (perk.dynamic && perk.name === "Raffle Entries" && unlocked) desc = gaTier.raffleMultiplier + "x entries into every raffle and giveaway";
+        return '' +
+          '<div class="perk ' + (unlocked ? "unlocked" : "locked") + '">' +
+            '<div class="perk-status ' + (unlocked ? "on" : "off") + '"></div>' +
+            '<div class="perk-icon">' + perk.icon + '</div>' +
+            '<div class="perk-name">' + perk.name + '</div>' +
+            '<div class="perk-desc">' + desc + '</div>' +
+            '<div class="perk-req ' + (unlocked ? "met" : "") + '">' + (unlocked ? "\u2713 UNLOCKED" : "REQUIRES " + (reqTierObj ? reqTierObj.name : perk.reqTier)) + '</div>' +
+          '</div>';
+      }).join("");
 
-      var subdaoPerksHTML = getSubdaoMatches(nfts).map(function(s){
+      view.innerHTML +=
+        '<div class="perks-card" style="border-color:rgba(74,222,128,0.15);">' +
+          '<div class="stats-title" style="color:#4ade80;">⛳ GOLF ADDICT PERKS</div>' +
+          '<div style="font-size:0.7rem;color:#555;letter-spacing:1px;margin-bottom:1rem;">Based on your ' + gaCount + ' Golf Addict' + (gaCount !== 1 ? 's' : '') + ' · Tier: <strong style="color:#4ade80;">' + gaTier.name + '</strong></div>' +
+          '<div class="perks-grid">' + gaPerksHTML + '</div>' +
+        '</div>';
+
+      // SubDAOs — unified LNL + Golf Addicts list
+      var allSubdaoHTML = getSubdaoMatches(nfts, session.loadedGolfAddicts || []).map(function(s){
         var req = s.reqValues.join(" / ");
         var reqLine = s.unlocked ? ("Unlocked via: " + s.hit) : ("Requires: " + req);
+        var isGA = s.src === 'ga';
+        var accentBorder = isGA ? (s.unlocked ? 'rgba(74,222,128,0.35)' : 'rgba(255,255,255,0.03)') : '';
+        var accentBg    = isGA ? (s.unlocked ? 'rgba(74,222,128,0.05)' : '') : '';
+        var styleExtra  = isGA ? ' style="' + (accentBorder ? 'border-color:' + accentBorder + ';' : '') + (accentBg ? 'background:' + accentBg + ';' : '') + '"' : '';
         return '' +
-          '<div class="perk ' + (s.unlocked ? "unlocked" : "locked") + '">' +
+          '<div class="perk ' + (s.unlocked ? "unlocked" : "locked") + '"' + styleExtra + '>' +
             '<div class="perk-status ' + (s.unlocked ? "on" : "off") + '"></div>' +
-            '<div class="perk-icon">' + s.icon + '</div>' +
+            '<div class="perk-icon">' + (isGA ? '⛳ ' : '') + s.icon + '</div>' +
             '<div class="perk-name">' + escapeHtml(s.name) + '</div>' +
             '<div class="perk-desc">' + escapeHtml(s.desc) + '</div>' +
             '<div class="perk-req ' + (s.unlocked ? "met" : "") + '">' + (s.unlocked ? "\u2713 UNLOCKED" : escapeHtml(reqLine)) + '</div>' +
@@ -1992,9 +2303,10 @@ var nextTierRow = nextTier
       view.innerHTML +=
         '<div class="perks-card">' +
           '<div class="stats-title">SUBDAOs</div>' +
-          '<div class="perks-grid subdao-grid">' + subdaoPerksHTML + '</div>' +
+          '<div class="perks-grid subdao-grid">' + allSubdaoHTML + '</div>' +
         '</div>';
 
+      // LNL Gallery
       var galleryHTML = nfts.map(function(nft) {
         var img = nft.image
           ? '<img src="' + nft.image + '" alt="' + escapeHtml(nft.name) + '" loading="lazy">'
@@ -2012,18 +2324,142 @@ var nextTierRow = nextTier
 
       view.innerHTML +=
         '<div class="gallery-card">' +
-          '<div class="stats-title">YOUR COLLECTION</div>' +
-          '<div class="gallery-grid">' + galleryHTML + '</div>' +
+          '<div class="stats-title">YOUR COLLECTION — LONG NECK LEGENDS (' + count + ')</div>' +
+          (count > 0 ? '<div class="gallery-grid">' + galleryHTML + '</div>' : '<div style="text-align:center;color:#555;padding:2rem;font-size:0.82rem;">No LNLs found in this wallet.</div>') +
+        '</div>';
+
+      // Golf Addicts Gallery
+      var gaGalleryHTML = (session.loadedGolfAddicts || []).map(function(nft) {
+        var img = nft.image
+          ? '<img src="' + nft.image + '" alt="' + escapeHtml(nft.name) + '" loading="lazy">'
+          : '<div style="aspect-ratio:1;background:#1e1e3a;display:flex;align-items:center;justify-content:center;color:#555;font-size:0.8rem;">No Image</div>';
+        var mintShort = nft.mint ? nft.mint.slice(0,4) + "..." + nft.mint.slice(-4) : "";
+        return '' +
+          '<div class="nft-tile" style="border-color:rgba(74,222,128,0.12);" onclick="window.open(\'https://magiceden.us/item-details/' + nft.mint + '\', \'_blank\')">' +
+            img +
+            '<div class="nft-tile-info">' +
+              '<div class="nft-tile-name">' + escapeHtml(nft.name) + '</div>' +
+              '<div class="nft-tile-id">' + mintShort + '</div>' +
+            '</div>' +
+          '</div>';
+      }).join("");
+
+      view.innerHTML +=
+        '<div class="gallery-card" style="border-color:rgba(74,222,128,0.15);">' +
+          '<div class="stats-title" style="color:#4ade80;">⛳ YOUR COLLECTION — GOLF ADDICTS (' + gaCount + ')</div>' +
+          (gaCount > 0 ? '<div class="gallery-grid">' + gaGalleryHTML + '</div>' :
+            '<div style="text-align:center;color:#555;padding:2rem;">' +
+              '<div style="font-size:2rem;margin-bottom:0.5rem;">⛳</div>' +
+              '<div style="font-size:0.82rem;margin-bottom:1rem;">No Golf Addicts in this wallet.</div>' +
+              '<a href="' + CONFIG.GA_MAGIC_EDEN_LINK + '" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#4ade80,#f97316);color:#000;text-decoration:none;padding:10px 28px;font-weight:700;font-size:0.8rem;text-transform:uppercase;letter-spacing:2px;border-radius:4px;">BUY ON MAGIC EDEN ⛳</a>' +
+            '</div>') +
         '</div>';
 
       view.innerHTML +=
         '<div class="share-section">' +
-          '<button class="share-btn" onclick="window.open(\'' + CONFIG.MAGIC_EDEN_LINK + '\', \'_blank\')">MAGIC EDEN</button>' +
+          '<button class="share-btn" onclick="window.open(\'' + CONFIG.MAGIC_EDEN_LINK + '\', \'_blank\')">LNL MAGIC EDEN</button>' +
+          '&nbsp;&nbsp;' +
+          '<button class="share-btn" style="border-color:rgba(74,222,128,0.3);color:#4ade80;" onclick="window.open(\'' + CONFIG.GA_MAGIC_EDEN_LINK + '\', \'_blank\')">⛳ GOLF ADDICTS MAGIC EDEN</button>' +
         '</div>';
 
       // ✅ always re-apply toggle state after rendering the panel
       applyProfilePanelUI();
     }
+
+    // ---- GOLF ADDICTS CABBAGE STAKING (uses same endpoint with ga_ prefix) ----
+    async function refreshGaCabbageUI() {
+      try {
+        if (!walletPublicKey) return;
+        var wallet = getCanonicalWallet();
+        if (!wallet) return;
+        var balEl = document.getElementById('gaCabbageBalance');
+        var pendEl = document.getElementById('gaCabbagePending');
+        var lastEl = document.getElementById('gaCabbageLast');
+        var startedEl = document.getElementById('gaCabbageStarted');
+        if (balEl) balEl.textContent = '…';
+        setBtnState('gaCabbageStartBtn', true, 'Start');
+        setBtnState('gaCabbageClaimBtn', true, 'Claim');
+
+        var res = await fetch(cabbageEndpoint() + '?wallet=' + encodeURIComponent(wallet) + '&collection=golf_addicts', {
+          method: 'GET', headers: cabbageAuthHeaders()
+        });
+        var data = await res.json().catch(function(){ return {}; });
+        if (!res.ok) throw new Error(data && data.error ? data.error : ('HTTP ' + res.status));
+
+        var balance = Number(data.balance || 0);
+        var startedAt = data.started_at || null;
+        var lastClaim = data.last_claim_at || null;
+        // Compute GA pending client-side: 5 cabbage/NFT/week, accrued since last claim (or started_at)
+        var gaCount = (session && session.loadedGolfAddicts) ? session.loadedGolfAddicts.length : 0;
+        var baseTime = (lastClaim && lastClaim.indexOf('1970') !== 0) ? lastClaim : startedAt;
+        var pending = 0;
+        if (startedAt && gaCount > 0 && baseTime) {
+          var msElapsed = Date.now() - new Date(baseTime).getTime();
+          var weeksElapsed = msElapsed / (7 * 24 * 60 * 60 * 1000);
+          pending = Math.max(0, gaCount * 5 * weeksElapsed);
+        } else {
+          pending = Number(data.pending || 0) * 5; // fallback: multiply server value
+        }
+        if (balEl) balEl.textContent = (Math.floor(balance * 100) / 100).toLocaleString();
+        if (pendEl) pendEl.textContent = (Math.floor(pending * 100) / 100).toLocaleString();
+        if (startedEl) startedEl.textContent = startedAt ? fmtDT(startedAt) : 'Not started';
+        var claimIsReal = lastClaim && lastClaim.indexOf('1970') !== 0;
+        if (lastEl) lastEl.textContent = claimIsReal ? fmtDT(lastClaim) : '—';
+        var started = !!startedAt;
+        setBtnState('gaCabbageStartBtn', false, 'Restart'); // always enabled for re-sync
+        setBtnState('gaCabbageClaimBtn', !started, 'Claim');
+      } catch(e) {
+        setBtnState('gaCabbageStartBtn', false, 'Start');
+        setBtnState('gaCabbageClaimBtn', false, 'Claim');
+      }
+    }
+
+    async function claimBoth() {
+      var lnlStarted = document.getElementById('cabbageStartBtn') && document.getElementById('cabbageStartBtn').disabled;
+      var gaStarted  = document.getElementById('gaCabbageStartBtn') && document.getElementById('gaCabbageStartBtn').disabled;
+      try {
+        await claimCabbage();
+      } catch(e) { console.warn('claimBoth LNL error:', e); }
+      try {
+        await claimGaCabbage();
+      } catch(e) { console.warn('claimBoth GA error:', e); }
+    }
+
+    async function startGaCabbage() {
+      try {
+        setBtnState('gaCabbageStartBtn', true, 'Starting…');
+        setBtnState('gaCabbageClaimBtn', true, 'Claim');
+        var payload = await signCabbageMessage('start');
+        var res = await fetch(cabbageEndpoint(), {
+          method: 'POST', headers: cabbageAuthHeaders(),
+          body: JSON.stringify({ action: 'start', wallet: getCanonicalWallet() || payload.wallet, signing_wallet: payload.wallet, message: payload.message, signature: payload.signature, collection: 'golf_addicts' })
+        });
+        var data = await res.json().catch(function(){ return {}; });
+        if (!res.ok) throw new Error(data && data.error ? data.error : ('HTTP ' + res.status));
+        await refreshGaCabbageUI();
+      } catch(e) {
+        alert('Start failed: ' + (e.message || e));
+        setBtnState('gaCabbageStartBtn', false, 'Start');
+      }
+    }
+
+    async function claimGaCabbage() {
+      try {
+        setBtnState('gaCabbageClaimBtn', true, 'Claiming…');
+        var payload = await signCabbageMessage('claim');
+        var res = await fetch(cabbageEndpoint(), {
+          method: 'POST', headers: cabbageAuthHeaders(),
+          body: JSON.stringify({ action: 'claim', wallet: getCanonicalWallet() || payload.wallet, signing_wallet: payload.wallet, message: payload.message, signature: payload.signature, collection: 'golf_addicts' })
+        });
+        var data = await res.json().catch(function(){ return {}; });
+        if (!res.ok) throw new Error(data && data.error ? data.error : ('HTTP ' + res.status));
+        await refreshGaCabbageUI();
+      } catch(e) {
+        alert('Claim failed: ' + (e.message || e));
+        setBtnState('gaCabbageClaimBtn', false, 'Claim');
+      }
+    }
+
 
     function editUsername(){
       var current = session.profile.username || "";
@@ -2321,7 +2757,7 @@ var nextTierRow = nextTier
   
     function openTraitsModal(){
       if (!session.loadedNFTs || session.loadedNFTs.length === 0) return alert("No NFTs loaded yet.");
-      var sub = getSubdaoMatches(session.loadedNFTs);
+      var sub = getSubdaoMatches(session.loadedNFTs, session.loadedGolfAddicts || []);
 
       var pills = document.getElementById("subdaoPills");
       if (pills){
@@ -2796,13 +3232,17 @@ var nextTierRow = nextTier
         if (startedEl) startedEl.textContent = startedAt ? fmtDT(startedAt) : 'Not started';
         var claimIsReal = lastClaim && lastClaim.indexOf('1970') !== 0;
         if (lastEl) lastEl.textContent = claimIsReal ? fmtDT(lastClaim) : '—';
-        if (nftCountEl) nftCountEl.textContent = stakedCount.toLocaleString();
+        // Use live on-chain count if available, fallback to backend staked_count
+        var liveCount = (session && session.loadedNFTs) ? session.loadedNFTs.length : stakedCount;
+        if (nftCountEl) nftCountEl.textContent = liveCount.toLocaleString();
+        // Also update the rate display to match live count
+        if (rateEl) rateEl.textContent = (liveCount * 1).toLocaleString() + ' \uD83E\uDD6C / week';
 
         // Button rules:
         // - If NOT started: enable Start, disable Claim
         // - If started: disable Start, enable Claim
         var started = !!startedAt;
-        setBtnState('cabbageStartBtn', started, started ? 'Started' : 'Start');
+        setBtnState('cabbageStartBtn', false, 'Restart'); // always enabled for re-sync
         setBtnState('cabbageClaimBtn', !started, 'Claim');
 
       } catch (e) {
@@ -6787,7 +7227,8 @@ var nextTierRow = nextTier
             pp_statCell('💸 Total Lost', Math.floor(stats.totalLost).toLocaleString(), '#ff3c5c') +
             pp_statCell('🎯 Biggest Win', Math.floor(stats.biggestWin).toLocaleString(), '#ffd700') +
             pp_statCell('💬 Messages', stats.chatMsgs.toLocaleString(), '#7b68ee') +
-            pp_statCell('🪶 NFTs Held', nftCount.toString(), '#00d4ff') +
+            pp_statCell('🪶 LNLs Held', nftCount.toString(), '#00d4ff') +
+            pp_statCell('⛳ Golf Addicts', ((session.loadedGolfAddicts || []).length).toString(), '#4ade80') +
             pp_statCell('📅 Member Since', joinStr, '#888') +
             pp_statCell('⏳ Days Active', stats.daysHeld.toString(), '#00d4ff') +
           '</div>' +
@@ -6850,6 +7291,14 @@ var nextTierRow = nextTier
       { id: 'og_30d',         icon: '📅', name: 'OG Member',          desc: 'Member for 30+ days',                     cat: 'holder', rarity: 'uncommon' },
       { id: 'og_90d',         icon: '🏛️', name: 'Veteran',           desc: 'Member for 90+ days',                     cat: 'holder', rarity: 'rare' },
       { id: 'og_365d',        icon: '🗿', name: 'Ancient One',        desc: 'Member for 1+ year',                      cat: 'holder', rarity: 'legendary' },
+      // Golf Addicts holder badges
+      { id: 'ga_hold_1',      icon: '⛳', name: 'On the Green',       desc: 'Hold at least 1 Golf Addict NFT',          cat: 'holder', rarity: 'common' },
+      { id: 'ga_hold_5',      icon: '🏌️', name: 'Club Member',        desc: 'Hold 5+ Golf Addict NFTs',                 cat: 'holder', rarity: 'uncommon' },
+      { id: 'ga_hold_10',     icon: '🏆', name: 'Pro Golfer',         desc: 'Hold 10+ Golf Addict NFTs',                cat: 'holder', rarity: 'rare' },
+      { id: 'ga_hold_15',     icon: '🏌️', name: 'Course King',        desc: 'Hold 15+ Golf Addict NFTs',                cat: 'holder', rarity: 'epic' },
+      { id: 'ga_hold_25',     icon: '🦅', name: 'Hole in One',        desc: 'Hold 25+ Golf Addict NFTs',                cat: 'holder', rarity: 'epic' },
+      { id: 'ga_hold_50',     icon: '🏅', name: 'Masters Champion',   desc: 'Hold 50+ Golf Addict NFTs',                cat: 'holder', rarity: 'legendary' },
+      { id: 'ga_hold_77',     icon: '💎', name: '1%er — Golf',        desc: 'Hold 77+ Golf Addict NFTs — Top 1%',       cat: 'holder', rarity: 'legendary' },
 
       // Social
       { id: 'chat_50',        icon: '🗣️', name: 'Social Butterfly',  desc: 'Send 50 chat messages',                   cat: 'social', rarity: 'common' },
@@ -6881,6 +7330,7 @@ var nextTierRow = nextTier
 
     var ACH_CATS = [
       { id: 'all',       label: 'All' },
+      { id: 'achieved',  label: '✅ Achieved' },
       { id: 'milestone', label: 'Milestones' },
       { id: 'casino',    label: 'Casino' },
       { id: 'pain',      label: 'Pain' },
@@ -7014,7 +7464,7 @@ var nextTierRow = nextTier
       var pct = Math.round((earned / total) * 100);
 
       var html =
-        '<div style="background:linear-gradient(135deg,#0d0d20,#0a0a1a);border:1px solid #1e1e3a;border-radius:16px;padding:1.5rem;margin-bottom:1rem;">' +
+        '<div style="grid-column:1/-1;background:linear-gradient(135deg,#0d0d20,#0a0a1a);border:1px solid #1e1e3a;border-radius:16px;padding:1.5rem;margin-bottom:1rem;">' +
           '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">' +
             '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.3rem;letter-spacing:3px;color:#e0e0ff;">🏅 ACHIEVEMENTS</div>' +
             '<div style="font-size:0.78rem;font-weight:700;color:#ffd700;">' + earned + ' / ' + total + ' <span style="color:#444;font-weight:400;">(' + pct + '%)</span></div>' +
@@ -7029,7 +7479,7 @@ var nextTierRow = nextTier
           '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:1rem;" id="ach_cats"></div>' +
 
           // Badge grid
-          '<div id="ach_grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;"></div>' +
+          '<div id="ach_grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;max-height:460px;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:rgba(0,212,255,0.3) transparent;padding-right:4px;"></div>' +
         '</div>';
 
       return html;
@@ -7043,13 +7493,13 @@ var nextTierRow = nextTier
       // Render category tabs
       var cHTML = '';
       ACH_CATS.forEach(function(c) {
-        var count = c.id === 'all' ? ACH_LIST.length : ACH_LIST.filter(function(a) { return a.cat === c.id; }).length;
+        var count = c.id === 'all' ? ACH_LIST.length : c.id === 'achieved' ? unlocked.length : ACH_LIST.filter(function(a) { return a.cat === c.id; }).length;
         cHTML += '<div style="padding:4px 10px;border-radius:6px;border:1px solid ' + (c.id === ach_activeCat ? 'rgba(0,212,255,0.5)' : 'rgba(255,255,255,0.06)') + ';background:' + (c.id === ach_activeCat ? 'rgba(0,212,255,0.08)' : 'rgba(0,0,0,0.2)') + ';color:' + (c.id === ach_activeCat ? '#00d4ff' : '#555') + ';font-size:0.6rem;font-weight:700;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;letter-spacing:0.5px;" onclick="ach_activeCat=\'' + c.id + '\';ach_paintGrid(ach_myBadges);">' + c.label + ' (' + count + ')</div>';
       });
       catsEl.innerHTML = cHTML;
 
       // Render badges
-      var items = ach_activeCat === 'all' ? ACH_LIST : ACH_LIST.filter(function(a) { return a.cat === ach_activeCat; });
+      var items = ach_activeCat === 'all' ? ACH_LIST : ach_activeCat === 'achieved' ? ACH_LIST.filter(function(a) { return unlocked.indexOf(a.id) !== -1; }) : ACH_LIST.filter(function(a) { return a.cat === ach_activeCat; });
       var gHTML = '';
       items.forEach(function(ach) {
         var earned = unlocked.indexOf(ach.id) !== -1;
