@@ -2381,9 +2381,19 @@ a.plink:hover{
         if (!res.ok) throw new Error(data && data.error ? data.error : ('HTTP ' + res.status));
 
         var balance = Number(data.balance || 0);
-        var pending = Number(data.pending || 0);
         var startedAt = data.started_at || null;
         var lastClaim = data.last_claim_at || null;
+        // Compute GA pending client-side: 5 cabbage/NFT/week, accrued since last claim (or started_at)
+        var gaCount = (session && session.loadedGolfAddicts) ? session.loadedGolfAddicts.length : 0;
+        var baseTime = (lastClaim && lastClaim.indexOf('1970') !== 0) ? lastClaim : startedAt;
+        var pending = 0;
+        if (startedAt && gaCount > 0 && baseTime) {
+          var msElapsed = Date.now() - new Date(baseTime).getTime();
+          var weeksElapsed = msElapsed / (7 * 24 * 60 * 60 * 1000);
+          pending = Math.max(0, gaCount * 5 * weeksElapsed);
+        } else {
+          pending = Number(data.pending || 0) * 5; // fallback: multiply server value
+        }
         if (balEl) balEl.textContent = (Math.floor(balance * 100) / 100).toLocaleString();
         if (pendEl) pendEl.textContent = (Math.floor(pending * 100) / 100).toLocaleString();
         if (startedEl) startedEl.textContent = startedAt ? fmtDT(startedAt) : 'Not started';
@@ -7433,7 +7443,7 @@ a.plink:hover{
       var pct = Math.round((earned / total) * 100);
 
       var html =
-        '<div style="background:linear-gradient(135deg,#0d0d20,#0a0a1a);border:1px solid #1e1e3a;border-radius:16px;padding:1.5rem;margin-bottom:1rem;">' +
+        '<div style="grid-column:1/-1;background:linear-gradient(135deg,#0d0d20,#0a0a1a);border:1px solid #1e1e3a;border-radius:16px;padding:1.5rem;margin-bottom:1rem;">' +
           '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">' +
             '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.3rem;letter-spacing:3px;color:#e0e0ff;">🏅 ACHIEVEMENTS</div>' +
             '<div style="font-size:0.78rem;font-weight:700;color:#ffd700;">' + earned + ' / ' + total + ' <span style="color:#444;font-weight:400;">(' + pct + '%)</span></div>' +
