@@ -5243,9 +5243,11 @@ a.plink:hover{
       pk_plrs=pR.data||[];
       var me=pk_plrs.find(function(p){return p.wallet===myW;});
 
-      // ── Bust detection: was seated, now gone → auto stand up as spectator + buy-in modal ──
+      // ── Bust detection: was seated AND now fully removed from table ──
+      // Only trigger between hands (status != playing) to avoid false positive during all-in
       var wasSitted = pk_tid === pk_viewTid && pk_mySeat >= 0;
-      if(wasSitted && !me){
+      var stillAllIn = me && me.all_in;
+      if(wasSitted && !me && pk_tbl && pk_tbl.status !== 'playing' && !stillAllIn){
         pk_tid=null; pk_mySeat=-1;
         pk_stopTimeout();
         var tbl=pk_tbl;
@@ -5571,7 +5573,10 @@ a.plink:hover{
         var open2=-1;
         for(var i=0;i<5;i++){if(taken2.indexOf(i)===-1){open2=i;break;}}
         if(open2===-1){_pkBuyInTid=null;_pkBuyInTbl=null;return alert('Table just filled up.');}
-        await sb.from('poker_players').insert({table_id:_pkBuyInTid,wallet:w,username:un,seat:open2,chips:chips,is_active:true,hole_cards:'[]',current_bet:0,total_bet:0,folded:false,all_in:false});
+        // Check if a hand is currently in progress — if so, mark as pending (sit out this hand)
+        var tblR=await sb.from('poker_tables').select('status').eq('id',_pkBuyInTid).single();
+        var handInProgress=tblR.data&&tblR.data.status==='playing';
+        await sb.from('poker_players').insert({table_id:_pkBuyInTid,wallet:w,username:un,seat:open2,chips:chips,is_active:true,hole_cards:'[]',current_bet:0,total_bet:0,folded:false,all_in:false,pending_next_hand:handInProgress});
         pk_tid=_pkBuyInTid;pk_mySeat=open2;pk_viewTid=_pkBuyInTid;
         _pkBuyInTid=null;_pkBuyInTbl=null;
         await pk_open();
@@ -5649,7 +5654,8 @@ a.plink:hover{
       var isShowdown=t.phase==='showdown';
       var me=pk_plrs.find(function(p){return p.wallet===myW;});
       if(me)pk_mySeat=me.seat;
-      var isMyTurn=me&&t.action_seat===me.seat&&isPlay&&!me.folded&&!me.all_in;
+      var isPending=me&&me.pending_next_hand;
+      var isMyTurn=me&&t.action_seat===me.seat&&isPlay&&!me.folded&&!me.all_in&&!isPending;
       var active=pk_plrs.filter(function(p){return p.is_active;});
       var html='';
 
@@ -5714,10 +5720,10 @@ a.plink:hover{
       }
 
       html+='<div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:0.8rem;">';
-      if(!isPlay&&!isBetween&&active.length>=2&&me){
+      if(!isPlay&&!isBetween&&active.length>=2&&me&&!isPending){
         html+='<button class="g_btn g_btn-primary" onclick="pk_deal()">\uD83C\uDCCF DEAL</button>';
       }
-      if(isBetween&&me){
+      if(isBetween&&me&&!isPending){
         html+='<button class="g_btn g_btn-primary" onclick="pk_deal()">\u25b6 NEXT HAND</button>';
       }
       if(isMyTurn){
@@ -5736,7 +5742,13 @@ a.plink:hover{
         html+='<button class="g_btn" style="border-color:rgba(255,60,92,0.35);color:#ff3c5c;" onclick="pk_act(\'fold\')">FOLD</button>';
       }
       html+='</div>';
-      if(isPlay&&me&&!me.folded&&!me.all_in&&!isMyTurn){
+      if(isPending){
+        html+='<div style="text-align:center;margin-top:0.8rem;padding:0.7rem 1rem;background:rgba(255,215,0,0.06);border:1px solid rgba(255,215,0,0.15);border-radius:8px;">'
+          +'<div style="font-size:0.7rem;color:#ffd700;letter-spacing:1px;">&#x23F3; WAITING FOR NEXT HAND</div>'
+          +'<div style="font-size:0.6rem;color:#555;margin-top:3px;">You will be dealt in on the next hand.</div>'
+          +'</div>';
+      }
+      if(isPlay&&me&&!me.folded&&!me.all_in&&!isMyTurn&&!isPending){
         html+='<div style="text-align:center;font-size:0.65rem;color:#333;margin-top:0.5rem;letter-spacing:1px;">Waiting for other players\u2026</div>';
       }
       if(!me){
@@ -5801,7 +5813,8 @@ a.plink:hover{
         var t=tR2.data;
         if(t.status==='playing'){pk_acting=false;return;}
 
-        // Re-read fresh player list
+        // Re-read fresh player list — clear any pending_next_hand flags first (they can play now)
+        await sb.from('poker_players').update({pending_next_hand:false}).eq('table_id',pk_tid).eq('pending_next_hand',true);
         var pR=await sb.from('poker_players').select('*').eq('table_id',pk_tid).eq('is_active',true).order('seat',{ascending:true});
         var ap=pR.data||[];
 
