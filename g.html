@@ -2109,6 +2109,10 @@ a.plink:hover{
 
       // ---- STAKING BOXES (side by side on PC) ----
       view.innerHTML +=
+        '<div style="display:flex;justify-content:center;margin-bottom:1rem;">' +
+          '<button class="disconnect-btn" style="border-color:rgba(0,255,136,0.4);color:#00ff88;font-size:0.95rem;font-weight:700;padding:12px 64px;letter-spacing:3px;width:100%;max-width:600px;" onclick="claimBoth()">🥬 CLAIM BOTH 🥬</button>' +
+        '</div>';
+      view.innerHTML +=
         '<div class="staking-row">' +
           // LNL Staking
           '<div class="stats-card">' +
@@ -2177,9 +2181,8 @@ a.plink:hover{
             '</div>' +
           '</div>' +
         '</div>' +
-        '<div style="display:flex;justify-content:center;margin-top:1rem;">' +
-          '<button class="disconnect-btn" style="border-color:rgba(255,215,0,0.4);color:#ffd700;font-size:0.85rem;padding:10px 32px;letter-spacing:2px;" onclick="claimBoth()">🥬 CLAIM BOTH 🥬</button>' +
-        '</div>';
+'';
+      view.innerHTML += ''
 
       // Populate cabbage values after DOM updates
       setTimeout(function(){ try { refreshCabbageUI(); } catch(e){} }, 50);
