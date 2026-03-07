@@ -396,6 +396,22 @@
 // ─── BACKEND URL ─────────────────────────────────────────────────────────────
 const API = 'https://lnl-bot-backend-production.up.railway.app';
 
+// ─── TWITTER HANDLE PERSISTENCE ──────────────────────────────────────────────
+// Saves each holder's Twitter handle keyed by their wallet address
+function saveTwitterHandle(wallet, handle) {
+  try {
+    const saved = JSON.parse(localStorage.getItem('lnl_twitter_handles') || '{}');
+    saved[wallet] = handle;
+    localStorage.setItem('lnl_twitter_handles', JSON.stringify(saved));
+  } catch(e) {}
+}
+function loadTwitterHandle(wallet) {
+  try {
+    const saved = JSON.parse(localStorage.getItem('lnl_twitter_handles') || '{}');
+    return saved[wallet] || '';
+  } catch(e) { return ''; }
+}
+
 // ─── STATE ───────────────────────────────────────────────────────────────────
 const state = {
   step: 1,
@@ -501,9 +517,25 @@ async function connectWallet(w){
 
     state.wallet   = pubkey;
     state.nftCount = verifyData.count;
+
+    // Load saved Twitter handle for this wallet if it exists
+    const savedHandle = loadTwitterHandle(pubkey);
+    if (savedHandle) {
+      state.twitterHandle   = savedHandle;
+      state.twitterConnected = true;
+    }
+
     toast(`${w.name} verified! ${verifyData.count} Long Neck Legend${verifyData.count>1?'s':''} found 🪶`);
     renderStep2();
-    setTimeout(() => goToStep(2), 800);
+
+    if (savedHandle) {
+      // Skip straight to bot — handle already known
+      renderStep3();
+      setTimeout(() => goToStep(3), 800);
+      toast(`Welcome back ${savedHandle}! Ready to post 🪶`);
+    } else {
+      setTimeout(() => goToStep(2), 800);
+    }
 
   } catch(e){
     toast('Connection failed. Please try again.', 'error');
@@ -536,6 +568,7 @@ document.getElementById('connect-twitter-btn').addEventListener('click', functio
   if (!handle || !handle.trim()) return;
   state.twitterConnected = true;
   state.twitterHandle = '@' + handle.trim().replace('@','');
+  saveTwitterHandle(state.wallet, state.twitterHandle);
   toast(`Twitter set to ${state.twitterHandle} ✓`);
   setTimeout(()=>{ goToStep(3); renderStep3(); }, 400);
 });
