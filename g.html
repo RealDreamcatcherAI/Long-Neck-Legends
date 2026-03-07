@@ -5099,8 +5099,9 @@ a.plink:hover{
     var pk_strikeMap = {};        // wallet → AFK strike count
     var _pkBuyInTid = null, _pkBuyInTbl = null;
 
-    // Timeout (turn clock)
-    var pk_toTimer = null, pk_toEl = null, pk_toSecs = 0;
+    // Turn clock vars
+    var pk_toTimer=null,pk_toActSeat=-1;
+    function pk_secsRemaining(t){if(!t||!t.action_seat_ts)return 30;var elapsed=Math.floor((Date.now()-new Date(t.action_seat_ts).getTime())/1000);return Math.max(0,30-elapsed);}
 
     // ── Card helpers ────────────────────────────────────────────────
     var PK_SUITS = {s:'\u2660',h:'\u2665',d:'\u2666',c:'\u2663'};
@@ -5243,31 +5244,26 @@ a.plink:hover{
     }
 
     // ── Turn clock ──────────────────────────────────────────────────
-    var pk_toTimer=null,pk_toSecs=0,pk_toActSeat=-1;
     function pk_syncTurnClock(t){
       if(!t||t.status!=='playing'||t.action_seat<0){pk_stopTimeout();return;}
       if(t.action_seat!==pk_toActSeat){
         pk_toActSeat=t.action_seat;
-        pk_toSecs=30;
         pk_stopTimeout();
         pk_toTimer=setInterval(pk_tickTimeout,1000);
       }
     }
-    function pk_stopTimeout(){clearInterval(pk_toTimer);pk_toTimer=null;pk_toActSeat=-1;}
+    function pk_stopTimeout(){clearInterval(pk_toTimer);pk_toTimer=null;}
     function pk_tickTimeout(){
-      pk_toSecs--;
+      if(!pk_tbl)return;
+      var secs=pk_secsRemaining(pk_tbl);
       var el=document.getElementById('pk_turnTimer');
-      if(el)el.textContent=pk_toSecs+'s';
-      if(pk_toSecs<=0){
-        pk_stopTimeout();
-        pk_autoFold();
-      }
+      if(el)el.textContent=secs+'s';
+      if(secs<=0){pk_stopTimeout();pk_autoFold();}
     }
     async function pk_autoFold(){
       if(!pk_tid||!pk_tbl)return;
-      var sb=getSupaClient();
       var myW=walletPublicKey?(getCanonicalWallet()||walletPublicKey.toBase58()):'';
-      if(!myW||pk_tbl.action_seat!==pk_mySeat)return; // only fold if it's our turn
+      if(!myW||pk_tbl.action_seat!==pk_mySeat)return;
       await pk_act('fold');
     }
 
@@ -5504,10 +5500,8 @@ a.plink:hover{
           if(pl.current_bet>0&&!isShowdown)html+='<div style="font-size:0.52rem;color:#ffd700;">bet: '+pl.current_bet+'</div>';
           if(folded)html+='<div style="font-size:0.5rem;color:#ff3c5c;margin-top:2px;">FOLDED</div>';
           else if(allIn)html+='<div style="font-size:0.5rem;color:#ff9900;font-weight:700;margin-top:2px;">ALL-IN</div>';
-          if(isTurn&&!isMe){
-            html+='<div style="font-size:0.48rem;color:#ffd700;margin-top:3px;animation:g_pulse 1s infinite;">THINKING\u2026</div>';
-          }
-          if(isTurn&&isMe&&!isSittingOut)html+='<div id="pk_turnTimer" style="font-size:0.52rem;color:#00ff88;font-weight:700;margin-top:3px;animation:g_pulse 1s infinite;">\u25b6 YOUR TURN ('+pk_toSecs+'s)</div>';
+
+          if(isTurn&&!isSittingOut&&!allIn){var _secs=pk_secsRemaining(t);var _col=isMe?'#00ff88':'#ffd700';var _lbl=isMe?'\u25b6 YOUR TURN':'THINKING\u2026';html+='<div id="pk_turnTimer" style="font-size:0.52rem;color:'+_col+';font-weight:700;margin-top:3px;animation:g_pulse 1s infinite;">'+_lbl+' ('+_secs+'s)</div>';}
           if(isShowdown&&hole.length===2&&!folded&&comm.length>=3){
             var sc=pk_score(hole.concat(comm));
             html+='<div style="font-size:0.48rem;color:#9945ff;margin-top:2px;">'+pk_handName(sc)+'</div>';
@@ -5688,7 +5682,7 @@ a.plink:hover{
           status:'playing',phase:'preflop',community:'[]',
           pot:sb_amt+bb_amt,current_bet:bb_amt,
           dealer_seat:newDS,bb_seat:bbSeat,
-          action_seat:actSeat,round_starter:actSeat,
+          action_seat:actSeat,action_seat_ts:new Date().toISOString(),round_starter:actSeat,
           deck:JSON.stringify(deck),hand_num:handNum,
           last_winner_msg:'',updated_at:new Date().toISOString()
         }).eq('id',pk_tid);
@@ -5813,7 +5807,7 @@ a.plink:hover{
         if(phase==='preflop'&&bbSeat!=null){
           var bbP=canAct.find(function(p){return p.seat===bbSeat;});
           if(bbP&&nextSeat===bbSeat&&action!=='raise'&&action!=='allin'&&curBet<=(t.big_blind||2)*1.001){
-            await sb.from('poker_tables').update({action_seat:bbSeat,updated_at:new Date().toISOString()}).eq('id',pk_tid);
+            await sb.from('poker_tables').update({action_seat:bbSeat,action_seat_ts:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',pk_tid);
             return;
           }
         }
@@ -5823,7 +5817,13 @@ a.plink:hover{
       if(canAct.length===1&&canAct[0].current_bet>=curBet){
         await pk_nextPhase(false);return;
       }
-      await sb.from('poker_tables').update({action_seat:nextSeat,updated_at:new Date().toISOString()}).eq('id',pk_tid);
+      // Safety: never set action_seat to an all-in or folded player
+      var nextPlr=plrs.find(function(p){return p.seat===nextSeat;});
+      if(!nextPlr||nextPlr.all_in||nextPlr.folded){
+        // Something went wrong — run next phase
+        await pk_nextPhase(false);return;
+      }
+      await sb.from('poker_tables').update({action_seat:nextSeat,action_seat_ts:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',pk_tid);
     }
 
     // ── Next phase ──────────────────────────────────────────────────
@@ -5853,7 +5853,7 @@ a.plink:hover{
       var actSeats=canActNow.map(function(p){return p.seat;}).sort(function(a,b){return a-b;});
       var firstSeat=actSeats[0];
       for(var i=0;i<actSeats.length;i++){if(actSeats[i]>ds){firstSeat=actSeats[i];break;}}
-      await sb.from('poker_tables').update({phase:next,community:JSON.stringify(comm),deck:JSON.stringify(deck),current_bet:0,action_seat:firstSeat,round_starter:firstSeat,updated_at:new Date().toISOString()}).eq('id',pk_tid);
+      await sb.from('poker_tables').update({phase:next,community:JSON.stringify(comm),deck:JSON.stringify(deck),current_bet:0,action_seat:firstSeat,action_seat_ts:new Date().toISOString(),round_starter:firstSeat,updated_at:new Date().toISOString()}).eq('id',pk_tid);
     }
 
     // ── Showdown ────────────────────────────────────────────────────
