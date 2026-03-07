@@ -1099,7 +1099,7 @@ a.plink:hover{
         <button class="dash-tab" id="tabStore" onclick="switchView('store')">🛒 Store</button>
         <button class="dash-tab" id="tabLeaderboard" onclick="switchView('leaderboard')">🏆</button>
         <button class="dash-tab" id="tabVoice" onclick="switchView('voice')">🎙️ Voice</button>
-        <button class="dash-tab" id="tabBot" onclick="switchView('bot')">🪶 Bot</button>
+        <button class="dash-tab" id="tabBot" onclick="window.open('https://longnecklegends.xyz/bot.html','_blank')">🪶 Bot</button>
       </div>
 
       <div class="dash-right">
@@ -8802,8 +8802,9 @@ a.plink:hover{
       if (!view) return;
 
       // Pull wallet from dashboard session automatically
-      if (session && session.wallet && !botState.wallet) {
-        botState.wallet = session.wallet;
+      var currentWallet = walletPublicKey ? walletPublicKey.toBase58() : null;
+      if (currentWallet && !botState.wallet) {
+        botState.wallet = currentWallet;
         botVerifyHolder();
       }
 
