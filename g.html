@@ -5243,15 +5243,21 @@ a.plink:hover{
       pk_plrs=pR.data||[];
       var me=pk_plrs.find(function(p){return p.wallet===myW;});
 
-      // ── Bust detection: was seated AND now fully removed from table ──
-      // Only trigger between hands (status != playing) to avoid false positive during all-in
-      var wasSitted = pk_tid === pk_viewTid && pk_mySeat >= 0;
-      var stillAllIn = me && me.all_in;
-      if(wasSitted && !me && pk_tbl && pk_tbl.status !== 'playing' && !stillAllIn){
+      // ── Seat tracking ──
+      // pk_seenInDb: true once we've confirmed our row exists in poker_players after sitting
+      if(me){
+        pk_tid=pk_viewTid;
+        pk_mySeat=me.seat;
+        pk_seenInDb=true; // confirmed in DB at least once
+      }
+
+      // ── Bust detection: only fire if we were confirmed in DB, are now gone, not all-in, not mid-hand ──
+      var wasSitted = pk_seenInDb && pk_tid === pk_viewTid && pk_mySeat >= 0;
+      if(wasSitted && !me && pk_tbl && pk_tbl.status !== 'playing'){
+        pk_seenInDb=false;
         pk_tid=null; pk_mySeat=-1;
         pk_stopTimeout();
         var tbl=pk_tbl;
-        // Show a brief toast
         (function(){
           var toast=document.createElement('div');
           toast.style.cssText='position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:9999;background:#1a0a0f;border:1px solid rgba(255,60,92,0.5);border-radius:10px;padding:12px 28px;color:#ff3c5c;font-family:Space Grotesk,sans-serif;font-weight:700;font-size:0.9rem;letter-spacing:1px;text-align:center;box-shadow:0 4px 30px rgba(255,60,92,0.2);';
@@ -5259,7 +5265,6 @@ a.plink:hover{
           document.body.appendChild(toast);
           setTimeout(function(){toast.remove();},3000);
         })();
-        // Open buy-in modal after brief delay
         if(tbl){
           setTimeout(function(){
             _pkBuyInTid=pk_viewTid;
@@ -5271,8 +5276,6 @@ a.plink:hover{
         pk_paint();
         return;
       }
-
-      if(me){pk_tid=pk_viewTid;pk_mySeat=me.seat;}
       pk_updatePanelHeader();
       pk_paint();
     }
@@ -5470,6 +5473,7 @@ a.plink:hover{
 
     // ── Buy-in modal state ──
     var _pkBuyInTid=null,_pkBuyInTbl=null;
+    var pk_seenInDb=false; // true once we confirmed our row in poker_players after sitting
 
     async function pk_join(tid){
       if(!walletPublicKey)return alert('Connect your wallet first.');
@@ -5577,6 +5581,7 @@ a.plink:hover{
         var tblR=await sb.from('poker_tables').select('status').eq('id',_pkBuyInTid).single();
         var handInProgress=tblR.data&&tblR.data.status==='playing';
         await sb.from('poker_players').insert({table_id:_pkBuyInTid,wallet:w,username:un,seat:open2,chips:chips,is_active:true,hole_cards:'[]',current_bet:0,total_bet:0,folded:false,all_in:false,pending_next_hand:handInProgress});
+        pk_seenInDb=false; // reset — will be confirmed on first refreshView
         pk_tid=_pkBuyInTid;pk_mySeat=open2;pk_viewTid=_pkBuyInTid;
         _pkBuyInTid=null;_pkBuyInTbl=null;
         await pk_open();
@@ -5605,6 +5610,7 @@ a.plink:hover{
       if(!pk_tid)return;
       if(!confirm('Stand up and leave the table? Your chips will be cashed out.'))return;
       pk_stopTimeout();
+      pk_seenInDb=false;
       var sb=getSupaClient();
       var w=getCanonicalWallet()||walletPublicKey.toBase58();
       var me=pk_plrs.find(function(p){return p.wallet===w;});
