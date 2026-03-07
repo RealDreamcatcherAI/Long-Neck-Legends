@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Long Neck Legends Bot</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #080508;
+      --surface: #130e15;
+      --border:  #3a1a5c;
+      --accent:  #c850ff;
+      --gold:    #ffd700;
+      --orange:  #ff6b35;
+      --text:    #f0e0ff;
+      --muted:   #7a4a9b;
+      --danger:  #ff4444;
+      --success: #00ff88;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(200,80,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(200,80,255,0.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none; z-index: 0;
+    }
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.12) 2px, rgba(0,0,0,0.12) 4px);
+      pointer-events: none; z-index: 0;
+    }
+
+    .app { max-width: 860px; margin: 0 auto; padding: 40px 24px 80px; position: relative; z-index: 1; }
+
+    /* HEADER */
+    .header { text-align: center; margin-bottom: 52px; }
+    .mascot { font-size: 52px; display: block; margin-bottom: 8px; animation: float 3s ease-in-out infinite; }
+    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+    .eyebrow { font-size: 11px; letter-spacing: 4px; color: var(--accent); text-transform: uppercase; margin-bottom: 10px; animation: fadeUp .6s .1s both; }
+    .header h1 { font-family: 'Bebas Neue', sans-serif; font-size: clamp(52px,10vw,96px); line-height: .9; letter-spacing: 2px; background: linear-gradient(135deg, var(--accent) 0%, var(--gold) 50%, var(--orange) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; animation: fadeUp .6s .2s both; }
+    .header-sub { font-size: 12px; color: var(--muted); letter-spacing: 2px; margin-top: 12px; animation: fadeUp .6s .35s both; }
+    .header-line { width: 120px; height: 1px; background: linear-gradient(90deg, transparent, var(--accent), transparent); margin: 20px auto 0; animation: fadeUp .6s .45s both; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+    /* STEPS */
+    .steps { display: flex; justify-content: center; margin-bottom: 40px; animation: fadeUp .6s .5s both; }
+    .step { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1; max-width: 160px; position: relative; }
+    .step:not(:last-child)::after { content:''; position:absolute; top:16px; right:-50%; width:100%; height:1px; background:var(--border); z-index:0; }
+    .step.done:not(:last-child)::after { background: var(--accent); }
+    .step-dot { width:32px; height:32px; border-radius:50%; border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; background:var(--bg); position:relative; z-index:1; transition:all .3s; }
+    .step.active .step-dot { border-color:var(--accent); background:rgba(200,80,255,.1); color:var(--accent); box-shadow:0 0 16px rgba(200,80,255,.3); }
+    .step.done .step-dot { border-color:var(--success); background:rgba(0,255,136,.1); color:var(--success); }
+    .step-name { font-size:9px; letter-spacing:2px; color:var(--muted); text-transform:uppercase; text-align:center; }
+    .step.active .step-name { color:var(--accent); }
+    .step.done .step-name { color:var(--success); }
+
+    /* CARDS */
+    .card { background:var(--surface); border:1px solid var(--border); border-radius:2px; padding:28px 32px; margin-bottom:20px; position:relative; overflow:hidden; transition:border-color .2s; }
+    .card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--accent),var(--gold)); opacity:0; transition:opacity .3s; }
+    .card:hover::before { opacity:1; }
+    .card:hover { border-color:rgba(200,80,255,.3); }
+    .card-label { font-size:10px; letter-spacing:3px; color:var(--accent); text-transform:uppercase; margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+    .card-label::after { content:''; flex:1; height:1px; background:var(--border); }
+
+    /* BUTTONS */
+    .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:14px 28px; font-family:'Space Mono',monospace; font-size:12px; font-weight:700; letter-spacing:2px; text-transform:uppercase; border:none; cursor:pointer; transition:all .2s; position:relative; overflow:hidden; border-radius:1px; white-space:nowrap; }
+    .btn::after { content:''; position:absolute; inset:0; background:rgba(255,255,255,.1); opacity:0; transition:opacity .15s; }
+    .btn:hover::after { opacity:1; }
+    .btn:active { transform:scale(.98); }
+    .btn:disabled { opacity:.4; cursor:not-allowed; }
+    .btn:disabled:hover::after { opacity:0; }
+    .btn-primary { background:linear-gradient(135deg,var(--accent),#8800cc); color:#fff; box-shadow:0 0 24px rgba(200,80,255,.25); }
+    .btn-primary:hover:not(:disabled) { box-shadow:0 0 40px rgba(200,80,255,.5); }
+    .btn-gold { background:linear-gradient(135deg,var(--gold),#cc9900); color:#000; }
+    .btn-twitter { background:#1d9bf0; color:#fff; }
+    .btn-twitter:hover:not(:disabled) { box-shadow:0 0 30px rgba(29,155,240,.4); }
+    .btn-ghost { background:transparent; border:1px solid var(--border); color:var(--muted); }
+    .btn-ghost:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); }
+    .btn-success { background:linear-gradient(135deg,var(--success),#00cc66); color:#000; }
+    .btn-full { width:100%; }
+
+    /* BADGES */
+    .badge { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:1px; font-size:10px; letter-spacing:2px; text-transform:uppercase; font-weight:700; }
+    .badge-success { background:rgba(0,255,136,.1); color:var(--success); border:1px solid rgba(0,255,136,.3); }
+    .badge-accent  { background:rgba(200,80,255,.1); color:var(--accent);  border:1px solid rgba(200,80,255,.3); }
+    .badge-gold    { background:rgba(255,215,0,.1);  color:var(--gold);   border:1px solid rgba(255,215,0,.3); }
+    .dot { width:6px; height:6px; border-radius:50%; background:currentColor; animation:pulse 1.5s infinite; display:inline-block; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    /* WALLET ADDRESS */
+    .wallet-address { font-size:12px; color:var(--accent); background:rgba(200,80,255,.05); border:1px solid rgba(200,80,255,.2); padding:8px 14px; border-radius:1px; letter-spacing:1px; }
+
+    /* MODE TABS */
+    .mode-tabs { display:flex; border:1px solid var(--border); border-radius:1px; overflow:hidden; margin-bottom:20px; }
+    .mode-tab { flex:1; padding:12px; background:transparent; border:none; color:var(--muted); font-family:'Space Mono',monospace; font-size:11px; letter-spacing:2px; text-transform:uppercase; cursor:pointer; transition:all .2s; border-right:1px solid var(--border); }
+    .mode-tab:last-child { border-right:none; }
+    .mode-tab.active { background:rgba(200,80,255,.1); color:var(--accent); }
+    .mode-tab:hover:not(.active) { color:var(--text); background:rgba(255,255,255,.03); }
+
+    /* INPUTS */
+    textarea, select, input[type="time"] { width:100%; background:rgba(0,0,0,.4); border:1px solid var(--border); border-radius:1px; color:var(--text); font-family:'Space Mono',monospace; font-size:13px; padding:14px; outline:none; transition:border-color .2s; line-height:1.6; }
+    textarea { resize:vertical; }
+    textarea:focus, select:focus, input[type="time"]:focus { border-color:var(--accent); }
+    textarea::placeholder { color:var(--muted); }
+    select option { background:#130e15; }
+    label { display:block; font-size:10px; letter-spacing:2px; color:var(--muted); text-transform:uppercase; margin-bottom:8px; }
+
+    /* TWEET PREVIEW */
+    .tweet-preview { background:#000; border:1px solid #2f3336; border-radius:12px; padding:20px; margin:20px 0; }
+    .tweet-header { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+    .tweet-avatar { width:40px; height:40px; border-radius:50%; background:linear-gradient(135deg,var(--accent),var(--gold)); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+    .tweet-name { font-size:15px; font-weight:700; color:#fff; font-family:sans-serif; }
+    .tweet-handle { font-size:13px; color:#71767b; font-family:sans-serif; }
+    .tweet-body { font-size:15px; line-height:1.5; color:#e7e9ea; font-family:sans-serif; word-break:break-word; min-height:40px; }
+    .tweet-chars { text-align:right; font-size:11px; margin-top:8px; color:var(--muted); }
+    .tweet-chars.over { color:var(--danger); }
+
+    /* SCHEDULE GRID */
+    .schedule-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px; }
+    @media(max-width:500px){ .schedule-grid{grid-template-columns:1fr;} }
+
+    /* HISTORY */
+    .history-item { border:1px solid var(--border); border-radius:1px; padding:14px 16px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:flex-start; gap:12px; transition:border-color .2s; }
+    .history-item:hover { border-color:rgba(200,80,255,.2); }
+    .history-text { font-size:12px; color:var(--text); line-height:1.5; flex:1; }
+    .history-meta { font-size:10px; color:var(--muted); margin-top:4px; }
+
+    /* SPINNER */
+    .spinner { width:14px; height:14px; border:2px solid rgba(200,80,255,.2); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; display:inline-block; vertical-align:middle; }
+    @keyframes spin { to{transform:rotate(360deg)} }
+
+    /* TOAST */
+    .toast { position:fixed; bottom:32px; right:32px; padding:14px 20px; border-radius:1px; font-size:12px; letter-spacing:1px; font-weight:700; z-index:999; animation:slideIn .3s ease; max-width:340px; }
+    .toast.success { background:rgba(0,255,136,.15); border:1px solid var(--success); color:var(--success); }
+    .toast.error   { background:rgba(255,68,68,.15);  border:1px solid var(--danger);  color:var(--danger); }
+    .toast.info    { background:rgba(200,80,255,.12); border:1px solid var(--accent);  color:var(--accent); }
+    @keyframes slideIn { from{transform:translateX(120%);opacity:0} to{transform:translateX(0);opacity:1} }
+
+    /* INFO BOX */
+    .info-box { background:rgba(200,80,255,.04); border:1px solid rgba(200,80,255,.15); border-left:3px solid var(--accent); padding:14px 16px; font-size:11px; color:var(--muted); line-height:1.7; border-radius:0 1px 1px 0; margin:16px 0; }
+    .info-box strong { color:var(--accent); }
+
+    /* TOGGLE */
+    .toggle-row { display:flex; align-items:center; justify-content:space-between; padding:14px 0; border-bottom:1px solid var(--border); }
+    .toggle-row:last-child { border-bottom:none; }
+    .toggle-label { font-size:12px; color:var(--text); }
+    .toggle-desc { font-size:10px; color:var(--muted); margin-top:2px; letter-spacing:1px; }
+    .toggle { position:relative; width:44px; height:24px; flex-shrink:0; }
+    .toggle input { opacity:0; width:0; height:0; }
+    .toggle-slider { position:absolute; inset:0; background:var(--border); border-radius:24px; cursor:pointer; transition:.3s; }
+    .toggle-slider::before { content:''; position:absolute; width:18px; height:18px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.3s; }
+    .toggle input:checked + .toggle-slider { background:var(--accent); }
+    .toggle input:checked + .toggle-slider::before { transform:translateX(20px); }
+
+    /* MISC */
+    .row { display:flex; gap:12px; flex-wrap:wrap; }
+    .row > * { flex:1; min-width:180px; }
+    hr { border:none; border-top:1px solid var(--border); margin:24px 0; }
+    .empty { text-align:center; padding:40px; color:var(--muted); font-size:12px; }
+    .footer { text-align:center; margin-top:60px; font-size:10px; color:var(--muted); letter-spacing:2px; }
+    .footer a { color:var(--accent); text-decoration:none; }
+    .flex-wrap { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+    .flex-between { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+
+    /* WALLET MODAL */
+    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.85); display:flex; align-items:center; justify-content:center; z-index:100; padding:20px; backdrop-filter:blur(4px); }
+    .modal { background:var(--surface); border:1px solid var(--border); border-top:2px solid var(--accent); border-radius:2px; padding:28px 24px; width:100%; max-width:400px; }
+    .modal-title { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+    .modal-title span { font-family:'Bebas Neue',sans-serif; font-size:24px; letter-spacing:2px; }
+    .modal-close { background:none; border:none; color:var(--muted); cursor:pointer; font-size:20px; line-height:1; padding:4px; }
+    .modal-close:hover { color:var(--text); }
+    .wallet-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .wallet-btn { background:rgba(200,80,255,.07); border:1px solid rgba(200,80,255,.3); border-radius:1px; padding:14px 12px; cursor:pointer; display:flex; align-items:center; gap:10px; color:var(--text); font-family:'Space Mono',monospace; font-size:11px; transition:all .2s; text-align:left; }
+    .wallet-btn:hover { border-color:var(--accent); background:rgba(200,80,255,.15); }
+    .wallet-btn.unavailable { background:rgba(255,255,255,.02); border-color:var(--border); color:var(--muted); }
+    .wallet-btn.unavailable:hover { border-color:rgba(200,80,255,.2); color:var(--text); }
+    .wallet-icon { font-size:20px; }
+    .wallet-name { font-weight:700; font-size:11px; }
+    .wallet-status { font-size:9px; opacity:.6; margin-top:2px; }
+    .wallet-hint { font-size:10px; color:var(--muted); text-align:center; margin-top:18px; line-height:1.6; }
+
+    /* hidden sections */
+    .section { display:none; }
+    .section.active { display:block; }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <span class="mascot">🪶</span>
+    <p class="eyebrow">Holder-Exclusive Tool</p>
+    <h1>LONG NECK<br>BOT</h1>
+    <p class="header-sub">Autonomous Twitter Engine for Long Neck Legends Holders · Solana</p>
+    <div class="header-line"></div>
+  </div>
+
+  <!-- STEP INDICATORS -->
+  <div class="steps" id="steps">
+    <div class="step active" id="step-ind-1">
+      <div class="step-dot">1</div>
+      <span class="step-name">Wallet</span>
+    </div>
+    <div class="step" id="step-ind-2">
+      <div class="step-dot">2</div>
+      <span class="step-name">Twitter</span>
+    </div>
+    <div class="step" id="step-ind-3">
+      <div class="step-dot">3</div>
+      <span class="step-name">Bot</span>
+    </div>
+  </div>
+
+  <!-- ══ STEP 1: WALLET ══ -->
+  <div class="section active" id="section-1">
+    <div class="card">
+      <p class="card-label">Step 01 — Verify Ownership</p>
+      <div style="text-align:center; padding:20px 0 28px;">
+        <p style="font-size:13px; color:var(--muted); line-height:1.8; margin-bottom:28px;">
+          Connect your Solana wallet to prove you hold at least one<br>
+          <strong style="color:var(--gold);">Long Neck Legend NFT</strong> and unlock the bot.
+        </p>
+        <button class="btn btn-primary" id="open-wallet-modal-btn">🔗 Connect Wallet</button>
+        <br><br>
+        <button class="btn btn-ghost" id="demo-btn" style="font-size:10px;">Try Demo Mode (no wallet)</button>
+      </div>
+      <div class="info-box">
+        <strong>How it works:</strong> We use read-only Solana wallet access to verify your NFT ownership via the Long Neck Legends collection address. We never request signing permissions or access to your funds. All major Solana wallets supported.
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ STEP 2: TWITTER ══ -->
+  <div class="section" id="section-2">
+    <div class="card">
+      <p class="card-label">Step 02 — Connect Twitter / X</p>
+      <div class="flex-wrap" style="margin-bottom:20px;" id="step2-badges"></div>
+      <hr>
+      <div style="text-align:center; padding:20px 0 28px;">
+        <p style="font-size:13px; color:var(--muted); line-height:1.8; margin-bottom:28px;">
+          Connect your Twitter / X account so the bot can<br>post on your behalf autonomously.
+        </p>
+        <button class="btn btn-twitter" id="connect-twitter-btn">🐦 Connect Twitter / X</button>
+      </div>
+      <div class="info-box">
+        <strong>OAuth 2.0 Security:</strong> We use Twitter's official OAuth 2.0 with PKCE. Your credentials are never stored — only a scoped access token. You can revoke anytime from Twitter settings. Your Solana wallet is never used to sign Twitter actions.
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ STEP 3: BOT ══ -->
+  <div class="section" id="section-3">
+
+    <!-- Status bar -->
+    <div class="card" style="padding:16px 24px;">
+      <div class="flex-between">
+        <div class="flex-wrap" id="status-badges"></div>
+        <button class="btn btn-ghost" id="disconnect-btn" style="padding:6px 14px; font-size:10px;">Disconnect</button>
+      </div>
+    </div>
+
+    <!-- Tweet Generator -->
+    <div class="card">
+      <p class="card-label">Generate Tweet</p>
+      <div class="mode-tabs">
+        <button class="mode-tab active" id="tab-hype" onclick="setMode('hype')">🔥 Hype Mode</button>
+        <button class="mode-tab" id="tab-custom" onclick="setMode('custom')">✍️ Custom Input</button>
+      </div>
+
+      <div id="hype-section">
+        <label>Topic Focus</label>
+        <select id="topic-select">
+          <option value="community">Community &amp; Holders</option>
+          <option value="rarity">Rarity &amp; Traits</option>
+          <option value="future">Future &amp; Roadmap</option>
+          <option value="culture">NFT Culture</option>
+          <option value="general">General Hype</option>
+          <option value="alpha">Alpha Call</option>
+        </select>
+      </div>
+
+      <div id="custom-section" style="display:none;">
+        <label>Your Idea / Angle</label>
+        <textarea id="custom-prompt" rows="3" placeholder="e.g. 'just minted my 3rd legend, feeling unstoppable'"></textarea>
+      </div>
+
+      <br>
+      <button class="btn btn-primary btn-full" id="generate-btn" onclick="generateTweet()">⚡ Generate Tweet</button>
+
+      <div id="tweet-result" style="display:none;">
+        <div class="tweet-preview">
+          <div class="tweet-header">
+            <div class="tweet-avatar">🪶</div>
+            <div>
+              <div class="tweet-name">Long Neck Holder</div>
+              <div class="tweet-handle" id="preview-handle">@LNLHolder</div>
+            </div>
+          </div>
+          <div class="tweet-body" id="tweet-body-text"></div>
+          <div class="tweet-chars" id="tweet-chars">0/280</div>
+        </div>
+        <div class="row">
+          <button class="btn btn-ghost" onclick="generateTweet()">🔄 Regenerate</button>
+          <button class="btn btn-twitter" id="post-btn" onclick="postTweet()">🚀 Post Now</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Auto-Post -->
+    <div class="card">
+      <p class="card-label">Auto-Post Schedule</p>
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Autonomous Posting</div>
+          <div class="toggle-desc">Bot generates &amp; posts automatically on schedule</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="auto-toggle" onchange="toggleAuto(this.checked)">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div id="auto-settings" style="display:none; margin-top:16px;">
+        <div class="schedule-grid">
+          <div>
+            <label>Post Frequency</label>
+            <select id="auto-interval">
+              <option value="1">Every 1 hour</option>
+              <option value="2">Every 2 hours</option>
+              <option value="4">Every 4 hours</option>
+              <option value="6" selected>Every 6 hours</option>
+              <option value="12">Every 12 hours</option>
+              <option value="24">Once daily</option>
+            </select>
+          </div>
+          <div>
+            <label>Start Time</label>
+            <input type="time" id="start-time" value="09:00">
+          </div>
+        </div>
+        <div class="info-box" id="auto-info">
+          <strong>Active:</strong> Bot will post every <strong id="auto-interval-label">6</strong>h starting at <strong id="auto-time-label">09:00</strong> using AI-generated hype tweets. Only posts when Solana wallet still holds ≥1 LNL NFT.
+        </div>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div class="card">
+      <p class="card-label" id="history-label">Posted History (0)</p>
+      <div id="history-list">
+        <div class="empty">No tweets posted yet. Generate one above! 🪶</div>
+      </div>
+    </div>
+
+  </div><!-- /section-3 -->
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <p>Long Neck Legends Bot · Holder-Exclusive · <a href="https://longnecklegends.xyz">longnecklegends.xyz</a></p>
+    <p style="margin-top:6px;">Powered by Claude AI · Solana NFT-gated · Your keys, your tweets 🪶</p>
+  </div>
+
+</div><!-- /app -->
+
+<!-- WALLET MODAL -->
+<div class="modal-overlay" id="wallet-modal" style="display:none;" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <div class="modal-title">
+      <span>SELECT WALLET</span>
+      <button class="modal-close" onclick="closeWalletModal()">✕</button>
+    </div>
+    <div class="wallet-grid" id="wallet-grid"></div>
+    <p class="wallet-hint">Don't see yours? Any wallet supporting the<br>Solana Wallet Standard will work automatically.</p>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast" style="display:none;"></div>
+
+<script>
+// ─── BACKEND URL ─────────────────────────────────────────────────────────────
+const API = 'https://lnl-bot-backend-production.up.railway.app';
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+const state = {
+  step: 1,
+  wallet: null,
+  nftCount: 0,
+  twitterConnected: false,
+  twitterHandle: '',
+  aiRemaining: 3,
+  mode: 'hype',
+  generatedTweet: '',
+  history: [],
+};
+
+// ─── WALLETS ─────────────────────────────────────────────────────────────────
+const WALLETS = [
+  { name:'Phantom',     icon:'👻', get: ()=> window.phantom?.solana || (window.solana?.isPhantom ? window.solana : null) },
+  { name:'Solflare',    icon:'☀️', get: ()=> window.solflare },
+  { name:'Backpack',    icon:'🎒', get: ()=> window.backpack?.solana || window.xnft?.solana },
+  { name:'Glow',        icon:'✨', get: ()=> window.glowSolana },
+  { name:'Exodus',      icon:'🚪', get: ()=> window.exodus?.solana },
+  { name:'Coin98',      icon:'🪙', get: ()=> window.coin98?.sol },
+  { name:'Brave',       icon:'🦁', get: ()=> window.braveSolana },
+  { name:'Math Wallet', icon:'🧮', get: ()=> window.solana?.isMathWallet ? window.solana : null },
+  { name:'Slope',       icon:'📐', get: ()=> window.Slope ? new window.Slope() : null },
+  { name:'Tokenary',    icon:'🔑', get: ()=> window.tokenary?.solana },
+];
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function shortAddr(a){ return a ? a.slice(0,6)+'...'+a.slice(-4) : ''; }
+function fmtTime(d){ return d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
+function fmtDate(d){ return d.toLocaleDateString([],{month:'short',day:'numeric'}); }
+
+function toast(msg, type='success', dur=4000){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast ' + type;
+  el.style.display = 'block';
+  clearTimeout(el._t);
+  el._t = setTimeout(()=>{ el.style.display='none'; }, dur);
+}
+
+function goToStep(n){
+  state.step = n;
+  [1,2,3].forEach(i=>{
+    document.getElementById('section-'+i).classList.toggle('active', i===n);
+    const ind = document.getElementById('step-ind-'+i);
+    ind.className = 'step' + (i===n ? ' active' : i<n ? ' done' : '');
+    ind.querySelector('.step-dot').textContent = i < n ? '✓' : String(i);
+  });
+}
+
+// ─── CHECK FOR TWITTER CALLBACK ───────────────────────────────────────────────
+// When Twitter redirects back, the URL has ?twitter=connected&handle=...&wallet=...
+window.addEventListener('load', () => {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('twitter') === 'connected') {
+    const handle = decodeURIComponent(params.get('handle') || '');
+    const wallet = decodeURIComponent(params.get('wallet') || '');
+    if (handle && wallet) {
+      state.wallet      = wallet;
+      state.twitterConnected = true;
+      state.twitterHandle    = handle;
+      // Clean URL so it looks tidy
+      window.history.replaceState({}, '', window.location.pathname);
+      renderStep2();
+      renderStep3();
+      goToStep(3);
+      toast(`Welcome back ${handle}! Bot is ready 🪶`);
+    }
+  }
+  if (params.get('twitter') === 'error') {
+    window.history.replaceState({}, '', window.location.pathname);
+    toast('Twitter connection failed. Please try again.', 'error');
+  }
+});
+
+// ─── WALLET MODAL ────────────────────────────────────────────────────────────
+function openWalletModal(){
+  const grid = document.getElementById('wallet-grid');
+  grid.innerHTML = '';
+  WALLETS.forEach(w => {
+    const avail = !!w.get();
+    const btn = document.createElement('button');
+    btn.className = 'wallet-btn' + (avail ? '' : ' unavailable');
+    btn.innerHTML = `<span class="wallet-icon">${w.icon}</span><div><div class="wallet-name">${w.name}</div><div class="wallet-status">${avail ? 'Detected ✓' : 'Not installed'}</div></div>`;
+    btn.onclick = () => connectWallet(w);
+    grid.appendChild(btn);
+  });
+  document.getElementById('wallet-modal').style.display = 'flex';
+}
+function closeWalletModal(){ document.getElementById('wallet-modal').style.display='none'; }
+function closeModalOutside(e){ if(e.target===document.getElementById('wallet-modal')) closeWalletModal(); }
+
+// ─── WALLET CONNECT ───────────────────────────────────────────────────────────
+async function connectWallet(w){
+  const provider = w.get();
+  if(!provider){ toast(`${w.name} not detected. Install it and try again.`, 'error'); return; }
+  closeWalletModal();
+  const btn = document.getElementById('open-wallet-modal-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Verifying...';
+  try {
+    const resp   = await provider.connect();
+    const pubkey = resp.publicKey?.toString() || resp.toString();
+
+    // ── Call backend to verify NFT ownership ──
+    const verifyRes = await fetch(`${API}/api/verify-holder`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ walletAddress: pubkey }),
+    });
+    const verifyData = await verifyRes.json();
+
+    if (!verifyData.verified) {
+      toast('No Long Neck Legends found in this wallet. Holders only! 🪶', 'error');
+      btn.disabled = false;
+      btn.innerHTML = '🔗 Connect Wallet';
+      return;
+    }
+
+    state.wallet   = pubkey;
+    state.nftCount = verifyData.count;
+    toast(`${w.name} verified! ${verifyData.count} Long Neck Legend${verifyData.count>1?'s':''} found 🪶`);
+    renderStep2();
+    setTimeout(() => goToStep(2), 800);
+
+  } catch(e){
+    toast('Connection failed. Please try again.', 'error');
+  }
+  btn.disabled = false;
+  btn.innerHTML = '🔗 Connect Wallet';
+}
+
+function demoConnect(){
+  state.wallet   = 'DEMOwallet111...demo';
+  state.nftCount = 3;
+  toast('Demo mode active — 3 Legends detected 🪶', 'info');
+  renderStep2();
+  setTimeout(() => goToStep(2), 800);
+}
+
+// ─── STEP 2 RENDER ────────────────────────────────────────────────────────────
+function renderStep2(){
+  document.getElementById('step2-badges').innerHTML = `
+    <span class="badge badge-success"><span class="dot"></span> Wallet Verified</span>
+    <span class="badge badge-gold">🪶 ${state.nftCount} Legend${state.nftCount>1?'s':''} Detected</span>
+    <span class="wallet-address">${shortAddr(state.wallet)}</span>
+  `;
+}
+
+// ─── TWITTER CONNECT — redirects to backend OAuth ────────────────────────────
+document.getElementById('connect-twitter-btn').addEventListener('click', function(){
+  if (!state.wallet) { toast('Connect your wallet first', 'error'); return; }
+  // Redirect to backend which kicks off Twitter OAuth
+  window.location.href = `${API}/auth/twitter?wallet=${encodeURIComponent(state.wallet)}`;
+});
+
+// ─── STEP 3 RENDER ────────────────────────────────────────────────────────────
+function renderStep3(){
+  document.getElementById('status-badges').innerHTML = `
+    <span class="badge badge-success"><span class="dot"></span> Bot Active</span>
+    <span class="badge badge-gold">🪶 ${state.nftCount} NFTs</span>
+    <span class="badge badge-accent">🐦 ${state.twitterHandle}</span>
+    <span class="badge badge-muted">⚡ ${state.aiRemaining} AI tweets left today</span>
+  `;
+  document.getElementById('preview-handle').textContent = state.twitterHandle;
+}
+
+// ─── MODE TOGGLE ─────────────────────────────────────────────────────────────
+function setMode(m){
+  state.mode = m;
+  document.getElementById('tab-hype').classList.toggle('active', m==='hype');
+  document.getElementById('tab-custom').classList.toggle('active', m==='custom');
+  document.getElementById('hype-section').style.display   = m==='hype'   ? '' : 'none';
+  document.getElementById('custom-section').style.display = m==='custom' ? '' : 'none';
+  document.getElementById('tweet-result').style.display = 'none';
+}
+
+// ─── GENERATE TWEET — calls backend ──────────────────────────────────────────
+async function generateTweet(){
+  const btn = document.getElementById('generate-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Generating...';
+  document.getElementById('tweet-result').style.display = 'none';
+
+  const topic        = document.getElementById('topic-select').value;
+  const customPrompt = document.getElementById('custom-prompt').value.trim();
+
+  try {
+    const res = await fetch(`${API}/api/generate-tweet`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        walletAddress: state.wallet,
+        mode:          state.mode,
+        topic,
+        customPrompt,
+      }),
+    });
+    const data = await res.json();
+
+    state.generatedTweet = data.tweet;
+    state.aiRemaining    = data.aiRemaining;
+
+    // Update AI counter badge
+    renderStep3();
+
+    // Show tweet preview
+    document.getElementById('tweet-body-text').textContent = data.tweet;
+    const charEl = document.getElementById('tweet-chars');
+    charEl.textContent = data.tweet.length + '/280';
+    charEl.className = 'tweet-chars' + (data.tweet.length > 280 ? ' over' : '');
+    document.getElementById('post-btn').disabled = data.tweet.length > 280;
+    document.getElementById('tweet-result').style.display = 'block';
+
+    if (!data.usedAI) toast(`AI limit reached for today — using a free template 🪶`, 'info');
+
+  } catch(e){
+    toast('Failed to generate tweet. Try again.', 'error');
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '⚡ Generate Tweet';
+}
+
+// ─── POST TWEET — calls backend ───────────────────────────────────────────────
+async function postTweet(){
+  const btn = document.getElementById('post-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Posting...';
+
+  try {
+    const res = await fetch(`${API}/api/post-tweet`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ walletAddress: state.wallet, text: state.generatedTweet }),
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      state.history.unshift({ text: state.generatedTweet, handle: state.twitterHandle, time: new Date(), mode: state.mode });
+      renderHistory();
+      toast('Tweet posted to X/Twitter! 🚀');
+      document.getElementById('tweet-result').style.display = 'none';
+      state.generatedTweet = '';
+    } else {
+      toast(data.error || 'Failed to post tweet', 'error');
+    }
+  } catch(e){
+    toast('Failed to post tweet. Try again.', 'error');
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '🚀 Post Now';
+}
+
+// ─── HISTORY ─────────────────────────────────────────────────────────────────
+function renderHistory(){
+  const el = document.getElementById('history-list');
+  document.getElementById('history-label').textContent = `Posted History (${state.history.length})`;
+  if(!state.history.length){
+    el.innerHTML = '<div class="empty">No tweets posted yet. Generate one above! 🪶</div>';
+    return;
+  }
+  el.innerHTML = state.history.map(h=>`
+    <div class="history-item">
+      <div>
+        <div class="history-text">${h.text}</div>
+        <div class="history-meta">${fmtDate(h.time)} at ${fmtTime(h.time)} · via ${h.mode==='hype'?'Hype Mode':'Custom Input'} · ${h.handle}</div>
+      </div>
+      <span class="badge badge-success" style="font-size:9px;white-space:nowrap;">Posted ✓</span>
+    </div>
+  `).join('');
+}
+
+// ─── AUTO-POST ────────────────────────────────────────────────────────────────
+async function toggleAuto(on){
+  document.getElementById('auto-settings').style.display = on ? '' : 'none';
+  const interval   = document.getElementById('auto-interval').value;
+  const scheduledAt = document.getElementById('start-time').value;
+
+  // Tell backend to enable/disable auto-posting for this holder
+  await fetch(`${API}/api/auto-settings`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ walletAddress: state.wallet, autoEnabled: on,
+      autoInterval: parseInt(interval), scheduledAt }),
+  });
+
+  document.getElementById('auto-interval-label').textContent = interval;
+  document.getElementById('auto-time-label').textContent = scheduledAt;
+  toast(on ? `Auto-posting enabled every ${interval}h 🤖` : 'Auto-posting paused', on ? 'success' : 'info');
+}
+
+document.getElementById('auto-interval').addEventListener('change', function(){
+  document.getElementById('auto-interval-label').textContent = this.value;
+});
+document.getElementById('start-time').addEventListener('change', function(){
+  document.getElementById('auto-time-label').textContent = this.value;
+});
+
+// ─── DISCONNECT ───────────────────────────────────────────────────────────────
+document.getElementById('disconnect-btn').addEventListener('click', ()=>{
+  state.wallet = null; state.nftCount = 0;
+  state.twitterConnected = false; state.twitterHandle = '';
+  goToStep(1);
+  // Re-attach twitter button listener after reset
+  document.getElementById('connect-twitter-btn').disabled = false;
+  document.getElementById('connect-twitter-btn').innerHTML = '🐦 Connect Twitter / X';
+});
+
+// ─── WIRE UP STEP 1 ───────────────────────────────────────────────────────────
+document.getElementById('open-wallet-modal-btn').addEventListener('click', openWalletModal);
+document.getElementById('demo-btn').addEventListener('click', demoConnect);
+</script>
+</body>
+</html>
