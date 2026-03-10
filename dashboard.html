@@ -7612,12 +7612,216 @@ a.plink:hover{
     var lb_cache = { cabbage: null, winners: null, chatters: null, holders: null, bigwins: null };
     var lb_cacheTime = 0;
     var lb_activeTab = 'cabbage';
+
+    // SubDAO Leaderboard
+    var lb_subdao_active = "talltoker";
+    var lb_subdao_cache  = {};
+    var lb_subdao_loading = false;
+
+    var LB_SUBDAOS = [
+      { id:"talltoker",    name:"Tall Toker",    icon:"🚬", lnlTraits:["Gold Pipe Beak","Blunt Beak"],                      gaTraits:["Smokin\x27 Lips","Puff Putt Pass"] },
+      { id:"royalty",      name:"Royalty",        icon:"👑", lnlTraits:["Golden Crown","Hippie Crown","Gold Grill Beak"],    gaTraits:["Off Course Crown"] },
+      { id:"wizzy",        name:"Wizzy",          icon:"🧙", lnlTraits:["Wizard Hat"],                                      gaTraits:["Putting Potion Masterr"] },
+      { id:"jeeterbeater", name:"Jeeter Beater",  icon:"🥊", lnlTraits:["Boxing Gloves"],                                   gaTraits:[] },
+      { id:"hoodiegang",   name:"Hoodie Gang",    icon:"🧥", lnlTraits:["Hoodie"],                                          gaTraits:[] },
+      { id:"headphones",   name:"HeadPhones",     icon:"🎧", lnlTraits:["Headphones"],                                      gaTraits:[] },
+      { id:"bob",          name:"BoB",            icon:"🧢", lnlTraits:["Beanie"],                                          gaTraits:[] },
+      { id:"frobros",      name:"Fro Bros",       icon:"🦱", lnlTraits:["Afro"],                                            gaTraits:[] },
+      { id:"goldenticket", name:"Golden Ticket",  icon:"🎟", lnlTraits:["Golden Ticket"],                                   gaTraits:[] }
+    ];
+
+    function lb_countTraitMatches(nfts, traitValues) {
+      if (!traitValues || !traitValues.length || !nfts || !nfts.length) return 0;
+      var normVals = traitValues.map(function(v){ return v.trim().toLowerCase(); });
+      var count = 0;
+      nfts.forEach(function(nft) {
+        var attrs = nft.attributes || [];
+        var hit = attrs.some(function(a) {
+          return normVals.indexOf(String(a.value || "").trim().toLowerCase()) !== -1;
+        });
+        if (hit) count++;
+      });
+      return count;
+    }
+
+    async function lb_buildSubdaoBoards() {
+      if (lb_subdao_loading) return;
+      lb_subdao_loading = true;
+      var body = document.getElementById("lb_body");
+      if (body) body.innerHTML = "<div class=\"lb_loading\">Scanning all holder wallets — this may take 10-20s...</div>";
+      try {
+        var sb = getSupaClient();
+        var wlR = await sb.from("wallet_links").select("wallet,profile_id");
+        var wlData = wlR.data || [];
+        var profIds = [];
+        wlData.forEach(function(r){ if (r.profile_id && profIds.indexOf(r.profile_id) === -1) profIds.push(r.profile_id); });
+        var profMap = {};
+        if (profIds.length) {
+          var pR = await sb.from("profiles").select("id,username").in("id", profIds);
+          (pR.data||[]).forEach(function(p){ profMap[p.id] = p.username || null; });
+        }
+        var walletUsernameMap = {};
+        wlData.forEach(function(r){
+          if (!walletUsernameMap[r.wallet]) walletUsernameMap[r.wallet] = r.profile_id ? (profMap[r.profile_id]||null) : null;
+        });
+        var allWallets = Object.keys(walletUsernameMap);
+        if (body) body.innerHTML = "<div class=\"lb_loading\">Fetching NFT traits for " + allWallets.length + " wallets...</div>";
+
+        var walletNFTs = {};
+
+        // Fetch one wallet at a time with retry logic to avoid Helius 429 rate limits
+        async function fetchWithRetry(wallet, maxRetries) {
+          for (var attempt = 0; attempt <= maxRetries; attempt++) {
+            try {
+              var lnl = await fetchAssetsByOwner(wallet);
+              var ga  = await fetchGolfAddictsByOwner(wallet);
+              return { lnl: lnl||[], ga: ga||[] };
+            } catch(e) {
+              if (attempt < maxRetries) {
+                // Exponential backoff: 1s, 2s, 4s
+                await new Promise(function(r){ setTimeout(r, 1000 * Math.pow(2, attempt)); });
+              }
+            }
+          }
+          return { lnl: [], ga: [] };
+        }
+
+        // Sequential with 300ms pause between each wallet to stay under rate limit
+        for (var i = 0; i < allWallets.length; i++) {
+          var wallet = allWallets[i];
+          walletNFTs[wallet] = await fetchWithRetry(wallet, 3);
+          if (body) {
+            body.innerHTML = "<div class=\"lb_loading\">Scanning wallets: " + (i+1) + " / " + allWallets.length + " — please wait...</div>";
+          }
+          // 300ms pause between requests to respect Helius rate limits
+          if (i < allWallets.length - 1) {
+            await new Promise(function(r){ setTimeout(r, 300); });
+          }
+        }
+
+        LB_SUBDAOS.forEach(function(dao) {
+          var rows = [];
+          allWallets.forEach(function(wallet) {
+            var nfts = walletNFTs[wallet] || { lnl: [], ga: [] };
+            var lnlCount = lb_countTraitMatches(nfts.lnl, dao.lnlTraits);
+            var gaCount  = lb_countTraitMatches(nfts.ga,  dao.gaTraits);
+            var total = lnlCount + gaCount;
+            if (total > 0) rows.push({ wallet:wallet, username:walletUsernameMap[wallet], count:total, lnlCount:lnlCount, gaCount:gaCount });
+          });
+          rows.sort(function(a,b){ return b.count - a.count; });
+          lb_subdao_cache[dao.id] = rows;
+        });
+      } catch(e) {
+        console.warn("lb_buildSubdaoBoards error:", e);
+        if (body) body.innerHTML = "<div class=\"lb_loading\">Error loading SubDAO data. Try again.</div>";
+      }
+      lb_subdao_loading = false;
+      lb_renderSubdaoBoard();
+    }
+
+    function lb_renderSubdaoBoard() {
+      var body = document.getElementById("lb_body");
+      if (!body) return;
+      var dao = LB_SUBDAOS.find(function(d){ return d.id === lb_subdao_active; });
+      if (!dao) return;
+      var data = lb_subdao_cache[dao.id];
+      var hasGa = dao.gaTraits && dao.gaTraits.length > 0;
+      var myW = getCanonicalWallet() || (walletPublicKey ? walletPublicKey.toBase58() : "");
+
+      var tabBar = "<div style=\"display:flex;gap:4px;flex-wrap:wrap;margin-bottom:1rem;\">";
+      LB_SUBDAOS.forEach(function(d) {
+        var act = d.id === lb_subdao_active;
+        var borderCol = act ? "rgba(153,69,255,0.5)" : "rgba(255,255,255,0.06)";
+        var bgCol     = act ? "rgba(153,69,255,0.1)" : "rgba(0,0,0,0.2)";
+        var textCol   = act ? "#9945ff" : "#555";
+        tabBar += "<div onclick=\"lb_switchSubdao('" + d.id + "')\" style=\"padding:5px 10px;border-radius:7px;border:1px solid "
+          + borderCol + ";background:" + bgCol + ";color:" + textCol
+          + ";font-size:0.65rem;font-weight:700;cursor:pointer;letter-spacing:0.5px;white-space:nowrap;\">"
+          + d.icon + " " + d.name + "</div>";
+      });
+      tabBar += "</div>";
+
+      if (!data) { body.innerHTML = tabBar + "<div class=\"lb_loading\">Loading...</div>"; return; }
+      if (!data.length) { body.innerHTML = tabBar + "<div class=\"lb_loading\">No holders found for this SubDAO.</div>"; return; }
+
+      var html = tabBar;
+      html += "<div style=\"display:flex;align-items:center;justify-content:space-between;margin-bottom:0.8rem;flex-wrap:wrap;gap:6px;\">";
+      html += "<div style=\"font-size:0.8rem;font-weight:700;color:#e0e0ff;\">" + dao.icon + " " + dao.name + " SubDAO";
+      if (hasGa) html += " <span style=\"font-size:0.55rem;color:#4ade80;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.2);padding:2px 6px;border-radius:4px;margin-left:4px;\">LNL + GA Combined</span>";
+      html += " <span style=\"font-size:0.62rem;color:#555;font-weight:400;\">- " + data.length + " holders</span></div>";
+      html += "<button onclick=\"lb_exportSubdao('" + dao.id + "')\" style=\"background:transparent;border:1px solid rgba(0,255,136,0.3);color:#00ff88;padding:5px 12px;border-radius:7px;cursor:pointer;font-size:0.65rem;font-weight:700;letter-spacing:1px;\">EXPORT CSV</button>";
+      html += "</div>";
+
+      html += "<table class=\"lb_table\"><thead><tr><th>#</th><th>Player</th>";
+      if (hasGa) html += "<th style=\"text-align:right;\">LNL</th><th style=\"text-align:right;\">GA</th>";
+      html += "<th style=\"text-align:right;\">Total</th></tr></thead><tbody>";
+
+      data.forEach(function(row, i) {
+        var rank = i + 1;
+        var medal = rank===1?"👑":rank===2?"🥈":rank===3?"🥉":rank;
+        var rankClass = rank===1?"lb_gold":rank===2?"lb_silver":rank===3?"lb_bronze":"";
+        var isMe = myW && row.wallet === myW;
+        var name = row.username || lb_shortWallet(row.wallet);
+        var rowBg = isMe ? "background:rgba(0,212,255,0.06);" : "";
+        var nameCol = isMe ? "#00d4ff" : "#c8c8e8";
+        var nameWt  = isMe ? 700 : 400;
+        html += "<tr style=\"" + rowBg + "\">";
+        html += "<td class=\"lb_rank " + rankClass + "\">" + medal + "</td>";
+        html += "<td><span style=\"color:" + nameCol + ";font-weight:" + nameWt + ";\">"
+          + escapeHtml(name) + (isMe ? " <span style=\"font-size:0.55rem;opacity:0.6;\">(you)</span>" : "") + "</span>"
+          + "<div class=\"lb_wallet\" style=\"color:" + walletColor(row.wallet) + ";\">" + lb_shortWallet(row.wallet) + "</div></td>";
+        if (hasGa) {
+          html += "<td class=\"lb_val\" style=\"color:#7b68ee;\">" + row.lnlCount + "</td>";
+          html += "<td class=\"lb_val\" style=\"color:#4ade80;\">" + row.gaCount + "</td>";
+        }
+        html += "<td class=\"lb_val\" style=\"color:#9945ff;font-size:0.9rem;\">" + row.count + "</td></tr>";
+      });
+      html += "</tbody></table>";
+
+      if (myW) {
+        var myIdx = data.findIndex(function(r){ return r.wallet === myW; });
+        if (myIdx >= 0) {
+          html += "<div style=\"text-align:center;margin-top:1rem;font-size:0.72rem;color:#9945ff;font-weight:700;\">Your rank: #" + (myIdx+1) + "</div>";
+        } else {
+          html += "<div style=\"text-align:center;margin-top:1rem;font-size:0.68rem;color:#333;\">Not in this SubDAO yet.</div>";
+        }
+      }
+      body.innerHTML = html;
+    }
+
+    function lb_switchSubdao(id) {
+      lb_subdao_active = id;
+      lb_renderSubdaoBoard();
+    }
+
+    function lb_exportSubdao(daoId) {
+      var dao = LB_SUBDAOS.find(function(d){ return d.id === daoId; });
+      var data = lb_subdao_cache[daoId] || [];
+      if (!data.length) { alert("No data to export."); return; }
+      var hasGa = dao && dao.gaTraits && dao.gaTraits.length > 0;
+      var lines = [hasGa ? "Rank,Username,Wallet,LNL Count,GA Count,Total" : "Rank,Username,Wallet,Count"];
+      data.forEach(function(row, i) {
+        var name = (row.username || "").replace(/,/g, "");
+        lines.push(hasGa
+          ? (i+1) + "," + name + "," + row.wallet + "," + row.lnlCount + "," + row.gaCount + "," + row.count
+          : (i+1) + "," + name + "," + row.wallet + "," + row.count);
+      });
+      var blob = new Blob([lines.join("\n")], { type: "text/csv" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = (dao ? dao.name.replace(/\s+/g, "_") : daoId) + "_SubDAO_leaderboard.csv";
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
     var LB_TABS = [
       { id: 'cabbage',  icon: '🥬', label: 'Top Cabbage' },
       { id: 'winners',  icon: '🎰', label: 'Casino Wins' },
       { id: 'chatters', icon: '🔥', label: 'Top Chatters' },
       { id: 'holders',  icon: '🪶', label: 'OG Holders' },
-      { id: 'bigwins',  icon: '💰', label: 'Biggest Wins' }
+      { id: 'bigwins',  icon: '💰', label: 'Biggest Wins' },
+      { id: 'subdao',   icon: '🗳',  label: 'SubDAOs' }
     ];
 
     async function lb_fetchAll() {
@@ -7790,6 +7994,11 @@ a.plink:hover{
     function lb_renderBoard() {
       var body = document.getElementById('lb_body');
       if (!body) return;
+      if (lb_activeTab === 'subdao') {
+        if (!Object.keys(lb_subdao_cache).length) lb_buildSubdaoBoards();
+        else lb_renderSubdaoBoard();
+        return;
+      }
       var data = lb_cache[lb_activeTab] || [];
       // Still loading
       if (lb_cache[lb_activeTab] === null) {
