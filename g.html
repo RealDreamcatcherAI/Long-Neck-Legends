@@ -7668,18 +7668,34 @@ a.plink:hover{
         if (body) body.innerHTML = "<div class=\"lb_loading\">Fetching NFT traits for " + allWallets.length + " wallets...</div>";
 
         var walletNFTs = {};
-        var CONC = 4;
-        for (var i = 0; i < allWallets.length; i += CONC) {
-          var chunk = allWallets.slice(i, i + CONC);
-          await Promise.all(chunk.map(function(wallet) {
-            return Promise.all([
-              fetchAssetsByOwner(wallet).catch(function(){ return []; }),
-              fetchGolfAddictsByOwner(wallet).catch(function(){ return []; })
-            ]).then(function(res){ walletNFTs[wallet] = { lnl: res[0]||[], ga: res[1]||[] }; });
-          }));
+
+        // Fetch one wallet at a time with retry logic to avoid Helius 429 rate limits
+        async function fetchWithRetry(wallet, maxRetries) {
+          for (var attempt = 0; attempt <= maxRetries; attempt++) {
+            try {
+              var lnl = await fetchAssetsByOwner(wallet);
+              var ga  = await fetchGolfAddictsByOwner(wallet);
+              return { lnl: lnl||[], ga: ga||[] };
+            } catch(e) {
+              if (attempt < maxRetries) {
+                // Exponential backoff: 1s, 2s, 4s
+                await new Promise(function(r){ setTimeout(r, 1000 * Math.pow(2, attempt)); });
+              }
+            }
+          }
+          return { lnl: [], ga: [] };
+        }
+
+        // Sequential with 300ms pause between each wallet to stay under rate limit
+        for (var i = 0; i < allWallets.length; i++) {
+          var wallet = allWallets[i];
+          walletNFTs[wallet] = await fetchWithRetry(wallet, 3);
           if (body) {
-            var done = Math.min(i + CONC, allWallets.length);
-            body.innerHTML = "<div class=\"lb_loading\">Scanned " + done + " / " + allWallets.length + " wallets...</div>";
+            body.innerHTML = "<div class=\"lb_loading\">Scanning wallets: " + (i+1) + " / " + allWallets.length + " — please wait...</div>";
+          }
+          // 300ms pause between requests to respect Helius rate limits
+          if (i < allWallets.length - 1) {
+            await new Promise(function(r){ setTimeout(r, 300); });
           }
         }
 
