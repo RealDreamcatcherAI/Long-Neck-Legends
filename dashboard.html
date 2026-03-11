@@ -7699,15 +7699,62 @@ a.plink:hover{
           }
         }
 
+        // Build profile→wallets map for deduplication
+        // profileMap: profileId → { username, primaryWallet, wallets[] }
+        var profileMap = {};
+        var noProfileWallets = []; // wallets with no profile_id
+        wlData.forEach(function(r) {
+          if (!r.profile_id) {
+            noProfileWallets.push(r.wallet);
+            return;
+          }
+          if (!profileMap[r.profile_id]) {
+            profileMap[r.profile_id] = {
+              username: profMap[r.profile_id] || null,
+              primaryWallet: r.wallet,
+              wallets: []
+            };
+          }
+          profileMap[r.profile_id].wallets.push(r.wallet);
+        });
+
         LB_SUBDAOS.forEach(function(dao) {
           var rows = [];
-          allWallets.forEach(function(wallet) {
+
+          // Aggregate by profile (combine all wallets per profile)
+          Object.keys(profileMap).forEach(function(profId) {
+            var prof = profileMap[profId];
+            var lnlTotal = 0, gaTotal = 0;
+            prof.wallets.forEach(function(wallet) {
+              var nfts = walletNFTs[wallet] || { lnl: [], ga: [] };
+              lnlTotal += lb_countTraitMatches(nfts.lnl, dao.lnlTraits);
+              gaTotal  += lb_countTraitMatches(nfts.ga,  dao.gaTraits);
+            });
+            var total = lnlTotal + gaTotal;
+            if (total > 0) {
+              rows.push({
+                profileId: profId,
+                wallet: prof.primaryWallet,
+                wallets: prof.wallets,
+                username: prof.username,
+                count: total,
+                lnlCount: lnlTotal,
+                gaCount: gaTotal
+              });
+            }
+          });
+
+          // Also include unlinked wallets (no profile)
+          noProfileWallets.forEach(function(wallet) {
             var nfts = walletNFTs[wallet] || { lnl: [], ga: [] };
             var lnlCount = lb_countTraitMatches(nfts.lnl, dao.lnlTraits);
             var gaCount  = lb_countTraitMatches(nfts.ga,  dao.gaTraits);
             var total = lnlCount + gaCount;
-            if (total > 0) rows.push({ wallet:wallet, username:walletUsernameMap[wallet], count:total, lnlCount:lnlCount, gaCount:gaCount });
+            if (total > 0) {
+              rows.push({ profileId: null, wallet:wallet, wallets:[wallet], username:null, count:total, lnlCount:lnlCount, gaCount:gaCount });
+            }
           });
+
           rows.sort(function(a,b){ return b.count - a.count; });
           lb_subdao_cache[dao.id] = rows;
         });
@@ -7760,15 +7807,17 @@ a.plink:hover{
         var rank = i + 1;
         var medal = rank===1?"👑":rank===2?"🥈":rank===3?"🥉":rank;
         var rankClass = rank===1?"lb_gold":rank===2?"lb_silver":rank===3?"lb_bronze":"";
-        var isMe = myW && row.wallet === myW;
+        // isMe: check if any of their wallets match
+        var isMe = myW && row.wallets && row.wallets.indexOf(myW) !== -1;
         var name = row.username || lb_shortWallet(row.wallet);
         var rowBg = isMe ? "background:rgba(0,212,255,0.06);" : "";
         var nameCol = isMe ? "#00d4ff" : "#c8c8e8";
         var nameWt  = isMe ? 700 : 400;
+        var walletCount = row.wallets && row.wallets.length > 1 ? " <span style=\"font-size:0.5rem;color:#444;\">(" + row.wallets.length + " wallets)</span>" : "";
         html += "<tr style=\"" + rowBg + "\">";
         html += "<td class=\"lb_rank " + rankClass + "\">" + medal + "</td>";
         html += "<td><span style=\"color:" + nameCol + ";font-weight:" + nameWt + ";\">"
-          + escapeHtml(name) + (isMe ? " <span style=\"font-size:0.55rem;opacity:0.6;\">(you)</span>" : "") + "</span>"
+          + escapeHtml(name) + walletCount + (isMe ? " <span style=\"font-size:0.55rem;opacity:0.6;\">(you)</span>" : "") + "</span>"
           + "<div class=\"lb_wallet\" style=\"color:" + walletColor(row.wallet) + ";\">" + lb_shortWallet(row.wallet) + "</div></td>";
         if (hasGa) {
           html += "<td class=\"lb_val\" style=\"color:#7b68ee;\">" + row.lnlCount + "</td>";
@@ -7779,14 +7828,19 @@ a.plink:hover{
       html += "</tbody></table>";
 
       if (myW) {
-        var myIdx = data.findIndex(function(r){ return r.wallet === myW; });
+        var myIdx = data.findIndex(function(r){ return r.wallets && r.wallets.indexOf(myW) !== -1; });
         if (myIdx >= 0) {
           html += "<div style=\"text-align:center;margin-top:1rem;font-size:0.72rem;color:#9945ff;font-weight:700;\">Your rank: #" + (myIdx+1) + "</div>";
         } else {
           html += "<div style=\"text-align:center;margin-top:1rem;font-size:0.68rem;color:#333;\">Not in this SubDAO yet.</div>";
         }
       }
+
+      // Spin wheel section
+      html += lb_buildSpinWheel(data, dao);
+
       body.innerHTML = html;
+      lb_initSpinWheel(data);
     }
 
     function lb_switchSubdao(id) {
@@ -7798,13 +7852,10 @@ a.plink:hover{
       var dao = LB_SUBDAOS.find(function(d){ return d.id === daoId; });
       var data = lb_subdao_cache[daoId] || [];
       if (!data.length) { alert("No data to export."); return; }
-      var hasGa = dao && dao.gaTraits && dao.gaTraits.length > 0;
-      var lines = [hasGa ? "Rank,Username,Wallet,LNL Count,GA Count,Total" : "Rank,Username,Wallet,Count"];
-      data.forEach(function(row, i) {
-        var name = (row.username || "").replace(/,/g, "");
-        lines.push(hasGa
-          ? (i+1) + "," + name + "," + row.wallet + "," + row.lnlCount + "," + row.gaCount + "," + row.count
-          : (i+1) + "," + name + "," + row.wallet + "," + row.count);
+      var lines = ["Name,Wallet,Total"];
+      data.forEach(function(row) {
+        var name = (row.username || lb_shortWallet(row.wallet)).replace(/,/g, "");
+        lines.push(name + "," + row.wallet + "," + row.count);
       });
       var blob = new Blob([lines.join("\n")], { type: "text/csv" });
       var url = URL.createObjectURL(blob);
@@ -7813,6 +7864,253 @@ a.plink:hover{
       a.download = (dao ? dao.name.replace(/\s+/g, "_") : daoId) + "_SubDAO_leaderboard.csv";
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
       URL.revokeObjectURL(url);
+    }
+
+    // ── Spin Wheel ───────────────────────────────────────────────────
+    // ── RAFFLE PICKER — weighted by NFT count ──────────────────────
+    var lb_spinData   = [];
+    var lb_spinPool   = []; // flat ticket pool: one entry per NFT held
+    var lb_spinAnim   = null;
+    var lb_particles  = [];
+
+    function lb_buildSpinWheel(data, dao) {
+      if (!data || !data.length) return "";
+      var totalTickets = data.reduce(function(s, r){ return s + r.count; }, 0);
+      var html = "";
+      html += "<div style=\"margin-top:1.5rem;border-top:1px solid rgba(255,255,255,0.06);padding-top:1.2rem;\">";
+      html += "<div style=\"display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:6px;\">";
+      html += "<div><div style=\"font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:3px;color:#9945ff;\">RAFFLE DRAW</div>";
+      html += "<div style=\"font-size:0.6rem;color:#444;letter-spacing:1px;\">" + totalTickets + " TICKETS ACROSS " + data.length + " HOLDERS — WEIGHTED BY NFT COUNT</div></div>";
+      html += "</div>";
+      // Stage
+      html += "<div style=\"position:relative;background:#05050f;border:1px solid rgba(153,69,255,0.2);border-radius:16px;overflow:hidden;height:320px;\">";
+      html += "<canvas id=\"lb_raffleCanvas\" style=\"position:absolute;inset:0;width:100%;height:100%;\"></canvas>";
+      html += "<div id=\"lb_raffleOverlay\" style=\"position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;\">";
+      html += "<div id=\"lb_raffleStatus\" style=\"font-family:'Bebas Neue',sans-serif;font-size:0.9rem;letter-spacing:3px;color:#333;\">READY</div>";
+      html += "<div id=\"lb_raffleNames\" style=\"font-family:'Space Grotesk',sans-serif;font-size:1.4rem;font-weight:900;color:#fff;text-shadow:0 0 20px #9945ff;min-height:40px;text-align:center;padding:0 1rem;\"></div>";
+      html += "<div id=\"lb_raffleWallet\" style=\"font-family:monospace;font-size:0.65rem;color:#555;margin-top:4px;\"></div>";
+      html += "<div id=\"lb_raffleTickets\" style=\"font-size:0.6rem;color:#9945ff;margin-top:6px;letter-spacing:1px;\"></div>";
+      html += "</div></div>";
+      // Button row
+      html += "<div style=\"display:flex;gap:8px;margin-top:0.8rem;\">";
+      html += "<button onclick=\"lb_startRaffle()\" id=\"lb_raffleBtn\" style=\"flex:1;padding:12px;background:linear-gradient(135deg,#9945ff,#6620d4);border:none;border-radius:10px;color:#fff;font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:4px;cursor:pointer;transition:opacity 0.2s;\">DRAW WINNER</button>";
+      html += "<button onclick=\"lb_resetRaffle()\" style=\"padding:12px 16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#555;font-family:'Space Grotesk',sans-serif;font-size:0.7rem;font-weight:700;cursor:pointer;\">RESET</button>";
+      html += "</div>";
+      html += "</div>";
+      return html;
+    }
+
+    function lb_initSpinWheel(data) {
+      lb_spinData = data.slice();
+      // Build weighted ticket pool
+      lb_spinPool = [];
+      lb_spinData.forEach(function(row) {
+        for (var t = 0; t < row.count; t++) {
+          lb_spinPool.push(row);
+        }
+      });
+      lb_particles = [];
+      var canvas = document.getElementById("lb_raffleCanvas");
+      if (canvas) {
+        canvas.width  = canvas.offsetWidth  || 600;
+        canvas.height = canvas.offsetHeight || 320;
+        lb_drawRaffleIdle(canvas);
+      }
+    }
+
+    function lb_drawRaffleIdle(canvas) {
+      var ctx = canvas.getContext("2d");
+      var W = canvas.width, H = canvas.height;
+      ctx.clearRect(0, 0, W, H);
+      // Ambient floating orbs
+      var t = Date.now() / 2000;
+      for (var i = 0; i < 8; i++) {
+        var x = W * (0.1 + 0.8 * ((Math.sin(t + i * 1.3) + 1) / 2));
+        var y = H * (0.1 + 0.8 * ((Math.cos(t * 0.7 + i * 0.9) + 1) / 2));
+        var r = 20 + 10 * Math.sin(t + i);
+        var grad = ctx.createRadialGradient(x, y, 0, x, y, r);
+        grad.addColorStop(0, "rgba(153,69,255,0.15)");
+        grad.addColorStop(1, "rgba(153,69,255,0)");
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, 2*Math.PI);
+        ctx.fillStyle = grad;
+        ctx.fill();
+      }
+    }
+
+    function lb_startRaffle() {
+      if (lb_spinAnim) return;
+      if (!lb_spinPool.length) return;
+      var btn = document.getElementById("lb_raffleBtn");
+      var statusEl  = document.getElementById("lb_raffleStatus");
+      var namesEl   = document.getElementById("lb_raffleNames");
+      var walletEl  = document.getElementById("lb_raffleWallet");
+      var ticketsEl = document.getElementById("lb_raffleTickets");
+      if (btn) btn.disabled = true;
+
+      // Pre-pick winner from weighted pool
+      var winner = lb_spinPool[Math.floor(Math.random() * lb_spinPool.length)];
+
+      var canvas = document.getElementById("lb_raffleCanvas");
+      if (!canvas) return;
+      canvas.width  = canvas.offsetWidth  || 600;
+      canvas.height = canvas.offsetHeight || 320;
+
+      // Phase 1: RAPID SHUFFLE — flash random names fast
+      var phase = 1;
+      var frameCount = 0;
+      var shuffleDuration = 140; // frames at 60fps ~ 2.3s
+      var shuffleInterval = 2;   // frames between name changes (starts fast)
+      lb_particles = [];
+
+      function spawnParticles(cx, cy, color) {
+        for (var p = 0; p < 18; p++) {
+          var angle = Math.random() * 2 * Math.PI;
+          var speed = 1.5 + Math.random() * 4;
+          lb_particles.push({
+            x: cx, y: cy,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            life: 1.0,
+            decay: 0.018 + Math.random() * 0.02,
+            r: 2 + Math.random() * 3,
+            color: color || "#9945ff"
+          });
+        }
+      }
+
+      function drawFrame() {
+        var ctx = canvas.getContext("2d");
+        var W = canvas.width, H = canvas.height;
+        // Fade trail
+        ctx.fillStyle = "rgba(5,5,15,0.25)";
+        ctx.fillRect(0, 0, W, H);
+
+        // Update + draw particles
+        lb_particles = lb_particles.filter(function(p){ return p.life > 0; });
+        lb_particles.forEach(function(p) {
+          p.x  += p.vx;
+          p.y  += p.vy;
+          p.vy += 0.08; // gravity
+          p.life -= p.decay;
+          ctx.globalAlpha = p.life;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, 2*Math.PI);
+          ctx.fillStyle = p.color;
+          ctx.fill();
+        });
+        ctx.globalAlpha = 1;
+
+        // Scanlines
+        ctx.fillStyle = "rgba(0,0,0,0.03)";
+        for (var sl = 0; sl < H; sl += 4) {
+          ctx.fillRect(0, sl, W, 1);
+        }
+      }
+
+      function raffleLoop() {
+        frameCount++;
+        drawFrame();
+
+        if (phase === 1) {
+          // Shuffle phase: show random names at increasing slowness
+          var slowdown = Math.floor(shuffleDuration * 0.5);
+          if (frameCount > slowdown) {
+            shuffleInterval = 2 + Math.floor(8 * ((frameCount - slowdown) / (shuffleDuration - slowdown)));
+          }
+          if (frameCount % shuffleInterval === 0) {
+            var rnd = lb_spinPool[Math.floor(Math.random() * lb_spinPool.length)];
+            var rndName = rnd.username || lb_shortWallet(rnd.wallet);
+            if (namesEl) {
+              namesEl.style.color = "#888";
+              namesEl.style.textShadow = "none";
+              namesEl.textContent = rndName;
+            }
+            if (walletEl) walletEl.textContent = "";
+            if (ticketsEl) ticketsEl.textContent = "";
+            if (statusEl) {
+              statusEl.textContent = "DRAWING...";
+              statusEl.style.color = "#9945ff";
+            }
+          }
+          if (frameCount >= shuffleDuration) {
+            phase = 2;
+            frameCount = 0;
+          }
+        } else if (phase === 2) {
+          // Lock-on phase: flash winner name 3 times fast then hold
+          var blink = Math.floor(frameCount / 8) % 2;
+          var winName = winner.username || lb_shortWallet(winner.wallet);
+          if (namesEl) {
+            namesEl.textContent = blink ? winName : "";
+            namesEl.style.color = "#fff";
+            namesEl.style.textShadow = "0 0 30px #9945ff, 0 0 60px #6620d4";
+          }
+          if (frameCount === 8 || frameCount === 24 || frameCount === 40) {
+            var cx = (canvas.offsetWidth || 600) / 2;
+            var cy = (canvas.offsetHeight || 320) / 2;
+            var colors = ["#9945ff","#00ff88","#ffd700","#ff3c5c","#00d4ff"];
+            spawnParticles(cx, cy, colors[frameCount % colors.length]);
+          }
+          if (frameCount >= 55) {
+            phase = 3;
+          }
+        } else if (phase === 3) {
+          // Reveal: show full winner card permanently
+          var winName = winner.username || lb_shortWallet(winner.wallet);
+          if (namesEl) {
+            namesEl.textContent = winName;
+            namesEl.style.color = "#fff";
+            namesEl.style.textShadow = "0 0 30px #9945ff, 0 0 60px #6620d4";
+          }
+          if (walletEl) walletEl.textContent = lb_shortWallet(winner.wallet);
+          if (ticketsEl) ticketsEl.textContent = winner.count + " TICKETS (" + winner.count + " NFTs held)";
+          if (statusEl) {
+            statusEl.textContent = "WINNER!";
+            statusEl.style.color = "#ffd700";
+          }
+          // Continuous gold sparkle
+          if (frameCount % 12 === 0) {
+            var cx2 = (canvas.offsetWidth || 600) * (0.2 + Math.random() * 0.6);
+            var cy2 = (canvas.offsetHeight || 320) * (0.2 + Math.random() * 0.6);
+            spawnParticles(cx2, cy2, Math.random() > 0.5 ? "#ffd700" : "#9945ff");
+          }
+          if (frameCount > 200) {
+            // Stop looping after 3s of celebration
+            lb_spinAnim = null;
+            if (btn) btn.disabled = false;
+            return;
+          }
+        }
+
+        lb_spinAnim = requestAnimationFrame(raffleLoop);
+      }
+
+      lb_spinAnim = requestAnimationFrame(raffleLoop);
+    }
+
+    function lb_resetRaffle() {
+      if (lb_spinAnim) {
+        cancelAnimationFrame(lb_spinAnim);
+        lb_spinAnim = null;
+      }
+      lb_particles = [];
+      var btn = document.getElementById("lb_raffleBtn");
+      var statusEl  = document.getElementById("lb_raffleStatus");
+      var namesEl   = document.getElementById("lb_raffleNames");
+      var walletEl  = document.getElementById("lb_raffleWallet");
+      var ticketsEl = document.getElementById("lb_raffleTickets");
+      if (btn) btn.disabled = false;
+      if (statusEl) { statusEl.textContent = "READY"; statusEl.style.color = "#333"; }
+      if (namesEl) { namesEl.textContent = ""; namesEl.style.textShadow = "none"; }
+      if (walletEl) walletEl.textContent = "";
+      if (ticketsEl) ticketsEl.textContent = "";
+      var canvas = document.getElementById("lb_raffleCanvas");
+      if (canvas) {
+        canvas.width  = canvas.offsetWidth  || 600;
+        canvas.height = canvas.offsetHeight || 320;
+        lb_drawRaffleIdle(canvas);
+      }
     }
 
     var LB_TABS = [
