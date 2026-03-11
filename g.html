@@ -7699,15 +7699,62 @@ a.plink:hover{
           }
         }
 
+        // Build profile→wallets map for deduplication
+        // profileMap: profileId → { username, primaryWallet, wallets[] }
+        var profileMap = {};
+        var noProfileWallets = []; // wallets with no profile_id
+        wlData.forEach(function(r) {
+          if (!r.profile_id) {
+            noProfileWallets.push(r.wallet);
+            return;
+          }
+          if (!profileMap[r.profile_id]) {
+            profileMap[r.profile_id] = {
+              username: profMap[r.profile_id] || null,
+              primaryWallet: r.wallet,
+              wallets: []
+            };
+          }
+          profileMap[r.profile_id].wallets.push(r.wallet);
+        });
+
         LB_SUBDAOS.forEach(function(dao) {
           var rows = [];
-          allWallets.forEach(function(wallet) {
+
+          // Aggregate by profile (combine all wallets per profile)
+          Object.keys(profileMap).forEach(function(profId) {
+            var prof = profileMap[profId];
+            var lnlTotal = 0, gaTotal = 0;
+            prof.wallets.forEach(function(wallet) {
+              var nfts = walletNFTs[wallet] || { lnl: [], ga: [] };
+              lnlTotal += lb_countTraitMatches(nfts.lnl, dao.lnlTraits);
+              gaTotal  += lb_countTraitMatches(nfts.ga,  dao.gaTraits);
+            });
+            var total = lnlTotal + gaTotal;
+            if (total > 0) {
+              rows.push({
+                profileId: profId,
+                wallet: prof.primaryWallet,
+                wallets: prof.wallets,
+                username: prof.username,
+                count: total,
+                lnlCount: lnlTotal,
+                gaCount: gaTotal
+              });
+            }
+          });
+
+          // Also include unlinked wallets (no profile)
+          noProfileWallets.forEach(function(wallet) {
             var nfts = walletNFTs[wallet] || { lnl: [], ga: [] };
             var lnlCount = lb_countTraitMatches(nfts.lnl, dao.lnlTraits);
             var gaCount  = lb_countTraitMatches(nfts.ga,  dao.gaTraits);
             var total = lnlCount + gaCount;
-            if (total > 0) rows.push({ wallet:wallet, username:walletUsernameMap[wallet], count:total, lnlCount:lnlCount, gaCount:gaCount });
+            if (total > 0) {
+              rows.push({ profileId: null, wallet:wallet, wallets:[wallet], username:null, count:total, lnlCount:lnlCount, gaCount:gaCount });
+            }
           });
+
           rows.sort(function(a,b){ return b.count - a.count; });
           lb_subdao_cache[dao.id] = rows;
         });
@@ -7760,15 +7807,17 @@ a.plink:hover{
         var rank = i + 1;
         var medal = rank===1?"👑":rank===2?"🥈":rank===3?"🥉":rank;
         var rankClass = rank===1?"lb_gold":rank===2?"lb_silver":rank===3?"lb_bronze":"";
-        var isMe = myW && row.wallet === myW;
+        // isMe: check if any of their wallets match
+        var isMe = myW && row.wallets && row.wallets.indexOf(myW) !== -1;
         var name = row.username || lb_shortWallet(row.wallet);
         var rowBg = isMe ? "background:rgba(0,212,255,0.06);" : "";
         var nameCol = isMe ? "#00d4ff" : "#c8c8e8";
         var nameWt  = isMe ? 700 : 400;
+        var walletCount = row.wallets && row.wallets.length > 1 ? " <span style=\"font-size:0.5rem;color:#444;\">(" + row.wallets.length + " wallets)</span>" : "";
         html += "<tr style=\"" + rowBg + "\">";
         html += "<td class=\"lb_rank " + rankClass + "\">" + medal + "</td>";
         html += "<td><span style=\"color:" + nameCol + ";font-weight:" + nameWt + ";\">"
-          + escapeHtml(name) + (isMe ? " <span style=\"font-size:0.55rem;opacity:0.6;\">(you)</span>" : "") + "</span>"
+          + escapeHtml(name) + walletCount + (isMe ? " <span style=\"font-size:0.55rem;opacity:0.6;\">(you)</span>" : "") + "</span>"
           + "<div class=\"lb_wallet\" style=\"color:" + walletColor(row.wallet) + ";\">" + lb_shortWallet(row.wallet) + "</div></td>";
         if (hasGa) {
           html += "<td class=\"lb_val\" style=\"color:#7b68ee;\">" + row.lnlCount + "</td>";
@@ -7779,14 +7828,19 @@ a.plink:hover{
       html += "</tbody></table>";
 
       if (myW) {
-        var myIdx = data.findIndex(function(r){ return r.wallet === myW; });
+        var myIdx = data.findIndex(function(r){ return r.wallets && r.wallets.indexOf(myW) !== -1; });
         if (myIdx >= 0) {
           html += "<div style=\"text-align:center;margin-top:1rem;font-size:0.72rem;color:#9945ff;font-weight:700;\">Your rank: #" + (myIdx+1) + "</div>";
         } else {
           html += "<div style=\"text-align:center;margin-top:1rem;font-size:0.68rem;color:#333;\">Not in this SubDAO yet.</div>";
         }
       }
+
+      // Spin wheel section
+      html += lb_buildSpinWheel(data, dao);
+
       body.innerHTML = html;
+      lb_initSpinWheel(data);
     }
 
     function lb_switchSubdao(id) {
@@ -7798,13 +7852,10 @@ a.plink:hover{
       var dao = LB_SUBDAOS.find(function(d){ return d.id === daoId; });
       var data = lb_subdao_cache[daoId] || [];
       if (!data.length) { alert("No data to export."); return; }
-      var hasGa = dao && dao.gaTraits && dao.gaTraits.length > 0;
-      var lines = [hasGa ? "Rank,Username,Wallet,LNL Count,GA Count,Total" : "Rank,Username,Wallet,Count"];
-      data.forEach(function(row, i) {
-        var name = (row.username || "").replace(/,/g, "");
-        lines.push(hasGa
-          ? (i+1) + "," + name + "," + row.wallet + "," + row.lnlCount + "," + row.gaCount + "," + row.count
-          : (i+1) + "," + name + "," + row.wallet + "," + row.count);
+      var lines = ["Name,Wallet,Total"];
+      data.forEach(function(row) {
+        var name = (row.username || lb_shortWallet(row.wallet)).replace(/,/g, "");
+        lines.push(name + "," + row.wallet + "," + row.count);
       });
       var blob = new Blob([lines.join("\n")], { type: "text/csv" });
       var url = URL.createObjectURL(blob);
@@ -7813,6 +7864,140 @@ a.plink:hover{
       a.download = (dao ? dao.name.replace(/\s+/g, "_") : daoId) + "_SubDAO_leaderboard.csv";
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
       URL.revokeObjectURL(url);
+    }
+
+    // ── Spin Wheel ───────────────────────────────────────────────────
+    var lb_spinData = [];
+    var lb_spinAngle = 0;
+    var lb_spinAnim  = null;
+
+    function lb_buildSpinWheel(data, dao) {
+      if (!data || !data.length) return "";
+      var html = "";
+      html += "<div style=\"margin-top:1.5rem;border-top:1px solid rgba(255,255,255,0.06);padding-top:1.2rem;\">";
+      html += "<div style=\"font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:3px;color:#9945ff;margin-bottom:0.8rem;\">SPIN THE WHEEL</div>";
+      html += "<div style=\"display:flex;align-items:flex-start;gap:1.5rem;flex-wrap:wrap;\">";
+      // Canvas
+      html += "<div style=\"position:relative;flex-shrink:0;\">";
+      html += "<canvas id=\"lb_spinCanvas\" width=\"300\" height=\"300\" style=\"border-radius:50%;cursor:pointer;\" onclick=\"lb_spin()\"></canvas>";
+      // Pointer triangle
+      html += "<div style=\"position:absolute;top:50%;right:-14px;transform:translateY(-50%);width:0;height:0;border-top:12px solid transparent;border-bottom:12px solid transparent;border-right:20px solid #9945ff;\"></div>";
+      html += "</div>";
+      // Right panel
+      html += "<div style=\"flex:1;min-width:200px;\">";
+      html += "<button onclick=\"lb_spin()\" id=\"lb_spinBtn\" style=\"width:100%;padding:10px;background:linear-gradient(135deg,#9945ff,#7b2ff7);border:none;border-radius:10px;color:#fff;font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:3px;cursor:pointer;margin-bottom:0.8rem;\">SPIN!</button>";
+      html += "<div id=\"lb_spinResult\" style=\"background:#0f0f22;border:1px solid rgba(153,69,255,0.3);border-radius:10px;padding:0.8rem;min-height:60px;text-align:center;\"><span style=\"color:#333;font-size:0.7rem;\">Click SPIN to pick a winner</span></div>";
+      html += "<div style=\"margin-top:0.8rem;font-size:0.6rem;color:#333;letter-spacing:0.5px;\">" + data.length + " holders in this draw</div>";
+      html += "</div>";
+      html += "</div></div>";
+      return html;
+    }
+
+    function lb_initSpinWheel(data) {
+      lb_spinData = data.slice();
+      lb_spinAngle = 0;
+      var canvas = document.getElementById("lb_spinCanvas");
+      if (!canvas) return;
+      lb_drawWheel(canvas, lb_spinAngle);
+    }
+
+    function lb_drawWheel(canvas, angle) {
+      var data = lb_spinData;
+      if (!data || !data.length) return;
+      var ctx = canvas.getContext("2d");
+      var W = canvas.width, H = canvas.height;
+      var cx = W/2, cy = H/2, r = cx - 4;
+      var slice = (2 * Math.PI) / data.length;
+      var colors = ["#9945ff","#7b2ff7","#6620d4","#4e18a0","#3a1077","#2a0a55","#8833ee","#aa55ff","#bb77ff","#cc99ff"];
+
+      ctx.clearRect(0,0,W,H);
+
+      data.forEach(function(row, i) {
+        var startA = angle + i * slice;
+        var endA   = startA + slice;
+        // Slice
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, r, startA, endA);
+        ctx.closePath();
+        ctx.fillStyle = colors[i % colors.length];
+        ctx.fill();
+        ctx.strokeStyle = "rgba(0,0,0,0.3)";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Label
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(startA + slice/2);
+        var labelR = r * 0.6;
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold " + Math.min(12, Math.max(8, 130/data.length)) + "px 'Space Grotesk',sans-serif";
+        ctx.textAlign = "right";
+        ctx.textBaseline = "middle";
+        var label = row.username || lb_shortWallet(row.wallet);
+        if (label.length > 12) label = label.slice(0,11) + ".";
+        ctx.fillText(label, labelR, 0);
+        ctx.restore();
+      });
+
+      // Center circle
+      ctx.beginPath();
+      ctx.arc(cx, cy, 22, 0, 2*Math.PI);
+      ctx.fillStyle = "#0a0a1a";
+      ctx.fill();
+      ctx.strokeStyle = "#9945ff";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    function lb_spin() {
+      if (lb_spinAnim) return;
+      var btn = document.getElementById("lb_spinBtn");
+      var resultEl = document.getElementById("lb_spinResult");
+      if (btn) btn.disabled = true;
+      if (resultEl) resultEl.innerHTML = "<span style=\"color:#555;font-size:0.7rem;\">Spinning...</span>";
+
+      var canvas = document.getElementById("lb_spinCanvas");
+      if (!canvas || !lb_spinData.length) return;
+
+      var totalSpins = (5 + Math.random() * 5) * 2 * Math.PI;
+      var duration   = 4000 + Math.random() * 2000;
+      var startAngle = lb_spinAngle;
+      var startTime  = null;
+
+      function easeOut(t) { return 1 - Math.pow(1 - t, 4); }
+
+      function step(ts) {
+        if (!startTime) startTime = ts;
+        var elapsed = ts - startTime;
+        var progress = Math.min(elapsed / duration, 1);
+        lb_spinAngle = startAngle + totalSpins * easeOut(progress);
+        lb_drawWheel(canvas, lb_spinAngle);
+        if (progress < 1) {
+          lb_spinAnim = requestAnimationFrame(step);
+        } else {
+          lb_spinAnim = null;
+          // Determine winner: pointer at right (angle=0 from center-right)
+          // Normalize final angle
+          var n = lb_spinData.length;
+          var slice = (2 * Math.PI) / n;
+          var norm = ((lb_spinAngle % (2*Math.PI)) + 2*Math.PI) % (2*Math.PI);
+          // Pointer at 0 radians (right side) — find which slice it lands on
+          var winIdx = n - 1 - Math.floor(norm / slice) % n;
+          winIdx = ((winIdx % n) + n) % n;
+          var winner = lb_spinData[winIdx];
+          var winName = winner.username || lb_shortWallet(winner.wallet);
+          if (resultEl) {
+            resultEl.innerHTML = "<div style=\"font-size:0.6rem;color:#9945ff;letter-spacing:2px;margin-bottom:4px;\">WINNER!</div>"
+              + "<div style=\"font-size:1rem;font-weight:700;color:#fff;\">" + escapeHtml(winName) + "</div>"
+              + "<div style=\"font-size:0.6rem;color:#555;margin-top:4px;\">" + lb_shortWallet(winner.wallet) + "</div>"
+              + "<div style=\"font-size:0.65rem;color:#9945ff;margin-top:4px;\">" + winner.count + " NFTs</div>";
+          }
+          if (btn) btn.disabled = false;
+        }
+      }
+      lb_spinAnim = requestAnimationFrame(step);
     }
 
     var LB_TABS = [
