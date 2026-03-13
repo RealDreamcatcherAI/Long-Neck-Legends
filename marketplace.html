@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Marketplace | Long Neck Legends</title>
+  <meta name="description" content="Buy and sell Long Neck Legends NFTs peer-to-peer on Solana.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦒</text></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=Permanent+Marker&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    :root{--bg:#040404;--card:#0b0b0b;--bdr:#141414;--r:#FF003C;--ra:rgba(255,0,60,.18);--rb:rgba(255,0,60,.06);--grn:#00FF88;--grna:rgba(0,255,136,.12);--w:#eee;--g1:#888;--g2:#444;--g3:#1e1e1e;--f:'Space Mono',monospace;--d:'Bebas Neue',sans-serif;--m:'Permanent Marker',cursive}
+    body{background:var(--bg);color:var(--w);font-family:var(--f);overflow-x:hidden}
+    a{color:var(--r);text-decoration:none}
+    ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:#060606}::-webkit-scrollbar-thumb{background:var(--r);border-radius:3px}
+    @keyframes up{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes fade{from{opacity:0}to{opacity:1}}
+    @keyframes glow{0%,100%{text-shadow:0 0 6px rgba(255,0,60,.4)}50%{text-shadow:0 0 18px rgba(255,0,60,.6)}}
+    @keyframes pulse{0%,100%{opacity:.6}50%{opacity:1}}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+    @keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+    .site-nav{position:sticky;top:0;z-index:200;background:rgba(4,4,4,.96);backdrop-filter:blur(20px);border-bottom:1px solid #111}
+    .site-nav-inner{max-width:1200px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+    .logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+    .logo-icon{width:36px;height:36px;background:var(--r);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:19px;box-shadow:0 0 10px var(--ra)}
+    .logo span{font-family:var(--d);font-size:17px;letter-spacing:4px;color:#fff}
+    .nav-links{display:flex;gap:3px;flex-wrap:wrap}
+    .nav-links a{padding:7px 12px;border-radius:6px;font-family:var(--d);font-size:11px;letter-spacing:2px;color:var(--g1);border:1px solid transparent;transition:all .2s}
+    .nav-links a:hover{color:var(--r);background:var(--rb)}
+    .nav-links a.active{color:var(--r);background:var(--rb);border-color:rgba(255,0,60,.2)}
+
+    .ticker{background:var(--r);padding:3px 0;overflow:hidden;white-space:nowrap}
+    .ticker-inner{display:inline-block;animation:scroll 30s linear infinite}
+    .ticker span{font-family:var(--f);font-size:10px;color:#000;font-weight:700;letter-spacing:1px}
+
+    .nft-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;padding:0 16px 30px;max-width:1400px;margin:0 auto}
+    .nft-card{background:var(--card);border:1px solid var(--bdr);border-radius:12px;overflow:hidden;cursor:pointer;transition:all .3s}
+    .nft-card:hover{transform:translateY(-4px);box-shadow:0 0 28px var(--ra),0 14px 36px rgba(0,0,0,.6);border-color:rgba(255,0,60,.22)}
+    .nft-card:hover .nft-img{transform:scale(1.05)}
+    .nft-img-wrap{height:220px;background:#030303;overflow:hidden;position:relative}
+    .nft-img{width:100%;height:100%;object-fit:cover;transition:transform .4s ease}
+    .nft-info{padding:10px 12px 12px}
+    .nft-name{font-family:var(--d);font-size:13px;color:#fff;letter-spacing:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .nft-owner{font-size:9px;color:var(--g2);margin-top:3px}
+    .yours-badge{position:absolute;top:7px;left:7px;background:var(--grna);border:1px solid rgba(0,255,136,.2);padding:2px 7px;border-radius:4px;font-size:8px;color:var(--grn);font-weight:700}
+
+    .sk{background:linear-gradient(90deg,#111 25%,#1a1a1a 50%,#111 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:8px}
+
+    .btn-primary{padding:12px 24px;background:var(--r);color:#fff;border:none;border-radius:8px;font-family:var(--d);font-size:15px;letter-spacing:3px;cursor:pointer;box-shadow:0 0 12px var(--ra);transition:all .2s;text-align:center;width:100%}
+    .btn-primary:hover{box-shadow:0 0 24px rgba(255,0,60,.4)}
+    .btn-ghost{padding:10px 20px;background:transparent;border:1px solid rgba(255,0,60,.2);color:var(--r);border-radius:8px;font-family:var(--d);font-size:13px;letter-spacing:3px;cursor:pointer;transition:all .2s;text-align:center}
+    .btn-ghost:hover{background:var(--rb)}
+    .btn-ghost:disabled{opacity:.3;cursor:not-allowed}
+    .wallet-btn{padding:10px 16px;background:linear-gradient(135deg,#AB47FF,#7C3AED);border:none;border-radius:10px;color:#fff;font-family:var(--d);font-size:12px;letter-spacing:3px;cursor:pointer;box-shadow:0 0 12px rgba(124,58,237,.2);transition:all .2s;display:flex;align-items:center;gap:8px}
+    .wallet-btn:hover{box-shadow:0 0 22px rgba(124,58,237,.4)}
+    .conn-btn{padding:7px 12px;background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.18);border-radius:10px;color:var(--grn);font-family:var(--f);font-size:10px;cursor:pointer;display:flex;align-items:center;gap:6px}
+    .dot-sm{width:5px;height:5px;border-radius:50%;background:var(--grn);animation:pulse 2s infinite;display:inline-block}
+    .input{padding:10px 14px;background:#080808;border:1px solid #1c1c1c;border-radius:8px;color:var(--w);font-family:var(--f);font-size:12px;outline:none}
+    .input:focus{border-color:var(--r)}
+    .neon{color:var(--r);animation:glow 3s ease-in-out infinite}
+    .stat-card{text-align:center;padding:10px 14px;background:var(--card);border:1px solid var(--bdr);border-radius:10px;min-width:85px}
+    .tab-btn{padding:8px 18px;background:transparent;border:1px solid transparent;border-radius:8px;color:var(--g2);font-family:var(--d);font-size:13px;letter-spacing:3px;cursor:pointer;transition:all .2s}
+    .tab-btn.active{color:var(--r);background:var(--rb);border-color:rgba(255,0,60,.2)}
+    .tg{font-size:9px;padding:3px 8px;border-radius:4px;letter-spacing:1px;font-weight:700}
+    .trait{background:var(--rb);border:1px solid rgba(255,0,60,.08);border-radius:6px;padding:5px 9px;font-size:10px;display:inline-block;margin:2px}
+
+    .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:1000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(14px);animation:fade .15s;padding:14px}
+    .modal{background:linear-gradient(145deg,#0c0c0c,#080808);border:1px solid #1c1c1c;border-radius:16px;width:100%;display:flex;flex-wrap:wrap;overflow:hidden;max-height:92vh;overflow-y:auto;position:relative}
+    .modal-close{position:absolute;top:12px;right:12px;z-index:10;background:var(--rb);border:1px solid var(--r);color:var(--r);width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:14px;display:grid;place-items:center}
+
+    .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:2000;background:var(--grn);color:#000;padding:10px 24px;border-radius:8px;font-family:var(--d);font-size:14px;letter-spacing:2px;box-shadow:0 4px 20px var(--grna);animation:up .25s}
+
+    .site-footer{border-top:1px solid #0e0e0e;padding:20px;text-align:center}
+    .site-footer a{color:var(--g2);margin:0 8px;font-size:10px;letter-spacing:2px;font-family:var(--d)}
+    .site-footer a:hover{color:var(--r)}
+
+    @media(max-width:600px){
+      .nav-links{gap:2px}.nav-links a{padding:5px 8px;font-size:9px;letter-spacing:1px}
+      .nft-grid{grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px;padding:0 10px 24px}
+      .logo span{font-size:14px;letter-spacing:3px}
+    }
+  </style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <div class="site-nav-inner">
+    <a href="/" class="logo">
+      <div class="logo-icon">🦒</div>
+      <span>LONG NECK LEGENDS</span>
+    </a>
+    <div class="nav-links">
+      <a href="/starternecks.html">STARTER NECKS</a>
+      <a href="/music.html">MUSIC</a>
+      <a href="/hotsaucemint.html">HOT SAUCE</a>
+      <a href="/store.html">STORE</a>
+      <a href="/marketplace.html" class="active">MARKETPLACE</a>
+      <a href="/dashboard.html">DASHBOARD</a>
+    </div>
+    <div id="wallet-area"></div>
+  </div>
+</nav>
+
+<div style="position:fixed;inset:0;pointer-events:none;z-index:999;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.025) 2px,rgba(0,0,0,.025) 4px)"></div>
+
+<div id="app"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  YOUR HELIUS API KEY — paste between the quotes
+// ═══════════════════════════════════════════════════════════
+const HELIUS_KEY = "PASTE_YOUR_NEW_KEY_HERE";
+// ═══════════════════════════════════════════════════════════
+
+const COLLECTION = "2WvxCvgFUiqUSBx32c5Z5Zsbcu4ZJCE1GEaaWpbD685P";
+const SUPPLY = 3333;
+const PAGE_SIZE = 28;
+const RPC = HELIUS_KEY && HELIUS_KEY !== "33955d33-79ed-4817-8a40-1ce04a3cf241"
+  ? `https://mainnet.helius-rpc.com/?api-key=${HELIUS_KEY}`
+  : null;
+
+// ── State ──
+let nfts = [];
+let myNfts = [];
+let total = 0;
+let page = 1;
+let loading = false;
+let error = null;
+let walletAddress = null;
+let walletProvider = null;
+let selectedNft = null;
+let activeTab = "market";
+let searchQuery = "";
+
+const short = (a, s=4, e=4) => a ? `${a.slice(0,s)}…${a.slice(-e)}` : "";
+
+// ── Parse Helius DAS asset ──
+function parseAsset(item) {
+  const meta = item.content?.metadata || {};
+  const files = item.content?.files || [];
+  const links = item.content?.links || {};
+  const img = links.image || (files[0]?.cdn_uri) || (files[0]?.uri) || "";
+  return {
+    mint: item.id,
+    name: meta.name || "Long Neck Legend",
+    image: img,
+    attributes: meta.attributes || [],
+    owner: item.ownership?.owner || "",
+  };
+}
+
+// ── Fetch NFTs from chain ──
+async function fetchPage(pg) {
+  if (!RPC) { error = "no_key"; render(); return; }
+  loading = true; error = null; render();
+  try {
+    const res = await fetch(RPC, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0", id: "lnl",
+        method: "getAssetsByGroup",
+        params: { groupKey: "collection", groupValue: COLLECTION, page: pg, limit: PAGE_SIZE }
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    nfts = (data.result?.items || []).map(parseAsset);
+    total = data.result?.total || 0;
+    page = pg;
+  } catch(e) { error = e.message; }
+  loading = false; render();
+}
+
+// ── Fetch wallet NFTs ──
+async function fetchMyNfts() {
+  if (!RPC || !walletAddress) return;
+  try {
+    const res = await fetch(RPC, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0", id: "lnl-my",
+        method: "searchAssets",
+        params: { ownerAddress: walletAddress, grouping: ["collection", COLLECTION], page: 1, limit: 100 }
+      })
+    });
+    const data = await res.json();
+    myNfts = (data.result?.items || []).map(parseAsset);
+  } catch(e) { console.error(e); }
+  render();
+}
+
+// ── Wallet ──
+async function connectWallet() {
+  const phantom = window?.phantom?.solana;
+  const solflare = window?.solflare;
+  const provider = phantom || solflare;
+  if (!provider) { alert("Install Phantom or Solflare wallet"); return; }
+  try {
+    const resp = await provider.connect();
+    walletAddress = resp.publicKey.toString();
+    walletProvider = provider;
+    showToast((phantom ? "Phantom" : "Solflare") + " connected");
+    render();
+    if (activeTab === "my-nfts") fetchMyNfts();
+  } catch(e) { console.error(e); }
+}
+
+function disconnectWallet() {
+  if (walletProvider?.disconnect) walletProvider.disconnect();
+  walletAddress = null; walletProvider = null; myNfts = [];
+  showToast("Disconnected");
+  render();
+}
+
+// ── Toast ──
+let toastTimer;
+function showToast(msg) {
+  const existing = document.querySelector(".toast");
+  if (existing) existing.remove();
+  const t = document.createElement("div");
+  t.className = "toast"; t.textContent = msg;
+  document.body.appendChild(t);
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.remove(), 3000);
+}
+
+// ── Render ──
+function render() {
+  const app = document.getElementById("app");
+  app.innerHTML = "";
+
+  // Wallet area in nav
+  const wa = document.getElementById("wallet-area");
+  if (walletAddress) {
+    wa.innerHTML = `<button class="conn-btn" id="disc-btn"><span class="dot-sm"></span>${short(walletAddress)} <span style="font-size:8px;opacity:.4">✕</span></button>`;
+    document.getElementById("disc-btn").onclick = disconnectWallet;
+  } else {
+    wa.innerHTML = `<button class="wallet-btn" id="conn-btn"><span>👻</span> CONNECT</button>`;
+    document.getElementById("conn-btn").onclick = connectWallet;
+  }
+
+  // Ticker
+  const t = `  ★ LONG NECK LEGENDS — ${total||SUPPLY} ON-CHAIN — DECENTRALIZED P2P MARKETPLACE — NO MIDDLEMEN — NO PLATFORM FEES  ★  `;
+  app.innerHTML += `<div class="ticker"><div class="ticker-inner"><span>${t}</span><span>${t}</span></div></div>`;
+
+  // Hero
+  app.innerHTML += `
+    <div style="padding:34px 16px 16px;text-align:center;background:radial-gradient(ellipse at center,var(--rb) 0%,transparent 65%)">
+      <h1 style="font-family:var(--m);font-size:clamp(22px,4.5vw,44px);color:#fff;line-height:1.1;margin-bottom:6px"><span class="neon">BUY & SELL</span> LONG NECKS</h1>
+      <p style="font-size:10px;color:var(--g2);max-width:440px;margin:0 auto 10px;line-height:1.6">The official Long Neck Legends decentralized marketplace. Peer-to-peer on Solana.</p>
+      <div style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:rgba(0,255,136,.04);border:1px solid rgba(0,255,136,.08);border-radius:6px;font-size:8px;color:var(--grn)"><span class="dot-sm"></span> ON-CHAIN • ${short(COLLECTION,6,4)}</div>
+      <div style="display:flex;justify-content:center;gap:12px;margin-top:18px;flex-wrap:wrap">
+        <div class="stat-card"><div style="font-family:var(--d);font-size:20px;color:var(--r);letter-spacing:2px">${total||"—"}</div><div style="font-size:8px;color:var(--g3);text-transform:uppercase;letter-spacing:3px">ON-CHAIN</div></div>
+        <div class="stat-card"><div style="font-family:var(--d);font-size:20px;color:var(--r);letter-spacing:2px">${nfts.length||"—"}</div><div style="font-size:8px;color:var(--g3);text-transform:uppercase;letter-spacing:3px">LOADED</div></div>
+        <div class="stat-card"><div style="font-family:var(--d);font-size:20px;color:var(--r);letter-spacing:2px">${SUPPLY}</div><div style="font-size:8px;color:var(--g3);text-transform:uppercase;letter-spacing:3px">SUPPLY</div></div>
+      </div>
+    </div>`;
+
+  // Tabs
+  app.innerHTML += `<div style="display:flex;gap:4px;justify-content:center;padding:0 16px 10px" id="tabs">
+    <button class="tab-btn ${activeTab==='market'?'active':''}" data-t="market">BROWSE ALL</button>
+    <button class="tab-btn ${activeTab==='my-nfts'?'active':''}" data-t="my-nfts">MY LONG NECKS</button>
+  </div>`;
+
+  if (activeTab === "market") renderMarket(app);
+  else renderMyNfts(app);
+
+  // Footer
+  app.innerHTML += `<footer class="site-footer">
+    <div style="font-family:var(--m);font-size:11px;color:var(--g3);letter-spacing:2px;margin-bottom:8px">LONG NECK LEGENDS © 2026</div>
+    <a href="https://x.com/longnecklegends" target="_blank">X / TWITTER</a>
+    <a href="https://discord.gg/ZPjf8n9unZ" target="_blank">DISCORD</a>
+    <a href="/">HOME</a>
+  </footer>`;
+
+  // Bind tabs
+  document.querySelectorAll("[data-t]").forEach(b => {
+    b.onclick = () => { activeTab = b.dataset.t; render(); if (activeTab==="my-nfts" && walletAddress && !myNfts.length) fetchMyNfts(); };
+  });
+
+  // Modal
+  if (selectedNft) renderModal();
+}
+
+function renderMarket(app) {
+  // Search
+  app.innerHTML += `<div style="padding:0 16px 10px;max-width:1400px;margin:0 auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <input class="input" id="search" placeholder="Search by name..." value="${searchQuery}" style="max-width:260px;flex:1 1 200px">
+    <div style="flex:1"></div>
+    ${total>0?`<span style="font-size:10px;color:var(--g3)">Page ${page} of ${Math.ceil(total/PAGE_SIZE)}</span>`:""}
+  </div>`;
+
+  // No key
+  if (error === "no_key") {
+    app.innerHTML += `<div style="margin:16px auto;padding:24px;background:var(--rb);border:1px solid rgba(255,0,60,.15);border-radius:12px;text-align:center;max-width:500px">
+      <div style="font-size:40px;margin-bottom:12px">🔑</div>
+      <div style="font-family:var(--d);color:var(--r);font-size:18px;letter-spacing:3px;margin-bottom:8px">ADD YOUR HELIUS KEY</div>
+      <p style="font-size:11px;color:var(--g1);line-height:1.7;margin-bottom:16px">Open <code style="color:var(--r);background:#111;padding:2px 6px;border-radius:4px">marketplace.html</code> and paste your key on the line:</p>
+      <div style="background:#080808;border:1px solid #1c1c1c;border-radius:8px;padding:14px;font-family:var(--f);font-size:11px;color:var(--grn);text-align:left;margin-bottom:16px">const HELIUS_KEY = "<span style="color:var(--r)">your_key_here</span>";</div>
+      <p style="font-size:10px;color:var(--g2)">Get a free key at <a href="https://helius.dev" target="_blank" style="color:var(--grn)">helius.dev</a></p>
+    </div>`;
+    return;
+  }
+
+  // Error
+  if (error) {
+    app.innerHTML += `<div style="margin:16px auto;padding:18px;background:var(--rb);border:1px solid rgba(255,0,60,.15);border-radius:10px;text-align:center;max-width:500px">
+      <div style="font-family:var(--d);color:var(--r);font-size:14px;letter-spacing:2px;margin-bottom:6px">ERROR</div>
+      <div style="font-size:11px;color:var(--g2);margin-bottom:10px">${error}</div>
+      <button class="btn-ghost" id="retry" style="font-size:11px">RETRY</button>
+    </div>`;
+    setTimeout(() => { document.getElementById("retry")?.addEventListener("click", () => fetchPage(page)); }, 0);
+    return;
+  }
+
+  // Loading
+  if (loading) {
+    let grid = `<div class="nft-grid">`;
+    for (let i=0;i<12;i++) grid += `<div class="nft-card"><div class="sk" style="height:220px"></div><div style="padding:14px"><div class="sk" style="height:14px;width:55%;margin-bottom:10px"></div><div class="sk" style="height:12px;width:40%"></div></div></div>`;
+    app.innerHTML += grid + `</div>`;
+    return;
+  }
+
+  // Filter
+  const filtered = searchQuery ? nfts.filter(n => n.name.toLowerCase().includes(searchQuery.toLowerCase())) : nfts;
+
+  // Grid
+  let grid = `<div class="nft-grid">`;
+  filtered.forEach((nft, i) => {
+    const yours = walletAddress && nft.owner === walletAddress;
+    grid += `<div class="nft-card" data-mint="${nft.mint}" style="animation:up .35s ease ${Math.min(i*.025,.5)}s both">
+      <div class="nft-img-wrap">
+        ${nft.image ? `<img src="${nft.image}" alt="${nft.name}" loading="lazy" class="nft-img" onerror="this.style.display='none'">` : `<div style="display:flex;align-items:center;justify-content:center;height:100%"><span style="font-size:44px;opacity:.07">🦒</span></div>`}
+        ${yours ? `<div class="yours-badge">YOURS</div>` : ""}
+      </div>
+      <div class="nft-info">
+        <div class="nft-name">${nft.name}</div>
+        <div class="nft-owner">Owner: ${short(nft.owner,4,3)}</div>
+      </div>
+    </div>`;
+  });
+  app.innerHTML += grid + `</div>`;
+
+  if (!filtered.length && !loading && !error) {
+    app.innerHTML += `<div style="text-align:center;padding:48px;color:var(--g2)">${searchQuery?"No matches":"No NFTs loaded"}</div>`;
+  }
+
+  // Pagination
+  if (total > 0) {
+    const pages = Math.ceil(total/PAGE_SIZE);
+    app.innerHTML += `<div style="display:flex;justify-content:center;gap:10px;padding:10px 16px 40px;align-items:center">
+      <button class="btn-ghost" id="prev" ${page<=1?"disabled":""} style="padding:10px 20px">← PREV</button>
+      <span style="font-family:var(--d);font-size:15px;color:var(--g1);letter-spacing:2px">PAGE ${page} of ${pages}</span>
+      <button class="btn-ghost" id="next" ${page>=pages?"disabled":""} style="padding:10px 20px">NEXT →</button>
+    </div>`;
+  }
+
+  // Bind events after DOM update
+  setTimeout(() => {
+    document.getElementById("search")?.addEventListener("input", e => { searchQuery = e.target.value; render(); });
+    document.getElementById("prev")?.addEventListener("click", () => fetchPage(page-1));
+    document.getElementById("next")?.addEventListener("click", () => fetchPage(page+1));
+    document.querySelectorAll("[data-mint]").forEach(card => {
+      card.onclick = () => { selectedNft = [...nfts, ...myNfts].find(n => n.mint === card.dataset.mint); render(); };
+    });
+  }, 0);
+}
+
+function renderMyNfts(app) {
+  if (!walletAddress) {
+    app.innerHTML += `<div style="text-align:center;padding:50px 20px">
+      <div style="font-size:44px;opacity:.12;margin-bottom:14px">🦒</div>
+      <div style="font-family:var(--d);font-size:18px;color:var(--g2);letter-spacing:3px;margin-bottom:14px">CONNECT YOUR WALLET</div>
+      <button class="wallet-btn" id="conn2" style="margin:0 auto"><span>👻</span> CONNECT</button>
+    </div>`;
+    setTimeout(() => { document.getElementById("conn2")?.addEventListener("click", connectWallet); }, 0);
+    return;
+  }
+
+  if (!myNfts.length) {
+    app.innerHTML += `<div style="text-align:center;padding:40px;color:var(--g2)">
+      <div style="margin-bottom:10px">No Long Neck Legends in this wallet</div>
+      <div style="font-size:9px;color:var(--g3)">${short(walletAddress,8,6)}</div>
+    </div>`;
+    return;
+  }
+
+  app.innerHTML += `<div style="padding:10px 16px;font-size:10px;color:var(--g2)">${myNfts.length} Long Neck${myNfts.length!==1?"s":""} in ${short(walletAddress,6,4)}</div>`;
+
+  let grid = `<div class="nft-grid">`;
+  myNfts.forEach((nft, i) => {
+    grid += `<div class="nft-card" data-mint="${nft.mint}" style="animation:up .35s ease ${i*.05}s both">
+      <div class="nft-img-wrap" style="height:200px">
+        ${nft.image ? `<img src="${nft.image}" alt="${nft.name}" loading="lazy" class="nft-img" onerror="this.style.display='none'">` : ""}
+      </div>
+      <div class="nft-info">
+        <div class="nft-name">${nft.name}</div>
+      </div>
+    </div>`;
+  });
+  app.innerHTML += grid + `</div>`;
+
+  setTimeout(() => {
+    document.querySelectorAll("[data-mint]").forEach(card => {
+      card.onclick = () => { selectedNft = myNfts.find(n => n.mint === card.dataset.mint); render(); };
+    });
+  }, 0);
+}
+
+function renderModal() {
+  if (!selectedNft) return;
+  const nft = selectedNft;
+  const yours = walletAddress && nft.owner === walletAddress;
+
+  const overlay = document.createElement("div");
+  overlay.className = "modal-bg";
+  overlay.onclick = e => { if (e.target === overlay) { selectedNft = null; render(); } };
+
+  let traitsHtml = "";
+  if (nft.attributes?.length) {
+    traitsHtml = `<div style="margin-bottom:16px"><div style="font-size:10px;color:var(--g2);letter-spacing:2px;margin-bottom:6px">TRAITS</div><div>${nft.attributes.map(a => `<span class="trait"><span style="color:var(--g2)">${a.trait_type}: </span><span style="color:var(--g1)">${a.value}</span></span>`).join("")}</div></div>`;
+  }
+
+  overlay.innerHTML = `<div class="modal" style="max-width:860px" onclick="event.stopPropagation()">
+    <button class="modal-close" id="close-modal">✕</button>
+    <div style="flex:1 1 340px;min-height:300px;background:#030303;display:flex;align-items:center;justify-content:center">
+      ${nft.image ? `<img src="${nft.image}" alt="${nft.name}" style="width:100%;height:100%;object-fit:contain;max-height:460px">` : `<span style="font-size:52px;opacity:.1">🦒</span>`}
+    </div>
+    <div style="flex:1 1 320px;padding:26px;min-width:260px">
+      <h2 style="font-family:var(--d);font-size:28px;color:#fff;letter-spacing:3px;line-height:1;margin-bottom:14px">${nft.name}</h2>
+      <div style="font-size:10px;color:var(--g2);margin-bottom:14px">Owner: <span style="color:var(--g1)">${short(nft.owner,8,6)}</span> ${yours ? `<span class="tg" style="margin-left:6px;background:var(--grna);color:var(--grn)">YOU</span>` : ""}</div>
+      ${traitsHtml}
+      <div style="display:flex;gap:8px">
+        ${!yours && walletAddress ? `<button class="btn-primary" style="flex:1" onclick="showToast('Trading coming soon — Auction House deployment needed')">BUY</button>` : ""}
+        ${!yours && walletAddress ? `<button class="btn-ghost" style="flex:1" onclick="showToast('Offers coming soon — Auction House deployment needed')">MAKE OFFER</button>` : ""}
+        ${yours ? `<button class="btn-primary" style="flex:1" onclick="showToast('Listing coming soon — Auction House deployment needed')">LIST FOR SALE</button>` : ""}
+      </div>
+      ${!walletAddress ? `<div style="font-size:10px;color:var(--g2);text-align:center;margin-top:10px;padding:10px;background:var(--rb);border-radius:8px">Connect wallet to trade</div>` : ""}
+      <div style="font-size:8px;color:var(--g3);margin-top:14px;word-break:break-all;line-height:1.6">Mint: ${nft.mint}</div>
+    </div>
+  </div>`;
+
+  document.getElementById("app").appendChild(overlay);
+  document.getElementById("close-modal").onclick = () => { selectedNft = null; render(); };
+}
+
+// ── Init ──
+document.addEventListener("DOMContentLoaded", () => {
+  fetchPage(1);
+});
+</script>
+</body>
+</html>
