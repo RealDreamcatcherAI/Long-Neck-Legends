@@ -111,13 +111,13 @@
 // ═══════════════════════════════════════════════════════════
 //  YOUR HELIUS API KEY — paste between the quotes
 // ═══════════════════════════════════════════════════════════
-const HELIUS_KEY = "PASTE_YOUR_NEW_KEY_HERE";
+const HELIUS_KEY = "33955d33-79ed-4817-8a40-1ce04a3cf241";
 // ═══════════════════════════════════════════════════════════
 
-const COLLECTION = "2WvxCvgFUiqUSBx32c5Z5Zsbcu4ZJCE1GEaaWpbD685P";
+const COLLECTION = "8Rt3Ayqth4DAiPnW9MDFi63TiQJHmohfTWLMQFHi4KZH";
 const SUPPLY = 3333;
 const PAGE_SIZE = 28;
-const RPC = HELIUS_KEY && HELIUS_KEY !== "33955d33-79ed-4817-8a40-1ce04a3cf241"
+const RPC = HELIUS_KEY && HELIUS_KEY !== ""
   ? `https://mainnet.helius-rpc.com/?api-key=${HELIUS_KEY}`
   : null;
 
@@ -254,9 +254,9 @@ function render() {
       <p style="font-size:10px;color:var(--g2);max-width:440px;margin:0 auto 10px;line-height:1.6">The official Long Neck Legends decentralized marketplace. Peer-to-peer on Solana.</p>
       <div style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:rgba(0,255,136,.04);border:1px solid rgba(0,255,136,.08);border-radius:6px;font-size:8px;color:var(--grn)"><span class="dot-sm"></span> ON-CHAIN • ${short(COLLECTION,6,4)}</div>
       <div style="display:flex;justify-content:center;gap:12px;margin-top:18px;flex-wrap:wrap">
-        <div class="stat-card"><div style="font-family:var(--d);font-size:20px;color:var(--r);letter-spacing:2px">${total||"—"}</div><div style="font-size:8px;color:var(--g3);text-transform:uppercase;letter-spacing:3px">ON-CHAIN</div></div>
-        <div class="stat-card"><div style="font-family:var(--d);font-size:20px;color:var(--r);letter-spacing:2px">${nfts.length||"—"}</div><div style="font-size:8px;color:var(--g3);text-transform:uppercase;letter-spacing:3px">LOADED</div></div>
         <div class="stat-card"><div style="font-family:var(--d);font-size:20px;color:var(--r);letter-spacing:2px">${SUPPLY}</div><div style="font-size:8px;color:var(--g3);text-transform:uppercase;letter-spacing:3px">SUPPLY</div></div>
+        <div class="stat-card"><div style="font-family:var(--d);font-size:20px;color:var(--r);letter-spacing:2px">${total||"—"}</div><div style="font-size:8px;color:var(--g3);text-transform:uppercase;letter-spacing:3px">INDEXED</div></div>
+        <div class="stat-card"><div style="font-family:var(--d);font-size:20px;color:var(--r);letter-spacing:2px">${page} / ${Math.ceil((total||1)/PAGE_SIZE)}</div><div style="font-size:8px;color:var(--g3);text-transform:uppercase;letter-spacing:3px">PAGE</div></div>
       </div>
     </div>`;
 
