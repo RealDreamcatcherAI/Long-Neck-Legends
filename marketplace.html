@@ -156,6 +156,8 @@ async function fetchPage(pg) {
   if (!RPC) { error = "no_key"; render(); return; }
   loading = true; error = null; render();
   try {
+    console.log("Fetching from RPC:", RPC);
+    console.log("Collection:", COLLECTION);
     const res = await fetch(RPC, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -166,6 +168,7 @@ async function fetchPage(pg) {
       })
     });
     const data = await res.json();
+    console.log("Helius response:", JSON.stringify(data).slice(0, 500));
     if (data.error) throw new Error(data.error.message);
     nfts = (data.result?.items || []).map(parseAsset);
     total = data.result?.total || 0;
