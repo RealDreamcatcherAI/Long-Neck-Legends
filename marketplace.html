@@ -180,36 +180,130 @@ async function fetchPage(pg) {
 // ── Fetch wallet NFTs ──
 async function fetchMyNfts() {
   if (!RPC || !walletAddress) return;
+  myNfts = [];
+  render();
   try {
-    const res = await fetch(RPC, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        jsonrpc: "2.0", id: "lnl-my",
-        method: "searchAssets",
-        params: { ownerAddress: walletAddress, grouping: ["collection", COLLECTION], page: 1, limit: 100 }
+    // Use getAssetsByOwner and filter by collection client-side
+    // (searchAssets grouping format is unreliable across Helius versions)
+    let page = 1, allItems = [];
+    while (true) {
+      const res = await fetch(RPC, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0", id: "lnl-my",
+          method: "getAssetsByOwner",
+          params: { ownerAddress: walletAddress, page, limit: 1000, displayOptions: { showCollectionMetadata: false } }
+        })
+      });
+      const data = await res.json();
+      const items = data.result?.items || [];
+      allItems = allItems.concat(items);
+      if (items.length < 1000) break;
+      page++;
+    }
+    // Filter to only LNL collection
+    myNfts = allItems
+      .filter(item => {
+        const groups = item.grouping || [];
+        return groups.some(g => g.group_key === "collection" && g.group_value === COLLECTION);
       })
-    });
-    const data = await res.json();
-    myNfts = (data.result?.items || []).map(parseAsset);
-  } catch(e) { console.error(e); }
+      .map(parseAsset);
+    console.log(`Found ${myNfts.length} LNL NFTs in wallet`);
+  } catch(e) { console.error("fetchMyNfts error:", e); }
   render();
 }
 
-// ── Wallet ──
-async function connectWallet() {
-  const phantom = window?.phantom?.solana;
+// ── Wallet Picker Modal ──
+function showWalletPicker() {
+  const existing = document.getElementById("wallet-picker-modal");
+  if (existing) existing.remove();
+
+  const phantom  = window?.phantom?.solana;
   const solflare = window?.solflare;
-  const provider = phantom || solflare;
-  if (!provider) { alert("Install Phantom or Solflare wallet"); return; }
+
+  const overlay = document.createElement("div");
+  overlay.id = "wallet-picker-modal";
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:3000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(14px);animation:fade .15s;padding:14px";
+  overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+
+  const wallets = [
+    { id:"phantom",  label:"Phantom",  icon:"👻", provider: phantom,  installUrl:"https://phantom.app" },
+    { id:"solflare", label:"Solflare", icon:"🌟", provider: solflare, installUrl:"https://solflare.com" },
+  ];
+
+  const rows = wallets.map(w => {
+    const installed = !!w.provider;
+    return `<button class="wallet-pick-btn" data-wallet="${w.id}" style="
+      display:flex;align-items:center;gap:14px;padding:16px 20px;
+      background:${installed?"#0e0e0e":"#080808"};
+      border:1px solid ${installed?"#2a2a2a":"#141414"};
+      border-radius:12px;cursor:pointer;width:100%;
+      transition:all .2s;color:${installed?"#fff":"#444"};font-family:'Space Mono',monospace;
+      text-align:left;margin-bottom:8px;
+    ">
+      <span style="font-size:28px">${w.icon}</span>
+      <div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:3px">${w.label}</div>
+        <div style="font-size:9px;color:${installed?"#555":"#333"};letter-spacing:1px">${installed?"DETECTED — CLICK TO CONNECT":"NOT INSTALLED"}</div>
+      </div>
+      <div style="margin-left:auto;font-size:9px;color:${installed?"var(--grn)":"#333"}">${installed?"●":"○"}</div>
+    </button>`;
+  }).join("");
+
+  overlay.innerHTML = `<div style="
+    background:linear-gradient(145deg,#0c0c0c,#080808);
+    border:1px solid #1c1c1c;border-radius:16px;padding:28px;
+    width:100%;max-width:380px;position:relative
+  " onclick="event.stopPropagation()">
+    <button onclick="document.getElementById('wallet-picker-modal').remove()" style="
+      position:absolute;top:12px;right:12px;background:rgba(255,0,60,.08);
+      border:1px solid rgba(255,0,60,.2);color:var(--r);width:28px;height:28px;
+      border-radius:50%;cursor:pointer;font-size:13px;display:grid;place-items:center
+    ">✕</button>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:4px;color:#fff;margin-bottom:6px;text-align:center">CONNECT WALLET</div>
+    <div style="font-size:9px;color:#444;letter-spacing:2px;text-align:center;margin-bottom:22px">CHOOSE YOUR SOLANA WALLET</div>
+    ${rows}
+    <div style="text-align:center;margin-top:10px;font-size:9px;color:#2a2a2a">
+      New to Solana? <a href="https://phantom.app" target="_blank" style="color:#555">Get Phantom</a>
+    </div>
+  </div>`;
+
+  document.body.appendChild(overlay);
+
+  // Bind wallet buttons
+  overlay.querySelectorAll(".wallet-pick-btn").forEach(btn => {
+    btn.onmouseenter = () => { if (!btn.disabled) btn.style.borderColor = "rgba(255,0,60,.3)"; };
+    btn.onmouseleave = () => { btn.style.borderColor = wallets.find(w=>w.id===btn.dataset.wallet)?.provider ? "#2a2a2a" : "#141414"; };
+    btn.onclick = async () => {
+      const w = wallets.find(x => x.id === btn.dataset.wallet);
+      if (!w.provider) {
+        window.open(w.installUrl, "_blank");
+        return;
+      }
+      overlay.remove();
+      await connectWalletProvider(w.provider, w.label);
+    };
+  });
+}
+
+async function connectWalletProvider(provider, label) {
   try {
     const resp = await provider.connect();
     walletAddress = resp.publicKey.toString();
     walletProvider = provider;
-    showToast((phantom ? "Phantom" : "Solflare") + " connected");
+    showToast(label + " connected ✓");
     render();
     if (activeTab === "my-nfts") fetchMyNfts();
-  } catch(e) { console.error(e); }
+  } catch(e) {
+    if (e.code !== 4001) console.error("Wallet connect error:", e);
+    // 4001 = user rejected, silently ignore
+  }
+}
+
+// Legacy single-call kept for the "MY LONG NECKS" tab connect button
+async function connectWallet() {
+  showWalletPicker();
 }
 
 function disconnectWallet() {
@@ -242,8 +336,8 @@ function render() {
     wa.innerHTML = `<button class="conn-btn" id="disc-btn"><span class="dot-sm"></span>${short(walletAddress)} <span style="font-size:8px;opacity:.4">✕</span></button>`;
     document.getElementById("disc-btn").onclick = disconnectWallet;
   } else {
-    wa.innerHTML = `<button class="wallet-btn" id="conn-btn"><span>👻</span> CONNECT</button>`;
-    document.getElementById("conn-btn").onclick = connectWallet;
+    wa.innerHTML = `<button class="wallet-btn" id="conn-btn"><span>👛</span> CONNECT</button>`;
+    document.getElementById("conn-btn").onclick = showWalletPicker;
   }
 
   // Ticker
@@ -378,9 +472,9 @@ function renderMyNfts(app) {
     app.innerHTML += `<div style="text-align:center;padding:50px 20px">
       <div style="font-size:44px;opacity:.12;margin-bottom:14px">🦒</div>
       <div style="font-family:var(--d);font-size:18px;color:var(--g2);letter-spacing:3px;margin-bottom:14px">CONNECT YOUR WALLET</div>
-      <button class="wallet-btn" id="conn2" style="margin:0 auto"><span>👻</span> CONNECT</button>
+      <button class="wallet-btn" id="conn2" style="margin:0 auto"><span>👛</span> CONNECT</button>
     </div>`;
-    setTimeout(() => { document.getElementById("conn2")?.addEventListener("click", connectWallet); }, 0);
+    setTimeout(() => { document.getElementById("conn2")?.addEventListener("click", showWalletPicker); }, 0);
     return;
   }
 
