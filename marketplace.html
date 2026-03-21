@@ -183,9 +183,7 @@ async function fetchMyNfts() {
   myNfts = [];
   render();
   try {
-    // Use getAssetsByOwner and filter by collection client-side
-    // (searchAssets grouping format is unreliable across Helius versions)
-    let page = 1, allItems = [];
+    let pg = 1, allItems = [];
     while (true) {
       const res = await fetch(RPC, {
         method: "POST",
@@ -193,25 +191,64 @@ async function fetchMyNfts() {
         body: JSON.stringify({
           jsonrpc: "2.0", id: "lnl-my",
           method: "getAssetsByOwner",
-          params: { ownerAddress: walletAddress, page, limit: 1000, displayOptions: { showCollectionMetadata: false } }
+          params: {
+            ownerAddress: walletAddress,
+            page: pg,
+            limit: 1000,
+            displayOptions: { showUnverifiedCollections: true }
+          }
         })
       });
       const data = await res.json();
+      if (data.error) { console.error("[LNL] RPC error:", data.error); break; }
       const items = data.result?.items || [];
       allItems = allItems.concat(items);
       if (items.length < 1000) break;
-      page++;
+      pg++;
     }
-    // Filter to only LNL collection
-    myNfts = allItems
-      .filter(item => {
-        const groups = item.grouping || [];
-        return groups.some(g => g.group_key === "collection" && g.group_value === COLLECTION);
-      })
-      .map(parseAsset);
-    console.log(`Found ${myNfts.length} LNL NFTs in wallet`);
+
+    console.log("[LNL] Total assets in wallet:", allItems.length);
+    if (allItems.length > 0) {
+      // Log the first few groupings so we can debug collection address mismatches
+      allItems.slice(0, 3).forEach((item, i) => {
+        console.log(`[LNL] Asset[${i}] name=${item.content?.metadata?.name} grouping=`, JSON.stringify(item.grouping));
+      });
+    }
+
+    myNfts = allItems.filter(item => {
+      // Strategy 1: any grouping key that holds our collection address
+      const groups = item.grouping || [];
+      if (groups.some(g => g.group_value === COLLECTION)) return true;
+
+      // Strategy 2: name prefix match (Long Neck Legend #XXXX)
+      const name = (item.content?.metadata?.name || "").toLowerCase();
+      if (name.startsWith("long neck legend")) return true;
+
+      // Strategy 3: check creators array for known LNL creator/update authority
+      const creators = item.creators || [];
+      if (creators.some(c => c.address === COLLECTION)) return true;
+
+      return false;
+    }).map(parseAsset);
+
+    console.log(`[LNL] Found ${myNfts.length} LNL NFTs after filter`);
   } catch(e) { console.error("fetchMyNfts error:", e); }
   render();
+}
+
+// ── Wallet detection (handles all mobile injection paths) ──
+function detectWallets() {
+  // Phantom: window.phantom.solana OR window.solana with isPhantom flag
+  const phantom = window?.phantom?.solana?.isPhantom ? window.phantom.solana
+    : (window?.solana?.isPhantom ? window.solana : null);
+  // Solflare: window.solflare.isSolflare OR window.solana.isSolflare (mobile in-app browser)
+  const solflare = window?.solflare?.isSolflare ? window.solflare
+    : (window?.solana?.isSolflare ? window.solana : null);
+  return { phantom, solflare };
+}
+
+function isMobile() {
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 }
 
 // ── Wallet Picker Modal ──
@@ -219,8 +256,9 @@ function showWalletPicker() {
   const existing = document.getElementById("wallet-picker-modal");
   if (existing) existing.remove();
 
-  const phantom  = window?.phantom?.solana;
-  const solflare = window?.solflare;
+  const { phantom, solflare } = detectWallets();
+  const mobile = isMobile();
+  const pageUrl = encodeURIComponent(window.location.href);
 
   const overlay = document.createElement("div");
   overlay.id = "wallet-picker-modal";
@@ -228,33 +266,50 @@ function showWalletPicker() {
   overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
 
   const wallets = [
-    { id:"phantom",  label:"Phantom",  icon:"👻", provider: phantom,  installUrl:"https://phantom.app" },
-    { id:"solflare", label:"Solflare", icon:"🌟", provider: solflare, installUrl:"https://solflare.com" },
+    {
+      id: "phantom", label: "Phantom", icon: "👻", provider: phantom,
+      installUrl: "https://phantom.app",
+      deepLink: `https://phantom.app/ul/browse/${pageUrl}?ref=${pageUrl}`
+    },
+    {
+      id: "solflare", label: "Solflare", icon: "🌟", provider: solflare,
+      installUrl: "https://solflare.com",
+      deepLink: `https://solflare.com/ul/v1/browse/${pageUrl}?ref=${pageUrl}`
+    },
   ];
 
   const rows = wallets.map(w => {
-    const installed = !!w.provider;
+    const detected = !!w.provider;
+    const subLabel = detected ? "DETECTED — TAP TO CONNECT"
+      : mobile ? "TAP TO OPEN IN WALLET APP"
+      : "NOT INSTALLED";
+    const col = detected ? "#fff" : mobile ? "#999" : "#444";
+    const bdr = detected ? "#2a2a2a" : mobile ? "#1e1e1e" : "#141414";
+    const dot = detected ? "var(--grn)" : mobile ? "#666" : "#333";
+    const arrow = detected ? "●" : mobile ? "↗" : "○";
+
     return `<button class="wallet-pick-btn" data-wallet="${w.id}" style="
       display:flex;align-items:center;gap:14px;padding:16px 20px;
-      background:${installed?"#0e0e0e":"#080808"};
-      border:1px solid ${installed?"#2a2a2a":"#141414"};
-      border-radius:12px;cursor:pointer;width:100%;
-      transition:all .2s;color:${installed?"#fff":"#444"};font-family:'Space Mono',monospace;
-      text-align:left;margin-bottom:8px;
+      background:${detected ? "#0e0e0e" : "#080808"};border:1px solid ${bdr};
+      border-radius:12px;cursor:pointer;width:100%;transition:all .2s;
+      color:${col};font-family:'Space Mono',monospace;text-align:left;margin-bottom:8px;
     ">
       <span style="font-size:28px">${w.icon}</span>
       <div>
         <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:3px">${w.label}</div>
-        <div style="font-size:9px;color:${installed?"#555":"#333"};letter-spacing:1px">${installed?"DETECTED — CLICK TO CONNECT":"NOT INSTALLED"}</div>
+        <div style="font-size:9px;color:${dot};letter-spacing:1px;margin-top:2px">${subLabel}</div>
       </div>
-      <div style="margin-left:auto;font-size:9px;color:${installed?"var(--grn)":"#333"}">${installed?"●":"○"}</div>
+      <div style="margin-left:auto;font-size:14px;color:${dot}">${arrow}</div>
     </button>`;
   }).join("");
 
+  const hint = mobile
+    ? `<div style="text-align:center;margin-top:10px;font-size:9px;color:#2a2a2a">Open this page inside your wallet's browser for the best experience</div>`
+    : `<div style="text-align:center;margin-top:10px;font-size:9px;color:#2a2a2a">New to Solana? <a href="https://phantom.app" target="_blank" style="color:#555">Get Phantom</a></div>`;
+
   overlay.innerHTML = `<div style="
-    background:linear-gradient(145deg,#0c0c0c,#080808);
-    border:1px solid #1c1c1c;border-radius:16px;padding:28px;
-    width:100%;max-width:380px;position:relative
+    background:linear-gradient(145deg,#0c0c0c,#080808);border:1px solid #1c1c1c;
+    border-radius:16px;padding:28px;width:100%;max-width:380px;position:relative
   " onclick="event.stopPropagation()">
     <button onclick="document.getElementById('wallet-picker-modal').remove()" style="
       position:absolute;top:12px;right:12px;background:rgba(255,0,60,.08);
@@ -263,26 +318,29 @@ function showWalletPicker() {
     ">✕</button>
     <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:4px;color:#fff;margin-bottom:6px;text-align:center">CONNECT WALLET</div>
     <div style="font-size:9px;color:#444;letter-spacing:2px;text-align:center;margin-bottom:22px">CHOOSE YOUR SOLANA WALLET</div>
-    ${rows}
-    <div style="text-align:center;margin-top:10px;font-size:9px;color:#2a2a2a">
-      New to Solana? <a href="https://phantom.app" target="_blank" style="color:#555">Get Phantom</a>
-    </div>
+    ${rows}${hint}
   </div>`;
 
   document.body.appendChild(overlay);
 
-  // Bind wallet buttons
   overlay.querySelectorAll(".wallet-pick-btn").forEach(btn => {
-    btn.onmouseenter = () => { if (!btn.disabled) btn.style.borderColor = "rgba(255,0,60,.3)"; };
-    btn.onmouseleave = () => { btn.style.borderColor = wallets.find(w=>w.id===btn.dataset.wallet)?.provider ? "#2a2a2a" : "#141414"; };
+    btn.onmouseenter = () => { btn.style.borderColor = "rgba(255,0,60,.3)"; };
+    btn.onmouseleave = () => {
+      const w = wallets.find(w => w.id === btn.dataset.wallet);
+      btn.style.borderColor = w?.provider ? "#2a2a2a" : mobile ? "#1e1e1e" : "#141414";
+    };
     btn.onclick = async () => {
       const w = wallets.find(x => x.id === btn.dataset.wallet);
-      if (!w.provider) {
+      if (w.provider) {
+        overlay.remove();
+        await connectWalletProvider(w.provider, w.label);
+      } else if (mobile) {
+        overlay.remove();
+        // Deep link opens page inside the wallet's in-app browser where provider IS injected
+        window.location.href = w.deepLink;
+      } else {
         window.open(w.installUrl, "_blank");
-        return;
       }
-      overlay.remove();
-      await connectWalletProvider(w.provider, w.label);
     };
   });
 }
