@@ -790,7 +790,17 @@ function renderMarket(app) {
     app.innerHTML += g+`</div>`; return;
   }
 
-  const filtered = searchQuery ? nfts.filter(n=>n.name.toLowerCase().includes(searchQuery.toLowerCase())) : nfts;
+  const base = searchQuery ? nfts.filter(n=>n.name.toLowerCase().includes(searchQuery.toLowerCase())) : nfts;
+  // Sort: listed NFTs float to top, then unlisted
+  const filtered = [...base].sort((a,b) => {
+    const aListed = !!listings[a.mint];
+    const bListed = !!listings[b.mint];
+    if (aListed && !bListed) return -1;
+    if (!aListed && bListed) return 1;
+    // Both listed: sort by price ascending
+    if (aListed && bListed) return listings[a.mint].price_sol - listings[b.mint].price_sol;
+    return 0;
+  });
   let grid = `<div class="nft-grid">`;
   filtered.forEach((nft, i) => {
     const yours   = walletAddress && nft.owner === walletAddress;
@@ -927,7 +937,7 @@ function renderModal() {
       ${listing
         ? `<button class="btn-green" style="flex:2" id="buy-btn">BUY NOW — ◎ ${listing.price_sol} SOL</button>`
         : `<div style="flex:2;padding:12px;background:#060606;border:1px solid #161616;border-radius:8px;font-size:10px;color:var(--g2);display:flex;align-items:center;justify-content:center">NOT LISTED</div>`}
-      <button class="btn-ghost" style="flex:1;white-space:nowrap" id="offer-btn">${myOffer?"EDIT OFFER":"MAKE OFFER"}</button>
+      <button class="btn-ghost" style="flex:1;white-space:nowrap;opacity:.35;cursor:not-allowed" id="offer-btn" disabled title="Offers coming soon">MAKE OFFER</button>
     </div>`;
   }
 
