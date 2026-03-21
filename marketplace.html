@@ -348,7 +348,8 @@ function showWalletPicker() {
 async function connectWalletProvider(provider, label) {
   try {
     const resp = await provider.connect();
-    walletAddress = resp.publicKey.toString();
+    const pk = resp?.publicKey || provider.publicKey;  // grab from either source
+    walletAddress = typeof pk === "string" ? pk : pk.toString(); // handle both types
     walletProvider = provider;
     showToast(label + " connected ✓");
     render();
