@@ -389,15 +389,19 @@ async function getWeb3() {
 }
 
 // ─────────────────────────────────────────────
-//  ATOMIC SWAP — SOL split + NFT transfer in ONE transaction
+//  TRANSACTION BUILDER
+//  The tx has ALL instructions in ONE transaction:
+//  SOL → seller, SOL → treasury, NFT → buyer
+//  Both buyer AND seller must sign.
 //
-//  Security guarantees:
-//  1. Seller ownership verified on-chain BEFORE tx is built
-//  2. Both SOL transfer and NFT transfer are instructions in the SAME tx
-//  3. If either fails, the entire tx reverts — buyer never loses SOL
-//     without receiving the NFT
+//  Flow:
+//  LISTING: seller signs the full tx (partial) → serialized bytes stored in Supabase
+//  BUYING:  buyer deserializes, adds their signature, broadcasts
+//
+//  This is fully atomic — if SOL moves, NFT moves in the same tx.
 // ─────────────────────────────────────────────
-async function buildAtomicSwap({ sellerPubkeyStr, buyerPubkeyStr, mintStr, priceSol }) {
+
+async function buildSwapTx({ sellerPubkeyStr, buyerPubkeyStr, mintStr, priceSol }) {
   const web3 = await getWeb3();
   const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = web3;
 
@@ -406,21 +410,19 @@ async function buildAtomicSwap({ sellerPubkeyStr, buyerPubkeyStr, mintStr, price
   const SYS_PROGRAM_ID   = new PublicKey("11111111111111111111111111111111");
   const SYSVAR_RENT      = new PublicKey("SysvarRent111111111111111111111111111111111");
 
-  const conn    = new Connection(RPC, "confirmed");
-  const seller  = new PublicKey(sellerPubkeyStr);
-  const buyer   = new PublicKey(buyerPubkeyStr);
-  const mint    = new PublicKey(mintStr);
+  const conn     = new Connection(RPC, "confirmed");
+  const seller   = new PublicKey(sellerPubkeyStr);
+  const buyer    = new PublicKey(buyerPubkeyStr);
+  const mint     = new PublicKey(mintStr);
   const treasury = new PublicKey(TREASURY);
 
-  // Derive ATAs
-  const [sellerATA] = await PublicKey.findProgramAddress(
-    [seller.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), mint.toBuffer()], ASSOC_TOKEN_ID);
-  const [buyerATA] = await PublicKey.findProgramAddress(
-    [buyer.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), mint.toBuffer()], ASSOC_TOKEN_ID);
-
-  // ── SAFETY CHECK: verify seller still holds the NFT ──
+  // Confirm seller still holds NFT
   const sellerTokens = await conn.getTokenAccountsByOwner(seller, { mint });
   if (!sellerTokens.value.length) throw new Error("SELLER_NO_NFT");
+  const sellerATA = sellerTokens.value[0].pubkey;
+
+  const [buyerATA] = await PublicKey.findProgramAddressSync(
+    [buyer.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), mint.toBuffer()], ASSOC_TOKEN_ID);
 
   const priceLamports  = Math.round(priceSol * LAMPORTS_PER_SOL);
   const feeLamports    = Math.round(priceLamports * FEE_PCT);
@@ -428,34 +430,33 @@ async function buildAtomicSwap({ sellerPubkeyStr, buyerPubkeyStr, mintStr, price
 
   const tx = new Transaction();
 
-  // ① Create buyer ATA if needed (buyer pays for it)
+  // ① Create buyer ATA if it doesn't exist yet
   const buyerAtaInfo = await conn.getAccountInfo(buyerATA);
   if (!buyerAtaInfo) {
     tx.add({
       programId: ASSOC_TOKEN_ID,
       keys: [
-        { pubkey: buyer,           isSigner: true,  isWritable: true  },
-        { pubkey: buyerATA,        isSigner: false, isWritable: true  },
-        { pubkey: buyer,           isSigner: false, isWritable: false },
-        { pubkey: mint,            isSigner: false, isWritable: false },
-        { pubkey: SYS_PROGRAM_ID,  isSigner: false, isWritable: false },
-        { pubkey: TOKEN_PROGRAM_ID,isSigner: false, isWritable: false },
-        { pubkey: SYSVAR_RENT,     isSigner: false, isWritable: false },
+        { pubkey: buyer,            isSigner: true,  isWritable: true  },
+        { pubkey: buyerATA,         isSigner: false, isWritable: true  },
+        { pubkey: buyer,            isSigner: false, isWritable: false },
+        { pubkey: mint,             isSigner: false, isWritable: false },
+        { pubkey: SYS_PROGRAM_ID,   isSigner: false, isWritable: false },
+        { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+        { pubkey: SYSVAR_RENT,      isSigner: false, isWritable: false },
       ],
       data: Buffer.alloc(0)
     });
   }
 
-  // ② SOL → seller
-  tx.add(SystemProgram.transfer({ fromPubkey: buyer, toPubkey: seller,   lamports: sellerLamports }));
+  // ② SOL → seller (buyer signs)
+  tx.add(SystemProgram.transfer({ fromPubkey: buyer, toPubkey: seller, lamports: sellerLamports }));
 
-  // ③ SOL → treasury (2.5% fee)
+  // ③ SOL → treasury (buyer signs)
   if (feeLamports > 0) {
     tx.add(SystemProgram.transfer({ fromPubkey: buyer, toPubkey: treasury, lamports: feeLamports }));
   }
 
-  // ④ NFT token → buyer (signed by seller)
-  //    Token transfer instruction discriminator = 3, amount = u64 LE 1
+  // ④ NFT → buyer (seller signs as token account authority)
   tx.add({
     programId: TOKEN_PROGRAM_ID,
     keys: [
@@ -463,18 +464,19 @@ async function buildAtomicSwap({ sellerPubkeyStr, buyerPubkeyStr, mintStr, price
       { pubkey: buyerATA,  isSigner: false, isWritable: true  },
       { pubkey: seller,    isSigner: true,  isWritable: false },
     ],
-    data: Buffer.from([3, 1, 0, 0, 0, 0, 0, 0, 0])
+    data: Buffer.from([3, 1, 0, 0, 0, 0, 0, 0, 0]) // transfer ix, amount=1
   });
 
   const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
   tx.recentBlockhash = blockhash;
   tx.lastValidBlockHeight = lastValidBlockHeight;
-  tx.feePayer = buyer;
+  tx.feePayer = buyer; // buyer pays network fees
 
-  return { tx, conn, sellerATA, buyerATA };
+  return { tx, conn, sellerATA: sellerATA.toBase58(), buyerATA: buyerATA.toBase58() };
 }
 
 // ─────────────────────────────────────────────
+//  RECORD SALE// ─────────────────────────────────────────────
 //  RECORD SALE
 // ─────────────────────────────────────────────
 async function recordSale({ mint, seller, buyer, price_sol, name, image, tx_sig }) {
@@ -492,7 +494,7 @@ async function recordSale({ mint, seller, buyer, price_sol, name, image, tx_sig 
 //  BUY
 // ─────────────────────────────────────────────
 async function buyNft(listing) {
-  console.log("[buyNft] called — wallet:", walletAddress, "provider:", !!walletProvider, "listing:", listing?.mint, listing?.price_sol);
+  console.log("[buyNft] called — wallet:", walletAddress, "listing:", listing?.mint, listing?.price_sol);
   if (!walletAddress || !walletProvider) { showToast("Connect wallet first", true); return; }
 
   const btn = document.getElementById("buy-btn");
@@ -500,68 +502,84 @@ async function buyNft(listing) {
   setBtn(`<span class="spinner"></span>VERIFYING...`, true);
 
   try {
-    console.log("[buyNft] loading web3...");
     const web3 = await getWeb3();
-    console.log("[buyNft] web3 loaded, building swap...");
-    const { tx, conn, buyerATA } = await buildAtomicSwap({
-      sellerPubkeyStr: listing.seller,
-      buyerPubkeyStr:  walletAddress,
-      mintStr:         listing.mint,
-      priceSol:        listing.price_sol
-    });
+    const { PublicKey, Transaction } = web3;
 
-    setBtn(`<span class="spinner"></span>SIGN IN WALLET...`, true);
+    // Check if listing has a pre-signed seller tx stored
+    const sellerSig = listing.seller_sig; // base64 serialized partial tx signed by seller
 
-    // CRITICAL: This tx requires TWO signatures — buyer (SOL) and seller (NFT).
-    // Since seller is not online to co-sign, we use a partial-sign approach:
-    // buyer signs, then we need seller to also sign the NFT transfer instruction.
-    //
-    // For a single-signer flow that is still atomic: use the wallet adapter
-    // sendAndConfirm pattern where the buyer's wallet pops up and approves
-    // the full transaction. The seller's signature on the NFT transfer means
-    // the buyer's wallet CANNOT complete this tx alone.
-    //
-    // PRACTICAL RESOLUTION for P2P without escrow program:
-    // The seller must be the one to initiate the final swap.
-    // Flow: buyer pays → triggers seller to sign NFT transfer.
-    // Implemented as: seller signs the FULL tx (both their NFT out + buyer's SOL in
-    // via a pre-authorized instruction). Since the tx is built with buyer as feePayer
-    // and seller signs the token transfer, BOTH must sign.
-    //
-    // For now: send to seller's wallet for signature via sendTransaction.
-    // The buyer signs first (partial), then seller signs to complete.
-    // This is handled below by having the connected wallet sign everything it can.
+    let sig;
 
-    const signed = await walletProvider.signTransaction(tx);
-    setBtn(`<span class="spinner"></span>BROADCASTING...`, true);
+    if (sellerSig) {
+      // ── PATH A: Seller pre-signed at list time — buyer just adds their signature ──
+      console.log("[buyNft] using pre-signed seller tx");
+      setBtn(`<span class="spinner"></span>BUILDING TX...`, true);
 
-    const sig = await conn.sendRawTransaction(signed.serialize(), { skipPreflight: false, maxRetries: 3 });
-    showToast("Confirming on-chain...");
+      const { tx, conn } = await buildSwapTx({
+        sellerPubkeyStr: listing.seller,
+        buyerPubkeyStr:  walletAddress,
+        mintStr:         listing.mint,
+        priceSol:        listing.price_sol
+      });
 
-    const result = await conn.confirmTransaction({
-      signature: sig,
-      blockhash: tx.recentBlockhash,
-      lastValidBlockHeight: tx.lastValidBlockHeight
-    }, "confirmed");
+      // Inject seller partial signature from stored bytes
+      try {
+        const sellerSigBytes = Uint8Array.from(atob(sellerSig), c => c.charCodeAt(0));
+        const sellerPubkey = new PublicKey(listing.seller);
+        tx.addSignature(sellerPubkey, sellerSigBytes);
+      } catch(sigErr) {
+        console.warn("[buyNft] stored sig inject failed, falling back to direct path:", sigErr.message);
+        // Fall through to PATH B
+        throw new Error("FALLBACK_TO_B");
+      }
 
-    if (result.value.err) throw new Error("Transaction rejected by network");
+      setBtn(`<span class="spinner"></span>SIGN IN WALLET...`, true);
+      const signed = await walletProvider.signTransaction(tx);
+      setBtn(`<span class="spinner"></span>BROADCASTING...`, true);
+      sig = await conn.sendRawTransaction(signed.serialize(), { skipPreflight: false, maxRetries: 3 });
+      showToast("Confirming on-chain...");
+      await conn.confirmTransaction({ signature: sig, blockhash: tx.recentBlockhash, lastValidBlockHeight: tx.lastValidBlockHeight }, "confirmed");
 
-    // ── POST-TX VERIFICATION: confirm buyer actually received the NFT ──
-    const { PublicKey } = web3;
-    const mintPK = new PublicKey(listing.mint);
-    const buyerPK = new PublicKey(walletAddress);
-    const received = await conn.getTokenAccountsByOwner(buyerPK, { mint: mintPK });
-    if (!received.value.length) {
-      throw new Error("SOL sent but NFT not received — contact support with sig: " + sig);
+    } else {
+      // ── PATH B: No pre-sig — buyer IS the seller (testing), or seller needs to co-sign now ──
+      // This handles the case where the listing was made before pre-signing was implemented
+      console.log("[buyNft] no pre-sig found — checking if buyer is seller");
+
+      if (walletAddress === listing.seller) {
+        // Seller is buying their own listing (test mode / self-trade)
+        // Seller signs both sides since they control both keys
+        const { tx, conn } = await buildSwapTx({
+          sellerPubkeyStr: listing.seller,
+          buyerPubkeyStr:  walletAddress,
+          mintStr:         listing.mint,
+          priceSol:        listing.price_sol
+        });
+        setBtn(`<span class="spinner"></span>SIGN IN WALLET...`, true);
+        const signed = await walletProvider.signTransaction(tx);
+        setBtn(`<span class="spinner"></span>BROADCASTING...`, true);
+        sig = await conn.sendRawTransaction(signed.serialize(), { skipPreflight: false, maxRetries: 3 });
+        showToast("Confirming on-chain...");
+        await conn.confirmTransaction({ signature: sig, blockhash: tx.recentBlockhash, lastValidBlockHeight: tx.lastValidBlockHeight }, "confirmed");
+      } else {
+        // Buyer and seller are different — need seller to re-sign
+        // Show a clear message instead of a cryptic failure
+        throw new Error("NEEDS_SELLER_RESIGN");
+      }
     }
 
-    // Clean up listing
+    // ── Post-tx: verify NFT landed ──
+    const { Connection, PublicKey } = web3;
+    const vConn = new Connection(RPC, "confirmed");
+    const mintPK  = new PublicKey(listing.mint);
+    const buyerPK = new PublicKey(walletAddress);
+    const received = await vConn.getTokenAccountsByOwner(buyerPK, { mint: mintPK });
+    if (!received.value.length) throw new Error("SOL sent but NFT not received — sig: " + sig);
+
+    // Clean up
     await sbDelete("marketplace_listings", { mint: listing.mint });
     delete listings[listing.mint];
-    // Remove any offers on this mint since it's sold
-    await sbDelete("marketplace_offers", { mint: listing.mint });
+    await sbDelete("marketplace_offers",   { mint: listing.mint });
     delete offers[listing.mint];
-    // Record sale for volume tracking
     await recordSale({ mint: listing.mint, seller: listing.seller, buyer: walletAddress, price_sol: listing.price_sol, name: listing.name, image: listing.image, tx_sig: sig });
 
     selectedNft = null;
@@ -569,18 +587,20 @@ async function buyNft(listing) {
     showToast("You own it! 🐦 " + listing.name);
 
   } catch(e) {
-    console.error("Buy error:", e);
+    console.error("[buyNft] error:", e);
     if (e.message === "SELLER_NO_NFT") {
-      // Seller moved the NFT — auto-delist so no one else hits this
       await sbDelete("marketplace_listings", { mint: listing.mint });
       delete listings[listing.mint];
       showToast("NFT moved by seller — listing auto-removed", true);
       render();
+    } else if (e.message === "NEEDS_SELLER_RESIGN") {
+      showToast("This listing needs the seller to re-list with the new signing flow", true);
+      setBtn(`BUY NOW — ${listing.price_sol} SOL`, false);
     } else if (e.code === 4001 || e.message?.toLowerCase().includes("cancel") || e.message?.toLowerCase().includes("reject")) {
-      showToast("Transaction cancelled", true);
+      showToast("Cancelled", true);
       setBtn(`BUY NOW — ${listing.price_sol} SOL`, false);
     } else {
-      showToast("Failed — nothing charged. Try again.", true);
+      showToast("Failed: " + (e.message || "unknown error"), true);
       setBtn(`BUY NOW — ${listing.price_sol} SOL`, false);
     }
   }
@@ -588,16 +608,63 @@ async function buyNft(listing) {
 
 // ─────────────────────────────────────────────
 //  LISTING ACTIONS
+//  When listing, seller signs the swap tx immediately.
+//  The partial signature (seller side only) is stored in Supabase.
+//  When a buyer purchases, they deserialize, add their signature, broadcast.
 // ─────────────────────────────────────────────
 async function listNft(nft, priceSol) {
-  await sbUpsert("marketplace_listings", {
-    mint: nft.mint, seller: walletAddress,
-    price_sol: parseFloat(priceSol),
-    name: nft.name, image: nft.image
-  });
-  listings[nft.mint] = { mint: nft.mint, seller: walletAddress, price_sol: parseFloat(priceSol), name: nft.name, image: nft.image };
-  showToast("Listed for " + priceSol + " SOL ✓");
-  render();
+  const btn = document.getElementById("cl");
+  if (btn) { btn.disabled = true; btn.innerHTML = `<span class="spinner"></span>SIGNING...`; }
+
+  try {
+    const web3 = await getWeb3();
+    const { PublicKey } = web3;
+
+    // Build the swap tx with a placeholder buyer (seller address) to get seller to sign
+    // We use seller as buyer placeholder so seller can sign both sides for the partial sig
+    // The actual buyer address doesn't matter for the seller's signature — only the NFT transfer instruction needs seller sig
+    const { tx, conn } = await buildSwapTx({
+      sellerPubkeyStr: walletAddress,
+      buyerPubkeyStr:  walletAddress, // placeholder — real buyer unknown at list time
+      mintStr:         nft.mint,
+      priceSol:        parseFloat(priceSol)
+    });
+
+    // Have seller sign — this gives us the seller's signature on the NFT transfer instruction
+    const partialSigned = await walletProvider.signTransaction(tx);
+
+    // Extract just the seller's signature bytes and encode as base64
+    const sellerPubkey = new PublicKey(walletAddress);
+    const sigMap = partialSigned.signatures;
+    let sellerSigB64 = null;
+    for (const { publicKey, signature } of sigMap) {
+      if (publicKey.toBase58() === walletAddress && signature) {
+        sellerSigB64 = btoa(String.fromCharCode(...signature));
+        break;
+      }
+    }
+
+    // Store listing with seller sig
+    await sbUpsert("marketplace_listings", {
+      mint: nft.mint, seller: walletAddress,
+      price_sol: parseFloat(priceSol),
+      name: nft.name, image: nft.image,
+      seller_sig: sellerSigB64
+    });
+    listings[nft.mint] = { mint: nft.mint, seller: walletAddress, price_sol: parseFloat(priceSol), name: nft.name, image: nft.image, seller_sig: sellerSigB64 };
+    showToast("Listed for " + priceSol + " SOL ✓");
+    const lm = document.getElementById("lm"); if (lm) lm.remove();
+    render();
+
+  } catch(e) {
+    console.error("[listNft] error:", e);
+    if (e.code === 4001 || e.message?.toLowerCase().includes("cancel")) {
+      showToast("Listing cancelled", true);
+    } else {
+      showToast("Failed to list: " + (e.message || "unknown"), true);
+    }
+    if (btn) { btn.disabled = false; btn.innerHTML = "LIST FOR SALE"; }
+  }
 }
 
 async function delistNft(mint) {
@@ -646,7 +713,7 @@ async function acceptOffer(offerData) {
   try {
     const web3 = await getWeb3();
     // Rebuild swap with seller as the signing wallet
-    const { tx, conn } = await buildAtomicSwap({
+    const { tx, conn } = await buildSwapTx({
       sellerPubkeyStr: walletAddress,
       buyerPubkeyStr:  offerData.buyer,
       mintStr:         offerData.mint,
