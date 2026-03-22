@@ -492,6 +492,7 @@ async function recordSale({ mint, seller, buyer, price_sol, name, image, tx_sig 
 //  BUY
 // ─────────────────────────────────────────────
 async function buyNft(listing) {
+  console.log("[buyNft] called — wallet:", walletAddress, "provider:", !!walletProvider, "listing:", listing?.mint, listing?.price_sol);
   if (!walletAddress || !walletProvider) { showToast("Connect wallet first", true); return; }
 
   const btn = document.getElementById("buy-btn");
@@ -499,7 +500,9 @@ async function buyNft(listing) {
   setBtn(`<span class="spinner"></span>VERIFYING...`, true);
 
   try {
+    console.log("[buyNft] loading web3...");
     const web3 = await getWeb3();
+    console.log("[buyNft] web3 loaded, building swap...");
     const { tx, conn, buyerATA } = await buildAtomicSwap({
       sellerPubkeyStr: listing.seller,
       buyerPubkeyStr:  walletAddress,
@@ -1196,7 +1199,12 @@ function renderModal() {
   document.getElementById("app").appendChild(ov);
   document.getElementById("close-modal").onclick = () => { selectedNft=null; render(); };
   document.getElementById("list-btn")?.addEventListener("click", () => { ov.remove(); showListingModal(nft); });
-  document.getElementById("buy-btn")?.addEventListener("click", () => listing && buyNft(listing));
+  document.getElementById("buy-btn")?.addEventListener("click", () => {
+    console.log("[BUY] clicked — listing:", listing, "wallet:", walletAddress, "provider:", !!walletProvider);
+    if (!listing) { console.error("[BUY] no listing object"); return; }
+    if (!walletAddress) { showWalletPicker(); return; }
+    buyNft(listing);
+  });
   document.getElementById("offer-btn")?.addEventListener("click", () => { ov.remove(); showOfferModal(nft); });
 }
 
