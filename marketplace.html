@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Marketplace | Long Neck Legends</title>
   <meta name="description" content="Buy and sell Long Neck Legends NFTs peer-to-peer on Solana.">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦤</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐦</text></svg>">
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=Permanent+Marker&display=swap" rel="stylesheet">
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
@@ -84,6 +84,36 @@
     .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:2000;background:var(--grn);color:#000;padding:10px 24px;border-radius:8px;font-family:var(--d);font-size:14px;letter-spacing:2px;box-shadow:0 4px 20px var(--grna);animation:up .25s;white-space:nowrap}
     .toast.err{background:var(--r);color:#fff;box-shadow:0 4px 20px var(--ra)}
 
+    /* Activity Bar */
+    .activity-bar{position:fixed;bottom:0;left:0;right:0;z-index:500;background:rgba(6,6,6,.97);border-top:1px solid #1a1a1a;backdrop-filter:blur(20px);transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1)}
+    .activity-bar.open{transform:translateY(0)}
+    .activity-bar-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px 6px;border-bottom:1px solid #111}
+    .activity-scroll{display:flex;gap:10px;overflow-x:auto;padding:10px 16px 14px;scrollbar-width:thin;scrollbar-color:var(--r) transparent}
+    .activity-scroll::-webkit-scrollbar{height:3px}.activity-scroll::-webkit-scrollbar-thumb{background:var(--r);border-radius:2px}
+    .activity-item{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;transition:transform .15s}
+    .activity-item:hover{transform:translateY(-2px)}
+    .activity-img{width:60px;height:60px;border-radius:8px;object-fit:cover;background:#111;border:1px solid #1c1c1c}
+    .activity-price{font-family:var(--d);font-size:12px;color:var(--grn);letter-spacing:1px}
+    .activity-time{font-size:9px;color:var(--g2)}
+
+    /* Filter Panel */
+    .filter-panel{position:fixed;top:0;left:0;bottom:0;z-index:600;width:min(320px,90vw);background:#060606;border-right:1px solid #1a1a1a;overflow-y:auto;transform:translateX(-100%);transition:transform .3s cubic-bezier(.4,0,.2,1)}
+    .filter-panel.open{transform:translateX(0)}
+    .filter-overlay{position:fixed;inset:0;z-index:599;background:rgba(0,0,0,.6);opacity:0;pointer-events:none;transition:opacity .3s}
+    .filter-overlay.open{opacity:1;pointer-events:all}
+    .filter-trait-group{margin-bottom:14px}
+    .filter-trait-group summary{font-family:var(--d);font-size:12px;letter-spacing:2px;color:var(--g1);cursor:pointer;padding:8px 0;list-style:none;display:flex;justify-content:space-between;align-items:center}
+    .filter-trait-group summary::-webkit-details-marker{display:none}
+    .filter-val{display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer;font-size:10px;color:var(--g2)}
+    .filter-val:hover{color:var(--w)}
+    .filter-val input{accent-color:var(--r);width:14px;height:14px;cursor:pointer}
+    .filter-val.active{color:var(--w)}
+
+    /* Tool buttons */
+    .tool-btn{padding:7px 12px;background:#0a0a0a;border:1px solid #1c1c1c;border-radius:8px;color:var(--g1);font-family:var(--d);font-size:11px;letter-spacing:2px;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .2s;white-space:nowrap}
+    .tool-btn:hover{border-color:rgba(255,0,60,.3);color:var(--w)}
+    .tool-btn.active{border-color:rgba(255,0,60,.4);color:var(--r);background:var(--rb)}
+
     .site-footer{border-top:1px solid #0e0e0e;padding:20px;text-align:center}
     .site-footer a{color:var(--g2);margin:0 8px;font-size:10px;letter-spacing:2px;font-family:var(--d)}
     .site-footer a:hover{color:var(--r)}
@@ -100,7 +130,7 @@
 <nav class="site-nav">
   <div class="site-nav-inner">
     <a href="/" class="logo">
-      <div class="logo-icon">🦤</div>
+      <div class="logo-icon">🐦</div>
       <span>LONG NECK LEGENDS</span>
     </a>
     <div class="nav-links">
@@ -117,6 +147,33 @@
 
 <div style="position:fixed;inset:0;pointer-events:none;z-index:999;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.025) 2px,rgba(0,0,0,.025) 4px)"></div>
 <div id="app"></div>
+
+<!-- Filter overlay + panel -->
+<div class="filter-overlay" id="filter-overlay" onclick="closeFilter()"></div>
+<div class="filter-panel" id="filter-panel">
+  <div style="padding:18px 16px;border-bottom:1px solid #111;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:#060606;z-index:2">
+    <div style="font-family:var(--d);font-size:18px;letter-spacing:3px;color:#fff">FILTER BY TRAIT</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button onclick="clearFilters()" style="font-size:9px;color:var(--r);background:none;border:none;cursor:pointer;font-family:var(--d);letter-spacing:1px" id="clear-filters-btn">CLEAR ALL</button>
+      <button onclick="closeFilter()" style="background:var(--rb);border:1px solid rgba(255,0,60,.2);color:var(--r);width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:12px;display:grid;place-items:center">✕</button>
+    </div>
+  </div>
+  <div id="filter-traits-body" style="padding:12px 16px">
+    <div style="color:var(--g2);font-size:10px;text-align:center;padding:20px">Loading traits...</div>
+  </div>
+</div>
+
+<!-- Activity Bar -->
+<div class="activity-bar" id="activity-bar">
+  <div class="activity-bar-header">
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-family:var(--d);font-size:14px;letter-spacing:3px;color:#fff">ACTIVITY</span>
+      <span id="activity-count" style="font-size:9px;color:var(--g2)"></span>
+    </div>
+    <button onclick="closeActivity()" style="background:var(--rb);border:1px solid rgba(255,0,60,.2);color:var(--r);width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:12px;display:grid;place-items:center">✕</button>
+  </div>
+  <div class="activity-scroll" id="activity-scroll"></div>
+</div>
 
 <script>
 // ═══════════════════════════════════════════════════════════
@@ -137,6 +194,11 @@ let total = 0, page = 1, loading = false, error = null;
 let walletAddress = null, walletProvider = null;
 let selectedNft = null, activeTab = "market", searchQuery = "";
 let totalVolume = 0;
+let sortDir = "asc"; // "asc" | "desc"
+let activeFilters = {}; // { "Background": ["Blue","Red"], "Hat": ["Crown"] }
+let allTraits = {}; // { "Background": Set(["Blue","Red",...]) }
+let traitsLoaded = false, traitsLoading = false;
+let recentSales = []; // last 50 sales for activity bar
 
 const short = (a, s=4, e=4) => a ? `${a.slice(0,s)}...${a.slice(-e)}` : "";
 
@@ -167,7 +229,7 @@ async function loadMarketData() {
     const [ls, os, sv] = await Promise.all([
       sbGet("marketplace_listings?select=*"),
       sbGet("marketplace_offers?select=*"),
-      sbGet("marketplace_sales?select=price_sol")
+      sbGet("marketplace_sales?select=price_sol,name,image,sold_at&order=sold_at.desc&limit=50")
     ]);
     listings = {};
     (Array.isArray(ls) ? ls : []).forEach(l => { listings[l.mint] = l; });
@@ -176,9 +238,143 @@ async function loadMarketData() {
       if (!offers[o.mint]) offers[o.mint] = [];
       offers[o.mint].push(o);
     });
-    totalVolume = (Array.isArray(sv) ? sv : []).reduce((sum, s) => sum + parseFloat(s.price_sol || 0), 0);
+    const sales = Array.isArray(sv) ? sv : [];
+    totalVolume = sales.reduce((sum, s) => sum + parseFloat(s.price_sol || 0), 0);
+    recentSales = sales; // already limited to 50 by query
   } catch(e) { console.error("loadMarketData:", e); }
 }
+
+// ─────────────────────────────────────────────
+//  ACTIVITY BAR
+// ─────────────────────────────────────────────
+function timeAgo(isoStr) {
+  const s = Math.floor((Date.now() - new Date(isoStr)) / 1000);
+  if (s < 60)  return s + "s ago";
+  if (s < 3600) return Math.floor(s/60) + "m ago";
+  if (s < 86400) return Math.floor(s/3600) + "h ago";
+  return Math.floor(s/86400) + "d ago";
+}
+
+function openActivity() {
+  const bar = document.getElementById("activity-bar");
+  const scroll = document.getElementById("activity-scroll");
+  const count = document.getElementById("activity-count");
+  if (!bar) return;
+  count.textContent = recentSales.length ? `${recentSales.length} sales` : "";
+  if (!recentSales.length) {
+    scroll.innerHTML = `<div style="color:var(--g2);font-size:10px;padding:10px 4px;white-space:nowrap">No sales yet — be the first!</div>`;
+  } else {
+    scroll.innerHTML = recentSales.map(s => `
+      <div class="activity-item">
+        ${s.image ? `<img class="activity-img" src="${s.image}" onerror="this.style.background='#1a1a1a'">` : `<div class="activity-img" style="display:flex;align-items:center;justify-content:center;font-size:22px">🐦</div>`}
+        <div class="activity-price">◎ ${parseFloat(s.price_sol).toFixed(2)}</div>
+        <div class="activity-time">${timeAgo(s.sold_at)}</div>
+      </div>`).join("");
+  }
+  bar.classList.add("open");
+}
+function closeActivity() { document.getElementById("activity-bar")?.classList.remove("open"); }
+
+// ─────────────────────────────────────────────
+//  TRAIT FILTER — lazy loads full collection with rate-limit safety
+// ─────────────────────────────────────────────
+async function loadTraits() {
+  if (traitsLoaded || traitsLoading) return;
+  traitsLoading = true;
+  const body = document.getElementById("filter-traits-body");
+  if (body) body.innerHTML = `<div style="color:var(--g2);font-size:10px;text-align:center;padding:20px"><span class="spinner"></span> Loading traits...</div>`;
+
+  try {
+    let pg = 1, all = [];
+    // Sequential pages with backoff to avoid rate limiting
+    while (true) {
+      const res = await fetch(RPC, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: "traits-" + pg, method: "getAssetsByGroup",
+          params: { groupKey: "collection", groupValue: COLLECTION, page: pg, limit: 1000 } })
+      });
+      const data = await res.json();
+      const items = data.result?.items || [];
+      items.forEach(item => {
+        const attrs = item.content?.metadata?.attributes || [];
+        attrs.forEach(a => {
+          if (!a.trait_type || !a.value) return;
+          if (!allTraits[a.trait_type]) allTraits[a.trait_type] = new Set();
+          allTraits[a.trait_type].add(String(a.value));
+        });
+      });
+      all = all.concat(items);
+      if (body) body.innerHTML = `<div style="color:var(--g2);font-size:10px;text-align:center;padding:10px"><span class="spinner"></span> Loading... ${all.length} / ${data.result?.total || "?"}</div>`;
+      if (items.length < 1000 || all.length >= (data.result?.total || 0)) break;
+      pg++;
+      await new Promise(r => setTimeout(r, 400)); // 400ms between pages to avoid rate limit
+    }
+    traitsLoaded = true;
+    renderFilterPanel();
+  } catch(e) {
+    console.error("loadTraits:", e);
+    if (body) body.innerHTML = `<div style="color:var(--r);font-size:10px;text-align:center;padding:20px">Failed to load traits</div>`;
+  }
+  traitsLoading = false;
+}
+
+function renderFilterPanel() {
+  const body = document.getElementById("filter-traits-body");
+  if (!body) return;
+  const traitKeys = Object.keys(allTraits).sort();
+  if (!traitKeys.length) { body.innerHTML = `<div style="color:var(--g2);font-size:10px;text-align:center;padding:20px">No traits found</div>`; return; }
+  const activeCount = Object.values(activeFilters).reduce((n, v) => n + v.length, 0);
+  document.getElementById("clear-filters-btn").style.opacity = activeCount ? "1" : "0.3";
+  body.innerHTML = traitKeys.map(trait => {
+    const vals = [...allTraits[trait]].sort();
+    const selected = activeFilters[trait] || [];
+    return `<details class="filter-trait-group" ${selected.length ? "open" : ""}>
+      <summary>${trait} <span style="font-size:9px;color:var(--g2)">${selected.length ? `<span style="color:var(--r)">${selected.length} selected</span>` : vals.length + " values"}</span></summary>
+      <div style="padding:4px 0 8px 4px">
+        ${vals.map(v => {
+          const checked = selected.includes(v);
+          return `<label class="filter-val ${checked?"active":""}">
+            <input type="checkbox" ${checked?"checked":""} onchange="toggleFilter('${trait.replace(/'/g,"\\'")}','${v.replace(/'/g,"\\'")}',this.checked)">
+            ${v}
+          </label>`;
+        }).join("")}
+      </div>
+    </details>`;
+  }).join("");
+}
+
+function toggleFilter(trait, value, on) {
+  if (!activeFilters[trait]) activeFilters[trait] = [];
+  if (on) { if (!activeFilters[trait].includes(value)) activeFilters[trait].push(value); }
+  else { activeFilters[trait] = activeFilters[trait].filter(v => v !== value); }
+  if (!activeFilters[trait].length) delete activeFilters[trait];
+  renderFilterPanel();
+  render();
+}
+
+function clearFilters() { activeFilters = {}; renderFilterPanel(); render(); }
+
+function openFilter() {
+  document.getElementById("filter-panel")?.classList.add("open");
+  document.getElementById("filter-overlay")?.classList.add("open");
+  loadTraits(); // lazy — no-ops if already loaded/loading
+}
+function closeFilter() {
+  document.getElementById("filter-panel")?.classList.remove("open");
+  document.getElementById("filter-overlay")?.classList.remove("open");
+}
+
+// Filter listings by active trait filters (uses Supabase listing data which has no traits,
+// so we cross-reference against allTraits asset data loaded for the filter panel)
+let traitIndex = {}; // mint -> { trait: value }
+function buildTraitIndex(items) {
+  items.forEach(item => {
+    const attrs = item.content?.metadata?.attributes || [];
+    traitIndex[item.id] = {};
+    attrs.forEach(a => { if (a.trait_type) traitIndex[item.id][a.trait_type] = String(a.value); });
+  });
+}
+
 
 // ─────────────────────────────────────────────
 //  SOLANA WEB3 (lazy loaded)
@@ -371,7 +567,7 @@ async function buyNft(listing) {
 
     selectedNft = null;
     await fetchMyNfts();
-    showToast("You own it! 🦤 " + listing.name);
+    showToast("You own it! 🐦 " + listing.name);
 
   } catch(e) {
     console.error("Buy error:", e);
@@ -486,7 +682,7 @@ async function acceptOffer(offerData) {
 
     selectedNft = null;
     await fetchMyNfts();
-    showToast("Sold! SOL received. 🦤");
+    showToast("Sold! SOL received. 🐦");
 
   } catch(e) {
     console.error("Accept offer error:", e);
@@ -782,35 +978,54 @@ function render() {
 }
 
 function renderMarket(app) {
-  const listedItems = Object.values(listings).sort((a,b) => a.price_sol - b.price_sol);
-  const filtered = searchQuery
-    ? listedItems.filter(l => l.name.toLowerCase().includes(searchQuery.toLowerCase()))
-    : listedItems;
+  // Apply sort
+  let listedItems = Object.values(listings).sort((a,b) =>
+    sortDir === "asc" ? a.price_sol - b.price_sol : b.price_sol - a.price_sol
+  );
+  // Apply search
+  if (searchQuery) listedItems = listedItems.filter(l => l.name.toLowerCase().includes(searchQuery.toLowerCase()));
+  // Apply trait filters
+  const filterKeys = Object.keys(activeFilters);
+  if (filterKeys.length && traitsLoaded) {
+    listedItems = listedItems.filter(l => {
+      const traits = traitIndex[l.mint] || {};
+      return filterKeys.every(k => activeFilters[k].includes(traits[k]));
+    });
+  }
+  const activeFilterCount = Object.values(activeFilters).reduce((n,v) => n+v.length, 0);
 
   app.innerHTML += `<div style="padding:0 16px 10px;max-width:1400px;margin:0 auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-    <input class="input" id="search" placeholder="Search listings..." value="${searchQuery}" style="max-width:260px;flex:1 1 200px">
+    <input class="input" id="search" placeholder="Search listings..." value="${searchQuery}" style="max-width:200px;flex:1 1 140px">
+    <button class="tool-btn ${activeFilterCount?'active':''}" onclick="openFilter()">
+      ⚙ FILTER${activeFilterCount?` <span style="background:var(--r);color:#fff;border-radius:10px;padding:1px 6px;font-size:9px">${activeFilterCount}</span>`:""}
+    </button>
+    <button class="tool-btn" onclick="sortDir=sortDir==='asc'?'desc':'asc';render()">
+      ${sortDir==="asc"?"↑ PRICE":"↓ PRICE"}
+    </button>
+    <button class="tool-btn" onclick="openActivity()">⚡ ACTIVITY</button>
     <div style="flex:1"></div>
-    <span style="font-size:10px;color:var(--g2)">${filtered.length} listing${filtered.length!==1?"s":""}</span>
+    <span style="font-size:10px;color:var(--g2)">${listedItems.length} listing${listedItems.length!==1?"s":""}</span>
   </div>`;
 
-  if (!filtered.length) {
+  if (!listedItems.length) {
     app.innerHTML += `<div style="text-align:center;padding:64px 20px">
-      <div style="font-size:48px;opacity:.08;margin-bottom:16px">🦤</div>
-      <div style="font-family:var(--d);font-size:18px;color:var(--g2);letter-spacing:3px;margin-bottom:8px">${searchQuery ? "NO MATCHES" : "NO ACTIVE LISTINGS"}</div>
-      <div style="font-size:10px;color:var(--g3)">${searchQuery ? "Try a different search" : "Be the first — connect your wallet and list a Long Neck"}</div>
+      <div style="font-size:48px;opacity:.08;margin-bottom:16px">🐦</div>
+      <div style="font-family:var(--d);font-size:18px;color:var(--g2);letter-spacing:3px;margin-bottom:8px">${searchQuery||activeFilterCount ? "NO MATCHES" : "NO ACTIVE LISTINGS"}</div>
+      <div style="font-size:10px;color:var(--g3)">${searchQuery||activeFilterCount ? "Try adjusting your search or filters" : "Be the first — connect your wallet and list a Long Neck"}</div>
+      ${activeFilterCount?`<button class="btn-ghost" style="margin:14px auto;display:block;font-size:11px" onclick="clearFilters()">CLEAR FILTERS</button>`:""}
     </div>`;
     setTimeout(() => { document.getElementById("search")?.addEventListener("input", e => { searchQuery=e.target.value; render(); }); }, 0);
     return;
   }
 
   let grid = `<div class="nft-grid">`;
-  filtered.forEach((listing, i) => {
+  listedItems.forEach((listing, i) => {
     const yours = walletAddress && listing.seller === walletAddress;
     grid += `<div class="nft-card" data-mint="${listing.mint}" style="animation:up .35s ease ${Math.min(i*.03,.5)}s both">
       <div class="nft-img-wrap">
         ${listing.image
           ? `<img src="${listing.image}" alt="${listing.name}" loading="lazy" class="nft-img" onerror="this.style.display='none'">`
-          : `<div style="display:flex;align-items:center;justify-content:center;height:100%"><span style="font-size:44px;opacity:.07">🦤</span></div>`}
+          : `<div style="display:flex;align-items:center;justify-content:center;height:100%"><span style="font-size:44px;opacity:.07">🐦</span></div>`}
         ${yours ? `<div class="yours-badge">YOURS</div>` : ""}
       </div>
       <div class="nft-info">
@@ -828,30 +1043,32 @@ function renderMarket(app) {
       card.onclick = () => {
         const listing = listings[card.dataset.mint];
         if (!listing) return;
-        // Build a minimal nft object from listing data for the modal
-        // Set basic data immediately so modal opens fast, then enrich with traits
         selectedNft = { mint: listing.mint, name: listing.name, image: listing.image, owner: listing.seller, attributes: [], _loading: true };
         render();
-        // Fetch full asset for traits in background
         fetch(RPC, {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ jsonrpc: "2.0", id: "asset", method: "getAsset", params: { id: listing.mint } })
         }).then(r => r.json()).then(d => {
           if (d.result && selectedNft?.mint === listing.mint) {
-            selectedNft = { ...selectedNft, ...parseAsset(d.result), _loading: false };
+            const full = parseAsset(d.result);
+            if (!traitIndex[listing.mint]) {
+              traitIndex[listing.mint] = {};
+              (d.result.content?.metadata?.attributes||[]).forEach(a => { if (a.trait_type) traitIndex[listing.mint][a.trait_type] = String(a.value); });
+            }
+            selectedNft = { ...selectedNft, ...full, _loading: false };
             render();
           }
         }).catch(() => { if (selectedNft?.mint === listing.mint) { selectedNft._loading = false; render(); } });
-        render();
       };
     });
   }, 0);
 }
 
+
 function renderMyNfts(app) {
   if (!walletAddress) {
     app.innerHTML += `<div style="text-align:center;padding:50px 20px">
-      <div style="font-size:44px;opacity:.12;margin-bottom:14px">🦤</div>
+      <div style="font-size:44px;opacity:.12;margin-bottom:14px">🐦</div>
       <div style="font-family:var(--d);font-size:18px;color:var(--g2);letter-spacing:3px;margin-bottom:14px">CONNECT YOUR WALLET</div>
       <button class="wallet-btn" id="conn2" style="margin:0 auto"><span>👛</span> CONNECT</button>
     </div>`;
@@ -960,7 +1177,7 @@ function renderModal() {
   ov.innerHTML = `<div class="modal" style="max-width:860px" onclick="event.stopPropagation()">
     <button class="modal-close" id="close-modal">✕</button>
     <div style="flex:1 1 340px;min-height:300px;background:#030303;display:flex;align-items:center;justify-content:center">
-      ${nft.image?`<img src="${nft.image}" alt="${nft.name}" style="width:100%;height:100%;object-fit:contain;max-height:460px">`:`<span style="font-size:52px;opacity:.1">🦤</span>`}
+      ${nft.image?`<img src="${nft.image}" alt="${nft.name}" style="width:100%;height:100%;object-fit:contain;max-height:460px">`:`<span style="font-size:52px;opacity:.1">🐦</span>`}
     </div>
     <div style="flex:1 1 320px;padding:26px;min-width:260px;display:flex;flex-direction:column">
       <h2 style="font-family:var(--d);font-size:28px;color:#fff;letter-spacing:3px;line-height:1;margin-bottom:8px">${nft.name}</h2>
