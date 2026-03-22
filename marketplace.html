@@ -199,6 +199,7 @@ let activeFilters = {}; // { "Background": ["Blue","Red"], "Hat": ["Crown"] }
 let allTraits = {}; // { "Background": Set(["Blue","Red",...]) }
 let traitsLoaded = false, traitsLoading = false;
 let recentSales = []; // last 50 sales for activity bar
+let traitIndex = {}; // mint -> { traitType: value } — built during loadTraits
 
 const short = (a, s=4, e=4) => a ? `${a.slice(0,s)}...${a.slice(-e)}` : "";
 
@@ -257,9 +258,11 @@ function timeAgo(isoStr) {
 
 function openActivity() {
   const bar = document.getElementById("activity-bar");
+  if (!bar) return;
+  // Toggle — close if already open
+  if (bar.classList.contains("open")) { bar.classList.remove("open"); return; }
   const scroll = document.getElementById("activity-scroll");
   const count = document.getElementById("activity-count");
-  if (!bar) return;
   count.textContent = recentSales.length ? `${recentSales.length} sales` : "";
   if (!recentSales.length) {
     scroll.innerHTML = `<div style="color:var(--g2);font-size:10px;padding:10px 4px;white-space:nowrap">No sales yet — be the first!</div>`;
@@ -297,11 +300,15 @@ async function loadTraits() {
       const items = data.result?.items || [];
       items.forEach(item => {
         const attrs = item.content?.metadata?.attributes || [];
+        // Build allTraits for filter panel checkboxes
         attrs.forEach(a => {
           if (!a.trait_type || !a.value) return;
           if (!allTraits[a.trait_type]) allTraits[a.trait_type] = new Set();
           allTraits[a.trait_type].add(String(a.value));
         });
+        // Build traitIndex for filter matching (mint -> {trait: value})
+        traitIndex[item.id] = {};
+        attrs.forEach(a => { if (a.trait_type) traitIndex[item.id][a.trait_type] = String(a.value); });
       });
       all = all.concat(items);
       if (body) body.innerHTML = `<div style="color:var(--g2);font-size:10px;text-align:center;padding:10px"><span class="spinner"></span> Loading... ${all.length} / ${data.result?.total || "?"}</div>`;
@@ -362,17 +369,6 @@ function openFilter() {
 function closeFilter() {
   document.getElementById("filter-panel")?.classList.remove("open");
   document.getElementById("filter-overlay")?.classList.remove("open");
-}
-
-// Filter listings by active trait filters (uses Supabase listing data which has no traits,
-// so we cross-reference against allTraits asset data loaded for the filter panel)
-let traitIndex = {}; // mint -> { trait: value }
-function buildTraitIndex(items) {
-  items.forEach(item => {
-    const attrs = item.content?.metadata?.attributes || [];
-    traitIndex[item.id] = {};
-    attrs.forEach(a => { if (a.trait_type) traitIndex[item.id][a.trait_type] = String(a.value); });
-  });
 }
 
 
