@@ -503,10 +503,10 @@ async function buyNft(listing) {
 
   try {
     const web3 = await getWeb3();
-    const { PublicKey, Transaction } = web3;
+    const { Connection, PublicKey, Transaction } = web3;
 
     // Check if listing has a pre-signed seller tx stored
-    const sellerSig = listing.seller_sig; // base64 serialized partial tx signed by seller
+    const sellerSig = listing.seller_sig;
 
     let sig;
 
@@ -568,7 +568,6 @@ async function buyNft(listing) {
     }
 
     // ── Post-tx: verify NFT landed ──
-    const { Connection, PublicKey } = web3;
     const vConn = new Connection(RPC, "confirmed");
     const mintPK  = new PublicKey(listing.mint);
     const buyerPK = new PublicKey(walletAddress);
