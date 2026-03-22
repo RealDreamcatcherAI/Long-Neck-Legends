@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Marketplace | Long Neck Legends</title>
   <meta name="description" content="Buy and sell Long Neck Legends NFTs peer-to-peer on Solana.">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦒</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦤</text></svg>">
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=Permanent+Marker&display=swap" rel="stylesheet">
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
@@ -100,7 +100,7 @@
 <nav class="site-nav">
   <div class="site-nav-inner">
     <a href="/" class="logo">
-      <div class="logo-icon">🦒</div>
+      <div class="logo-icon">🦤</div>
       <span>LONG NECK LEGENDS</span>
     </a>
     <div class="nav-links">
@@ -122,7 +122,7 @@
 // ═══════════════════════════════════════════════════════════
 const HELIUS_KEY = "33955d33-79ed-4817-8a40-1ce04a3cf241";
 const COLLECTION = "2WvxCvgFUiqUSBx32c5Z5Zsbcu4ZJCE1GEaaWpbD685P";
-const TREASURY   = "7uob8wsBH23aKRMVB18PCEZY1Ttwfjj4rhdWJZdgEYDa";
+const TREASURY   = "ChnzFpK4ty2vpzM48HUrtDVY7tWD8StmYaNxQcKSBuyc";
 const FEE_PCT    = 0.025;
 const SUPPLY     = 3333;
 const PAGE_SIZE  = 28;
@@ -136,6 +136,7 @@ let nfts = [], myNfts = [], listings = {}, offers = {};
 let total = 0, page = 1, loading = false, error = null;
 let walletAddress = null, walletProvider = null;
 let selectedNft = null, activeTab = "market", searchQuery = "";
+let totalVolume = 0;
 
 const short = (a, s=4, e=4) => a ? `${a.slice(0,s)}...${a.slice(-e)}` : "";
 
@@ -163,9 +164,10 @@ async function sbDelete(table, match) {
 
 async function loadMarketData() {
   try {
-    const [ls, os] = await Promise.all([
+    const [ls, os, sv] = await Promise.all([
       sbGet("marketplace_listings?select=*"),
-      sbGet("marketplace_offers?select=*")
+      sbGet("marketplace_offers?select=*"),
+      sbGet("marketplace_sales?select=price_sol")
     ]);
     listings = {};
     (Array.isArray(ls) ? ls : []).forEach(l => { listings[l.mint] = l; });
@@ -174,6 +176,7 @@ async function loadMarketData() {
       if (!offers[o.mint]) offers[o.mint] = [];
       offers[o.mint].push(o);
     });
+    totalVolume = (Array.isArray(sv) ? sv : []).reduce((sum, s) => sum + parseFloat(s.price_sol || 0), 0);
   } catch(e) { console.error("loadMarketData:", e); }
 }
 
@@ -280,6 +283,20 @@ async function buildAtomicSwap({ sellerPubkeyStr, buyerPubkeyStr, mintStr, price
 }
 
 // ─────────────────────────────────────────────
+//  RECORD SALE
+// ─────────────────────────────────────────────
+async function recordSale({ mint, seller, buyer, price_sol, name, image, tx_sig }) {
+  try {
+    await fetch(`${SB_URL}/rest/v1/marketplace_sales`, {
+      method: "POST",
+      headers: { ...SB_HDR, Prefer: "return=minimal" },
+      body: JSON.stringify({ mint, seller, buyer, price_sol, name, image, tx_sig })
+    });
+    totalVolume += parseFloat(price_sol);
+  } catch(e) { console.error("recordSale:", e); }
+}
+
+// ─────────────────────────────────────────────
 //  BUY
 // ─────────────────────────────────────────────
 async function buyNft(listing) {
@@ -349,10 +366,12 @@ async function buyNft(listing) {
     // Remove any offers on this mint since it's sold
     await sbDelete("marketplace_offers", { mint: listing.mint });
     delete offers[listing.mint];
+    // Record sale for volume tracking
+    await recordSale({ mint: listing.mint, seller: listing.seller, buyer: walletAddress, price_sol: listing.price_sol, name: listing.name, image: listing.image, tx_sig: sig });
 
     selectedNft = null;
     await fetchMyNfts();
-    showToast("You own it! 🦒 " + listing.name);
+    showToast("You own it! 🦤 " + listing.name);
 
   } catch(e) {
     console.error("Buy error:", e);
@@ -462,10 +481,12 @@ async function acceptOffer(offerData) {
     await sbDelete("marketplace_offers",   { mint: offerData.mint });
     delete listings[offerData.mint];
     delete offers[offerData.mint];
+    // Record sale for volume tracking
+    await recordSale({ mint: offerData.mint, seller: walletAddress, buyer: offerData.buyer, price_sol: offerData.price_sol, name: offerData.name, image: offerData.image, tx_sig: sig });
 
     selectedNft = null;
     await fetchMyNfts();
-    showToast("Sold! SOL received. 🦒");
+    showToast("Sold! SOL received. 🦤");
 
   } catch(e) {
     console.error("Accept offer error:", e);
@@ -733,6 +754,8 @@ function render() {
     <div style="display:flex;justify-content:center;gap:12px;margin-top:18px;flex-wrap:wrap">
       <div class="stat-card"><div style="font-family:var(--d);font-size:20px;color:var(--r);letter-spacing:2px">${SUPPLY}</div><div style="font-size:8px;color:var(--g3);text-transform:uppercase;letter-spacing:3px">SUPPLY</div></div>
       <div class="stat-card"><div style="font-family:var(--d);font-size:20px;color:var(--grn);letter-spacing:2px">${listedCount}</div><div style="font-size:8px;color:var(--g3);text-transform:uppercase;letter-spacing:3px">LISTED</div></div>
+      <div class="stat-card"><div style="font-family:var(--d);font-size:20px;color:var(--grn);letter-spacing:2px">${((listedCount/SUPPLY)*100).toFixed(1)}%</div><div style="font-size:8px;color:var(--g3);text-transform:uppercase;letter-spacing:3px">% LISTED</div></div>
+      <div class="stat-card"><div style="font-family:var(--d);font-size:20px;color:var(--r);letter-spacing:2px">◎ ${totalVolume.toFixed(2)}</div><div style="font-size:8px;color:var(--g3);text-transform:uppercase;letter-spacing:3px">VOLUME</div></div>
     </div>
   </div>`;
 
@@ -772,7 +795,7 @@ function renderMarket(app) {
 
   if (!filtered.length) {
     app.innerHTML += `<div style="text-align:center;padding:64px 20px">
-      <div style="font-size:48px;opacity:.08;margin-bottom:16px">🦒</div>
+      <div style="font-size:48px;opacity:.08;margin-bottom:16px">🦤</div>
       <div style="font-family:var(--d);font-size:18px;color:var(--g2);letter-spacing:3px;margin-bottom:8px">${searchQuery ? "NO MATCHES" : "NO ACTIVE LISTINGS"}</div>
       <div style="font-size:10px;color:var(--g3)">${searchQuery ? "Try a different search" : "Be the first — connect your wallet and list a Long Neck"}</div>
     </div>`;
@@ -787,7 +810,7 @@ function renderMarket(app) {
       <div class="nft-img-wrap">
         ${listing.image
           ? `<img src="${listing.image}" alt="${listing.name}" loading="lazy" class="nft-img" onerror="this.style.display='none'">`
-          : `<div style="display:flex;align-items:center;justify-content:center;height:100%"><span style="font-size:44px;opacity:.07">🦒</span></div>`}
+          : `<div style="display:flex;align-items:center;justify-content:center;height:100%"><span style="font-size:44px;opacity:.07">🦤</span></div>`}
         ${yours ? `<div class="yours-badge">YOURS</div>` : ""}
       </div>
       <div class="nft-info">
@@ -806,7 +829,19 @@ function renderMarket(app) {
         const listing = listings[card.dataset.mint];
         if (!listing) return;
         // Build a minimal nft object from listing data for the modal
-        selectedNft = { mint: listing.mint, name: listing.name, image: listing.image, owner: listing.seller, attributes: [] };
+        // Set basic data immediately so modal opens fast, then enrich with traits
+        selectedNft = { mint: listing.mint, name: listing.name, image: listing.image, owner: listing.seller, attributes: [], _loading: true };
+        render();
+        // Fetch full asset for traits in background
+        fetch(RPC, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jsonrpc: "2.0", id: "asset", method: "getAsset", params: { id: listing.mint } })
+        }).then(r => r.json()).then(d => {
+          if (d.result && selectedNft?.mint === listing.mint) {
+            selectedNft = { ...selectedNft, ...parseAsset(d.result), _loading: false };
+            render();
+          }
+        }).catch(() => { if (selectedNft?.mint === listing.mint) { selectedNft._loading = false; render(); } });
         render();
       };
     });
@@ -816,7 +851,7 @@ function renderMarket(app) {
 function renderMyNfts(app) {
   if (!walletAddress) {
     app.innerHTML += `<div style="text-align:center;padding:50px 20px">
-      <div style="font-size:44px;opacity:.12;margin-bottom:14px">🦒</div>
+      <div style="font-size:44px;opacity:.12;margin-bottom:14px">🦤</div>
       <div style="font-family:var(--d);font-size:18px;color:var(--g2);letter-spacing:3px;margin-bottom:14px">CONNECT YOUR WALLET</div>
       <button class="wallet-btn" id="conn2" style="margin:0 auto"><span>👛</span> CONNECT</button>
     </div>`;
@@ -868,7 +903,12 @@ function renderModal() {
   ov.onclick = e => { if (e.target===ov) { selectedNft=null; render(); } };
 
   let traitsHtml = "";
-  if (nft.attributes?.length) {
+  if (nft._loading) {
+    traitsHtml = `<div style="margin-bottom:14px">
+      <div style="font-size:10px;color:var(--g2);letter-spacing:2px;margin-bottom:8px">TRAITS</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${[1,2,3,4].map(()=>`<div class="sk" style="height:24px;width:80px;border-radius:6px"></div>`).join("")}</div>
+    </div>`;
+  } else if (nft.attributes?.length) {
     traitsHtml = `<div style="margin-bottom:14px">
       <div style="font-size:10px;color:var(--g2);letter-spacing:2px;margin-bottom:6px">TRAITS</div>
       <div>${nft.attributes.map(a=>`<span class="trait"><span style="color:var(--g2)">${a.trait_type}: </span><span style="color:var(--g1)">${a.value}</span></span>`).join("")}</div>
@@ -920,7 +960,7 @@ function renderModal() {
   ov.innerHTML = `<div class="modal" style="max-width:860px" onclick="event.stopPropagation()">
     <button class="modal-close" id="close-modal">✕</button>
     <div style="flex:1 1 340px;min-height:300px;background:#030303;display:flex;align-items:center;justify-content:center">
-      ${nft.image?`<img src="${nft.image}" alt="${nft.name}" style="width:100%;height:100%;object-fit:contain;max-height:460px">`:`<span style="font-size:52px;opacity:.1">🦒</span>`}
+      ${nft.image?`<img src="${nft.image}" alt="${nft.name}" style="width:100%;height:100%;object-fit:contain;max-height:460px">`:`<span style="font-size:52px;opacity:.1">🦤</span>`}
     </div>
     <div style="flex:1 1 320px;padding:26px;min-width:260px;display:flex;flex-direction:column">
       <h2 style="font-family:var(--d);font-size:28px;color:#fff;letter-spacing:3px;line-height:1;margin-bottom:8px">${nft.name}</h2>
