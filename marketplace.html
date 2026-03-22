@@ -491,47 +491,12 @@ function parseAsset(item) {
   return { mint: item.id, name: meta.name || "Long Neck Legend", image: img, attributes: meta.attributes || [], owner: item.ownership?.owner || "" };
 }
 
+// Browse All is now listings-only — no Helius fetch needed.
+// fetchPage kept as stub so existing retry/init calls don't break.
 async function fetchPage(pg) {
-  loading = true; error = null; render();
-  try {
-    // Primary: getAssetsByGroup with verified collection address
-    const res = await fetch(RPC, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ jsonrpc: "2.0", id: "lnl", method: "getAssetsByGroup",
-        params: { groupKey: "collection", groupValue: COLLECTION, page: pg, limit: PAGE_SIZE } })
-    });
-    const data = await res.json();
-    console.log("[Browse] getAssetsByGroup response — total:", data.result?.total, "items:", data.result?.items?.length, "error:", data.error);
-    if (data.error) throw new Error(data.error.message);
-
-    // If 0 results, try searchAssets as fallback (different indexing path)
-    if (!data.result?.total && pg === 1) {
-      console.log("[Browse] 0 results from getAssetsByGroup — trying searchAssets fallback");
-      const res2 = await fetch(RPC, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jsonrpc: "2.0", id: "lnl2", method: "searchAssets",
-          params: { grouping: [["collection", COLLECTION]], page: pg, limit: PAGE_SIZE } })
-      });
-      const data2 = await res2.json();
-      console.log("[Browse] searchAssets fallback — total:", data2.result?.total, "items:", data2.result?.items?.length, "error:", data2.error);
-      if (!data2.error && data2.result?.total) {
-        nfts  = (data2.result?.items || []).map(parseAsset);
-        total = data2.result?.total || 0;
-        page  = pg;
-        loading = false; render(); return;
-      }
-      // Both returned 0 — collection address is likely wrong. Show diagnostic.
-      if (!data2.result?.total) {
-        error = `Collection not found. Address may be wrong — check console. Current: ${COLLECTION.slice(0,8)}...`;
-        loading = false; render(); return;
-      }
-    }
-
-    nfts  = (data.result?.items || []).map(parseAsset);
-    total = data.result?.total || 0;
-    page  = pg;
-  } catch(e) { error = e.message; console.error("[Browse] fetchPage error:", e); }
-  loading = false; render();
+  // Nothing to fetch — listings loaded by loadMarketData() at init
+  // and refreshed whenever a listing is added/removed.
+  render();
 }
 
 async function fetchMyNfts() {
@@ -767,13 +732,12 @@ function render() {
     <div style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:rgba(0,255,136,.04);border:1px solid rgba(0,255,136,.08);border-radius:6px;font-size:8px;color:var(--grn)"><span class="dot-sm"></span> ON-CHAIN • ${short(COLLECTION,6,4)}</div>
     <div style="display:flex;justify-content:center;gap:12px;margin-top:18px;flex-wrap:wrap">
       <div class="stat-card"><div style="font-family:var(--d);font-size:20px;color:var(--r);letter-spacing:2px">${SUPPLY}</div><div style="font-size:8px;color:var(--g3);text-transform:uppercase;letter-spacing:3px">SUPPLY</div></div>
-      <div class="stat-card"><div style="font-family:var(--d);font-size:20px;color:var(--r);letter-spacing:2px">${total||"—"}</div><div style="font-size:8px;color:var(--g3);text-transform:uppercase;letter-spacing:3px">INDEXED</div></div>
       <div class="stat-card"><div style="font-family:var(--d);font-size:20px;color:var(--grn);letter-spacing:2px">${listedCount}</div><div style="font-size:8px;color:var(--g3);text-transform:uppercase;letter-spacing:3px">LISTED</div></div>
     </div>
   </div>`;
 
   app.innerHTML += `<div style="display:flex;gap:4px;justify-content:center;padding:0 16px 10px" id="tabs">
-    <button class="tab-btn ${activeTab==='market'?'active':''}" data-t="market">BROWSE ALL</button>
+    <button class="tab-btn ${activeTab==='market'?'active':''}" data-t="market">LISTINGS</button>
     <button class="tab-btn ${activeTab==='my-nfts'?'active':''}" data-t="my-nfts">MY LONG NECKS</button>
   </div>`;
 
@@ -795,70 +759,56 @@ function render() {
 }
 
 function renderMarket(app) {
+  const listedItems = Object.values(listings).sort((a,b) => a.price_sol - b.price_sol);
+  const filtered = searchQuery
+    ? listedItems.filter(l => l.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    : listedItems;
+
   app.innerHTML += `<div style="padding:0 16px 10px;max-width:1400px;margin:0 auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-    <input class="input" id="search" placeholder="Search by name..." value="${searchQuery}" style="max-width:260px;flex:1 1 200px">
+    <input class="input" id="search" placeholder="Search listings..." value="${searchQuery}" style="max-width:260px;flex:1 1 200px">
     <div style="flex:1"></div>
-    ${total>0?`<span style="font-size:10px;color:var(--g3)">Page ${page} of ${Math.ceil(total/PAGE_SIZE)}</span>`:""}
+    <span style="font-size:10px;color:var(--g2)">${filtered.length} listing${filtered.length!==1?"s":""}</span>
   </div>`;
 
-  if (error) {
-    app.innerHTML += `<div style="margin:16px auto;padding:18px;background:var(--rb);border:1px solid rgba(255,0,60,.15);border-radius:10px;text-align:center;max-width:500px">
-      <div style="font-family:var(--d);color:var(--r);font-size:14px;letter-spacing:2px;margin-bottom:6px">ERROR</div>
-      <div style="font-size:11px;color:var(--g2);margin-bottom:10px">${error}</div>
-      <button class="btn-ghost" id="retry" style="font-size:11px">RETRY</button>
+  if (!filtered.length) {
+    app.innerHTML += `<div style="text-align:center;padding:64px 20px">
+      <div style="font-size:48px;opacity:.08;margin-bottom:16px">🦒</div>
+      <div style="font-family:var(--d);font-size:18px;color:var(--g2);letter-spacing:3px;margin-bottom:8px">${searchQuery ? "NO MATCHES" : "NO ACTIVE LISTINGS"}</div>
+      <div style="font-size:10px;color:var(--g3)">${searchQuery ? "Try a different search" : "Be the first — connect your wallet and list a Long Neck"}</div>
     </div>`;
-    setTimeout(() => document.getElementById("retry")?.addEventListener("click", () => fetchPage(page)), 0);
+    setTimeout(() => { document.getElementById("search")?.addEventListener("input", e => { searchQuery=e.target.value; render(); }); }, 0);
     return;
   }
-  if (loading) {
-    let g = `<div class="nft-grid">`;
-    for (let i=0;i<12;i++) g += `<div class="nft-card"><div class="sk" style="height:220px"></div><div style="padding:14px"><div class="sk" style="height:14px;width:55%;margin-bottom:10px"></div><div class="sk" style="height:12px;width:40%"></div></div></div>`;
-    app.innerHTML += g+`</div>`; return;
-  }
 
-  const base = searchQuery ? nfts.filter(n=>n.name.toLowerCase().includes(searchQuery.toLowerCase())) : nfts;
-  // Sort: listed NFTs float to top, then unlisted
-  const filtered = [...base].sort((a,b) => {
-    const aListed = !!listings[a.mint];
-    const bListed = !!listings[b.mint];
-    if (aListed && !bListed) return -1;
-    if (!aListed && bListed) return 1;
-    // Both listed: sort by price ascending
-    if (aListed && bListed) return listings[a.mint].price_sol - listings[b.mint].price_sol;
-    return 0;
-  });
   let grid = `<div class="nft-grid">`;
-  filtered.forEach((nft, i) => {
-    const yours   = walletAddress && nft.owner === walletAddress;
-    const listing = listings[nft.mint];
-    grid += `<div class="nft-card" data-mint="${nft.mint}" style="animation:up .35s ease ${Math.min(i*.025,.5)}s both">
+  filtered.forEach((listing, i) => {
+    const yours = walletAddress && listing.seller === walletAddress;
+    grid += `<div class="nft-card" data-mint="${listing.mint}" style="animation:up .35s ease ${Math.min(i*.03,.5)}s both">
       <div class="nft-img-wrap">
-        ${nft.image?`<img src="${nft.image}" alt="${nft.name}" loading="lazy" class="nft-img" onerror="this.style.display='none'">`:`<div style="display:flex;align-items:center;justify-content:center;height:100%"><span style="font-size:44px;opacity:.07">🦒</span></div>`}
-        ${yours?`<div class="yours-badge">YOURS</div>`:""}
-        ${listing?`<div class="listed-badge">◎ ${listing.price_sol}</div>`:""}
+        ${listing.image
+          ? `<img src="${listing.image}" alt="${listing.name}" loading="lazy" class="nft-img" onerror="this.style.display='none'">`
+          : `<div style="display:flex;align-items:center;justify-content:center;height:100%"><span style="font-size:44px;opacity:.07">🦒</span></div>`}
+        ${yours ? `<div class="yours-badge">YOURS</div>` : ""}
       </div>
       <div class="nft-info">
-        <div class="nft-name">${nft.name}</div>
-        ${listing?`<div class="price-tag">◎ ${listing.price_sol} SOL</div>`:`<div class="nft-owner">Owner: ${short(nft.owner,4,3)}</div>`}
+        <div class="nft-name">${listing.name}</div>
+        <div class="price-tag">◎ ${listing.price_sol} SOL</div>
+        <div style="font-size:9px;color:var(--g2);margin-top:3px">Seller: ${short(listing.seller,4,3)}</div>
       </div>
     </div>`;
   });
   app.innerHTML += grid + `</div>`;
-  if (!filtered.length && !loading) app.innerHTML += `<div style="text-align:center;padding:48px;color:var(--g2)">${searchQuery?"No matches":"No NFTs loaded"}</div>`;
-  if (total > 0) {
-    const pages = Math.ceil(total/PAGE_SIZE);
-    app.innerHTML += `<div style="display:flex;justify-content:center;gap:10px;padding:10px 16px 40px;align-items:center">
-      <button class="btn-ghost" id="prev" ${page<=1?"disabled":""} style="padding:10px 20px">← PREV</button>
-      <span style="font-family:var(--d);font-size:15px;color:var(--g1);letter-spacing:2px">PAGE ${page} of ${pages}</span>
-      <button class="btn-ghost" id="next" ${page>=pages?"disabled":""} style="padding:10px 20px">NEXT →</button>
-    </div>`;
-  }
+
   setTimeout(() => {
     document.getElementById("search")?.addEventListener("input", e => { searchQuery=e.target.value; render(); });
-    document.getElementById("prev")?.addEventListener("click", () => fetchPage(page-1));
-    document.getElementById("next")?.addEventListener("click", () => fetchPage(page+1));
     document.querySelectorAll("[data-mint]").forEach(card => {
-      card.onclick = () => { selectedNft=[...nfts,...myNfts].find(n=>n.mint===card.dataset.mint); render(); };
+      card.onclick = () => {
+        const listing = listings[card.dataset.mint];
+        if (!listing) return;
+        // Build a minimal nft object from listing data for the modal
+        selectedNft = { mint: listing.mint, name: listing.name, image: listing.image, owner: listing.seller, attributes: [] };
+        render();
+      };
     });
   }, 0);
 }
