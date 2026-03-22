@@ -494,17 +494,43 @@ function parseAsset(item) {
 async function fetchPage(pg) {
   loading = true; error = null; render();
   try {
+    // Primary: getAssetsByGroup with verified collection address
     const res = await fetch(RPC, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ jsonrpc: "2.0", id: "lnl", method: "getAssetsByGroup",
         params: { groupKey: "collection", groupValue: COLLECTION, page: pg, limit: PAGE_SIZE } })
     });
     const data = await res.json();
+    console.log("[Browse] getAssetsByGroup response — total:", data.result?.total, "items:", data.result?.items?.length, "error:", data.error);
     if (data.error) throw new Error(data.error.message);
+
+    // If 0 results, try searchAssets as fallback (different indexing path)
+    if (!data.result?.total && pg === 1) {
+      console.log("[Browse] 0 results from getAssetsByGroup — trying searchAssets fallback");
+      const res2 = await fetch(RPC, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: "lnl2", method: "searchAssets",
+          params: { grouping: [["collection", COLLECTION]], page: pg, limit: PAGE_SIZE } })
+      });
+      const data2 = await res2.json();
+      console.log("[Browse] searchAssets fallback — total:", data2.result?.total, "items:", data2.result?.items?.length, "error:", data2.error);
+      if (!data2.error && data2.result?.total) {
+        nfts  = (data2.result?.items || []).map(parseAsset);
+        total = data2.result?.total || 0;
+        page  = pg;
+        loading = false; render(); return;
+      }
+      // Both returned 0 — collection address is likely wrong. Show diagnostic.
+      if (!data2.result?.total) {
+        error = `Collection not found. Address may be wrong — check console. Current: ${COLLECTION.slice(0,8)}...`;
+        loading = false; render(); return;
+      }
+    }
+
     nfts  = (data.result?.items || []).map(parseAsset);
     total = data.result?.total || 0;
     page  = pg;
-  } catch(e) { error = e.message; }
+  } catch(e) { error = e.message; console.error("[Browse] fetchPage error:", e); }
   loading = false; render();
 }
 
