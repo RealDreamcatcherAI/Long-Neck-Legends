@@ -1188,16 +1188,30 @@
       const asset = (await assetRes.json()).result;
       const proof = (await proofRes.json()).result;
       if (!asset || !proof) throw new Error("Could not fetch cNFT data from Helius");
-      return {
-        treeId: asset.compression.tree,
-        leafId: asset.compression.leaf_id,
-        dataHash: asset.compression.data_hash,
-        creatorHash: asset.compression.creator_hash,
+      const details = {
+        treeId: asset.compression?.tree,
+        leafId: asset.compression?.leaf_id,
+        dataHash: asset.compression?.data_hash,
+        creatorHash: asset.compression?.creator_hash,
         root: proof.root,
-        proofPath: proof.proof,
-        owner: asset.ownership.owner,
-        delegate: asset.ownership.delegate || asset.ownership.owner,
+        proofPath: proof.proof || [],
+        owner: asset.ownership?.owner,
+        delegate: asset.ownership?.delegate || asset.ownership?.owner,
       };
+      console.log("[cNFT] details:", JSON.stringify(details, null, 2));
+      return details;
+    }
+
+    // Safe PublicKey construction with clear error messages
+    function safePK(PublicKey, value, label) {
+      if (!value) throw new Error("Null/undefined value for " + label + ": " + value);
+      try { return new PublicKey(value); }
+      catch (e) { throw new Error("Invalid PublicKey for " + label + " (" + value + "): " + e.message); }
+    }
+
+    // Convert base58 hash to 32-byte buffer (for instruction data like root/dataHash/creatorHash)
+    function hashToBytes(PublicKey, base58Str, label) {
+      return safePK(PublicKey, base58Str, label).toBuffer();
     }
 
     // Derive Bubblegum tree authority PDA
@@ -1208,16 +1222,16 @@
 
     // Build Bubblegum delegate instruction
     function buildDelegateIx(PublicKey, { ownerPK, previousDelegatePK, newDelegatePK, treePK, treeAuthorityPK, root, dataHash, creatorHash, nonce, index, proofPath }) {
-      const bgProg = new PublicKey(BUBBLEGUM_PROGRAM);
-      const compProg = new PublicKey(COMPRESSION_PROGRAM);
-      const noopProg = new PublicKey(NOOP_PROGRAM);
-      const sysProg = new PublicKey(SYS_PROGRAM);
+      const bgProg = safePK(PublicKey, BUBBLEGUM_PROGRAM, "BUBBLEGUM_PROGRAM");
+      const compProg = safePK(PublicKey, COMPRESSION_PROGRAM, "COMPRESSION_PROGRAM");
+      const noopProg = safePK(PublicKey, NOOP_PROGRAM, "NOOP_PROGRAM");
+      const sysProg = safePK(PublicKey, SYS_PROGRAM, "SYS_PROGRAM");
 
       const ixData = concatBytes(
         BG_IX.delegate,
-        new PublicKey(root).toBuffer(),
-        new PublicKey(dataHash).toBuffer(),
-        new PublicKey(creatorHash).toBuffer(),
+        hashToBytes(PublicKey, root, "root"),
+        hashToBytes(PublicKey, dataHash, "dataHash"),
+        hashToBytes(PublicKey, creatorHash, "creatorHash"),
         toLEU64(nonce),
         toLEU32(index)
       );
@@ -1233,8 +1247,8 @@
         { pubkey: sysProg, isSigner: false, isWritable: false },
       ];
       // Append proof path as remaining accounts
-      proofPath.forEach(hash => {
-        keys.push({ pubkey: new PublicKey(hash), isSigner: false, isWritable: false });
+      proofPath.forEach((hash, i) => {
+        keys.push({ pubkey: safePK(PublicKey, hash, "proof[" + i + "]"), isSigner: false, isWritable: false });
       });
 
       return { programId: bgProg, keys, data: ixData };
@@ -1242,16 +1256,16 @@
 
     // Build Bubblegum transfer instruction (delegate transfers)
     function buildTransferIx(PublicKey, { ownerPK, delegatePK, newOwnerPK, treePK, treeAuthorityPK, root, dataHash, creatorHash, nonce, index, proofPath, delegateIsSigner }) {
-      const bgProg = new PublicKey(BUBBLEGUM_PROGRAM);
-      const compProg = new PublicKey(COMPRESSION_PROGRAM);
-      const noopProg = new PublicKey(NOOP_PROGRAM);
-      const sysProg = new PublicKey(SYS_PROGRAM);
+      const bgProg = safePK(PublicKey, BUBBLEGUM_PROGRAM, "BUBBLEGUM_PROGRAM");
+      const compProg = safePK(PublicKey, COMPRESSION_PROGRAM, "COMPRESSION_PROGRAM");
+      const noopProg = safePK(PublicKey, NOOP_PROGRAM, "NOOP_PROGRAM");
+      const sysProg = safePK(PublicKey, SYS_PROGRAM, "SYS_PROGRAM");
 
       const ixData = concatBytes(
         BG_IX.transfer,
-        new PublicKey(root).toBuffer(),
-        new PublicKey(dataHash).toBuffer(),
-        new PublicKey(creatorHash).toBuffer(),
+        hashToBytes(PublicKey, root, "root"),
+        hashToBytes(PublicKey, dataHash, "dataHash"),
+        hashToBytes(PublicKey, creatorHash, "creatorHash"),
         toLEU64(nonce),
         toLEU32(index)
       );
@@ -1266,8 +1280,8 @@
         { pubkey: compProg, isSigner: false, isWritable: false },
         { pubkey: sysProg, isSigner: false, isWritable: false },
       ];
-      proofPath.forEach(hash => {
-        keys.push({ pubkey: new PublicKey(hash), isSigner: false, isWritable: false });
+      proofPath.forEach((hash, i) => {
+        keys.push({ pubkey: safePK(PublicKey, hash, "txProof[" + i + "]"), isSigner: false, isWritable: false });
       });
 
       return { programId: bgProg, keys, data: ixData };
@@ -1317,11 +1331,11 @@
         if (btn) btn.innerHTML = `<span class="spinner"></span>FETCHING PROOF...`;
         const details = await getAssetDetails(nft.mint);
 
-        const ownerPK = new PublicKey(walletAddress);
-        const escrowPK = new PublicKey(ESCROW_ADDRESS);
-        const treePK = new PublicKey(details.treeId);
+        const ownerPK = safePK(PublicKey, walletAddress, "walletAddress");
+        const escrowPK = safePK(PublicKey, ESCROW_ADDRESS, "ESCROW_ADDRESS");
+        const treePK = safePK(PublicKey, details.treeId, "treeId");
         const [treeAuthorityPK] = getTreeAuthority(PublicKey, treePK);
-        const prevDelegatePK = new PublicKey(details.delegate);
+        const prevDelegatePK = safePK(PublicKey, details.delegate, "delegate");
 
         const delegateIx = buildDelegateIx(PublicKey, {
           ownerPK, previousDelegatePK: prevDelegatePK, newDelegatePK: escrowPK,
