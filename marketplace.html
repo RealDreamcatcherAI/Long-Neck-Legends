@@ -1138,6 +1138,17 @@
     let _web3 = null;
     async function getWeb3() {
       if (_web3) return _web3;
+      // Step 1: ensure Buffer polyfill is available (required by @solana/web3.js IIFE in browser)
+      if (typeof window.Buffer === "undefined") {
+        await new Promise((res, rej) => {
+          const s = document.createElement("script");
+          s.src = "https://bundle.run/buffer@6.0.3";
+          s.onload = () => { window.Buffer = window.buffer.Buffer; res(); };
+          s.onerror = rej;
+          document.head.appendChild(s);
+        });
+      }
+      // Step 2: load web3.js
       await new Promise((res, rej) => {
         const s = document.createElement("script");
         s.src = "https://unpkg.com/@solana/web3.js@1.91.8/lib/index.iife.min.js";
