@@ -1897,12 +1897,15 @@
       SOL locked in on-chain escrow until accepted or cancelled &nbsp;•&nbsp; Cancel anytime to get SOL back
     </div>
     <div style="display:flex;gap:8px">
-      <button class="btn-primary" id="co" style="flex:2">${myOffer ? "UPDATE OFFER" : "PLACE OFFER"}</button>
+      ${myOffer
+        ? `<div style="flex:2;padding:12px;background:#050505;border:1px solid #161616;border-radius:8px;font-size:9px;color:var(--g2);display:flex;align-items:center;justify-content:center;letter-spacing:1px">CANCEL CURRENT OFFER TO PLACE A NEW ONE</div>`
+        : `<button class="btn-primary" id="co" style="flex:2">PLACE OFFER</button>`}
       ${myOffer ? `<button class="btn-danger" id="cob">CANCEL</button>` : ""}
     </div>
   </div>`;
       document.body.appendChild(ov);
-      document.getElementById("co").onclick = async () => {
+      const coBtn = document.getElementById("co");
+      if (coBtn) coBtn.onclick = async () => {
         const p = parseFloat(document.getElementById("op").value);
         if (isNaN(p) || p < 0.01) { showToast("Enter a valid offer", true); return; }
         ov.remove(); await makeOffer(nft, p);
