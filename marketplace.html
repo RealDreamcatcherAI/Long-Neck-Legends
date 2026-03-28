@@ -935,16 +935,15 @@
     const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5cHFuZGFzb3Bka3JxdmtsbHZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5NTI1NjEsImV4cCI6MjA4NzUyODU2MX0.jXLaLfFudJf-xytfHAvMe5oV0DVeWi7xNB53Ib0GD_s";
     const RPC = `https://mainnet.helius-rpc.com/?api-key=${HELIUS_KEY}`;
 
-    // ── Auction House ──
-    const AH_ADDRESS = "C8RnHdp5X4effosZt2mEnFhbttg2mEnfXq7JqcztXav4";
-    const AH_PROGRAM = "hausS13jsjafwWwGqZTUQRmWyvyxn9EQpqMwV1PBBmk";
-    const METADATA_PROGRAM = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s";
-    const WRAPPED_SOL = "So11111111111111111111111111111111111111112";
+    // ── Compressed NFT Marketplace (Bubblegum + Escrow Co-signer) ──
+    const ESCROW_ADDRESS = "BRveonSzDfxYzmmTxpEdHndajfBTBLjz3bwatJGLSxii"; // from generate-escrow.mjs
+    const COSIGN_URL = "https://hypqndasopdkrqvkllvc.supabase.co/functions/v1/marketplace-cosign";
+    const BUBBLEGUM_PROGRAM = "BGUMAp9Gq7iTEuizy4pqaxsTyUCBK68MDfK752saRPe";
+    const COMPRESSION_PROGRAM = "cmtDvXumGCrqC1Age74AVPhSRVXJMd8PJS91L8KbNCK";
+    const NOOP_PROGRAM = "noopb9bkMVfRPU8AsBHK8EZKzq2FVrFgius4Gm2hpWam";
     const TOKEN_PROGRAM = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
-    const ASSOC_TOKEN_PROGRAM = "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJe1bz";
     const SYS_PROGRAM = "11111111111111111111111111111111";
-    const SYSVAR_RENT = "SysvarRent111111111111111111111111111111111";
-    let AH_IX = {}; // populated at init by computeDiscriminators()
+    let BG_IX = {}; // Bubblegum instruction discriminators
     // ═══════════════════════════════════════════════════════════
 
     // ── State ──
@@ -1150,12 +1149,10 @@
     }
 
     // ─────────────────────────────────────────────
-    //  AUCTION HOUSE HELPERS
-    //  Builds raw instructions for the Metaplex AH program.
-    //  No SDK needed — just web3.js + PDA derivation.
+    //  BUBBLEGUM cNFT HELPERS
     // ─────────────────────────────────────────────
 
-    // Anchor instruction discriminator: first 8 bytes of sha256("global:<name>")
+    // Anchor discriminator: first 8 bytes of sha256("global:<name>")
     async function anchorDisc(name) {
       const data = new TextEncoder().encode("global:" + name);
       const hash = await crypto.subtle.digest("SHA-256", data);
@@ -1163,107 +1160,129 @@
     }
 
     async function computeDiscriminators() {
-      AH_IX.sell = await anchorDisc("sell");
-      AH_IX.publicBuy = await anchorDisc("public_buy");
-      AH_IX.executeSale = await anchorDisc("execute_sale");
-      AH_IX.cancel = await anchorDisc("cancel");
-      AH_IX.withdraw = await anchorDisc("withdraw");
+      BG_IX.delegate = await anchorDisc("delegate");
+      BG_IX.transfer = await anchorDisc("transfer");
     }
 
-    // u64 little-endian encoding for instruction data
     function toLEU64(n) {
-      const buf = new ArrayBuffer(8);
-      const view = new DataView(buf);
-      view.setBigUint64(0, BigInt(Math.round(n)), true);
-      return new Uint8Array(buf);
+      const buf = new ArrayBuffer(8); new DataView(buf).setBigUint64(0, BigInt(Math.round(n)), true); return new Uint8Array(buf);
     }
-
-    // Concatenate Uint8Arrays
+    function toLEU32(n) {
+      const buf = new ArrayBuffer(4); new DataView(buf).setUint32(0, n, true); return new Uint8Array(buf);
+    }
     function concatBytes(...arrays) {
       const total = arrays.reduce((s, a) => s + a.length, 0);
-      const out = new Uint8Array(total);
-      let off = 0;
+      const out = new Uint8Array(total); let off = 0;
       for (const a of arrays) { out.set(a, off); off += a.length; }
       return out;
     }
 
-    // Derive Metaplex metadata PDA for an NFT mint
-    function getMetadataPDA(PublicKey, mintPK) {
-      const metaProg = new PublicKey(METADATA_PROGRAM);
-      return PublicKey.findProgramAddressSync(
-        [new TextEncoder().encode("metadata"), metaProg.toBuffer(), mintPK.toBuffer()],
-        metaProg
+    // Fetch cNFT compression data + merkle proof from Helius
+    async function getAssetDetails(mintId) {
+      const [assetRes, proofRes] = await Promise.all([
+        fetch(RPC, { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jsonrpc: "2.0", id: "a", method: "getAsset", params: { id: mintId } }) }),
+        fetch(RPC, { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jsonrpc: "2.0", id: "p", method: "getAssetProof", params: { id: mintId } }) })
+      ]);
+      const asset = (await assetRes.json()).result;
+      const proof = (await proofRes.json()).result;
+      if (!asset || !proof) throw new Error("Could not fetch cNFT data from Helius");
+      return {
+        treeId: asset.compression.tree,
+        leafId: asset.compression.leaf_id,
+        dataHash: asset.compression.data_hash,
+        creatorHash: asset.compression.creator_hash,
+        root: proof.root,
+        proofPath: proof.proof,
+        owner: asset.ownership.owner,
+        delegate: asset.ownership.delegate || asset.ownership.owner,
+      };
+    }
+
+    // Derive Bubblegum tree authority PDA
+    function getTreeAuthority(PublicKey, treePK) {
+      const bgProg = new PublicKey(BUBBLEGUM_PROGRAM);
+      return PublicKey.findProgramAddressSync([treePK.toBuffer()], bgProg);
+    }
+
+    // Build Bubblegum delegate instruction
+    function buildDelegateIx(PublicKey, { ownerPK, previousDelegatePK, newDelegatePK, treePK, treeAuthorityPK, root, dataHash, creatorHash, nonce, index, proofPath }) {
+      const bgProg = new PublicKey(BUBBLEGUM_PROGRAM);
+      const compProg = new PublicKey(COMPRESSION_PROGRAM);
+      const noopProg = new PublicKey(NOOP_PROGRAM);
+      const sysProg = new PublicKey(SYS_PROGRAM);
+
+      const ixData = concatBytes(
+        BG_IX.delegate,
+        new PublicKey(root).toBuffer(),
+        new PublicKey(dataHash).toBuffer(),
+        new PublicKey(creatorHash).toBuffer(),
+        toLEU64(nonce),
+        toLEU32(index)
       );
+
+      const keys = [
+        { pubkey: treeAuthorityPK, isSigner: false, isWritable: true },
+        { pubkey: ownerPK, isSigner: true, isWritable: false },
+        { pubkey: previousDelegatePK, isSigner: false, isWritable: false },
+        { pubkey: newDelegatePK, isSigner: false, isWritable: false },
+        { pubkey: treePK, isSigner: false, isWritable: true },
+        { pubkey: noopProg, isSigner: false, isWritable: false },
+        { pubkey: compProg, isSigner: false, isWritable: false },
+        { pubkey: sysProg, isSigner: false, isWritable: false },
+      ];
+      // Append proof path as remaining accounts
+      proofPath.forEach(hash => {
+        keys.push({ pubkey: new PublicKey(hash), isSigner: false, isWritable: false });
+      });
+
+      return { programId: bgProg, keys, data: ixData };
     }
 
-    // Derive AH fee account PDA
-    function getAHFeeAccount(PublicKey, ahPK, ahProgPK) {
-      return PublicKey.findProgramAddressSync(
-        [new TextEncoder().encode("auction_house"), ahPK.toBuffer(), new TextEncoder().encode("fee_payer")],
-        ahProgPK
+    // Build Bubblegum transfer instruction (delegate transfers)
+    function buildTransferIx(PublicKey, { ownerPK, delegatePK, newOwnerPK, treePK, treeAuthorityPK, root, dataHash, creatorHash, nonce, index, proofPath, delegateIsSigner }) {
+      const bgProg = new PublicKey(BUBBLEGUM_PROGRAM);
+      const compProg = new PublicKey(COMPRESSION_PROGRAM);
+      const noopProg = new PublicKey(NOOP_PROGRAM);
+      const sysProg = new PublicKey(SYS_PROGRAM);
+
+      const ixData = concatBytes(
+        BG_IX.transfer,
+        new PublicKey(root).toBuffer(),
+        new PublicKey(dataHash).toBuffer(),
+        new PublicKey(creatorHash).toBuffer(),
+        toLEU64(nonce),
+        toLEU32(index)
       );
+
+      const keys = [
+        { pubkey: treeAuthorityPK, isSigner: false, isWritable: true },
+        { pubkey: ownerPK, isSigner: !delegateIsSigner, isWritable: false },
+        { pubkey: delegatePK, isSigner: delegateIsSigner, isWritable: false },
+        { pubkey: newOwnerPK, isSigner: false, isWritable: false },
+        { pubkey: treePK, isSigner: false, isWritable: true },
+        { pubkey: noopProg, isSigner: false, isWritable: false },
+        { pubkey: compProg, isSigner: false, isWritable: false },
+        { pubkey: sysProg, isSigner: false, isWritable: false },
+      ];
+      proofPath.forEach(hash => {
+        keys.push({ pubkey: new PublicKey(hash), isSigner: false, isWritable: false });
+      });
+
+      return { programId: bgProg, keys, data: ixData };
     }
 
-    // Derive AH treasury PDA
-    function getAHTreasury(PublicKey, ahPK, ahProgPK) {
-      return PublicKey.findProgramAddressSync(
-        [new TextEncoder().encode("auction_house"), ahPK.toBuffer(), new TextEncoder().encode("treasury")],
-        ahProgPK
-      );
-    }
-
-    // Derive buyer escrow PDA
-    function getBuyerEscrow(PublicKey, ahPK, buyerPK, ahProgPK) {
-      return PublicKey.findProgramAddressSync(
-        [new TextEncoder().encode("auction_house"), ahPK.toBuffer(), buyerPK.toBuffer()],
-        ahProgPK
-      );
-    }
-
-    // Derive program as signer PDA
-    function getProgramAsSigner(PublicKey, ahProgPK) {
-      return PublicKey.findProgramAddressSync(
-        [new TextEncoder().encode("auction_house"), new TextEncoder().encode("signer")],
-        ahProgPK
-      );
-    }
-
-    // Derive seller trade state PDA
-    function getSellerTradeState(PublicKey, sellerPK, ahPK, tokenAccPK, treasuryMintPK, mintPK, priceLamports, tokenSize, ahProgPK) {
-      return PublicKey.findProgramAddressSync([
-        new TextEncoder().encode("auction_house"),
-        sellerPK.toBuffer(), ahPK.toBuffer(), tokenAccPK.toBuffer(),
-        treasuryMintPK.toBuffer(), mintPK.toBuffer(),
-        toLEU64(priceLamports), toLEU64(tokenSize)
-      ], ahProgPK);
-    }
-
-    // Derive buyer trade state PDA
-    function getBuyerTradeState(PublicKey, buyerPK, ahPK, treasuryMintPK, mintPK, priceLamports, tokenSize, ahProgPK) {
-      return PublicKey.findProgramAddressSync([
-        new TextEncoder().encode("auction_house"),
-        buyerPK.toBuffer(), ahPK.toBuffer(),
-        treasuryMintPK.toBuffer(), mintPK.toBuffer(),
-        toLEU64(priceLamports), toLEU64(tokenSize)
-      ], ahProgPK);
-    }
-
-    // Get the AH authority address from on-chain account data
-    let _ahAuthority = null;
-    async function getAHAuthority(conn, PublicKey) {
-      if (_ahAuthority) return _ahAuthority;
-      const ahPK = new PublicKey(AH_ADDRESS);
-      const info = await conn.getAccountInfo(ahPK);
-      if (!info) throw new Error("Auction House account not found on-chain");
-      // AH account layout: offset 8 (discriminator) then first pubkey at offset 8 is auctionHouseFeeAccount,
-      // Actually the layout is: 8 bytes discriminator, then fields in order.
-      // Metaplex AH account layout (after 8-byte Anchor discriminator):
-      // auction_house_fee_account: Pubkey (32), auction_house_treasury: Pubkey (32),
-      // treasury_withdrawal_destination: Pubkey (32), fee_withdrawal_destination: Pubkey (32),
-      // treasury_mint: Pubkey (32), authority: Pubkey (32), creator: Pubkey (32), bump: u8, ...
-      // authority is at offset 8 + 32*5 = 168
-      _ahAuthority = new PublicKey(info.data.slice(168, 200));
-      return _ahAuthority;
+    // Call the Edge Function co-signer
+    async function cosign(body) {
+      const res = await fetch(COSIGN_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${SB_KEY}` },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (data.error) throw new Error("Co-signer: " + data.error);
+      return data;
     }
 
     // ─────────────────────────────────────────────
@@ -1281,83 +1300,49 @@
     }
 
     // ─────────────────────────────────────────────
-    //  LIST (Auction House Sell instruction)
-    //  Seller signs → creates on-chain trade state
-    //  NFT stays in wallet, AH gets delegate authority
+    //  LIST (Bubblegum Delegate to escrow)
+    //  Seller signs → cNFT delegated to escrow address
+    //  cNFT stays in wallet but escrow can transfer it
     // ─────────────────────────────────────────────
     async function listNft(nft, priceSol) {
       const btn = document.getElementById("cl");
-      if (btn) { btn.disabled = true; btn.innerHTML = `<span class="spinner"></span>SIGNING...`; }
+      if (btn) { btn.disabled = true; btn.innerHTML = `<span class="spinner"></span>LOADING...`; }
 
       try {
         const web3 = await getWeb3();
-        const { Connection, PublicKey, Transaction, LAMPORTS_PER_SOL } = web3;
+        const { Connection, PublicKey, Transaction } = web3;
         const conn = new Connection(RPC, "confirmed");
 
-        const sellerPK = new PublicKey(walletAddress);
-        const mintPK = new PublicKey(nft.mint);
-        const ahPK = new PublicKey(AH_ADDRESS);
-        const ahProgPK = new PublicKey(AH_PROGRAM);
-        const treasuryMintPK = new PublicKey(WRAPPED_SOL);
-        const tokenProgPK = new PublicKey(TOKEN_PROGRAM);
-        const sysProgPK = new PublicKey(SYS_PROGRAM);
-        const rentPK = new PublicKey(SYSVAR_RENT);
+        console.log("[listNft] fetching cNFT data for:", nft.mint);
+        if (btn) btn.innerHTML = `<span class="spinner"></span>FETCHING PROOF...`;
+        const details = await getAssetDetails(nft.mint);
 
-        const priceLamports = Math.round(parseFloat(priceSol) * LAMPORTS_PER_SOL);
-        const tokenSize = 1;
+        const ownerPK = new PublicKey(walletAddress);
+        const escrowPK = new PublicKey(ESCROW_ADDRESS);
+        const treePK = new PublicKey(details.treeId);
+        const [treeAuthorityPK] = getTreeAuthority(PublicKey, treePK);
+        const prevDelegatePK = new PublicKey(details.delegate);
 
-        // Get seller's token account
-        const sellerTokens = await conn.getTokenAccountsByOwner(sellerPK, { mint: mintPK });
-        if (!sellerTokens.value.length) throw new Error("NFT not found in your wallet");
-        const sellerTokenAccPK = sellerTokens.value[0].pubkey;
+        const delegateIx = buildDelegateIx(PublicKey, {
+          ownerPK, previousDelegatePK: prevDelegatePK, newDelegatePK: escrowPK,
+          treePK, treeAuthorityPK,
+          root: details.root, dataHash: details.dataHash, creatorHash: details.creatorHash,
+          nonce: details.leafId, index: details.leafId,
+          proofPath: details.proofPath
+        });
 
-        // Derive PDAs
-        const authority = await getAHAuthority(conn, PublicKey);
-        const [ahFeeAcc] = getAHFeeAccount(PublicKey, ahPK, ahProgPK);
-        const [sellerTradeState, tsB] = getSellerTradeState(PublicKey, sellerPK, ahPK, sellerTokenAccPK, treasuryMintPK, mintPK, priceLamports, tokenSize, ahProgPK);
-        const [freeTradeState, ftsB] = getSellerTradeState(PublicKey, sellerPK, ahPK, sellerTokenAccPK, treasuryMintPK, mintPK, 0, tokenSize, ahProgPK);
-        const [programAsSigner, pasB] = getProgramAsSigner(PublicKey, ahProgPK);
-        const [metadataPDA] = getMetadataPDA(PublicKey, mintPK);
-
-        // Build Sell instruction
-        const ixData = concatBytes(
-          AH_IX.sell,
-          new Uint8Array([tsB, ftsB, pasB]),
-          toLEU64(priceLamports),
-          toLEU64(tokenSize)
-        );
-
-        const sellIx = {
-          programId: ahProgPK,
-          keys: [
-            { pubkey: sellerPK, isSigner: true, isWritable: true },
-            { pubkey: sellerTokenAccPK, isSigner: false, isWritable: true },
-            { pubkey: metadataPDA, isSigner: false, isWritable: false },
-            { pubkey: authority, isSigner: false, isWritable: false },
-            { pubkey: ahPK, isSigner: false, isWritable: false },
-            { pubkey: ahFeeAcc, isSigner: false, isWritable: true },
-            { pubkey: sellerTradeState, isSigner: false, isWritable: true },
-            { pubkey: freeTradeState, isSigner: false, isWritable: true },
-            { pubkey: tokenProgPK, isSigner: false, isWritable: false },
-            { pubkey: sysProgPK, isSigner: false, isWritable: false },
-            { pubkey: programAsSigner, isSigner: false, isWritable: false },
-            { pubkey: rentPK, isSigner: false, isWritable: false },
-          ],
-          data: ixData
-        };
-
-        const tx = new Transaction().add(sellIx);
+        const tx = new Transaction().add(delegateIx);
         const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
-        tx.recentBlockhash = blockhash;
-        tx.lastValidBlockHeight = lastValidBlockHeight;
-        tx.feePayer = sellerPK;
+        tx.recentBlockhash = blockhash; tx.lastValidBlockHeight = lastValidBlockHeight;
+        tx.feePayer = ownerPK;
 
+        if (btn) btn.innerHTML = `<span class="spinner"></span>SIGN IN WALLET...`;
         const signed = await walletProvider.signTransaction(tx);
         if (btn) btn.innerHTML = `<span class="spinner"></span>CONFIRMING...`;
         const sig = await conn.sendRawTransaction(signed.serialize(), { skipPreflight: false });
         await conn.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed");
 
-        // Save to Supabase for UI
+        // Save to Supabase
         await sbUpsert("marketplace_listings", {
           mint: nft.mint, seller: walletAddress,
           price_sol: parseFloat(priceSol),
@@ -1369,65 +1354,43 @@
         render();
 
       } catch (e) {
-        console.error("[listNft] error:", e);
+        console.error("[listNft]", e);
         if (e.code === 4001 || e.message?.toLowerCase().includes("cancel") || e.message?.toLowerCase().includes("reject")) {
           showToast("Listing cancelled", true);
         } else {
-          showToast("Failed to list: " + (e.message || "unknown"), true);
+          showToast("Failed: " + (e.message || "unknown"), true);
         }
         if (btn) { btn.disabled = false; btn.innerHTML = "LIST FOR SALE"; }
       }
     }
 
     // ─────────────────────────────────────────────
-    //  DELIST (Auction House Cancel instruction)
+    //  DELIST (Delegate back to self)
     // ─────────────────────────────────────────────
     async function delistNft(mint) {
       try {
         const web3 = await getWeb3();
-        const { Connection, PublicKey, Transaction, LAMPORTS_PER_SOL } = web3;
+        const { Connection, PublicKey, Transaction } = web3;
         const conn = new Connection(RPC, "confirmed");
-        const listing = listings[mint];
-        if (!listing) { showToast("Listing not found", true); return; }
 
-        const sellerPK = new PublicKey(walletAddress);
-        const mintPK = new PublicKey(mint);
-        const ahPK = new PublicKey(AH_ADDRESS);
-        const ahProgPK = new PublicKey(AH_PROGRAM);
-        const treasuryMintPK = new PublicKey(WRAPPED_SOL);
-        const tokenProgPK = new PublicKey(TOKEN_PROGRAM);
+        const details = await getAssetDetails(mint);
+        const ownerPK = new PublicKey(walletAddress);
+        const treePK = new PublicKey(details.treeId);
+        const [treeAuthorityPK] = getTreeAuthority(PublicKey, treePK);
 
-        const priceLamports = Math.round(listing.price_sol * LAMPORTS_PER_SOL);
+        // Delegate back to owner (revoke escrow)
+        const delegateIx = buildDelegateIx(PublicKey, {
+          ownerPK, previousDelegatePK: new PublicKey(ESCROW_ADDRESS), newDelegatePK: ownerPK,
+          treePK, treeAuthorityPK,
+          root: details.root, dataHash: details.dataHash, creatorHash: details.creatorHash,
+          nonce: details.leafId, index: details.leafId,
+          proofPath: details.proofPath
+        });
 
-        const sellerTokens = await conn.getTokenAccountsByOwner(sellerPK, { mint: mintPK });
-        if (!sellerTokens.value.length) throw new Error("NFT not in wallet");
-        const sellerTokenAccPK = sellerTokens.value[0].pubkey;
-
-        const authority = await getAHAuthority(conn, PublicKey);
-        const [ahFeeAcc] = getAHFeeAccount(PublicKey, ahPK, ahProgPK);
-        const [sellerTradeState] = getSellerTradeState(PublicKey, sellerPK, ahPK, sellerTokenAccPK, treasuryMintPK, mintPK, priceLamports, 1, ahProgPK);
-
-        const ixData = concatBytes(AH_IX.cancel, toLEU64(priceLamports), toLEU64(1));
-
-        const cancelIx = {
-          programId: ahProgPK,
-          keys: [
-            { pubkey: sellerPK, isSigner: true, isWritable: true },
-            { pubkey: sellerTokenAccPK, isSigner: false, isWritable: true },
-            { pubkey: mintPK, isSigner: false, isWritable: false },
-            { pubkey: authority, isSigner: false, isWritable: false },
-            { pubkey: ahPK, isSigner: false, isWritable: false },
-            { pubkey: ahFeeAcc, isSigner: false, isWritable: true },
-            { pubkey: sellerTradeState, isSigner: false, isWritable: true },
-            { pubkey: tokenProgPK, isSigner: false, isWritable: false },
-          ],
-          data: ixData
-        };
-
-        const tx = new Transaction().add(cancelIx);
+        const tx = new Transaction().add(delegateIx);
         const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
         tx.recentBlockhash = blockhash; tx.lastValidBlockHeight = lastValidBlockHeight;
-        tx.feePayer = sellerPK;
+        tx.feePayer = ownerPK;
 
         const signed = await walletProvider.signTransaction(tx);
         const sig = await conn.sendRawTransaction(signed.serialize(), { skipPreflight: false });
@@ -1439,7 +1402,7 @@
         render();
       } catch (e) {
         console.error("[delistNft]", e);
-        if (e.code === 4001 || e.message?.toLowerCase().includes("cancel")) {
+        if (e.code === 4001 || e.message?.toLowerCase().includes("cancel") || e.message?.toLowerCase().includes("reject")) {
           showToast("Cancelled", true);
         } else {
           showToast("Failed: " + (e.message || "unknown"), true);
@@ -1448,129 +1411,85 @@
     }
 
     // ─────────────────────────────────────────────
-    //  BUY NOW (PublicBuy + ExecuteSale in one tx)
-    //  Buyer signs once → SOL escrowed + sale executed atomically
+    //  BUY NOW (SOL transfer + Bubblegum transfer via escrow co-sign)
+    //  Frontend builds full tx → sends to Edge Function for escrow signature
+    //  → buyer signs SOL part → broadcasts. Fully atomic.
     // ─────────────────────────────────────────────
     async function buyNft(listing) {
-      console.log("[buyNft] AH flow — wallet:", walletAddress, "mint:", listing?.mint);
+      console.log("[buyNft] cNFT flow — wallet:", walletAddress, "mint:", listing?.mint);
       if (!walletAddress || !walletProvider) { showToast("Connect wallet first", true); return; }
 
       const btn = document.getElementById("buy-btn");
       const setBtn = (html, dis) => { if (btn) { btn.innerHTML = html; btn.disabled = dis; } };
-      setBtn(`<span class="spinner"></span>BUILDING TX...`, true);
+      setBtn(`<span class="spinner"></span>LOADING...`, true);
 
       try {
         const web3 = await getWeb3();
-        const { Connection, PublicKey, Transaction, LAMPORTS_PER_SOL } = web3;
+        const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = web3;
         const conn = new Connection(RPC, "confirmed");
 
         const buyerPK = new PublicKey(walletAddress);
         const sellerPK = new PublicKey(listing.seller);
-        const mintPK = new PublicKey(listing.mint);
-        const ahPK = new PublicKey(AH_ADDRESS);
-        const ahProgPK = new PublicKey(AH_PROGRAM);
-        const treasuryMintPK = new PublicKey(WRAPPED_SOL);
-        const tokenProgPK = new PublicKey(TOKEN_PROGRAM);
-        const ataProgPK = new PublicKey(ASSOC_TOKEN_PROGRAM);
-        const sysProgPK = new PublicKey(SYS_PROGRAM);
-        const rentPK = new PublicKey(SYSVAR_RENT);
+        const escrowPK = new PublicKey(ESCROW_ADDRESS);
+        const treasuryPK = new PublicKey(TREASURY);
 
         const priceLamports = Math.round(listing.price_sol * LAMPORTS_PER_SOL);
-        const tokenSize = 1;
+        const feeLamports = Math.round(priceLamports * FEE_PCT);
+        const sellerLamports = priceLamports - feeLamports;
 
-        // Seller's token account
-        const sellerTokens = await conn.getTokenAccountsByOwner(sellerPK, { mint: mintPK });
-        if (!sellerTokens.value.length) {
-          await sbDelete("marketplace_listings", { mint: listing.mint });
-          delete listings[listing.mint];
-          showToast("NFT moved by seller — listing auto-removed", true);
-          render(); return;
+        setBtn(`<span class="spinner"></span>FETCHING PROOF...`, true);
+        const details = await getAssetDetails(listing.mint);
+        const treePK = new PublicKey(details.treeId);
+        const [treeAuthorityPK] = getTreeAuthority(PublicKey, treePK);
+
+        // Build the full transaction
+        const tx = new Transaction();
+
+        // ① SOL → seller (buyer signs)
+        tx.add(SystemProgram.transfer({ fromPubkey: buyerPK, toPubkey: sellerPK, lamports: sellerLamports }));
+
+        // ② SOL → treasury fee (buyer signs)
+        if (feeLamports > 0) {
+          tx.add(SystemProgram.transfer({ fromPubkey: buyerPK, toPubkey: treasuryPK, lamports: feeLamports }));
         }
-        const sellerTokenAccPK = sellerTokens.value[0].pubkey;
 
-        // Buyer receipt token account (ATA)
-        const [buyerATA] = PublicKey.findProgramAddressSync(
-          [buyerPK.toBuffer(), tokenProgPK.toBuffer(), mintPK.toBuffer()], ataProgPK
-        );
+        // ③ Bubblegum transfer: escrow (delegate) transfers cNFT → buyer
+        const transferIx = buildTransferIx(PublicKey, {
+          ownerPK: sellerPK,
+          delegatePK: escrowPK,
+          newOwnerPK: buyerPK,
+          treePK, treeAuthorityPK,
+          root: details.root, dataHash: details.dataHash, creatorHash: details.creatorHash,
+          nonce: details.leafId, index: details.leafId,
+          proofPath: details.proofPath,
+          delegateIsSigner: true // escrow signs this
+        });
+        tx.add(transferIx);
 
-        // Derive all PDAs
-        const authority = await getAHAuthority(conn, PublicKey);
-        const [ahFeeAcc] = getAHFeeAccount(PublicKey, ahPK, ahProgPK);
-        const [ahTreasury] = getAHTreasury(PublicKey, ahPK, ahProgPK);
-        const [escrowPayment, escB] = getBuyerEscrow(PublicKey, ahPK, buyerPK, ahProgPK);
-        const [buyerTradeState, btsB] = getBuyerTradeState(PublicKey, buyerPK, ahPK, treasuryMintPK, mintPK, priceLamports, tokenSize, ahProgPK);
-        const [sellerTradeState] = getSellerTradeState(PublicKey, sellerPK, ahPK, sellerTokenAccPK, treasuryMintPK, mintPK, priceLamports, tokenSize, ahProgPK);
-        const [freeTradeState, ftsB] = getSellerTradeState(PublicKey, sellerPK, ahPK, sellerTokenAccPK, treasuryMintPK, mintPK, 0, tokenSize, ahProgPK);
-        const [programAsSigner, pasB] = getProgramAsSigner(PublicKey, ahProgPK);
-        const [metadataPDA] = getMetadataPDA(PublicKey, mintPK);
-
-        // ① PublicBuy instruction — deposits SOL to escrow + creates buyer trade state
-        const buyData = concatBytes(AH_IX.publicBuy, new Uint8Array([btsB, escB]), toLEU64(priceLamports), toLEU64(tokenSize));
-        const buyIx = {
-          programId: ahProgPK,
-          keys: [
-            { pubkey: buyerPK, isSigner: true, isWritable: true },
-            { pubkey: buyerPK, isSigner: true, isWritable: true }, // payment_account = buyer for SOL
-            { pubkey: buyerPK, isSigner: false, isWritable: false }, // transfer_authority
-            { pubkey: treasuryMintPK, isSigner: false, isWritable: false },
-            { pubkey: sellerTokenAccPK, isSigner: false, isWritable: false },
-            { pubkey: metadataPDA, isSigner: false, isWritable: false },
-            { pubkey: escrowPayment, isSigner: false, isWritable: true },
-            { pubkey: authority, isSigner: false, isWritable: false },
-            { pubkey: ahPK, isSigner: false, isWritable: false },
-            { pubkey: ahFeeAcc, isSigner: false, isWritable: true },
-            { pubkey: buyerTradeState, isSigner: false, isWritable: true },
-            { pubkey: tokenProgPK, isSigner: false, isWritable: false },
-            { pubkey: sysProgPK, isSigner: false, isWritable: false },
-            { pubkey: rentPK, isSigner: false, isWritable: false },
-          ],
-          data: buyData
-        };
-
-        // ② ExecuteSale instruction — atomically swaps NFT ↔ SOL
-        const execData = concatBytes(AH_IX.executeSale, new Uint8Array([escB, ftsB, pasB]), toLEU64(priceLamports), toLEU64(tokenSize));
-        const execIx = {
-          programId: ahProgPK,
-          keys: [
-            { pubkey: buyerPK, isSigner: true, isWritable: true },
-            { pubkey: sellerPK, isSigner: false, isWritable: true },
-            { pubkey: sellerTokenAccPK, isSigner: false, isWritable: true },
-            { pubkey: mintPK, isSigner: false, isWritable: false },
-            { pubkey: metadataPDA, isSigner: false, isWritable: false },
-            { pubkey: treasuryMintPK, isSigner: false, isWritable: false },
-            { pubkey: escrowPayment, isSigner: false, isWritable: true },
-            { pubkey: sellerPK, isSigner: false, isWritable: true }, // seller_payment_receipt = seller for SOL
-            { pubkey: buyerATA, isSigner: false, isWritable: true },
-            { pubkey: authority, isSigner: false, isWritable: false },
-            { pubkey: ahPK, isSigner: false, isWritable: false },
-            { pubkey: ahFeeAcc, isSigner: false, isWritable: true },
-            { pubkey: ahTreasury, isSigner: false, isWritable: true },
-            { pubkey: buyerTradeState, isSigner: false, isWritable: true },
-            { pubkey: sellerTradeState, isSigner: false, isWritable: true },
-            { pubkey: freeTradeState, isSigner: false, isWritable: true },
-            { pubkey: tokenProgPK, isSigner: false, isWritable: false },
-            { pubkey: sysProgPK, isSigner: false, isWritable: false },
-            { pubkey: ataProgPK, isSigner: false, isWritable: false },
-            { pubkey: programAsSigner, isSigner: false, isWritable: false },
-            { pubkey: rentPK, isSigner: false, isWritable: false },
-          ],
-          data: execData
-        };
-
-        const tx = new Transaction().add(buyIx).add(execIx);
         const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
         tx.recentBlockhash = blockhash; tx.lastValidBlockHeight = lastValidBlockHeight;
         tx.feePayer = buyerPK;
 
+        // Serialize (without signatures) and send to co-signer
+        setBtn(`<span class="spinner"></span>CO-SIGNING...`, true);
+        const serialized = tx.serialize({ requireAllSignatures: false, verifySignatures: false });
+        const txB64 = btoa(String.fromCharCode(...serialized));
+
+        const cosigned = await cosign({ action: "cosign-buy", txBase64: txB64, mint: listing.mint });
+
+        // Deserialize the co-signed tx and have buyer sign
         setBtn(`<span class="spinner"></span>SIGN IN WALLET...`, true);
-        const signed = await walletProvider.signTransaction(tx);
+        const cosignedBuf = Uint8Array.from(atob(cosigned.tx), c => c.charCodeAt(0));
+        const cosignedTx = Transaction.from(cosignedBuf);
+        const fullySigned = await walletProvider.signTransaction(cosignedTx);
+
         setBtn(`<span class="spinner"></span>CONFIRMING...`, true);
-        const sig = await conn.sendRawTransaction(signed.serialize(), { skipPreflight: false, maxRetries: 3 });
+        const sig = await conn.sendRawTransaction(fullySigned.serialize(), { skipPreflight: false });
         showToast("Confirming on-chain...");
         const result = await conn.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed");
         if (result.value.err) throw new Error("Transaction failed on-chain");
 
-        // Clean up Supabase
+        // Clean up
         await sbDelete("marketplace_listings", { mint: listing.mint });
         delete listings[listing.mint];
         await sbDelete("marketplace_offers", { mint: listing.mint });
@@ -1582,7 +1501,7 @@
         showToast("You own it! 🐦 " + listing.name);
 
       } catch (e) {
-        console.error("[buyNft] error:", e);
+        console.error("[buyNft]", e);
         if (e.code === 4001 || e.message?.toLowerCase().includes("cancel") || e.message?.toLowerCase().includes("reject")) {
           showToast("Cancelled", true);
         } else {
@@ -1593,66 +1512,24 @@
     }
 
     // ─────────────────────────────────────────────
-    //  MAKE OFFER (PublicBuy only — deposits SOL to on-chain escrow)
-    //  Buyer's SOL is LOCKED until they cancel or seller accepts.
+    //  MAKE OFFER (Send SOL to escrow wallet — locked on-chain)
     // ─────────────────────────────────────────────
     async function makeOffer(nft, offerSol) {
       if (!walletAddress || !walletProvider) { showToast("Connect wallet first", true); return; }
 
       try {
         const web3 = await getWeb3();
-        const { Connection, PublicKey, Transaction, LAMPORTS_PER_SOL } = web3;
+        const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = web3;
         const conn = new Connection(RPC, "confirmed");
 
         const buyerPK = new PublicKey(walletAddress);
-        const mintPK = new PublicKey(nft.mint);
-        const ahPK = new PublicKey(AH_ADDRESS);
-        const ahProgPK = new PublicKey(AH_PROGRAM);
-        const treasuryMintPK = new PublicKey(WRAPPED_SOL);
-        const tokenProgPK = new PublicKey(TOKEN_PROGRAM);
-        const sysProgPK = new PublicKey(SYS_PROGRAM);
-        const rentPK = new PublicKey(SYSVAR_RENT);
+        const escrowPK = new PublicKey(ESCROW_ADDRESS);
+        const lamports = Math.round(parseFloat(offerSol) * LAMPORTS_PER_SOL);
 
-        const priceLamports = Math.round(parseFloat(offerSol) * LAMPORTS_PER_SOL);
-
-        // We need the seller's token account — look up from listing or from on-chain
-        // For offers on unlisted NFTs, we fetch the current owner's token account
-        const ownerAddr = nft.owner || (listings[nft.mint]?.seller);
-        if (!ownerAddr) throw new Error("Cannot determine NFT owner");
-        const ownerPK = new PublicKey(ownerAddr);
-        const ownerTokens = await conn.getTokenAccountsByOwner(ownerPK, { mint: mintPK });
-        if (!ownerTokens.value.length) throw new Error("NFT owner's token account not found");
-        const sellerTokenAccPK = ownerTokens.value[0].pubkey;
-
-        const authority = await getAHAuthority(conn, PublicKey);
-        const [ahFeeAcc] = getAHFeeAccount(PublicKey, ahPK, ahProgPK);
-        const [escrowPayment, escB] = getBuyerEscrow(PublicKey, ahPK, buyerPK, ahProgPK);
-        const [buyerTradeState, btsB] = getBuyerTradeState(PublicKey, buyerPK, ahPK, treasuryMintPK, mintPK, priceLamports, 1, ahProgPK);
-        const [metadataPDA] = getMetadataPDA(PublicKey, mintPK);
-
-        const buyData = concatBytes(AH_IX.publicBuy, new Uint8Array([btsB, escB]), toLEU64(priceLamports), toLEU64(1));
-        const buyIx = {
-          programId: ahProgPK,
-          keys: [
-            { pubkey: buyerPK, isSigner: true, isWritable: true },
-            { pubkey: buyerPK, isSigner: true, isWritable: true },
-            { pubkey: buyerPK, isSigner: false, isWritable: false },
-            { pubkey: treasuryMintPK, isSigner: false, isWritable: false },
-            { pubkey: sellerTokenAccPK, isSigner: false, isWritable: false },
-            { pubkey: metadataPDA, isSigner: false, isWritable: false },
-            { pubkey: escrowPayment, isSigner: false, isWritable: true },
-            { pubkey: authority, isSigner: false, isWritable: false },
-            { pubkey: ahPK, isSigner: false, isWritable: false },
-            { pubkey: ahFeeAcc, isSigner: false, isWritable: true },
-            { pubkey: buyerTradeState, isSigner: false, isWritable: true },
-            { pubkey: tokenProgPK, isSigner: false, isWritable: false },
-            { pubkey: sysProgPK, isSigner: false, isWritable: false },
-            { pubkey: rentPK, isSigner: false, isWritable: false },
-          ],
-          data: buyData
-        };
-
-        const tx = new Transaction().add(buyIx);
+        // Transfer SOL to escrow wallet
+        const tx = new Transaction().add(
+          SystemProgram.transfer({ fromPubkey: buyerPK, toPubkey: escrowPK, lamports })
+        );
         const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
         tx.recentBlockhash = blockhash; tx.lastValidBlockHeight = lastValidBlockHeight;
         tx.feePayer = buyerPK;
@@ -1681,118 +1558,25 @@
     }
 
     // ─────────────────────────────────────────────
-    //  CANCEL OFFER (Withdraw — returns escrowed SOL to buyer)
+    //  CANCEL OFFER (Edge Function returns SOL from escrow)
     // ─────────────────────────────────────────────
     async function cancelOffer(mint) {
-      if (!walletAddress || !walletProvider) return;
-      const offer = (offers[mint] || []).find(o => o.buyer === walletAddress);
-      if (!offer) { showToast("No offer to cancel", true); return; }
-
+      if (!walletAddress) return;
       try {
-        const web3 = await getWeb3();
-        const { Connection, PublicKey, Transaction, LAMPORTS_PER_SOL } = web3;
-        const conn = new Connection(RPC, "confirmed");
-
-        const buyerPK = new PublicKey(walletAddress);
-        const mintPK = new PublicKey(mint);
-        const ahPK = new PublicKey(AH_ADDRESS);
-        const ahProgPK = new PublicKey(AH_PROGRAM);
-        const treasuryMintPK = new PublicKey(WRAPPED_SOL);
-        const tokenProgPK = new PublicKey(TOKEN_PROGRAM);
-        const ataProgPK = new PublicKey(ASSOC_TOKEN_PROGRAM);
-        const sysProgPK = new PublicKey(SYS_PROGRAM);
-        const rentPK = new PublicKey(SYSVAR_RENT);
-
-        const priceLamports = Math.round(offer.price_sol * LAMPORTS_PER_SOL);
-
-        // We also need to cancel the buyer trade state (Cancel instruction with buyer's trade state)
-        // First cancel the bid, then withdraw
-        // Actually for SOL-native AH, we need to:
-        // 1. Cancel the bid (closes buyer trade state)
-        // 2. Withdraw from escrow
-
-        // For cancel bid, we need the seller token account that was used when the bid was made.
-        // We'll look it up from the NFT owner.
-        const ownerAddr = listings[mint]?.seller;
-        let sellerTokenAccPK;
-        if (ownerAddr) {
-          const ownerPK = new PublicKey(ownerAddr);
-          const ownerTokens = await conn.getTokenAccountsByOwner(ownerPK, { mint: mintPK });
-          if (ownerTokens.value.length) sellerTokenAccPK = ownerTokens.value[0].pubkey;
-        }
-
-        const authority = await getAHAuthority(conn, PublicKey);
-        const [ahFeeAcc] = getAHFeeAccount(PublicKey, ahPK, ahProgPK);
-        const [escrowPayment, escB] = getBuyerEscrow(PublicKey, ahPK, buyerPK, ahProgPK);
-        const [buyerTradeState] = getBuyerTradeState(PublicKey, buyerPK, ahPK, treasuryMintPK, mintPK, priceLamports, 1, ahProgPK);
-
-        const tx = new Transaction();
-
-        // Cancel the bid (buyer trade state)
-        if (sellerTokenAccPK) {
-          const cancelData = concatBytes(AH_IX.cancel, toLEU64(priceLamports), toLEU64(1));
-          tx.add({
-            programId: ahProgPK,
-            keys: [
-              { pubkey: buyerPK, isSigner: true, isWritable: true },
-              { pubkey: sellerTokenAccPK, isSigner: false, isWritable: true },
-              { pubkey: mintPK, isSigner: false, isWritable: false },
-              { pubkey: authority, isSigner: false, isWritable: false },
-              { pubkey: ahPK, isSigner: false, isWritable: false },
-              { pubkey: ahFeeAcc, isSigner: false, isWritable: true },
-              { pubkey: buyerTradeState, isSigner: false, isWritable: true },
-              { pubkey: tokenProgPK, isSigner: false, isWritable: false },
-            ],
-            data: cancelData
-          });
-        }
-
-        // Withdraw from escrow
-        const withdrawData = concatBytes(AH_IX.withdraw, new Uint8Array([escB]), toLEU64(priceLamports));
-        tx.add({
-          programId: ahProgPK,
-          keys: [
-            { pubkey: buyerPK, isSigner: true, isWritable: true }, // wallet
-            { pubkey: buyerPK, isSigner: false, isWritable: true }, // receipt_account
-            { pubkey: escrowPayment, isSigner: false, isWritable: true },
-            { pubkey: treasuryMintPK, isSigner: false, isWritable: false },
-            { pubkey: authority, isSigner: false, isWritable: false },
-            { pubkey: ahPK, isSigner: false, isWritable: false },
-            { pubkey: ahFeeAcc, isSigner: false, isWritable: true },
-            { pubkey: tokenProgPK, isSigner: false, isWritable: false },
-            { pubkey: sysProgPK, isSigner: false, isWritable: false },
-            { pubkey: ataProgPK, isSigner: false, isWritable: false },
-            { pubkey: rentPK, isSigner: false, isWritable: false },
-          ],
-          data: withdrawData
-        });
-
-        const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
-        tx.recentBlockhash = blockhash; tx.lastValidBlockHeight = lastValidBlockHeight;
-        tx.feePayer = buyerPK;
-
-        const signed = await walletProvider.signTransaction(tx);
-        const sig = await conn.sendRawTransaction(signed.serialize(), { skipPreflight: false });
-        await conn.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed");
-
-        await sbDelete("marketplace_offers", { mint, buyer: walletAddress });
+        showToast("Returning SOL from escrow...");
+        const result = await cosign({ action: "cancel-offer", mint, buyer: walletAddress });
         if (offers[mint]) offers[mint] = offers[mint].filter(o => o.buyer !== walletAddress);
         showToast("Offer cancelled — SOL returned ✓");
         render();
-
       } catch (e) {
         console.error("[cancelOffer]", e);
-        if (e.code === 4001 || e.message?.toLowerCase().includes("cancel") || e.message?.toLowerCase().includes("reject")) {
-          showToast("Cancelled", true);
-        } else {
-          showToast("Failed: " + (e.message || "unknown"), true);
-        }
+        showToast("Failed: " + (e.message || "unknown"), true);
       }
     }
 
     // ─────────────────────────────────────────────
-    //  ACCEPT OFFER (ExecuteSale — seller signs, buyer's escrowed SOL moves)
-    //  Buyer does NOT need to be online. SOL is already locked in escrow.
+    //  ACCEPT OFFER (Seller signs cNFT transfer + escrow co-signs SOL release)
+    //  Buyer does NOT need to be online. SOL is already in escrow.
     // ─────────────────────────────────────────────
     async function acceptOffer(offerData) {
       if (!walletAddress || !walletProvider) return;
@@ -1802,104 +1586,61 @@
 
       try {
         const web3 = await getWeb3();
-        const { Connection, PublicKey, Transaction, LAMPORTS_PER_SOL } = web3;
+        const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = web3;
         const conn = new Connection(RPC, "confirmed");
 
         const sellerPK = new PublicKey(walletAddress);
         const buyerPK = new PublicKey(offerData.buyer);
-        const mintPK = new PublicKey(offerData.mint);
-        const ahPK = new PublicKey(AH_ADDRESS);
-        const ahProgPK = new PublicKey(AH_PROGRAM);
-        const treasuryMintPK = new PublicKey(WRAPPED_SOL);
-        const tokenProgPK = new PublicKey(TOKEN_PROGRAM);
-        const ataProgPK = new PublicKey(ASSOC_TOKEN_PROGRAM);
-        const sysProgPK = new PublicKey(SYS_PROGRAM);
-        const rentPK = new PublicKey(SYSVAR_RENT);
+        const escrowPK = new PublicKey(ESCROW_ADDRESS);
+        const treasuryPK = new PublicKey(TREASURY);
 
         const priceLamports = Math.round(offerData.price_sol * LAMPORTS_PER_SOL);
+        const feeLamports = Math.round(priceLamports * FEE_PCT);
+        const sellerLamports = priceLamports - feeLamports;
 
-        const sellerTokens = await conn.getTokenAccountsByOwner(sellerPK, { mint: mintPK });
-        if (!sellerTokens.value.length) throw new Error("NFT not in your wallet");
-        const sellerTokenAccPK = sellerTokens.value[0].pubkey;
-
-        const [buyerATA] = PublicKey.findProgramAddressSync(
-          [buyerPK.toBuffer(), tokenProgPK.toBuffer(), mintPK.toBuffer()], ataProgPK
-        );
-
-        const authority = await getAHAuthority(conn, PublicKey);
-        const [ahFeeAcc] = getAHFeeAccount(PublicKey, ahPK, ahProgPK);
-        const [ahTreasury] = getAHTreasury(PublicKey, ahPK, ahProgPK);
-        const [escrowPayment, escB] = getBuyerEscrow(PublicKey, ahPK, buyerPK, ahProgPK);
-        const [buyerTradeState] = getBuyerTradeState(PublicKey, buyerPK, ahPK, treasuryMintPK, mintPK, priceLamports, 1, ahProgPK);
-
-        // The seller needs a listing (trade state) on-chain to match.
-        // If the NFT is listed at a different price, we need to create a free listing first.
-        // For accept-offer, we create a "sell" at the offer price, then executeSale.
-        const [sellerTradeState, stsB] = getSellerTradeState(PublicKey, sellerPK, ahPK, sellerTokenAccPK, treasuryMintPK, mintPK, priceLamports, 1, ahProgPK);
-        const [freeTradeState, ftsB] = getSellerTradeState(PublicKey, sellerPK, ahPK, sellerTokenAccPK, treasuryMintPK, mintPK, 0, 1, ahProgPK);
-        const [programAsSigner, pasB] = getProgramAsSigner(PublicKey, ahProgPK);
-        const [metadataPDA] = getMetadataPDA(PublicKey, mintPK);
+        const details = await getAssetDetails(offerData.mint);
+        const treePK = new PublicKey(details.treeId);
+        const [treeAuthorityPK] = getTreeAuthority(PublicKey, treePK);
 
         const tx = new Transaction();
 
-        // ① Sell instruction at the offer price (creates seller trade state to match)
-        const sellData = concatBytes(AH_IX.sell, new Uint8Array([stsB, ftsB, pasB]), toLEU64(priceLamports), toLEU64(1));
-        tx.add({
-          programId: ahProgPK,
-          keys: [
-            { pubkey: sellerPK, isSigner: true, isWritable: true },
-            { pubkey: sellerTokenAccPK, isSigner: false, isWritable: true },
-            { pubkey: metadataPDA, isSigner: false, isWritable: false },
-            { pubkey: authority, isSigner: false, isWritable: false },
-            { pubkey: ahPK, isSigner: false, isWritable: false },
-            { pubkey: ahFeeAcc, isSigner: false, isWritable: true },
-            { pubkey: sellerTradeState, isSigner: false, isWritable: true },
-            { pubkey: freeTradeState, isSigner: false, isWritable: true },
-            { pubkey: tokenProgPK, isSigner: false, isWritable: false },
-            { pubkey: sysProgPK, isSigner: false, isWritable: false },
-            { pubkey: programAsSigner, isSigner: false, isWritable: false },
-            { pubkey: rentPK, isSigner: false, isWritable: false },
-          ],
-          data: sellData
-        });
+        // ① SOL from escrow → seller (escrow signs)
+        tx.add(SystemProgram.transfer({ fromPubkey: escrowPK, toPubkey: sellerPK, lamports: sellerLamports }));
 
-        // ② ExecuteSale
-        const execData = concatBytes(AH_IX.executeSale, new Uint8Array([escB, ftsB, pasB]), toLEU64(priceLamports), toLEU64(1));
-        tx.add({
-          programId: ahProgPK,
-          keys: [
-            { pubkey: buyerPK, isSigner: false, isWritable: true },
-            { pubkey: sellerPK, isSigner: true, isWritable: true },
-            { pubkey: sellerTokenAccPK, isSigner: false, isWritable: true },
-            { pubkey: mintPK, isSigner: false, isWritable: false },
-            { pubkey: metadataPDA, isSigner: false, isWritable: false },
-            { pubkey: treasuryMintPK, isSigner: false, isWritable: false },
-            { pubkey: escrowPayment, isSigner: false, isWritable: true },
-            { pubkey: sellerPK, isSigner: false, isWritable: true },
-            { pubkey: buyerATA, isSigner: false, isWritable: true },
-            { pubkey: authority, isSigner: false, isWritable: false },
-            { pubkey: ahPK, isSigner: false, isWritable: false },
-            { pubkey: ahFeeAcc, isSigner: false, isWritable: true },
-            { pubkey: ahTreasury, isSigner: false, isWritable: true },
-            { pubkey: buyerTradeState, isSigner: false, isWritable: true },
-            { pubkey: sellerTradeState, isSigner: false, isWritable: true },
-            { pubkey: freeTradeState, isSigner: false, isWritable: true },
-            { pubkey: tokenProgPK, isSigner: false, isWritable: false },
-            { pubkey: sysProgPK, isSigner: false, isWritable: false },
-            { pubkey: ataProgPK, isSigner: false, isWritable: false },
-            { pubkey: programAsSigner, isSigner: false, isWritable: false },
-            { pubkey: rentPK, isSigner: false, isWritable: false },
-          ],
-          data: execData
+        // ② SOL from escrow → treasury fee (escrow signs)
+        if (feeLamports > 0) {
+          tx.add(SystemProgram.transfer({ fromPubkey: escrowPK, toPubkey: treasuryPK, lamports: feeLamports }));
+        }
+
+        // ③ Bubblegum transfer: seller → buyer (seller signs as owner)
+        const transferIx = buildTransferIx(PublicKey, {
+          ownerPK: sellerPK,
+          delegatePK: sellerPK, // seller is signing directly as owner
+          newOwnerPK: buyerPK,
+          treePK, treeAuthorityPK,
+          root: details.root, dataHash: details.dataHash, creatorHash: details.creatorHash,
+          nonce: details.leafId, index: details.leafId,
+          proofPath: details.proofPath,
+          delegateIsSigner: false // owner signs, not delegate
         });
+        tx.add(transferIx);
 
         const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
         tx.recentBlockhash = blockhash; tx.lastValidBlockHeight = lastValidBlockHeight;
         tx.feePayer = sellerPK;
 
-        const signed = await walletProvider.signTransaction(tx);
+        // Send to co-signer for escrow signature on SOL release
+        const serialized = tx.serialize({ requireAllSignatures: false, verifySignatures: false });
+        const txB64 = btoa(String.fromCharCode(...serialized));
+        const cosigned = await cosign({ action: "cosign-accept", txBase64: txB64, mint: offerData.mint, buyer: offerData.buyer });
+
+        // Seller signs the co-signed tx
+        const cosignedBuf = Uint8Array.from(atob(cosigned.tx), c => c.charCodeAt(0));
+        const cosignedTx = Transaction.from(cosignedBuf);
+        const fullySigned = await walletProvider.signTransaction(cosignedTx);
+
         showToast("Confirming...");
-        const sig = await conn.sendRawTransaction(signed.serialize(), { skipPreflight: false });
+        const sig = await conn.sendRawTransaction(fullySigned.serialize(), { skipPreflight: false });
         await conn.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed");
 
         // Clean up
@@ -1932,7 +1673,8 @@
       const files = item.content?.files || [];
       const links = item.content?.links || {};
       const img = links.image || files[0]?.cdn_uri || files[0]?.uri || "";
-      return { mint: item.id, name: meta.name || "Long Neck Legend", image: img, attributes: meta.attributes || [], owner: item.ownership?.owner || "" };
+      const compressed = !!item.compression?.compressed;
+      return { mint: item.id, name: meta.name || "Long Neck Legend", image: img, attributes: meta.attributes || [], owner: item.ownership?.owner || "", compressed };
     }
 
     // Browse All is now listings-only — no Helius fetch needed.
@@ -2091,7 +1833,7 @@
       <input id="lp" class="input" type="number" min="0.01" step="0.01" placeholder="e.g. 2.5" value="${listing ? listing.price_sol : ""}">
     </div>
     <div style="font-size:9px;color:var(--g2);margin-bottom:16px;padding:10px 12px;background:#050505;border:1px solid #111;border-radius:8px;line-height:1.8">
-      NFT stays in your wallet until sold &nbsp;•&nbsp; 2.5% fee at sale &nbsp;•&nbsp; On-chain via Auction House<br>
+      NFT stays in your wallet until sold &nbsp;•&nbsp; 2.5% fee at sale &nbsp;•&nbsp; Escrow co-signed<br>
       You receive: <span id="sg" style="color:var(--grn);font-family:var(--d)">${listing ? (listing.price_sol * (1 - FEE_PCT)).toFixed(4) + " SOL" : "—"}</span>
     </div>
     <div style="display:flex;gap:8px">
@@ -2320,6 +2062,7 @@
       <div class="nft-img-wrap" style="height:200px">
         ${nft.image ? `<img src="${nft.image}" alt="${nft.name}" loading="lazy" class="nft-img" onerror="this.style.display='none'">` : ""}
         ${listing ? `<div class="listed-badge">◎ ${listing.price_sol}</div>` : ""}
+        ${nft.compressed ? `<div style="position:absolute;bottom:7px;left:7px;background:rgba(255,165,0,.18);border:1px solid rgba(255,165,0,.25);padding:2px 6px;border-radius:4px;font-size:7px;color:#ffa500;font-weight:700;letter-spacing:1px">cNFT</div>` : ""}
       </div>
       <div class="nft-info">
         <div class="nft-name">${nft.name}</div>
@@ -2395,7 +2138,7 @@
       if (!walletAddress) {
         actions = `<button class="wallet-btn" style="width:100%;justify-content:center" onclick="showWalletPicker()"><span>👛</span> CONNECT TO TRADE</button>`;
       } else if (yours) {
-        actions = `<button class="btn-primary" id="list-btn">${listing ? "MANAGE LISTING" : "LIST FOR SALE"}</button>`;
+          actions = `<button class="btn-primary" id="list-btn">${listing ? "MANAGE LISTING" : "LIST FOR SALE"}</button>`;
       } else {
         actions = `<div style="display:flex;gap:8px">
       ${listing
