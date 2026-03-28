@@ -1211,13 +1211,13 @@
 
     // Convert base58 hash to 32-byte buffer (for instruction data like root/dataHash/creatorHash)
     function hashToBytes(PublicKey, base58Str, label) {
-      return safePK(PublicKey, base58Str, label).toBuffer();
+      return safePK(PublicKey, base58Str, label).toBytes();
     }
 
     // Derive Bubblegum tree authority PDA
     function getTreeAuthority(PublicKey, treePK) {
       const bgProg = new PublicKey(BUBBLEGUM_PROGRAM);
-      return PublicKey.findProgramAddressSync([treePK.toBuffer()], bgProg);
+      return PublicKey.findProgramAddressSync([treePK.toBytes()], bgProg);
     }
 
     // Build Bubblegum delegate instruction
