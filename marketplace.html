@@ -926,10 +926,15 @@
   <script>
     // ═══════════════════════════════════════════════════════════
     const HELIUS_KEY = "33955d33-79ed-4817-8a40-1ce04a3cf241";
-    const COLLECTION = "2WvxCvgFUiqUSBx32c5Z5Zsbcu4ZJCE1GEaaWpbD685P";
+    const COLLECTIONS = {
+      LNL: { key: "LNL", label: "LONG NECK LEGENDS", shortLabel: "LNL", mint: "2WvxCvgFUiqUSBx32c5Z5Zsbcu4ZJCE1GEaaWpbD685P" },
+      GA: { key: "GA", label: "GOLF ADDICT", shortLabel: "GA", mint: "AYQRWUDYa4T6RJN1pngFoKfAoX1Dew6kfB3AZXxjvdyi" }
+    };
+    const COLLECTION_KEYS = Object.keys(COLLECTIONS);
     const TREASURY = "ChnzFpK4ty2vpzM48HUrtDVY7tWD8StmYaNxQcKSBuyc";
     const FEE_PCT = 0.025;
-    const SUPPLY = 3333;
+    const SUPPLY_BY_COLLECTION = { LNL: 3333, GA: 777 };
+    const SUPPLY = SUPPLY_BY_COLLECTION.LNL + SUPPLY_BY_COLLECTION.GA;
     const PAGE_SIZE = 28;
     const SB_URL = "https://hypqndasopdkrqvkllvc.supabase.co";
     const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5cHFuZGFzb3Bka3JxdmtsbHZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5NTI1NjEsImV4cCI6MjA4NzUyODU2MX0.jXLaLfFudJf-xytfHAvMe5oV0DVeWi7xNB53Ib0GD_s";
@@ -950,16 +955,33 @@
     let nfts = [], myNfts = [], listings = {}, offers = {};
     let total = 0, page = 1, loading = false, error = null;
     let walletAddress = null, walletProvider = null;
-    let selectedNft = null, activeTab = "market", searchQuery = "";
+    let selectedNft = null, activeTab = "market", activeCollection = "all", searchQuery = "";
     let totalVolume = 0;
     let sortDir = "asc"; // "asc" | "desc"
-    let activeFilters = {}; // { "Background": ["Blue","Red"], "Hat": ["Crown"] }
-    let allTraits = {}; // { "Background": Set(["Blue","Red",...]) }
+    let activeFilters = {}; // { "LNL::Background": ["Blue","Red"], "GA::Ball": ["White"] }
+    let allTraits = {}; // { LNL: { "Background": Set([...]) }, GA: { "Ball": Set([...]) } }
     let traitsLoaded = false, traitsLoading = false;
     let recentSales = []; // last 50 sales for activity bar
     let traitIndex = {}; // mint -> { traitType: value } — built during loadTraits
+    let collectionByMint = {}; // mint -> "LNL" | "GA"
+    let supplyByCollection = { ...SUPPLY_BY_COLLECTION };
 
     const short = (a, s = 4, e = 4) => a ? `${a.slice(0, s)}...${a.slice(-e)}` : "";
+    const getCollectionConfig = key => COLLECTIONS[key] || null;
+    const getCollectionLabel = key => key === "all" ? "ALL COLLECTIONS" : (getCollectionConfig(key)?.label || "UNKNOWN COLLECTION");
+    const getCollectionShortLabel = key => key === "all" ? "ALL" : (getCollectionConfig(key)?.shortLabel || key || "NFT");
+    const getCollectionMint = key => getCollectionConfig(key)?.mint || "";
+    const detectCollectionKey = item => {
+      const grouped = (item.grouping || []).find(g => g.group_key === "collection" && COLLECTION_KEYS.some(key => g.group_value === COLLECTIONS[key].mint));
+      if (grouped) return COLLECTION_KEYS.find(key => COLLECTIONS[key].mint === grouped.group_value) || null;
+      const name = (item.content?.metadata?.name || item.name || "").toLowerCase();
+      if (name.startsWith("long neck legend")) return "LNL";
+      if (name.includes("golf addict")) return "GA";
+      if ((item.creators || []).some(c => COLLECTION_KEYS.some(key => c.address === COLLECTIONS[key].mint))) {
+        return COLLECTION_KEYS.find(key => (item.creators || []).some(c => c.address === COLLECTIONS[key].mint)) || null;
+      }
+      return collectionByMint[item.id] || null;
+    };
 
     // ─────────────────────────────────────────────
     //  SUPABASE
@@ -1046,35 +1068,45 @@
       if (body) body.innerHTML = `<div style="color:var(--g2);font-size:10px;text-align:center;padding:20px"><span class="spinner"></span> Loading traits...</div>`;
 
       try {
-        let pg = 1, all = [];
-        // Sequential pages with backoff to avoid rate limiting
-        while (true) {
-          const res = await fetch(RPC, {
-            method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              jsonrpc: "2.0", id: "traits-" + pg, method: "getAssetsByGroup",
-              params: { groupKey: "collection", groupValue: COLLECTION, page: pg, limit: 1000 }
-            })
-          });
-          const data = await res.json();
-          const items = data.result?.items || [];
-          items.forEach(item => {
-            const attrs = item.content?.metadata?.attributes || [];
-            // Build allTraits for filter panel checkboxes
-            attrs.forEach(a => {
-              if (!a.trait_type || !a.value) return;
-              if (!allTraits[a.trait_type]) allTraits[a.trait_type] = new Set();
-              allTraits[a.trait_type].add(String(a.value));
+        let all = [];
+        allTraits = {};
+        for (const key of COLLECTION_KEYS) {
+          if (!allTraits[key]) allTraits[key] = {};
+          let pg = 1;
+          let collectionItems = [];
+          while (true) {
+            const res = await fetch(RPC, {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                jsonrpc: "2.0", id: `traits-${key}-${pg}`, method: "getAssetsByGroup",
+                params: { groupKey: "collection", groupValue: COLLECTIONS[key].mint, page: pg, limit: 1000 }
+              })
             });
-            // Build traitIndex for filter matching (mint -> {trait: value})
-            traitIndex[item.id] = {};
-            attrs.forEach(a => { if (a.trait_type) traitIndex[item.id][a.trait_type] = String(a.value); });
-          });
-          all = all.concat(items);
-          if (body) body.innerHTML = `<div style="color:var(--g2);font-size:10px;text-align:center;padding:10px"><span class="spinner"></span> Loading... ${all.length} / ${data.result?.total || "?"}</div>`;
-          if (items.length < 1000 || all.length >= (data.result?.total || 0)) break;
-          pg++;
-          await new Promise(r => setTimeout(r, 400)); // 400ms between pages to avoid rate limit
+            const data = await res.json();
+            const items = data.result?.items || [];
+            items.forEach(item => {
+              collectionByMint[item.id] = key;
+              const attrs = item.content?.metadata?.attributes || [];
+              traitIndex[item.id] = {};
+              attrs.forEach(a => {
+                if (!a.trait_type || a.value == null || a.value === "") return;
+                const traitType = String(a.trait_type);
+                const traitValue = String(a.value);
+                if (!allTraits[key][traitType]) allTraits[key][traitType] = new Set();
+                allTraits[key][traitType].add(traitValue);
+                traitIndex[item.id][traitType] = traitValue;
+              });
+            });
+            collectionItems = collectionItems.concat(items);
+            all = all.concat(items);
+            if (body) body.innerHTML = `<div style="color:var(--g2);font-size:10px;text-align:center;padding:10px"><span class="spinner"></span> Loading... ${all.length} assets scanned</div>`;
+            if (items.length < 1000 || collectionItems.length >= (data.result?.total || 0)) {
+              supplyByCollection[key] = data.result?.total || collectionItems.length;
+              break;
+            }
+            pg++;
+            await new Promise(r => setTimeout(r, 400));
+          }
         }
         traitsLoaded = true;
         renderFilterPanel();
@@ -1088,33 +1120,54 @@
     function renderFilterPanel() {
       const body = document.getElementById("filter-traits-body");
       if (!body) return;
-      const traitKeys = Object.keys(allTraits).sort();
-      if (!traitKeys.length) { body.innerHTML = `<div style="color:var(--g2);font-size:10px;text-align:center;padding:20px">No traits found</div>`; return; }
       const activeCount = Object.values(activeFilters).reduce((n, v) => n + v.length, 0);
       document.getElementById("clear-filters-btn").style.opacity = activeCount ? "1" : "0.3";
-      body.innerHTML = traitKeys.map(trait => {
-        const vals = [...allTraits[trait]].sort();
-        const selected = activeFilters[trait] || [];
-        return `<details class="filter-trait-group" ${selected.length ? "open" : ""}>
-      <summary>${trait} <span style="font-size:9px;color:var(--g2)">${selected.length ? `<span style="color:var(--r)">${selected.length} selected</span>` : vals.length + " values"}</span></summary>
-      <div style="padding:4px 0 8px 4px">
-        ${vals.map(v => {
-          const checked = selected.includes(v);
-          return `<label class="filter-val ${checked ? "active" : ""}">
-            <input type="checkbox" ${checked ? "checked" : ""} onchange="toggleFilter('${trait.replace(/'/g, "\\'")}','${v.replace(/'/g, "\\'")}',this.checked)">
-            ${v}
-          </label>`;
-        }).join("")}
-      </div>
-    </details>`;
+
+      const sectionHtml = COLLECTION_KEYS.map(key => {
+        const traitsForCollection = allTraits[key] || {};
+        const traitKeys = Object.keys(traitsForCollection).sort();
+        const color = key === "LNL" ? "var(--r)" : "var(--grn)";
+        const glow = key === "LNL" ? "rgba(255,0,60,.08)" : "rgba(0,255,136,.08)";
+        const border = key === "LNL" ? "rgba(255,0,60,.22)" : "rgba(0,255,136,.22)";
+
+        return `<div style="margin-bottom:18px">
+          <div style="position:sticky;top:58px;z-index:1;background:#060606;padding:10px 0 8px">
+            <div style="font-family:var(--d);font-size:14px;letter-spacing:3px;color:${color};padding:8px 10px;border:1px solid ${border};border-radius:10px;background:${glow}">
+              ${COLLECTIONS[key].shortLabel} TRAITS
+            </div>
+          </div>
+          ${traitKeys.length ? traitKeys.map(trait => {
+            const vals = [...traitsForCollection[trait]].sort();
+            const filterKey = `${key}::${trait}`;
+            const selected = activeFilters[filterKey] || [];
+            return `<details class="filter-trait-group" ${selected.length ? "open" : ""}>
+              <summary>
+                <span style="color:${color}">${trait}</span>
+                <span style="font-size:9px;color:var(--g2)">${selected.length ? `<span style="color:${color}">${selected.length} selected</span>` : vals.length + " values"}</span>
+              </summary>
+              <div style="padding:4px 0 8px 4px">
+                ${vals.map(v => {
+                  const checked = selected.includes(v);
+                  return `<label class="filter-val ${checked ? "active" : ""}">
+                    <input type="checkbox" ${checked ? "checked" : ""} onchange="toggleFilter('${key}','${trait.replace(/'/g, "\\'")}','${v.replace(/'/g, "\\'")}',this.checked)">
+                    ${v}
+                  </label>`;
+                }).join("")}
+              </div>
+            </details>`;
+          }).join("") : `<div style="color:var(--g2);font-size:10px;padding:12px 4px">No traits found</div>`}
+        </div>`;
       }).join("");
+
+      body.innerHTML = sectionHtml || `<div style="color:var(--g2);font-size:10px;text-align:center;padding:20px">No traits found</div>`;
     }
 
-    function toggleFilter(trait, value, on) {
-      if (!activeFilters[trait]) activeFilters[trait] = [];
-      if (on) { if (!activeFilters[trait].includes(value)) activeFilters[trait].push(value); }
-      else { activeFilters[trait] = activeFilters[trait].filter(v => v !== value); }
-      if (!activeFilters[trait].length) delete activeFilters[trait];
+    function toggleFilter(collectionKey, trait, value, on) {
+      const namespacedKey = `${collectionKey}::${trait}`;
+      if (!activeFilters[namespacedKey]) activeFilters[namespacedKey] = [];
+      if (on) { if (!activeFilters[namespacedKey].includes(value)) activeFilters[namespacedKey].push(value); }
+      else { activeFilters[namespacedKey] = activeFilters[namespacedKey].filter(v => v !== value); }
+      if (!activeFilters[namespacedKey].length) delete activeFilters[namespacedKey];
       renderFilterPanel();
       render();
     }
@@ -1698,7 +1751,8 @@
       const links = item.content?.links || {};
       const img = links.image || files[0]?.cdn_uri || files[0]?.uri || "";
       const compressed = !!item.compression?.compressed;
-      return { mint: item.id, name: meta.name || "Long Neck Legend", image: img, attributes: meta.attributes || [], owner: item.ownership?.owner || "", compressed };
+      const collectionKey = detectCollectionKey(item);
+      return { mint: item.id, name: meta.name || "Long Neck Legend", image: img, attributes: meta.attributes || [], owner: item.ownership?.owner || "", compressed, collectionKey };
     }
 
     // Browse All is now listings-only — no Helius fetch needed.
@@ -1733,10 +1787,11 @@
           pg++;
         }
         myNfts = all.filter(item => {
-          if ((item.grouping || []).some(g => g.group_value === COLLECTION)) return true;
-          if ((item.content?.metadata?.name || "").toLowerCase().startsWith("long neck legend")) return true;
-          if ((item.creators || []).some(c => c.address === COLLECTION)) return true;
-          return false;
+          const collectionKey = detectCollectionKey(item);
+          if (!collectionKey) return false;
+          item.__collectionKey = collectionKey;
+          collectionByMint[item.id] = collectionKey;
+          return true;
         }).map(parseAsset);
       } catch (e) { console.error(e); }
       render();
@@ -1995,25 +2050,43 @@
         document.getElementById("conn-btn").onclick = showWalletPicker;
       }
 
-      const listedCount = Object.keys(listings).length;
-      const t = `  ★ LONG NECK LEGENDS  ★  ${total || SUPPLY} ON-CHAIN  ★  ${listedCount} LISTED  ★  ATOMIC SWAPS  ★  2.5% FEE  ★  P2P — NO MIDDLEMEN  ★  `;
+      const allListedItems = Object.values(listings);
+      const listedCount = activeCollection === "all"
+        ? allListedItems.length
+        : allListedItems.filter(l => (collectionByMint[l.mint] || l.collectionKey) === activeCollection).length;
+      const activeSupply = activeCollection === "all"
+        ? Object.values(SUPPLY_BY_COLLECTION).reduce((sum, n) => sum + (n || 0), 0)
+        : (SUPPLY_BY_COLLECTION[activeCollection] || supplyByCollection[activeCollection] || 0);
+      const t = `  ★ LONG NECK LEGENDS  ★  ${SUPPLY} ON-CHAIN  ★  ${listedCount} LISTED  ★  ATOMIC SWAPS  ★  2.5% FEE  ★  P2P — NO MIDDLEMEN  ★  `;
       app.innerHTML += `<div class="ticker"><div class="ticker-inner"><span>${t}</span><span>${t}</span></div></div>`;
 
       app.innerHTML += `<div style="padding:34px 16px 16px;text-align:center;background:radial-gradient(ellipse at center,var(--rb) 0%,transparent 65%)">
     <h1 style="font-family:var(--m);font-size:clamp(22px,4.5vw,44px);color:#fff;line-height:1.1;margin-bottom:6px"><span class="neon">BUY & SELL</span> LONG NECKS</h1>
     <p style="font-size:10px;color:var(--g2);max-width:440px;margin:0 auto 10px;line-height:1.6">The official Long Neck Legends P2P marketplace. Atomic swaps on Solana.</p>
-    <div style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:rgba(0,255,136,.04);border:1px solid rgba(0,255,136,.08);border-radius:6px;font-size:8px;color:var(--grn)"><span class="dot-sm"></span> ON-CHAIN • ${short(COLLECTION, 6, 4)}</div>
+    <div style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:rgba(0,255,136,.04);border:1px solid rgba(0,255,136,.08);border-radius:6px;font-size:8px;color:var(--grn)"><span class="dot-sm"></span> ON-CHAIN • ${getCollectionLabel(activeCollection === "all" ? "all" : activeCollection)}</div>
     <div style="display:flex;justify-content:center;gap:12px;margin-top:18px;flex-wrap:wrap">
-      <div class="stat-card"><div style="font-family:var(--d);font-size:20px;color:var(--r);letter-spacing:2px">${SUPPLY}</div><div style="font-size:10px;color:var(--g2);text-transform:uppercase;letter-spacing:2px">SUPPLY</div></div>
+      <div class="stat-card"><div style="font-family:var(--d);font-size:20px;color:var(--r);letter-spacing:2px">${(() => {
+          if (activeCollection === "all") return SUPPLY;
+          return SUPPLY_BY_COLLECTION[activeCollection] || supplyByCollection[activeCollection] || "—";
+        })()}</div><div style="font-size:10px;color:var(--g2);text-transform:uppercase;letter-spacing:2px">SUPPLY</div></div>
       <div class="stat-card"><div style="font-family:var(--d);font-size:20px;color:var(--grn);letter-spacing:2px">${listedCount}</div><div style="font-size:10px;color:var(--g2);text-transform:uppercase;letter-spacing:2px">LISTED</div></div>
-      <div class="stat-card"><div style="font-family:var(--d);font-size:20px;color:var(--grn);letter-spacing:2px">${((listedCount / SUPPLY) * 100).toFixed(1)}%</div><div style="font-size:10px;color:var(--g2);text-transform:uppercase;letter-spacing:2px">% LISTED</div></div>
+      <div class="stat-card"><div style="font-family:var(--d);font-size:20px;color:var(--grn);letter-spacing:2px">${(() => {
+          const supply = activeSupply;
+          return supply ? ((listedCount / supply) * 100).toFixed(1) + "%" : "—";
+        })()}</div><div style="font-size:10px;color:var(--g2);text-transform:uppercase;letter-spacing:2px">% LISTED</div></div>
       <div class="stat-card"><div style="font-family:var(--d);font-size:20px;color:var(--r);letter-spacing:2px">◎ ${totalVolume.toFixed(2)}</div><div style="font-size:10px;color:var(--g2);text-transform:uppercase;letter-spacing:2px">VOLUME</div></div>
     </div>
   </div>`;
 
       app.innerHTML += `<div style="display:flex;gap:4px;justify-content:center;padding:0 16px 10px" id="tabs">
     <button class="tab-btn ${activeTab === 'market' ? 'active' : ''}" data-t="market">LISTINGS</button>
-    <button class="tab-btn ${activeTab === 'my-nfts' ? 'active' : ''}" data-t="my-nfts">MY LONG NECKS</button>
+    <button class="tab-btn ${activeTab === 'my-nfts' ? 'active' : ''}" data-t="my-nfts">MY NFTS</button>
+  </div>`;
+
+      app.innerHTML += `<div style="display:flex;gap:4px;justify-content:center;padding:0 16px 18px;flex-wrap:wrap" id="collection-tabs">
+    <button class="tab-btn ${activeCollection === 'all' ? 'active' : ''}" data-c="all">ALL</button>
+    <button class="tab-btn ${activeCollection === 'LNL' ? 'active' : ''}" data-c="LNL">LNL</button>
+    <button class="tab-btn ${activeCollection === 'GA' ? 'active' : ''}" data-c="GA">GA</button>
   </div>`;
 
       if (activeTab === "market") renderMarket(app);
@@ -2029,13 +2102,20 @@
       document.querySelectorAll("[data-t]").forEach(b => {
         b.onclick = () => { activeTab = b.dataset.t; render(); if (activeTab === "my-nfts" && walletAddress && !myNfts.length) fetchMyNfts(); };
       });
+      document.querySelectorAll("[data-c]").forEach(b => {
+        b.onclick = () => { activeCollection = b.dataset.c; render(); if (activeTab === "my-nfts" && walletAddress && !myNfts.length) fetchMyNfts(); };
+      });
 
       if (selectedNft) renderModal();
     }
 
     function renderMarket(app) {
+      let listedItems = Object.values(listings);
+      if (activeCollection !== "all") {
+        listedItems = listedItems.filter(l => (collectionByMint[l.mint] || l.collectionKey) === activeCollection);
+      }
       // Apply sort
-      let listedItems = Object.values(listings).sort((a, b) =>
+      listedItems = listedItems.sort((a, b) =>
         sortDir === "asc" ? a.price_sol - b.price_sol : b.price_sol - a.price_sol
       );
       // Apply search
@@ -2045,7 +2125,12 @@
       if (filterKeys.length && traitsLoaded) {
         listedItems = listedItems.filter(l => {
           const traits = traitIndex[l.mint] || {};
-          return filterKeys.every(k => activeFilters[k].includes(traits[k]));
+          const itemCollectionKey = collectionByMint[l.mint] || l.collectionKey || detectCollectionKey(l);
+          return filterKeys.every(k => {
+            const [filterCollectionKey, traitName] = k.split("::");
+            if (filterCollectionKey !== itemCollectionKey) return false;
+            return activeFilters[k].includes(traits[traitName]);
+          });
         });
       }
       const activeFilterCount = Object.values(activeFilters).reduce((n, v) => n + v.length, 0);
@@ -2067,7 +2152,7 @@
         app.innerHTML += `<div style="text-align:center;padding:64px 20px">
       <div style="font-size:48px;opacity:.08;margin-bottom:16px">🐦</div>
       <div style="font-family:var(--d);font-size:18px;color:var(--g2);letter-spacing:3px;margin-bottom:8px">${searchQuery || activeFilterCount ? "NO MATCHES" : "NO ACTIVE LISTINGS"}</div>
-      <div style="font-size:10px;color:var(--g2)">${searchQuery || activeFilterCount ? "Try adjusting your search or filters" : "Be the first — connect your wallet and list a Long Neck"}</div>
+      <div style="font-size:10px;color:var(--g2)">${searchQuery || activeFilterCount ? "Try adjusting your search or filters" : `Be the first — connect your wallet and list a ${activeCollection === "GA" ? "Golf Addict" : activeCollection === "LNL" ? "Long Neck" : "collection NFT"}`}</div>
       ${activeFilterCount ? `<button class="btn-ghost" style="margin:14px auto;display:block;font-size:11px" onclick="clearFilters()">CLEAR FILTERS</button>` : ""}
     </div>`;
         setTimeout(() => { document.getElementById("search")?.addEventListener("input", e => { searchQuery = e.target.value; render(); }); }, 0);
@@ -2086,6 +2171,7 @@
       </div>
       <div class="nft-info">
         <div class="nft-name">${listing.name}</div>
+        <div style="font-size:8px;color:var(--g2);margin-top:4px;letter-spacing:1px">${getCollectionShortLabel(collectionByMint[listing.mint] || listing.collectionKey)}</div>
         <div class="price-tag">◎ ${listing.price_sol} SOL</div>
         <div style="font-size:9px;color:var(--g2);margin-top:3px">Seller: ${short(listing.seller, 4, 3)}</div>
       </div>
@@ -2122,6 +2208,7 @@
 
 
     function renderMyNfts(app) {
+      const visibleNfts = activeCollection === "all" ? myNfts : myNfts.filter(nft => nft.collectionKey === activeCollection);
       if (!walletAddress) {
         app.innerHTML += `<div style="text-align:center;padding:50px 20px">
       <div style="font-size:44px;opacity:.12;margin-bottom:14px">🐦</div>
@@ -2131,15 +2218,15 @@
         setTimeout(() => document.getElementById("conn2")?.addEventListener("click", showWalletPicker), 0);
         return;
       }
-      if (!myNfts.length) {
+      if (!visibleNfts.length) {
         app.innerHTML += `<div style="text-align:center;padding:40px;color:var(--g2)">
-      <div style="margin-bottom:10px">No Long Neck Legends in this wallet</div>
+      <div style="margin-bottom:10px">No ${activeCollection === "all" ? "supported NFTs" : getCollectionLabel(activeCollection)} in this wallet</div>
       <div style="font-size:9px;color:var(--g2)">${short(walletAddress, 8, 6)}</div>
     </div>`; return;
       }
-      app.innerHTML += `<div style="padding:10px 16px;font-size:10px;color:var(--g2)">${myNfts.length} Long Neck${myNfts.length !== 1 ? "s" : ""} in ${short(walletAddress, 6, 4)}</div>`;
+      app.innerHTML += `<div style="padding:10px 16px;font-size:10px;color:var(--g2)">${visibleNfts.length} ${activeCollection === "all" ? "NFT" : getCollectionShortLabel(activeCollection)}${visibleNfts.length !== 1 ? "s" : ""} in ${short(walletAddress, 6, 4)}</div>`;
       let grid = `<div class="nft-grid">`;
-      myNfts.forEach((nft, i) => {
+      visibleNfts.forEach((nft, i) => {
         const listing = listings[nft.mint];
         grid += `<div class="nft-card" data-mint="${nft.mint}" style="animation:up .35s ease ${i * .05}s both">
       <div class="nft-img-wrap" style="height:200px">
@@ -2149,6 +2236,7 @@
       </div>
       <div class="nft-info">
         <div class="nft-name">${nft.name}</div>
+        <div style="font-size:8px;color:var(--g2);margin-top:4px;letter-spacing:1px">${getCollectionShortLabel(nft.collectionKey)}</div>
         ${listing ? `<div class="price-tag">◎ ${listing.price_sol} SOL</div>` : `<div style="font-size:9px;color:var(--g2);margin-top:3px">NOT LISTED</div>`}
       </div>
     </div>`;
@@ -2156,7 +2244,7 @@
       app.innerHTML += grid + `</div>`;
       setTimeout(() => {
         document.querySelectorAll("[data-mint]").forEach(card => {
-          card.onclick = () => { selectedNft = myNfts.find(n => n.mint === card.dataset.mint); render(); };
+          card.onclick = () => { selectedNft = visibleNfts.find(n => n.mint === card.dataset.mint); render(); };
         });
       }, 0);
     }
@@ -2272,6 +2360,7 @@
     document.addEventListener("DOMContentLoaded", async () => {
       await computeDiscriminators();
       await loadMarketData();
+      loadTraits();
       fetchPage(1);
     });
   </script>
