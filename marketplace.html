@@ -1617,8 +1617,11 @@
     }
 
     // ─────────────────────────────────────────────
-    //  ACCEPT OFFER (Seller signs cNFT transfer + escrow co-signs SOL release)
-    //  Buyer does NOT need to be online. SOL is already in escrow.
+    //  ACCEPT OFFER
+    //  Seller signs an auth message proving identity.
+    //  Edge fn does the full settlement server-side:
+    //  cNFT transfer (escrow delegate) + SOL release to seller + fee.
+    //  No tx size issue since the edge fn builds it with full Buffer support.
     // ─────────────────────────────────────────────
     async function acceptOffer(offerData) {
       if (!walletAddress || !walletProvider) return;
@@ -1627,74 +1630,39 @@
       if (btn) { btn.disabled = true; btn.innerHTML = `<span class="spinner"></span>`; }
 
       try {
-        const web3 = await getWeb3();
-        const { Connection, PublicKey, Transaction, LAMPORTS_PER_SOL } = web3;
-        const conn = new Connection(RPC, "confirmed");
+        // Build auth message: "accept-offer:<mint>:<buyer>:<seller>"
+        // Seller signs this to prove they authorise the settlement
+        const authMsg = `accept-offer:${offerData.mint}:${offerData.buyer}:${walletAddress}`;
+        const authBytes = new TextEncoder().encode(authMsg);
 
-        const sellerPK = new PublicKey(walletAddress);
-        const buyerPK = new PublicKey(offerData.buyer);
-        const escrowPK = new PublicKey(ESCROW_ADDRESS);
-        const treasuryPK = new PublicKey(TREASURY);
+        if (!walletProvider.signMessage) throw new Error("Wallet does not support signMessage");
+        const authSig = await walletProvider.signMessage(authBytes, "utf8");
 
-        const priceLamports = Math.round(offerData.price_sol * LAMPORTS_PER_SOL);
-        const feeLamports = Math.round(priceLamports * FEE_PCT);
-        const sellerLamports = priceLamports - feeLamports;
+        // Convert signature to base64
+        const sigBytes = authSig instanceof Uint8Array ? authSig : new Uint8Array(authSig);
+        const sigB64 = btoa(sigBytes.reduce((s, b) => s + String.fromCharCode(b), ""));
 
-        const details = await getAssetDetails(offerData.mint);
-        const treePK = new PublicKey(details.treeId);
-        const [treeAuthorityPK] = getTreeAuthority(PublicKey, treePK);
-
-        // Determine if escrow is currently the delegate (NFT is listed)
-        const isListed = !!listings[offerData.mint];
-        // If listed, escrow is the delegate and must co-sign the transfer
-        // If not listed, seller/owner signs directly
-        const delegateIsSigner = isListed;
-
-        // ── TX1: cNFT transfer only (fits under 1232 bytes without SOL transfers) ──
-        const transferIx = buildTransferIx(PublicKey, {
-          ownerPK: sellerPK,
-          delegatePK: isListed ? escrowPK : sellerPK,
-          newOwnerPK: buyerPK,
-          treePK, treeAuthorityPK,
-          root: details.root, dataHash: details.dataHash, creatorHash: details.creatorHash,
-          nonce: details.leafId, index: details.leafId,
-          proofPath: details.proofPath,
-          delegateIsSigner
+        showToast("Settling offer...");
+        const result = await cosign({
+          action: "settle-accept",
+          mint: offerData.mint,
+          buyer: offerData.buyer,
+          seller: walletAddress,
+          authMessage: authMsg,
+          authSignature: sigB64
         });
+        console.log("[acceptOffer] settle-accept result:", result);
 
-        const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
-        const transferTx = new Transaction();
-        transferTx.add(transferIx);
-        transferTx.recentBlockhash = blockhash;
-        transferTx.lastValidBlockHeight = lastValidBlockHeight;
-        transferTx.feePayer = sellerPK;
-
-        const rawBytes = transferTx.serialize({ requireAllSignatures: false, verifySignatures: false });
-        const txBytes = rawBytes instanceof Uint8Array ? rawBytes : new Uint8Array(rawBytes);
-        console.log("[acceptOffer] cNFT-only tx bytes:", txBytes.length);
-        const txB64 = btoa(txBytes.reduce((s, b) => s + String.fromCharCode(b), ""));
-
-        const cosigned = await cosign({ action: "cosign-accept", txBase64: txB64, mint: offerData.mint, buyer: offerData.buyer, seller: walletAddress });
-
-        const cosignedBuf = Uint8Array.from(atob(cosigned.tx), c => c.charCodeAt(0));
-        const cosignedTx = Transaction.from(cosignedBuf);
-        const fullySigned = await walletProvider.signTransaction(cosignedTx);
-
-        showToast("Transferring NFT...");
-        const transferSig = await conn.sendRawTransaction(fullySigned.serialize(), { skipPreflight: false });
-        await conn.confirmTransaction({ signature: transferSig, blockhash, lastValidBlockHeight }, "confirmed");
-        console.log("[acceptOffer] cNFT transferred:", transferSig);
-
-        // ── TX2: Edge fn releases SOL from escrow to seller + treasury ──
-        showToast("Releasing payment...");
-        await cosign({ action: "settle-accept", mint: offerData.mint, buyer: offerData.buyer, seller: walletAddress, transferSig });
-
-        // Clean up
+        // Clean up local state
         await sbDelete("marketplace_listings", { mint: offerData.mint });
         await sbDelete("marketplace_offers", { mint: offerData.mint });
         delete listings[offerData.mint];
         delete offers[offerData.mint];
-        await recordSale({ mint: offerData.mint, seller: walletAddress, buyer: offerData.buyer, price_sol: offerData.price_sol, name: offerData.name, image: offerData.image, tx_sig: transferSig });
+        await recordSale({
+          mint: offerData.mint, seller: walletAddress, buyer: offerData.buyer,
+          price_sol: offerData.price_sol, name: offerData.name, image: offerData.image,
+          tx_sig: result.sig
+        });
 
         selectedNft = null;
         await fetchMyNfts();
