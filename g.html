@@ -958,8 +958,8 @@
     let selectedNft = null, activeTab = "market", activeCollection = "all", searchQuery = "";
     let totalVolume = 0;
     let sortDir = "asc"; // "asc" | "desc"
-    let activeFilters = {}; // { "Background": ["Blue","Red"], "Hat": ["Crown"] }
-    let allTraits = {}; // { "Background": Set(["Blue","Red",...]) }
+    let activeFilters = {}; // { "LNL::Background": ["Blue","Red"], "GA::Ball": ["White"] }
+    let allTraits = {}; // { LNL: { "Background": Set([...]) }, GA: { "Ball": Set([...]) } }
     let traitsLoaded = false, traitsLoading = false;
     let recentSales = []; // last 50 sales for activity bar
     let traitIndex = {}; // mint -> { traitType: value } — built during loadTraits
@@ -1069,7 +1069,9 @@
 
       try {
         let all = [];
+        allTraits = {};
         for (const key of COLLECTION_KEYS) {
+          if (!allTraits[key]) allTraits[key] = {};
           let pg = 1;
           let collectionItems = [];
           while (true) {
@@ -1085,13 +1087,15 @@
             items.forEach(item => {
               collectionByMint[item.id] = key;
               const attrs = item.content?.metadata?.attributes || [];
-              attrs.forEach(a => {
-                if (!a.trait_type || !a.value) return;
-                if (!allTraits[a.trait_type]) allTraits[a.trait_type] = new Set();
-                allTraits[a.trait_type].add(String(a.value));
-              });
               traitIndex[item.id] = {};
-              attrs.forEach(a => { if (a.trait_type) traitIndex[item.id][a.trait_type] = String(a.value); });
+              attrs.forEach(a => {
+                if (!a.trait_type || a.value == null || a.value === "") return;
+                const traitType = String(a.trait_type);
+                const traitValue = String(a.value);
+                if (!allTraits[key][traitType]) allTraits[key][traitType] = new Set();
+                allTraits[key][traitType].add(traitValue);
+                traitIndex[item.id][traitType] = traitValue;
+              });
             });
             collectionItems = collectionItems.concat(items);
             all = all.concat(items);
@@ -1116,33 +1120,54 @@
     function renderFilterPanel() {
       const body = document.getElementById("filter-traits-body");
       if (!body) return;
-      const traitKeys = Object.keys(allTraits).sort();
-      if (!traitKeys.length) { body.innerHTML = `<div style="color:var(--g2);font-size:10px;text-align:center;padding:20px">No traits found</div>`; return; }
       const activeCount = Object.values(activeFilters).reduce((n, v) => n + v.length, 0);
       document.getElementById("clear-filters-btn").style.opacity = activeCount ? "1" : "0.3";
-      body.innerHTML = traitKeys.map(trait => {
-        const vals = [...allTraits[trait]].sort();
-        const selected = activeFilters[trait] || [];
-        return `<details class="filter-trait-group" ${selected.length ? "open" : ""}>
-      <summary>${trait} <span style="font-size:9px;color:var(--g2)">${selected.length ? `<span style="color:var(--r)">${selected.length} selected</span>` : vals.length + " values"}</span></summary>
-      <div style="padding:4px 0 8px 4px">
-        ${vals.map(v => {
-          const checked = selected.includes(v);
-          return `<label class="filter-val ${checked ? "active" : ""}">
-            <input type="checkbox" ${checked ? "checked" : ""} onchange="toggleFilter('${trait.replace(/'/g, "\\'")}','${v.replace(/'/g, "\\'")}',this.checked)">
-            ${v}
-          </label>`;
-        }).join("")}
-      </div>
-    </details>`;
+
+      const sectionHtml = COLLECTION_KEYS.map(key => {
+        const traitsForCollection = allTraits[key] || {};
+        const traitKeys = Object.keys(traitsForCollection).sort();
+        const color = key === "LNL" ? "var(--r)" : "var(--grn)";
+        const glow = key === "LNL" ? "rgba(255,0,60,.08)" : "rgba(0,255,136,.08)";
+        const border = key === "LNL" ? "rgba(255,0,60,.22)" : "rgba(0,255,136,.22)";
+
+        return `<div style="margin-bottom:18px">
+          <div style="position:sticky;top:58px;z-index:1;background:#060606;padding:10px 0 8px">
+            <div style="font-family:var(--d);font-size:14px;letter-spacing:3px;color:${color};padding:8px 10px;border:1px solid ${border};border-radius:10px;background:${glow}">
+              ${COLLECTIONS[key].shortLabel} TRAITS
+            </div>
+          </div>
+          ${traitKeys.length ? traitKeys.map(trait => {
+            const vals = [...traitsForCollection[trait]].sort();
+            const filterKey = `${key}::${trait}`;
+            const selected = activeFilters[filterKey] || [];
+            return `<details class="filter-trait-group" ${selected.length ? "open" : ""}>
+              <summary>
+                <span style="color:${color}">${trait}</span>
+                <span style="font-size:9px;color:var(--g2)">${selected.length ? `<span style="color:${color}">${selected.length} selected</span>` : vals.length + " values"}</span>
+              </summary>
+              <div style="padding:4px 0 8px 4px">
+                ${vals.map(v => {
+                  const checked = selected.includes(v);
+                  return `<label class="filter-val ${checked ? "active" : ""}">
+                    <input type="checkbox" ${checked ? "checked" : ""} onchange="toggleFilter('${key}','${trait.replace(/'/g, "\\'")}','${v.replace(/'/g, "\\'")}',this.checked)">
+                    ${v}
+                  </label>`;
+                }).join("")}
+              </div>
+            </details>`;
+          }).join("") : `<div style="color:var(--g2);font-size:10px;padding:12px 4px">No traits found</div>`}
+        </div>`;
       }).join("");
+
+      body.innerHTML = sectionHtml || `<div style="color:var(--g2);font-size:10px;text-align:center;padding:20px">No traits found</div>`;
     }
 
-    function toggleFilter(trait, value, on) {
-      if (!activeFilters[trait]) activeFilters[trait] = [];
-      if (on) { if (!activeFilters[trait].includes(value)) activeFilters[trait].push(value); }
-      else { activeFilters[trait] = activeFilters[trait].filter(v => v !== value); }
-      if (!activeFilters[trait].length) delete activeFilters[trait];
+    function toggleFilter(collectionKey, trait, value, on) {
+      const namespacedKey = `${collectionKey}::${trait}`;
+      if (!activeFilters[namespacedKey]) activeFilters[namespacedKey] = [];
+      if (on) { if (!activeFilters[namespacedKey].includes(value)) activeFilters[namespacedKey].push(value); }
+      else { activeFilters[namespacedKey] = activeFilters[namespacedKey].filter(v => v !== value); }
+      if (!activeFilters[namespacedKey].length) delete activeFilters[namespacedKey];
       renderFilterPanel();
       render();
     }
@@ -2100,7 +2125,12 @@
       if (filterKeys.length && traitsLoaded) {
         listedItems = listedItems.filter(l => {
           const traits = traitIndex[l.mint] || {};
-          return filterKeys.every(k => activeFilters[k].includes(traits[k]));
+          const itemCollectionKey = collectionByMint[l.mint] || l.collectionKey || detectCollectionKey(l);
+          return filterKeys.every(k => {
+            const [filterCollectionKey, traitName] = k.split("::");
+            if (filterCollectionKey !== itemCollectionKey) return false;
+            return activeFilters[k].includes(traits[traitName]);
+          });
         });
       }
       const activeFilterCount = Object.values(activeFilters).reduce((n, v) => n + v.length, 0);
