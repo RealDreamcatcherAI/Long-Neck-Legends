@@ -864,6 +864,10 @@
       }
     }
   </style>
+  <!-- Buffer polyfill MUST load before web3.js -->
+  <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.min.js"></script>
+  <script>window.Buffer = window.Buffer || buffer.Buffer;</script>
+  <script src="https://unpkg.com/@solana/web3.js@1.91.8/lib/index.iife.min.js"></script>
 </head>
 
 <body>
@@ -1135,28 +1139,10 @@
     // ─────────────────────────────────────────────
     //  SOLANA WEB3 (lazy loaded)
     // ─────────────────────────────────────────────
-    let _web3 = null;
+    // web3.js + Buffer polyfill loaded eagerly in <head> — always available
     async function getWeb3() {
-      if (_web3) return _web3;
-      // Step 1: ensure Buffer polyfill is available (required by @solana/web3.js IIFE in browser)
-      if (typeof window.Buffer === "undefined") {
-        await new Promise((res, rej) => {
-          const s = document.createElement("script");
-          s.src = "https://bundle.run/buffer@6.0.3";
-          s.onload = () => { window.Buffer = window.buffer.Buffer; res(); };
-          s.onerror = rej;
-          document.head.appendChild(s);
-        });
-      }
-      // Step 2: load web3.js
-      await new Promise((res, rej) => {
-        const s = document.createElement("script");
-        s.src = "https://unpkg.com/@solana/web3.js@1.91.8/lib/index.iife.min.js";
-        s.onload = res; s.onerror = rej;
-        document.head.appendChild(s);
-      });
-      _web3 = window.solanaWeb3;
-      return _web3;
+      if (!window.solanaWeb3) throw new Error("@solana/web3.js failed to load");
+      return window.solanaWeb3;
     }
 
     // ─────────────────────────────────────────────
@@ -1715,7 +1701,7 @@
         const serialized = tx.serialize({ requireAllSignatures: false, verifySignatures: false });
         const serializedBytes = serialized instanceof Uint8Array ? serialized : new Uint8Array(serialized);
         const txB64 = btoa(serializedBytes.reduce((s, b) => s + String.fromCharCode(b), ""));
-        const cosigned = await cosign({ action: "cosign-accept", txBase64: txB64, mint: offerData.mint, buyer: offerData.buyer });
+        const cosigned = await cosign({ action: "cosign-accept", txBase64: txB64, mint: offerData.mint, buyer: offerData.buyer, seller: walletAddress });
 
         // Seller signs the co-signed tx
         const cosignedBuf = Uint8Array.from(atob(cosigned.tx), c => c.charCodeAt(0));
