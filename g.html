@@ -933,7 +933,8 @@
     const COLLECTION_KEYS = Object.keys(COLLECTIONS);
     const TREASURY = "ChnzFpK4ty2vpzM48HUrtDVY7tWD8StmYaNxQcKSBuyc";
     const FEE_PCT = 0.025;
-    const SUPPLY = 3333;
+    const SUPPLY_BY_COLLECTION = { LNL: 3333, GA: 777 };
+    const SUPPLY = SUPPLY_BY_COLLECTION.LNL + SUPPLY_BY_COLLECTION.GA;
     const PAGE_SIZE = 28;
     const SB_URL = "https://hypqndasopdkrqvkllvc.supabase.co";
     const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5cHFuZGFzb3Bka3JxdmtsbHZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5NTI1NjEsImV4cCI6MjA4NzUyODU2MX0.jXLaLfFudJf-xytfHAvMe5oV0DVeWi7xNB53Ib0GD_s";
@@ -963,7 +964,7 @@
     let recentSales = []; // last 50 sales for activity bar
     let traitIndex = {}; // mint -> { traitType: value } — built during loadTraits
     let collectionByMint = {}; // mint -> "LNL" | "GA"
-    let supplyByCollection = {};
+    let supplyByCollection = { ...SUPPLY_BY_COLLECTION };
 
     const short = (a, s = 4, e = 4) => a ? `${a.slice(0, s)}...${a.slice(-e)}` : "";
     const getCollectionConfig = key => COLLECTIONS[key] || null;
@@ -2024,8 +2025,14 @@
         document.getElementById("conn-btn").onclick = showWalletPicker;
       }
 
-      const listedCount = Object.keys(listings).length;
-      const t = `  ★ LONG NECK LEGENDS  ★  ${total || SUPPLY} ON-CHAIN  ★  ${listedCount} LISTED  ★  ATOMIC SWAPS  ★  2.5% FEE  ★  P2P — NO MIDDLEMEN  ★  `;
+      const allListedItems = Object.values(listings);
+      const listedCount = activeCollection === "all"
+        ? allListedItems.length
+        : allListedItems.filter(l => (collectionByMint[l.mint] || l.collectionKey) === activeCollection).length;
+      const activeSupply = activeCollection === "all"
+        ? Object.values(SUPPLY_BY_COLLECTION).reduce((sum, n) => sum + (n || 0), 0)
+        : (SUPPLY_BY_COLLECTION[activeCollection] || supplyByCollection[activeCollection] || 0);
+      const t = `  ★ LONG NECK LEGENDS  ★  ${SUPPLY} ON-CHAIN  ★  ${listedCount} LISTED  ★  ATOMIC SWAPS  ★  2.5% FEE  ★  P2P — NO MIDDLEMEN  ★  `;
       app.innerHTML += `<div class="ticker"><div class="ticker-inner"><span>${t}</span><span>${t}</span></div></div>`;
 
       app.innerHTML += `<div style="padding:34px 16px 16px;text-align:center;background:radial-gradient(ellipse at center,var(--rb) 0%,transparent 65%)">
@@ -2034,17 +2041,12 @@
     <div style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:rgba(0,255,136,.04);border:1px solid rgba(0,255,136,.08);border-radius:6px;font-size:8px;color:var(--grn)"><span class="dot-sm"></span> ON-CHAIN • ${getCollectionLabel(activeCollection === "all" ? "all" : activeCollection)}</div>
     <div style="display:flex;justify-content:center;gap:12px;margin-top:18px;flex-wrap:wrap">
       <div class="stat-card"><div style="font-family:var(--d);font-size:20px;color:var(--r);letter-spacing:2px">${(() => {
-          if (activeCollection === "all") {
-            const totalKnownSupply = Object.values(supplyByCollection).reduce((sum, n) => sum + (n || 0), 0);
-            return totalKnownSupply || (SUPPLY + "+");
-          }
-          return supplyByCollection[activeCollection] || (activeCollection === "LNL" ? SUPPLY : "—");
+          if (activeCollection === "all") return SUPPLY;
+          return SUPPLY_BY_COLLECTION[activeCollection] || supplyByCollection[activeCollection] || "—";
         })()}</div><div style="font-size:10px;color:var(--g2);text-transform:uppercase;letter-spacing:2px">SUPPLY</div></div>
       <div class="stat-card"><div style="font-family:var(--d);font-size:20px;color:var(--grn);letter-spacing:2px">${listedCount}</div><div style="font-size:10px;color:var(--g2);text-transform:uppercase;letter-spacing:2px">LISTED</div></div>
       <div class="stat-card"><div style="font-family:var(--d);font-size:20px;color:var(--grn);letter-spacing:2px">${(() => {
-          const supply = activeCollection === "all"
-            ? Object.values(supplyByCollection).reduce((sum, n) => sum + (n || 0), 0)
-            : supplyByCollection[activeCollection] || (activeCollection === "LNL" ? SUPPLY : 0);
+          const supply = activeSupply;
           return supply ? ((listedCount / supply) * 100).toFixed(1) + "%" : "—";
         })()}</div><div style="font-size:10px;color:var(--g2);text-transform:uppercase;letter-spacing:2px">% LISTED</div></div>
       <div class="stat-card"><div style="font-family:var(--d);font-size:20px;color:var(--r);letter-spacing:2px">◎ ${totalVolume.toFixed(2)}</div><div style="font-size:10px;color:var(--g2);text-transform:uppercase;letter-spacing:2px">VOLUME</div></div>
