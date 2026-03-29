@@ -1138,6 +1138,17 @@
     let _web3 = null;
     async function getWeb3() {
       if (_web3) return _web3;
+      // Step 1: ensure Buffer polyfill is available (required by @solana/web3.js IIFE in browser)
+      if (typeof window.Buffer === "undefined") {
+        await new Promise((res, rej) => {
+          const s = document.createElement("script");
+          s.src = "https://bundle.run/buffer@6.0.3";
+          s.onload = () => { window.Buffer = window.buffer.Buffer; res(); };
+          s.onerror = rej;
+          document.head.appendChild(s);
+        });
+      }
+      // Step 2: load web3.js
       await new Promise((res, rej) => {
         const s = document.createElement("script");
         s.src = "https://unpkg.com/@solana/web3.js@1.91.8/lib/index.iife.min.js";
@@ -1177,23 +1188,6 @@
       return out;
     }
 
-    // Build a SOL transfer instruction without SystemProgram.transfer (avoids Buffer polyfill issue)
-    function buildSolTransferIx(PublicKey, fromPK, toPK, lamports) {
-      const sysProgPK = new PublicKey(SYS_PROGRAM);
-      const data = new Uint8Array(12);
-      const dv = new DataView(data.buffer);
-      dv.setUint32(0, 2, true); // transfer instruction index
-      dv.setBigUint64(4, BigInt(lamports), true);
-      return {
-        programId: sysProgPK,
-        keys: [
-          { pubkey: fromPK, isSigner: true, isWritable: true },
-          { pubkey: toPK, isSigner: false, isWritable: true },
-        ],
-        data
-      };
-    }
-
     // Fetch cNFT compression data + merkle proof from Helius
     async function getAssetDetails(mintId) {
       const [assetRes, proofRes] = await Promise.all([
@@ -1207,7 +1201,7 @@
       if (!asset || !proof) throw new Error("Could not fetch cNFT data from Helius");
       const details = {
         treeId: asset.compression?.tree,
-        leafId: asset.compression?.leaf_id,
+        leafId: Number(asset.compression?.leaf_id),
         dataHash: asset.compression?.data_hash,
         creatorHash: asset.compression?.creator_hash,
         root: proof.root,
@@ -1219,6 +1213,17 @@
       return details;
     }
 
+    let BUY_IN_FLIGHT = false;
+
+    async function waitForOwner(mintId, expectedOwner, tries = 12, delayMs = 1500) {
+      for (let i = 0; i < tries; i++) {
+        const asset = await getAssetDetails(mintId);
+        if ((asset.owner || "").toLowerCase() === String(expectedOwner).toLowerCase()) return asset;
+        await new Promise(r => setTimeout(r, delayMs));
+      }
+      throw new Error("Settlement returned, but ownership did not update on-chain");
+    }
+
     // Safe PublicKey construction with clear error messages
     function safePK(PublicKey, value, label) {
       if (!value) throw new Error("Null/undefined value for " + label + ": " + value);
@@ -1228,13 +1233,13 @@
 
     // Convert base58 hash to 32-byte buffer (for instruction data like root/dataHash/creatorHash)
     function hashToBytes(PublicKey, base58Str, label) {
-      return safePK(PublicKey, base58Str, label).toBuffer();
+      return safePK(PublicKey, base58Str, label).toBytes();
     }
 
     // Derive Bubblegum tree authority PDA
     function getTreeAuthority(PublicKey, treePK) {
       const bgProg = new PublicKey(BUBBLEGUM_PROGRAM);
-      return PublicKey.findProgramAddressSync([treePK.toBuffer()], bgProg);
+      return PublicKey.findProgramAddressSync([treePK.toBytes()], bgProg);
     }
 
     // Build Bubblegum delegate instruction
@@ -1306,13 +1311,19 @@
 
     // Call the Edge Function co-signer
     async function cosign(body) {
+      console.log("[cosign] sending action:", body.action, "mint:", body.mint);
       const res = await fetch(COSIGN_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${SB_KEY}` },
         body: JSON.stringify(body)
       });
-      const data = await res.json();
-      if (data.error) throw new Error("Co-signer: " + data.error);
+      console.log("[cosign] HTTP status:", res.status, res.statusText);
+      const raw = await res.text();
+      console.log("[cosign] raw response:", raw);
+      let data;
+      try { data = JSON.parse(raw); }
+      catch (e) { throw new Error("Co-signer returned non-JSON (status " + res.status + "): " + raw.slice(0, 200)); }
+      if (!res.ok || data.error) throw new Error("Co-signer error (status " + res.status + "): " + (data.error || data.message || raw.slice(0, 200)));
       return data;
     }
 
@@ -1336,16 +1347,15 @@
     //  cNFT stays in wallet but escrow can transfer it
     // ─────────────────────────────────────────────
     async function listNft(nft, priceSol) {
-      const btn = document.getElementById("cl");
-      if (btn) { btn.disabled = true; btn.innerHTML = `<span class="spinner"></span>LOADING...`; }
-
+      // The listing modal is already removed before this is called for new listings.
+      // We use a toast-based progress flow instead of relying on a modal button.
       try {
         const web3 = await getWeb3();
         const { Connection, PublicKey, Transaction } = web3;
         const conn = new Connection(RPC, "confirmed");
 
+        showToast("Fetching proof...");
         console.log("[listNft] fetching cNFT data for:", nft.mint);
-        if (btn) btn.innerHTML = `<span class="spinner"></span>FETCHING PROOF...`;
         const details = await getAssetDetails(nft.mint);
 
         const ownerPK = safePK(PublicKey, walletAddress, "walletAddress");
@@ -1367,9 +1377,9 @@
         tx.recentBlockhash = blockhash; tx.lastValidBlockHeight = lastValidBlockHeight;
         tx.feePayer = ownerPK;
 
-        if (btn) btn.innerHTML = `<span class="spinner"></span>SIGN IN WALLET...`;
+        showToast("Sign in wallet to list...");
         const signed = await walletProvider.signTransaction(tx);
-        if (btn) btn.innerHTML = `<span class="spinner"></span>CONFIRMING...`;
+        showToast("Confirming on-chain...");
         const sig = await conn.sendRawTransaction(signed.serialize(), { skipPreflight: false });
         await conn.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed");
 
@@ -1381,7 +1391,6 @@
         });
         listings[nft.mint] = { mint: nft.mint, seller: walletAddress, price_sol: parseFloat(priceSol), name: nft.name, image: nft.image };
         showToast("Listed for " + priceSol + " SOL ✓");
-        const lm = document.getElementById("lm"); if (lm) lm.remove();
         render();
 
       } catch (e) {
@@ -1391,7 +1400,6 @@
         } else {
           showToast("Failed: " + (e.message || "unknown"), true);
         }
-        if (btn) { btn.disabled = false; btn.innerHTML = "LIST FOR SALE"; }
       }
     }
 
@@ -1404,6 +1412,7 @@
         const { Connection, PublicKey, Transaction } = web3;
         const conn = new Connection(RPC, "confirmed");
 
+        showToast("Fetching proof...");
         const details = await getAssetDetails(mint);
         const ownerPK = new PublicKey(walletAddress);
         const treePK = new PublicKey(details.treeId);
@@ -1423,7 +1432,9 @@
         tx.recentBlockhash = blockhash; tx.lastValidBlockHeight = lastValidBlockHeight;
         tx.feePayer = ownerPK;
 
+        showToast("Sign in wallet to delist...");
         const signed = await walletProvider.signTransaction(tx);
+        showToast("Confirming...");
         const sig = await conn.sendRawTransaction(signed.serialize(), { skipPreflight: false });
         await conn.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed");
 
@@ -1438,113 +1449,127 @@
         } else {
           showToast("Failed: " + (e.message || "unknown"), true);
         }
+        // Re-open listing modal so user can retry
+        const nft = myNfts.find(n => n.mint === mint) || { mint, name: listings[mint]?.name || mint, image: listings[mint]?.image || "" };
+        showListingModal(nft);
       }
     }
 
     // ─────────────────────────────────────────────
-    //  BUY NOW — Two-step:
-    //  Step 1: Buyer sends SOL to escrow (tiny tx, fits easily)
-    //  Step 2: Edge Function settles — transfers cNFT + distributes SOL
-    //  This avoids the 1232-byte tx size limit from 20-node proof paths
+    //  BUY NOW (SOL transfer + Bubblegum transfer via escrow co-sign)
+    //  Frontend builds full tx → sends to Edge Function for escrow signature
+    //  → buyer signs SOL part → broadcasts. Fully atomic.
     // ─────────────────────────────────────────────
-    let BUY_IN_FLIGHT = false;
-
     async function buyNft(listing) {
-      if (BUY_IN_FLIGHT) {
-        console.warn("[buyNft] blocked duplicate click");
-        return;
-      }
-
       console.log("[buyNft] cNFT flow — wallet:", walletAddress, "mint:", listing?.mint);
       if (!walletAddress || !walletProvider) { showToast("Connect wallet first", true); return; }
-      if (!listing?.mint || !listing?.seller || !listing?.price_sol) { showToast("Invalid listing", true); return; }
-      if (walletAddress === TREASURY) { showToast("Treasury wallet cannot buy NFTs", true); return; }
-      if (walletAddress === listing.seller) { showToast("Seller wallet cannot buy its own NFT", true); return; }
 
       const btn = document.getElementById("buy-btn");
-      const setBtn = (html, dis) => { if (btn) { btn.innerHTML = html; btn.disabled = !!dis; } };
-      BUY_IN_FLIGHT = true;
-      setBtn(`<span class="spinner"></span>SENDING SOL...`, true);
+      const setBtn = (html, dis) => { if (btn) { btn.innerHTML = html; btn.disabled = dis; } };
+      setBtn(`<span class="spinner"></span>LOADING...`, true);
 
       try {
         const web3 = await getWeb3();
-        const { Connection, PublicKey, Transaction, LAMPORTS_PER_SOL } = web3;
+        const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = web3;
         const conn = new Connection(RPC, "confirmed");
-        console.log("[buyNft] web3 loaded");
 
         const buyerPK = new PublicKey(walletAddress);
+        const sellerPK = new PublicKey(listing.seller);
         const escrowPK = new PublicKey(ESCROW_ADDRESS);
-        const priceLamports = Math.round(Number(listing.price_sol) * LAMPORTS_PER_SOL);
-        console.log("[buyNft] priceLamports:", priceLamports);
+        const treasuryPK = new PublicKey(TREASURY);
 
-        const ix = buildSolTransferIx(PublicKey, buyerPK, escrowPK, priceLamports);
-        console.log("[buyNft] ix built:", ix);
-        const depositTx = new Transaction().add(ix);
-        console.log("[buyNft] tx built, getting blockhash...");
-        const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash("confirmed");
-        depositTx.recentBlockhash = blockhash;
-        depositTx.lastValidBlockHeight = lastValidBlockHeight;
-        depositTx.feePayer = buyerPK;
-
-        setBtn(`<span class="spinner"></span>SIGN IN WALLET...`, true);
-        const signed = await walletProvider.signTransaction(depositTx);
-        setBtn(`<span class="spinner"></span>DEPOSITING SOL...`, true);
-        const depositSig = await conn.sendRawTransaction(signed.serialize(), { skipPreflight: false });
-        const depositConf = await conn.confirmTransaction({ signature: depositSig, blockhash, lastValidBlockHeight }, "confirmed");
-        if (depositConf.value.err) throw new Error("Deposit transaction failed on-chain");
-        console.log("[buyNft] SOL deposited:", depositSig);
+        const priceLamports = Math.round(listing.price_sol * LAMPORTS_PER_SOL);
+        const feeLamports = Math.round(priceLamports * FEE_PCT);
+        const sellerLamports = priceLamports - feeLamports;
 
         setBtn(`<span class="spinner"></span>FETCHING PROOF...`, true);
         const details = await getAssetDetails(listing.mint);
-        const web3PK = web3.PublicKey;
-        const treePK = new web3PK(details.treeId);
-        const [treeAuthorityPK] = getTreeAuthority(web3PK, treePK);
+        const treePK = new PublicKey(details.treeId);
+        const [treeAuthorityPK] = getTreeAuthority(PublicKey, treePK);
 
-        setBtn(`<span class="spinner"></span>SETTLING...`, true);
-        showToast("SOL deposited — settling trade...");
-        const result = await cosign({
-          action: "settle-buy",
-          mint: listing.mint,
-          buyer: walletAddress,
-          seller: listing.seller,
-          depositSig,
-          priceLamports,
-          treeId: details.treeId,
-          treeAuthority: treeAuthorityPK.toBase58(),
-          root: details.root,
-          dataHash: details.dataHash,
-          creatorHash: details.creatorHash,
-          leafId: details.leafId,
-          proofPath: details.proofPath
+        // Build the full transaction
+        const tx = new Transaction();
+
+        // ① SOL → seller (buyer signs)
+        tx.add(SystemProgram.transfer({ fromPubkey: buyerPK, toPubkey: sellerPK, lamports: sellerLamports }));
+
+        // ② SOL → treasury fee (buyer signs)
+        if (feeLamports > 0) {
+          tx.add(SystemProgram.transfer({ fromPubkey: buyerPK, toPubkey: treasuryPK, lamports: feeLamports }));
+        }
+
+        // ③ Bubblegum transfer: escrow (delegate) transfers cNFT → buyer
+        const transferIx = buildTransferIx(PublicKey, {
+          ownerPK: sellerPK,
+          delegatePK: escrowPK,
+          newOwnerPK: buyerPK,
+          treePK, treeAuthorityPK,
+          root: details.root, dataHash: details.dataHash, creatorHash: details.creatorHash,
+          nonce: details.leafId, index: details.leafId,
+          proofPath: details.proofPath,
+          delegateIsSigner: true // escrow signs this
         });
+        tx.add(transferIx);
 
-        if (result.error) throw new Error(result.error);
-        console.log("[buyNft] settled:", result.sig, result.payoutSig || null);
+        const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
+        tx.recentBlockhash = blockhash; tx.lastValidBlockHeight = lastValidBlockHeight;
+        tx.feePayer = buyerPK;
 
+        // Serialize (without signatures) and send to co-signer
+        console.log("[buyNft] building tx — instructions:", tx.instructions.length);
+        setBtn(`<span class="spinner"></span>CO-SIGNING...`, true);
+        let serialized;
+        try {
+          serialized = tx.serialize({ requireAllSignatures: false, verifySignatures: false });
+          console.log("[buyNft] serialized tx bytes:", serialized.length);
+        } catch(serErr) {
+          console.error("[buyNft] SERIALIZE FAILED:", serErr);
+          throw serErr;
+        }
+        // Use Uint8Array explicitly — avoids "Buffer is not defined" in browser environments
+        const serializedBytes = serialized instanceof Uint8Array ? serialized : new Uint8Array(serialized);
+        const txB64 = btoa(serializedBytes.reduce((s, b) => s + String.fromCharCode(b), ""));
+        console.log("[buyNft] txB64 length:", txB64.length, "— calling cosign...");
+
+        const cosigned = await cosign({ action: "cosign-buy", txBase64: txB64, mint: listing.mint });
+        console.log("[buyNft] cosign returned, tx length:", cosigned.tx?.length);
+
+        // Deserialize the co-signed tx and have buyer sign
+        setBtn(`<span class="spinner"></span>SIGN IN WALLET...`, true);
+        const cosignedBuf = Uint8Array.from(atob(cosigned.tx), c => c.charCodeAt(0));
+        const cosignedTx = Transaction.from(cosignedBuf);
+        console.log("[buyNft] asking wallet to sign...");
+        const fullySigned = await walletProvider.signTransaction(cosignedTx);
+
+        setBtn(`<span class="spinner"></span>CONFIRMING...`, true);
+        console.log("[buyNft] broadcasting tx...");
+        const sig = await conn.sendRawTransaction(fullySigned.serialize(), { skipPreflight: false });
+        showToast("Confirming on-chain...");
+        const result = await conn.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed");
+        if (result.value.err) throw new Error("Transaction failed on-chain");
+
+        // Clean up
         await sbDelete("marketplace_listings", { mint: listing.mint });
         delete listings[listing.mint];
         await sbDelete("marketplace_offers", { mint: listing.mint });
         delete offers[listing.mint];
-        await recordSale({ mint: listing.mint, seller: listing.seller, buyer: walletAddress, price_sol: listing.price_sol, name: listing.name, image: listing.image, tx_sig: result.sig || result.payoutSig || depositSig });
+        await recordSale({ mint: listing.mint, seller: listing.seller, buyer: walletAddress, price_sol: listing.price_sol, name: listing.name, image: listing.image, tx_sig: sig });
 
         selectedNft = null;
         await fetchMyNfts();
         showToast("You own it! 🐦 " + listing.name);
-        setBtn(`BOUGHT`, true);
 
       } catch (e) {
-        console.error("[buyNft]", e);
-        const msg = e?.message || String(e);
-        if (e.code === 4001 || msg.toLowerCase().includes("cancel") || msg.toLowerCase().includes("reject")) {
+        console.error("[buyNft] CAUGHT ERROR:", e);
+        console.error("[buyNft] error name:", e?.name);
+        console.error("[buyNft] error message:", e?.message);
+        console.error("[buyNft] error stack:", e?.stack);
+        if (e.code === 4001 || e.message?.toLowerCase().includes("cancel") || e.message?.toLowerCase().includes("reject")) {
           showToast("Cancelled", true);
-        } else if (msg.toLowerCase().includes("deposited") || msg.toLowerCase().includes("settl")) {
-          showToast("SOL sent but settlement failed — use refund path", true);
         } else {
-          showToast("Failed: " + msg, true);
+          showToast("Failed: " + (e.message || "unknown"), true);
         }
         setBtn(`BUY NOW — ◎ ${listing.price_sol} SOL`, false);
-      } finally {
-        BUY_IN_FLIGHT = false;
       }
     }
 
@@ -1565,7 +1590,7 @@
 
         // Transfer SOL to escrow wallet
         const tx = new Transaction().add(
-          buildSolTransferIx(PublicKey, buyerPK, escrowPK, lamports)
+          SystemProgram.transfer({ fromPubkey: buyerPK, toPubkey: escrowPK, lamports })
         );
         const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
         tx.recentBlockhash = blockhash; tx.lastValidBlockHeight = lastValidBlockHeight;
@@ -1601,7 +1626,10 @@
       if (!walletAddress) return;
       try {
         showToast("Returning SOL from escrow...");
-        const result = await cosign({ action: "cancel-offer", mint, buyer: walletAddress });
+        await cosign({ action: "cancel-offer", mint, buyer: walletAddress });
+        // Remove from Supabase
+        await sbDelete("marketplace_offers", { mint, buyer: walletAddress });
+        // Update local state
         if (offers[mint]) offers[mint] = offers[mint].filter(o => o.buyer !== walletAddress);
         showToast("Offer cancelled — SOL returned ✓");
         render();
@@ -1639,26 +1667,32 @@
         const treePK = new PublicKey(details.treeId);
         const [treeAuthorityPK] = getTreeAuthority(PublicKey, treePK);
 
+        // Determine if escrow is currently the delegate (NFT is listed)
+        const isListed = !!listings[offerData.mint];
+        // If listed, escrow is the delegate and must co-sign the transfer
+        // If not listed, seller/owner signs directly
+        const delegateIsSigner = isListed;
+
         const tx = new Transaction();
 
         // ① SOL from escrow → seller (escrow signs)
-        tx.add(buildSolTransferIx(PublicKey, escrowPK, sellerPK, sellerLamports));
+        tx.add(SystemProgram.transfer({ fromPubkey: escrowPK, toPubkey: sellerPK, lamports: sellerLamports }));
 
         // ② SOL from escrow → treasury fee (escrow signs)
         if (feeLamports > 0) {
-          tx.add(buildSolTransferIx(PublicKey, escrowPK, treasuryPK, feeLamports));
+          tx.add(SystemProgram.transfer({ fromPubkey: escrowPK, toPubkey: treasuryPK, lamports: feeLamports }));
         }
 
-        // ③ Bubblegum transfer: seller → buyer (seller signs as owner)
+        // ③ Bubblegum transfer: cNFT → buyer
         const transferIx = buildTransferIx(PublicKey, {
           ownerPK: sellerPK,
-          delegatePK: sellerPK, // seller is signing directly as owner
+          delegatePK: isListed ? escrowPK : sellerPK,
           newOwnerPK: buyerPK,
           treePK, treeAuthorityPK,
           root: details.root, dataHash: details.dataHash, creatorHash: details.creatorHash,
           nonce: details.leafId, index: details.leafId,
           proofPath: details.proofPath,
-          delegateIsSigner: false // owner signs, not delegate
+          delegateIsSigner // escrow co-signs if listed, seller signs if not
         });
         tx.add(transferIx);
 
@@ -1668,8 +1702,9 @@
 
         // Send to co-signer for escrow signature on SOL release
         const serialized = tx.serialize({ requireAllSignatures: false, verifySignatures: false });
-        const txB64 = btoa(String.fromCharCode(...serialized));
-        const cosigned = await cosign({ action: "cosign-accept", txBase64: txB64, mint: offerData.mint, buyer: offerData.buyer, seller: walletAddress });
+        const serializedBytes = serialized instanceof Uint8Array ? serialized : new Uint8Array(serialized);
+        const txB64 = btoa(serializedBytes.reduce((s, b) => s + String.fromCharCode(b), ""));
+        const cosigned = await cosign({ action: "cosign-accept", txBase64: txB64, mint: offerData.mint, buyer: offerData.buyer });
 
         // Seller signs the co-signed tx
         const cosignedBuf = Uint8Array.from(atob(cosigned.tx), c => c.charCodeAt(0));
@@ -1852,6 +1887,14 @@
       const ov = document.createElement("div");
       ov.id = "lm"; ov.className = "modal-bg";
       ov.onclick = e => { if (e.target === ov) ov.remove(); };
+
+      // If already listed, show a clear "UPDATE PRICE" note so user knows no new on-chain tx needed
+      const updateNote = listing
+        ? `<div style="padding:8px 12px;background:rgba(255,165,0,.06);border:1px solid rgba(255,165,0,.18);border-radius:8px;margin-bottom:12px;font-size:9px;color:#ffa500;letter-spacing:1px;line-height:1.7">
+            ✏ PRICE UPDATE ONLY — No wallet signature needed. The escrow delegation stays active.
+          </div>`
+        : "";
+
       ov.innerHTML = `<div style="background:linear-gradient(145deg,#0c0c0c,#080808);border:1px solid #1c1c1c;border-radius:16px;padding:28px;width:100%;max-width:420px;position:relative;animation:up .2s" onclick="event.stopPropagation()">
     <button onclick="document.getElementById('lm').remove()" style="position:absolute;top:12px;right:12px;background:rgba(255,0,60,.08);border:1px solid rgba(255,0,60,.2);color:var(--r);width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:13px;display:grid;place-items:center">✕</button>
     <div style="display:flex;gap:14px;align-items:center;margin-bottom:20px">
@@ -1864,9 +1907,10 @@
     ${listing ? `<div style="padding:10px 14px;background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.14);border-radius:8px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">
       <span style="font-size:9px;color:var(--grn);letter-spacing:2px">CURRENTLY LISTED</span>
       <span style="font-family:var(--d);font-size:18px;color:var(--grn)">${listing.price_sol} SOL</span>
-    </div>`: ""}
+    </div>` : ""}
+    ${updateNote}
     <div style="margin-bottom:8px">
-      <div style="font-size:9px;color:var(--g2);letter-spacing:2px;margin-bottom:6px">${listing ? "UPDATE PRICE" : "LIST PRICE"} (SOL)</div>
+      <div style="font-size:9px;color:var(--g2);letter-spacing:2px;margin-bottom:6px">${listing ? "NEW PRICE" : "LIST PRICE"} (SOL)</div>
       <input id="lp" class="input" type="number" min="0.01" step="0.01" placeholder="e.g. 2.5" value="${listing ? listing.price_sol : ""}">
     </div>
     <div style="font-size:9px;color:var(--g2);margin-bottom:16px;padding:10px 12px;background:#050505;border:1px solid #111;border-radius:8px;line-height:1.8">
@@ -1874,20 +1918,67 @@
       You receive: <span id="sg" style="color:var(--grn);font-family:var(--d)">${listing ? (listing.price_sol * (1 - FEE_PCT)).toFixed(4) + " SOL" : "—"}</span>
     </div>
     <div style="display:flex;gap:8px">
-      <button class="btn-primary" id="cl" style="flex:2">${listing ? "UPDATE LISTING" : "LIST FOR SALE"}</button>
-      ${listing ? `<button class="btn-danger" id="dl">DELIST</button>` : ""}
+      <button class="btn-primary" id="cl" style="flex:2">${listing ? "UPDATE PRICE" : "LIST FOR SALE"}</button>
+      ${listing ? `<button class="btn-danger" id="dl" style="min-width:80px">DELIST</button>` : ""}
     </div>
   </div>`;
       document.body.appendChild(ov);
       const lp = document.getElementById("lp");
       const sg = document.getElementById("sg");
       lp.oninput = () => { const v = parseFloat(lp.value); sg.textContent = isNaN(v) ? "—" : (v * (1 - FEE_PCT)).toFixed(4) + " SOL"; };
+
       document.getElementById("cl").onclick = async () => {
         const p = parseFloat(lp.value);
         if (isNaN(p) || p < 0.01) { showToast("Enter a valid price", true); return; }
-        ov.remove(); await listNft(nft, p);
+        if (listing) {
+          // Already listed — price-only update, no new on-chain tx needed
+          await updateListingPrice(nft, p);
+        } else {
+          // New listing — full on-chain delegate + Supabase insert
+          ov.remove();
+          await listNft(nft, p);
+        }
       };
-      document.getElementById("dl")?.addEventListener("click", async () => { ov.remove(); await delistNft(nft.mint); });
+
+      document.getElementById("dl")?.addEventListener("click", async () => {
+        const dlBtn = document.getElementById("dl");
+        const clBtn = document.getElementById("cl");
+        if (dlBtn) { dlBtn.disabled = true; dlBtn.innerHTML = `<span class="spinner"></span>`; }
+        if (clBtn) clBtn.disabled = true;
+        await delistNft(nft.mint);
+        ov.remove();
+      });
+    }
+
+    // ─────────────────────────────────────────────
+    //  UPDATE LISTING PRICE (no on-chain tx — escrow already delegated)
+    // ─────────────────────────────────────────────
+    async function updateListingPrice(nft, newPriceSol) {
+      const clBtn = document.getElementById("cl");
+      const dlBtn = document.getElementById("dl");
+      if (clBtn) { clBtn.disabled = true; clBtn.innerHTML = `<span class="spinner"></span>UPDATING...`; }
+      if (dlBtn) dlBtn.disabled = true;
+
+      try {
+        // Patch price in Supabase (upsert with same mint keeps everything else intact)
+        await sbUpsert("marketplace_listings", {
+          mint: nft.mint,
+          seller: walletAddress,
+          price_sol: parseFloat(newPriceSol),
+          name: nft.name,
+          image: nft.image
+        });
+        // Update local state
+        listings[nft.mint] = { ...listings[nft.mint], price_sol: parseFloat(newPriceSol) };
+        showToast("Price updated to " + newPriceSol + " SOL ✓");
+        const lm = document.getElementById("lm"); if (lm) lm.remove();
+        render();
+      } catch (e) {
+        console.error("[updateListingPrice]", e);
+        showToast("Failed to update price: " + (e.message || "unknown"), true);
+        if (clBtn) { clBtn.disabled = false; clBtn.innerHTML = "UPDATE PRICE"; }
+        if (dlBtn) dlBtn.disabled = false;
+      }
     }
 
     // ─────────────────────────────────────────────
