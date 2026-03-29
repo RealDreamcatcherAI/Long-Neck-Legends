@@ -1442,23 +1442,22 @@
     }
 
     // ─────────────────────────────────────────────
-    //  BUY NOW (SOL transfer + Bubblegum transfer via escrow co-sign)
-    //  Frontend builds full tx → sends to Edge Function for escrow signature
-    //  → buyer signs SOL part → broadcasts. Fully atomic.
+    //  BUY NOW — Versioned Transaction (v0) with Address Lookup Table
+    //  Uses ALT to compress proof path accounts, keeping tx under 1232 bytes
     // ─────────────────────────────────────────────
 
-    function buildSolTransferIx(PublicKey, fromPK, toPK, lamports) {
-      const web3 = window.solanaWeb3;
-      if (!web3?.SystemProgram) throw new Error("web3 SystemProgram not loaded");
-      return web3.SystemProgram.transfer({
-        fromPubkey: fromPK,
-        toPubkey: toPK,
-        lamports: Math.round(Number(lamports))
+    // Fetch the Address Lookup Table for the merkle tree from Helius
+    async function getTreeALT(treeId) {
+      const res = await fetch(RPC, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: "alt", method: "getAddressLookupTable", params: [treeId] })
       });
+      const data = await res.json();
+      return data.result?.value || null;
     }
 
     async function buyNft(listing) {
-      console.log("[buyNft] cNFT flow — wallet:", walletAddress, "mint:", listing?.mint);
+      console.log("[buyNft] v0 tx flow — wallet:", walletAddress, "mint:", listing?.mint);
       if (!walletAddress || !walletProvider) { showToast("Connect wallet first", true); return; }
 
       const btn = document.getElementById("buy-btn");
@@ -1467,7 +1466,8 @@
 
       try {
         const web3 = await getWeb3();
-        const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = web3;
+        const { Connection, PublicKey, SystemProgram, LAMPORTS_PER_SOL,
+                TransactionMessage, VersionedTransaction, AddressLookupTableAccount } = web3;
         const conn = new Connection(RPC, "confirmed");
 
         const buyerPK = new PublicKey(walletAddress);
@@ -1484,66 +1484,63 @@
         const treePK = new PublicKey(details.treeId);
         const [treeAuthorityPK] = getTreeAuthority(PublicKey, treePK);
 
-        // Build the full transaction
-        const tx = new Transaction();
+        // Load the tree's Address Lookup Table — compresses proof accounts from 32→1 byte each
+        console.log("[buyNft] loading ALT for tree:", details.treeId);
+        const altRes = await conn.getAddressLookupTable(treePK);
+        const altAccount = altRes?.value;
+        const lookupTables = altAccount ? [altAccount] : [];
+        if (!altAccount) console.warn("[buyNft] No ALT found for tree — tx may be too large");
 
-        // ① SOL → seller (buyer signs)
-        tx.add(SystemProgram.transfer({ fromPubkey: buyerPK, toPubkey: sellerPK, lamports: sellerLamports }));
-
-        // ② SOL → treasury fee (buyer signs)
-        if (feeLamports > 0) {
-          tx.add(SystemProgram.transfer({ fromPubkey: buyerPK, toPubkey: treasuryPK, lamports: feeLamports }));
-        }
-
-        // ③ Bubblegum transfer: escrow (delegate) transfers cNFT → buyer
+        // Build instructions
+        const solToSeller = SystemProgram.transfer({ fromPubkey: buyerPK, toPubkey: sellerPK, lamports: sellerLamports });
+        const solToTreasury = feeLamports > 0
+          ? SystemProgram.transfer({ fromPubkey: buyerPK, toPubkey: treasuryPK, lamports: feeLamports })
+          : null;
         const transferIx = buildTransferIx(PublicKey, {
-          ownerPK: sellerPK,
-          delegatePK: escrowPK,
-          newOwnerPK: buyerPK,
+          ownerPK: sellerPK, delegatePK: escrowPK, newOwnerPK: buyerPK,
           treePK, treeAuthorityPK,
           root: details.root, dataHash: details.dataHash, creatorHash: details.creatorHash,
           nonce: details.leafId, index: details.leafId,
           proofPath: details.proofPath,
-          delegateIsSigner: true // escrow signs this
+          delegateIsSigner: true
         });
-        tx.add(transferIx);
+
+        const instructions = [solToSeller, solToTreasury, transferIx].filter(Boolean);
 
         const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
-        tx.recentBlockhash = blockhash; tx.lastValidBlockHeight = lastValidBlockHeight;
-        tx.feePayer = buyerPK;
 
-        // Serialize (without signatures) and send to co-signer
-        console.log("[buyNft] building tx — instructions:", tx.instructions.length);
+        // Build versioned message (v0)
+        const message = new TransactionMessage({
+          payerKey: buyerPK,
+          recentBlockhash: blockhash,
+          instructions,
+        }).compileToV0Message(lookupTables);
+
+        const vtx = new VersionedTransaction(message);
+        console.log("[buyNft] v0 tx built, sending to cosigner...");
+
+        // Serialize and send to co-signer
         setBtn(`<span class="spinner"></span>CO-SIGNING...`, true);
-        let serialized;
-        try {
-          serialized = tx.serialize({ requireAllSignatures: false, verifySignatures: false });
-          console.log("[buyNft] serialized tx bytes:", serialized.length);
-        } catch(serErr) {
-          console.error("[buyNft] SERIALIZE FAILED:", serErr);
-          throw serErr;
-        }
-        // Use Uint8Array explicitly — avoids "Buffer is not defined" in browser environments
-        const serializedBytes = serialized instanceof Uint8Array ? serialized : new Uint8Array(serialized);
+        const serializedBytes = vtx.serialize();
+        console.log("[buyNft] serialized v0 tx bytes:", serializedBytes.length);
         const txB64 = btoa(serializedBytes.reduce((s, b) => s + String.fromCharCode(b), ""));
-        console.log("[buyNft] txB64 length:", txB64.length, "— calling cosign...");
 
         const cosigned = await cosign({ action: "cosign-buy", txBase64: txB64, mint: listing.mint });
-        console.log("[buyNft] cosign returned, tx length:", cosigned.tx?.length);
+        console.log("[buyNft] cosign returned");
 
-        // Deserialize the co-signed tx and have buyer sign
+        // Deserialize cosigned tx and have buyer sign
         setBtn(`<span class="spinner"></span>SIGN IN WALLET...`, true);
         const cosignedBuf = Uint8Array.from(atob(cosigned.tx), c => c.charCodeAt(0));
-        const cosignedTx = Transaction.from(cosignedBuf);
-        console.log("[buyNft] asking wallet to sign...");
-        const fullySigned = await walletProvider.signTransaction(cosignedTx);
+        const cosignedVtx = VersionedTransaction.deserialize(cosignedBuf);
+        console.log("[buyNft] asking wallet to sign v0 tx...");
+        const fullySigned = await walletProvider.signTransaction(cosignedVtx);
 
         setBtn(`<span class="spinner"></span>CONFIRMING...`, true);
-        console.log("[buyNft] broadcasting tx...");
+        console.log("[buyNft] broadcasting...");
         const sig = await conn.sendRawTransaction(fullySigned.serialize(), { skipPreflight: false });
         showToast("Confirming on-chain...");
         const result = await conn.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed");
-        if (result.value.err) throw new Error("Transaction failed on-chain");
+        if (result.value.err) throw new Error("Transaction failed on-chain: " + JSON.stringify(result.value.err));
 
         // Clean up
         await sbDelete("marketplace_listings", { mint: listing.mint });
@@ -1558,9 +1555,6 @@
 
       } catch (e) {
         console.error("[buyNft] CAUGHT ERROR:", e);
-        console.error("[buyNft] error name:", e?.name);
-        console.error("[buyNft] error message:", e?.message);
-        console.error("[buyNft] error stack:", e?.stack);
         if (e.code === 4001 || e.message?.toLowerCase().includes("cancel") || e.message?.toLowerCase().includes("reject")) {
           showToast("Cancelled", true);
         } else {
@@ -1648,7 +1642,8 @@
 
       try {
         const web3 = await getWeb3();
-        const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = web3;
+        const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL,
+                TransactionMessage, VersionedTransaction } = web3;
         const conn = new Connection(RPC, "confirmed");
 
         const sellerPK = new PublicKey(walletAddress);
@@ -1670,17 +1665,11 @@
         // If not listed, seller/owner signs directly
         const delegateIsSigner = isListed;
 
-        const tx = new Transaction();
-
-        // ① SOL from escrow → seller (escrow signs)
-        tx.add(SystemProgram.transfer({ fromPubkey: escrowPK, toPubkey: sellerPK, lamports: sellerLamports }));
-
-        // ② SOL from escrow → treasury fee (escrow signs)
-        if (feeLamports > 0) {
-          tx.add(SystemProgram.transfer({ fromPubkey: escrowPK, toPubkey: treasuryPK, lamports: feeLamports }));
-        }
-
-        // ③ Bubblegum transfer: cNFT → buyer
+        // Build instructions
+        const solToSeller = SystemProgram.transfer({ fromPubkey: escrowPK, toPubkey: sellerPK, lamports: sellerLamports });
+        const solToTreasury = feeLamports > 0
+          ? SystemProgram.transfer({ fromPubkey: escrowPK, toPubkey: treasuryPK, lamports: feeLamports })
+          : null;
         const transferIx = buildTransferIx(PublicKey, {
           ownerPK: sellerPK,
           delegatePK: isListed ? escrowPK : sellerPK,
@@ -1689,24 +1678,33 @@
           root: details.root, dataHash: details.dataHash, creatorHash: details.creatorHash,
           nonce: details.leafId, index: details.leafId,
           proofPath: details.proofPath,
-          delegateIsSigner // escrow co-signs if listed, seller signs if not
+          delegateIsSigner
         });
-        tx.add(transferIx);
+        const instructions = [solToSeller, solToTreasury, transferIx].filter(Boolean);
+
+        // Use v0 versioned tx with ALT to keep under 1232 byte limit
+        const { TransactionMessage, VersionedTransaction } = web3;
+        const altRes = await conn.getAddressLookupTable(treePK);
+        const lookupTables = altRes?.value ? [altRes.value] : [];
 
         const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
-        tx.recentBlockhash = blockhash; tx.lastValidBlockHeight = lastValidBlockHeight;
-        tx.feePayer = sellerPK;
+        const message = new TransactionMessage({
+          payerKey: sellerPK,
+          recentBlockhash: blockhash,
+          instructions,
+        }).compileToV0Message(lookupTables);
 
-        // Send to co-signer for escrow signature on SOL release
-        const serialized = tx.serialize({ requireAllSignatures: false, verifySignatures: false });
-        const serializedBytes = serialized instanceof Uint8Array ? serialized : new Uint8Array(serialized);
+        const vtx = new VersionedTransaction(message);
+        const serializedBytes = vtx.serialize();
+        console.log("[acceptOffer] v0 tx bytes:", serializedBytes.length);
         const txB64 = btoa(serializedBytes.reduce((s, b) => s + String.fromCharCode(b), ""));
+
         const cosigned = await cosign({ action: "cosign-accept", txBase64: txB64, mint: offerData.mint, buyer: offerData.buyer, seller: walletAddress });
 
-        // Seller signs the co-signed tx
+        // Seller signs the co-signed versioned tx
         const cosignedBuf = Uint8Array.from(atob(cosigned.tx), c => c.charCodeAt(0));
-        const cosignedTx = Transaction.from(cosignedBuf);
-        const fullySigned = await walletProvider.signTransaction(cosignedTx);
+        const cosignedVtx = VersionedTransaction.deserialize(cosignedBuf);
+        const fullySigned = await walletProvider.signTransaction(cosignedVtx);
 
         showToast("Confirming...");
         const sig = await conn.sendRawTransaction(fullySigned.serialize(), { skipPreflight: false });
