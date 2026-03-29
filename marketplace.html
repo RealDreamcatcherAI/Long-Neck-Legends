@@ -1177,6 +1177,23 @@
       return out;
     }
 
+    // Build a SOL transfer instruction without SystemProgram.transfer (avoids Buffer polyfill issue)
+    function buildSolTransferIx(PublicKey, fromPK, toPK, lamports) {
+      const sysProgPK = new PublicKey(SYS_PROGRAM);
+      const data = new Uint8Array(12);
+      const dv = new DataView(data.buffer);
+      dv.setUint32(0, 2, true); // transfer instruction index
+      dv.setBigUint64(4, BigInt(lamports), true);
+      return {
+        programId: sysProgPK,
+        keys: [
+          { pubkey: fromPK, isSigner: true, isWritable: true },
+          { pubkey: toPK, isSigner: false, isWritable: true },
+        ],
+        data
+      };
+    }
+
     // Fetch cNFT compression data + merkle proof from Helius
     async function getAssetDetails(mintId) {
       const [assetRes, proofRes] = await Promise.all([
@@ -1449,7 +1466,7 @@
 
         // Step 1: Buyer sends full price SOL to escrow
         const depositTx = new Transaction().add(
-          SystemProgram.transfer({ fromPubkey: buyerPK, toPubkey: escrowPK, lamports: priceLamports })
+          buildSolTransferIx(PublicKey, buyerPK, escrowPK, priceLamports)
         );
         const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
         depositTx.recentBlockhash = blockhash;
@@ -1532,7 +1549,7 @@
 
         // Transfer SOL to escrow wallet
         const tx = new Transaction().add(
-          SystemProgram.transfer({ fromPubkey: buyerPK, toPubkey: escrowPK, lamports })
+          buildSolTransferIx(PublicKey, buyerPK, escrowPK, lamports)
         );
         const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
         tx.recentBlockhash = blockhash; tx.lastValidBlockHeight = lastValidBlockHeight;
@@ -1609,11 +1626,11 @@
         const tx = new Transaction();
 
         // ① SOL from escrow → seller (escrow signs)
-        tx.add(SystemProgram.transfer({ fromPubkey: escrowPK, toPubkey: sellerPK, lamports: sellerLamports }));
+        tx.add(buildSolTransferIx(PublicKey, escrowPK, sellerPK, sellerLamports));
 
         // ② SOL from escrow → treasury fee (escrow signs)
         if (feeLamports > 0) {
-          tx.add(SystemProgram.transfer({ fromPubkey: escrowPK, toPubkey: treasuryPK, lamports: feeLamports }));
+          tx.add(buildSolTransferIx(PublicKey, escrowPK, treasuryPK, feeLamports));
         }
 
         // ③ Bubblegum transfer: seller → buyer (seller signs as owner)
