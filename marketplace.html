@@ -1447,12 +1447,23 @@
     //  Step 2: Edge Function settles — transfers cNFT + distributes SOL
     //  This avoids the 1232-byte tx size limit from 20-node proof paths
     // ─────────────────────────────────────────────
+    let BUY_IN_FLIGHT = false;
+
     async function buyNft(listing) {
+      if (BUY_IN_FLIGHT) {
+        console.warn("[buyNft] blocked duplicate click");
+        return;
+      }
+
       console.log("[buyNft] cNFT flow — wallet:", walletAddress, "mint:", listing?.mint);
       if (!walletAddress || !walletProvider) { showToast("Connect wallet first", true); return; }
+      if (!listing?.mint || !listing?.seller || !listing?.price_sol) { showToast("Invalid listing", true); return; }
+      if (walletAddress === TREASURY) { showToast("Treasury wallet cannot buy NFTs", true); return; }
+      if (walletAddress === listing.seller) { showToast("Seller wallet cannot buy its own NFT", true); return; }
 
       const btn = document.getElementById("buy-btn");
-      const setBtn = (html, dis) => { if (btn) { btn.innerHTML = html; btn.disabled = dis; } };
+      const setBtn = (html, dis) => { if (btn) { btn.innerHTML = html; btn.disabled = !!dis; } };
+      BUY_IN_FLIGHT = true;
       setBtn(`<span class="spinner"></span>SENDING SOL...`, true);
 
       try {
@@ -1463,15 +1474,14 @@
 
         const buyerPK = new PublicKey(walletAddress);
         const escrowPK = new PublicKey(ESCROW_ADDRESS);
-        const priceLamports = Math.round(listing.price_sol * LAMPORTS_PER_SOL);
+        const priceLamports = Math.round(Number(listing.price_sol) * LAMPORTS_PER_SOL);
         console.log("[buyNft] priceLamports:", priceLamports);
 
-        // Step 1: Buyer sends full price SOL to escrow
         const ix = buildSolTransferIx(PublicKey, buyerPK, escrowPK, priceLamports);
         console.log("[buyNft] ix built:", ix);
         const depositTx = new Transaction().add(ix);
         console.log("[buyNft] tx built, getting blockhash...");
-        const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
+        const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash("confirmed");
         depositTx.recentBlockhash = blockhash;
         depositTx.lastValidBlockHeight = lastValidBlockHeight;
         depositTx.feePayer = buyerPK;
@@ -1480,10 +1490,10 @@
         const signed = await walletProvider.signTransaction(depositTx);
         setBtn(`<span class="spinner"></span>DEPOSITING SOL...`, true);
         const depositSig = await conn.sendRawTransaction(signed.serialize(), { skipPreflight: false });
-        await conn.confirmTransaction({ signature: depositSig, blockhash, lastValidBlockHeight }, "confirmed");
+        const depositConf = await conn.confirmTransaction({ signature: depositSig, blockhash, lastValidBlockHeight }, "confirmed");
+        if (depositConf.value.err) throw new Error("Deposit transaction failed on-chain");
         console.log("[buyNft] SOL deposited:", depositSig);
 
-        // Step 2: Edge Function settles — transfers cNFT to buyer + distributes SOL
         setBtn(`<span class="spinner"></span>FETCHING PROOF...`, true);
         const details = await getAssetDetails(listing.mint);
         const web3PK = web3.PublicKey;
@@ -1498,6 +1508,7 @@
           buyer: walletAddress,
           seller: listing.seller,
           depositSig,
+          priceLamports,
           treeId: details.treeId,
           treeAuthority: treeAuthorityPK.toBase58(),
           root: details.root,
@@ -1508,30 +1519,32 @@
         });
 
         if (result.error) throw new Error(result.error);
-        console.log("[buyNft] settled:", result.sig);
+        console.log("[buyNft] settled:", result.sig, result.payoutSig || null);
 
-        // Clean up
         await sbDelete("marketplace_listings", { mint: listing.mint });
         delete listings[listing.mint];
         await sbDelete("marketplace_offers", { mint: listing.mint });
         delete offers[listing.mint];
-        await recordSale({ mint: listing.mint, seller: listing.seller, buyer: walletAddress, price_sol: listing.price_sol, name: listing.name, image: listing.image, tx_sig: result.sig || depositSig });
+        await recordSale({ mint: listing.mint, seller: listing.seller, buyer: walletAddress, price_sol: listing.price_sol, name: listing.name, image: listing.image, tx_sig: result.sig || result.payoutSig || depositSig });
 
         selectedNft = null;
         await fetchMyNfts();
         showToast("You own it! 🐦 " + listing.name);
+        setBtn(`BOUGHT`, true);
 
       } catch (e) {
         console.error("[buyNft]", e);
-        if (e.code === 4001 || e.message?.toLowerCase().includes("cancel") || e.message?.toLowerCase().includes("reject")) {
+        const msg = e?.message || String(e);
+        if (e.code === 4001 || msg.toLowerCase().includes("cancel") || msg.toLowerCase().includes("reject")) {
           showToast("Cancelled", true);
-        } else if (e.message?.includes("deposited")) {
-          // SOL was sent but settlement failed — tell user to contact support
-          showToast("SOL sent but transfer failed — contact support", true);
+        } else if (msg.toLowerCase().includes("deposited") || msg.toLowerCase().includes("settl")) {
+          showToast("SOL sent but settlement failed — use refund path", true);
         } else {
-          showToast("Failed: " + (e.message || "unknown"), true);
+          showToast("Failed: " + msg, true);
         }
         setBtn(`BUY NOW — ◎ ${listing.price_sol} SOL`, false);
+      } finally {
+        BUY_IN_FLIGHT = false;
       }
     }
 
