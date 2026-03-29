@@ -1425,9 +1425,10 @@
     }
 
     // ─────────────────────────────────────────────
-    //  BUY NOW (SOL transfer + Bubblegum transfer via escrow co-sign)
-    //  Frontend builds full tx → sends to Edge Function for escrow signature
-    //  → buyer signs SOL part → broadcasts. Fully atomic.
+    //  BUY NOW — Two-step:
+    //  Step 1: Buyer sends SOL to escrow (tiny tx, fits easily)
+    //  Step 2: Edge Function settles — transfers cNFT + distributes SOL
+    //  This avoids the 1232-byte tx size limit from 20-node proof paths
     // ─────────────────────────────────────────────
     async function buyNft(listing) {
       console.log("[buyNft] cNFT flow — wallet:", walletAddress, "mint:", listing?.mint);
@@ -1435,7 +1436,7 @@
 
       const btn = document.getElementById("buy-btn");
       const setBtn = (html, dis) => { if (btn) { btn.innerHTML = html; btn.disabled = dis; } };
-      setBtn(`<span class="spinner"></span>LOADING...`, true);
+      setBtn(`<span class="spinner"></span>SENDING SOL...`, true);
 
       try {
         const web3 = await getWeb3();
@@ -1443,72 +1444,58 @@
         const conn = new Connection(RPC, "confirmed");
 
         const buyerPK = new PublicKey(walletAddress);
-        const sellerPK = new PublicKey(listing.seller);
         const escrowPK = new PublicKey(ESCROW_ADDRESS);
-        const treasuryPK = new PublicKey(TREASURY);
-
         const priceLamports = Math.round(listing.price_sol * LAMPORTS_PER_SOL);
-        const feeLamports = Math.round(priceLamports * FEE_PCT);
-        const sellerLamports = priceLamports - feeLamports;
 
+        // Step 1: Buyer sends full price SOL to escrow
+        const depositTx = new Transaction().add(
+          SystemProgram.transfer({ fromPubkey: buyerPK, toPubkey: escrowPK, lamports: priceLamports })
+        );
+        const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
+        depositTx.recentBlockhash = blockhash;
+        depositTx.lastValidBlockHeight = lastValidBlockHeight;
+        depositTx.feePayer = buyerPK;
+
+        setBtn(`<span class="spinner"></span>SIGN IN WALLET...`, true);
+        const signed = await walletProvider.signTransaction(depositTx);
+        setBtn(`<span class="spinner"></span>DEPOSITING SOL...`, true);
+        const depositSig = await conn.sendRawTransaction(signed.serialize(), { skipPreflight: false });
+        await conn.confirmTransaction({ signature: depositSig, blockhash, lastValidBlockHeight }, "confirmed");
+        console.log("[buyNft] SOL deposited:", depositSig);
+
+        // Step 2: Edge Function settles — transfers cNFT to buyer + distributes SOL
         setBtn(`<span class="spinner"></span>FETCHING PROOF...`, true);
         const details = await getAssetDetails(listing.mint);
-        const treePK = new PublicKey(details.treeId);
-        const [treeAuthorityPK] = getTreeAuthority(PublicKey, treePK);
+        const web3PK = web3.PublicKey;
+        const treePK = new web3PK(details.treeId);
+        const [treeAuthorityPK] = getTreeAuthority(web3PK, treePK);
 
-        // Build the full transaction
-        const tx = new Transaction();
-
-        // ① SOL → seller (buyer signs)
-        tx.add(SystemProgram.transfer({ fromPubkey: buyerPK, toPubkey: sellerPK, lamports: sellerLamports }));
-
-        // ② SOL → treasury fee (buyer signs)
-        if (feeLamports > 0) {
-          tx.add(SystemProgram.transfer({ fromPubkey: buyerPK, toPubkey: treasuryPK, lamports: feeLamports }));
-        }
-
-        // ③ Bubblegum transfer: escrow (delegate) transfers cNFT → buyer
-        const transferIx = buildTransferIx(PublicKey, {
-          ownerPK: sellerPK,
-          delegatePK: escrowPK,
-          newOwnerPK: buyerPK,
-          treePK, treeAuthorityPK,
-          root: details.root, dataHash: details.dataHash, creatorHash: details.creatorHash,
-          nonce: details.leafId, index: details.leafId,
-          proofPath: details.proofPath,
-          delegateIsSigner: true // escrow signs this
+        setBtn(`<span class="spinner"></span>SETTLING...`, true);
+        showToast("SOL deposited — settling trade...");
+        const result = await cosign({
+          action: "settle-buy",
+          mint: listing.mint,
+          buyer: walletAddress,
+          seller: listing.seller,
+          depositSig,
+          treeId: details.treeId,
+          treeAuthority: treeAuthorityPK.toBase58(),
+          root: details.root,
+          dataHash: details.dataHash,
+          creatorHash: details.creatorHash,
+          leafId: details.leafId,
+          proofPath: details.proofPath
         });
-        tx.add(transferIx);
 
-        const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
-        tx.recentBlockhash = blockhash; tx.lastValidBlockHeight = lastValidBlockHeight;
-        tx.feePayer = buyerPK;
-
-        // Serialize (without signatures) and send to co-signer
-        setBtn(`<span class="spinner"></span>CO-SIGNING...`, true);
-        const serialized = tx.serialize({ requireAllSignatures: false, verifySignatures: false });
-        const txB64 = btoa(String.fromCharCode(...serialized));
-
-        const cosigned = await cosign({ action: "cosign-buy", txBase64: txB64, mint: listing.mint });
-
-        // Deserialize the co-signed tx and have buyer sign
-        setBtn(`<span class="spinner"></span>SIGN IN WALLET...`, true);
-        const cosignedBuf = Uint8Array.from(atob(cosigned.tx), c => c.charCodeAt(0));
-        const cosignedTx = Transaction.from(cosignedBuf);
-        const fullySigned = await walletProvider.signTransaction(cosignedTx);
-
-        setBtn(`<span class="spinner"></span>CONFIRMING...`, true);
-        const sig = await conn.sendRawTransaction(fullySigned.serialize(), { skipPreflight: false });
-        showToast("Confirming on-chain...");
-        const result = await conn.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed");
-        if (result.value.err) throw new Error("Transaction failed on-chain");
+        if (result.error) throw new Error(result.error);
+        console.log("[buyNft] settled:", result.sig);
 
         // Clean up
         await sbDelete("marketplace_listings", { mint: listing.mint });
         delete listings[listing.mint];
         await sbDelete("marketplace_offers", { mint: listing.mint });
         delete offers[listing.mint];
-        await recordSale({ mint: listing.mint, seller: listing.seller, buyer: walletAddress, price_sol: listing.price_sol, name: listing.name, image: listing.image, tx_sig: sig });
+        await recordSale({ mint: listing.mint, seller: listing.seller, buyer: walletAddress, price_sol: listing.price_sol, name: listing.name, image: listing.image, tx_sig: result.sig || depositSig });
 
         selectedNft = null;
         await fetchMyNfts();
@@ -1518,6 +1505,9 @@
         console.error("[buyNft]", e);
         if (e.code === 4001 || e.message?.toLowerCase().includes("cancel") || e.message?.toLowerCase().includes("reject")) {
           showToast("Cancelled", true);
+        } else if (e.message?.includes("deposited")) {
+          // SOL was sent but settlement failed — tell user to contact support
+          showToast("SOL sent but transfer failed — contact support", true);
         } else {
           showToast("Failed: " + (e.message || "unknown"), true);
         }
