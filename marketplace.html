@@ -1464,7 +1464,7 @@
 
       try {
         const web3 = await getWeb3();
-        const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = web3;
+        const { Connection, PublicKey, Transaction, LAMPORTS_PER_SOL } = web3;
         const conn = new Connection(RPC, "confirmed");
 
         const buyerPK = new PublicKey(walletAddress);
@@ -1477,13 +1477,21 @@
         const sellerLamports = priceLamports - feeLamports;
 
         // ── TX1: Buyer pays SOL ──────────────────────────────────
-        // Simple payment tx: buyer → seller + treasury fee
-        // Small, no proof accounts, buyer signs alone
+        // Build SOL transfer instructions manually — avoids Buffer dependency in SystemProgram.transfer
         setBtn(`<span class="spinner"></span>SIGN PAYMENT...`, true);
+        const sysPK = new PublicKey("11111111111111111111111111111111");
+        const buildSolIx = (fromPK, toPK, lamports) => ({
+          programId: sysPK,
+          keys: [
+            { pubkey: fromPK, isSigner: true, isWritable: true },
+            { pubkey: toPK, isSigner: false, isWritable: true }
+          ],
+          data: new Uint8Array([...toLEU32(2), ...toLEU64(lamports)])
+        });
         const payTx = new Transaction();
-        payTx.add(SystemProgram.transfer({ fromPubkey: buyerPK, toPubkey: sellerPK, lamports: sellerLamports }));
+        payTx.add(buildSolIx(buyerPK, sellerPK, sellerLamports));
         if (feeLamports > 0) {
-          payTx.add(SystemProgram.transfer({ fromPubkey: buyerPK, toPubkey: treasuryPK, lamports: feeLamports }));
+          payTx.add(buildSolIx(buyerPK, treasuryPK, feeLamports));
         }
         const { blockhash: bh1, lastValidBlockHeight: lbh1 } = await conn.getLatestBlockhash();
         payTx.recentBlockhash = bh1;
@@ -1544,17 +1552,23 @@
 
       try {
         const web3 = await getWeb3();
-        const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = web3;
+        const { Connection, PublicKey, Transaction, LAMPORTS_PER_SOL } = web3;
         const conn = new Connection(RPC, "confirmed");
 
         const buyerPK = new PublicKey(walletAddress);
         const escrowPK = new PublicKey(ESCROW_ADDRESS);
         const lamports = Math.round(parseFloat(offerSol) * LAMPORTS_PER_SOL);
 
-        // Transfer SOL to escrow wallet
-        const tx = new Transaction().add(
-          SystemProgram.transfer({ fromPubkey: buyerPK, toPubkey: escrowPK, lamports })
-        );
+        // Build SOL transfer manually — avoids Buffer dependency
+        const sysPK = new PublicKey("11111111111111111111111111111111");
+        const tx = new Transaction().add({
+          programId: sysPK,
+          keys: [
+            { pubkey: buyerPK, isSigner: true, isWritable: true },
+            { pubkey: escrowPK, isSigner: false, isWritable: true }
+          ],
+          data: new Uint8Array([...toLEU32(2), ...toLEU64(lamports)])
+        });
         const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
         tx.recentBlockhash = blockhash; tx.lastValidBlockHeight = lastValidBlockHeight;
         tx.feePayer = buyerPK;
@@ -1614,7 +1628,7 @@
 
       try {
         const web3 = await getWeb3();
-        const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = web3;
+        const { Connection, PublicKey, Transaction, LAMPORTS_PER_SOL } = web3;
         const conn = new Connection(RPC, "confirmed");
 
         const sellerPK = new PublicKey(walletAddress);
