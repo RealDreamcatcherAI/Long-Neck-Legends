@@ -28,9 +28,9 @@
       --grn: #00FF88;
       --grna: rgba(0, 255, 136, .12);
       --w: #eee;
-      --g1: #888;
-      --g2: #444;
-      --g3: #1e1e1e;
+      --g1: #999;
+      --g2: #666;
+      --g3: #444;
       --f: 'Space Mono', monospace;
       --d: 'Bebas Neue', sans-serif;
       --m: 'Permanent Marker', cursive
@@ -1780,7 +1780,7 @@
       ov.innerHTML = `<div style="background:linear-gradient(145deg,#0c0c0c,#080808);border:1px solid #1c1c1c;border-radius:16px;padding:28px;width:100%;max-width:380px;position:relative" onclick="event.stopPropagation()">
     <button onclick="document.getElementById('wpm').remove()" style="position:absolute;top:12px;right:12px;background:rgba(255,0,60,.08);border:1px solid rgba(255,0,60,.2);color:var(--r);width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:13px;display:grid;place-items:center">✕</button>
     <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:4px;color:#fff;margin-bottom:6px;text-align:center">CONNECT WALLET</div>
-    <div style="font-size:9px;color:#444;letter-spacing:2px;text-align:center;margin-bottom:22px">CHOOSE YOUR SOLANA WALLET</div>${rows}
+    <div style="font-size:9px;color:#888;letter-spacing:2px;text-align:center;margin-bottom:22px">CHOOSE YOUR SOLANA WALLET</div>${rows}
   </div>`;
       document.body.appendChild(ov);
       ov.querySelectorAll(".wpb").forEach(btn => {
@@ -2004,10 +2004,10 @@
     <p style="font-size:10px;color:var(--g2);max-width:440px;margin:0 auto 10px;line-height:1.6">The official Long Neck Legends P2P marketplace. Atomic swaps on Solana.</p>
     <div style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:rgba(0,255,136,.04);border:1px solid rgba(0,255,136,.08);border-radius:6px;font-size:8px;color:var(--grn)"><span class="dot-sm"></span> ON-CHAIN • ${short(COLLECTION, 6, 4)}</div>
     <div style="display:flex;justify-content:center;gap:12px;margin-top:18px;flex-wrap:wrap">
-      <div class="stat-card"><div style="font-family:var(--d);font-size:20px;color:var(--r);letter-spacing:2px">${SUPPLY}</div><div style="font-size:8px;color:var(--g3);text-transform:uppercase;letter-spacing:3px">SUPPLY</div></div>
-      <div class="stat-card"><div style="font-family:var(--d);font-size:20px;color:var(--grn);letter-spacing:2px">${listedCount}</div><div style="font-size:8px;color:var(--g3);text-transform:uppercase;letter-spacing:3px">LISTED</div></div>
-      <div class="stat-card"><div style="font-family:var(--d);font-size:20px;color:var(--grn);letter-spacing:2px">${((listedCount / SUPPLY) * 100).toFixed(1)}%</div><div style="font-size:8px;color:var(--g3);text-transform:uppercase;letter-spacing:3px">% LISTED</div></div>
-      <div class="stat-card"><div style="font-family:var(--d);font-size:20px;color:var(--r);letter-spacing:2px">◎ ${totalVolume.toFixed(2)}</div><div style="font-size:8px;color:var(--g3);text-transform:uppercase;letter-spacing:3px">VOLUME</div></div>
+      <div class="stat-card"><div style="font-family:var(--d);font-size:20px;color:var(--r);letter-spacing:2px">${SUPPLY}</div><div style="font-size:10px;color:var(--g2);text-transform:uppercase;letter-spacing:2px">SUPPLY</div></div>
+      <div class="stat-card"><div style="font-family:var(--d);font-size:20px;color:var(--grn);letter-spacing:2px">${listedCount}</div><div style="font-size:10px;color:var(--g2);text-transform:uppercase;letter-spacing:2px">LISTED</div></div>
+      <div class="stat-card"><div style="font-family:var(--d);font-size:20px;color:var(--grn);letter-spacing:2px">${((listedCount / SUPPLY) * 100).toFixed(1)}%</div><div style="font-size:10px;color:var(--g2);text-transform:uppercase;letter-spacing:2px">% LISTED</div></div>
+      <div class="stat-card"><div style="font-family:var(--d);font-size:20px;color:var(--r);letter-spacing:2px">◎ ${totalVolume.toFixed(2)}</div><div style="font-size:10px;color:var(--g2);text-transform:uppercase;letter-spacing:2px">VOLUME</div></div>
     </div>
   </div>`;
 
@@ -2020,7 +2020,7 @@
       else renderMyNfts(app);
 
       app.innerHTML += `<footer class="site-footer">
-    <div style="font-family:var(--m);font-size:11px;color:var(--g3);letter-spacing:2px;margin-bottom:8px">LONG NECK LEGENDS © 2026</div>
+    <div style="font-family:var(--m);font-size:11px;color:var(--g2);letter-spacing:2px;margin-bottom:8px">LONG NECK LEGENDS © 2026</div>
     <a href="https://x.com/longnecklegends" target="_blank">X / TWITTER</a>
     <a href="https://discord.gg/ZPjf8n9unZ" target="_blank">DISCORD</a>
     <a href="/">HOME</a>
@@ -2067,7 +2067,7 @@
         app.innerHTML += `<div style="text-align:center;padding:64px 20px">
       <div style="font-size:48px;opacity:.08;margin-bottom:16px">🐦</div>
       <div style="font-family:var(--d);font-size:18px;color:var(--g2);letter-spacing:3px;margin-bottom:8px">${searchQuery || activeFilterCount ? "NO MATCHES" : "NO ACTIVE LISTINGS"}</div>
-      <div style="font-size:10px;color:var(--g3)">${searchQuery || activeFilterCount ? "Try adjusting your search or filters" : "Be the first — connect your wallet and list a Long Neck"}</div>
+      <div style="font-size:10px;color:var(--g2)">${searchQuery || activeFilterCount ? "Try adjusting your search or filters" : "Be the first — connect your wallet and list a Long Neck"}</div>
       ${activeFilterCount ? `<button class="btn-ghost" style="margin:14px auto;display:block;font-size:11px" onclick="clearFilters()">CLEAR FILTERS</button>` : ""}
     </div>`;
         setTimeout(() => { document.getElementById("search")?.addEventListener("input", e => { searchQuery = e.target.value; render(); }); }, 0);
@@ -2134,7 +2134,7 @@
       if (!myNfts.length) {
         app.innerHTML += `<div style="text-align:center;padding:40px;color:var(--g2)">
       <div style="margin-bottom:10px">No Long Neck Legends in this wallet</div>
-      <div style="font-size:9px;color:var(--g3)">${short(walletAddress, 8, 6)}</div>
+      <div style="font-size:9px;color:var(--g2)">${short(walletAddress, 8, 6)}</div>
     </div>`; return;
       }
       app.innerHTML += `<div style="padding:10px 16px;font-size:10px;color:var(--g2)">${myNfts.length} Long Neck${myNfts.length !== 1 ? "s" : ""} in ${short(walletAddress, 6, 4)}</div>`;
@@ -2185,7 +2185,7 @@
       } else if (nft.attributes?.length) {
         traitsHtml = `<div style="margin-bottom:14px">
       <div style="font-size:10px;color:var(--g2);letter-spacing:2px;margin-bottom:6px">TRAITS</div>
-      <div>${nft.attributes.map(a => `<span class="trait"><span style="color:var(--g2)">${a.trait_type}: </span><span style="color:var(--g1)">${a.value}</span></span>`).join("")}</div>
+      <div>${nft.attributes.map(a => `<span class="trait"><span style="color:var(--g1)">${a.trait_type}: </span><span style="color:#ccc">${a.value}</span></span>`).join("")}</div>
     </div>`;
       }
 
@@ -2250,7 +2250,7 @@
       ${myOfferHtml}
       ${actions}
       ${offersHtml}
-      <div style="font-size:8px;color:var(--g3);margin-top:14px;word-break:break-all;line-height:1.6">Mint: ${nft.mint}</div>
+      <div style="font-size:9px;color:var(--g2);margin-top:14px;word-break:break-all;line-height:1.6">Mint: ${nft.mint}</div>
     </div>
   </div>`;
 
