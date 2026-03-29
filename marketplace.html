@@ -1692,7 +1692,6 @@
         const instructions = [solToSeller, solToTreasury, transferIx].filter(Boolean);
 
         // Use v0 versioned tx with ALT to keep under 1232 byte limit
-        const { TransactionMessage, VersionedTransaction } = web3;
         const altRes = await conn.getAddressLookupTable(treePK);
         const lookupTables = altRes?.value ? [altRes.value] : [];
 
