@@ -1457,17 +1457,20 @@
 
       try {
         const web3 = await getWeb3();
-        const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = web3;
+        const { Connection, PublicKey, Transaction, LAMPORTS_PER_SOL } = web3;
         const conn = new Connection(RPC, "confirmed");
+        console.log("[buyNft] web3 loaded");
 
         const buyerPK = new PublicKey(walletAddress);
         const escrowPK = new PublicKey(ESCROW_ADDRESS);
         const priceLamports = Math.round(listing.price_sol * LAMPORTS_PER_SOL);
+        console.log("[buyNft] priceLamports:", priceLamports);
 
         // Step 1: Buyer sends full price SOL to escrow
-        const depositTx = new Transaction().add(
-          buildSolTransferIx(PublicKey, buyerPK, escrowPK, priceLamports)
-        );
+        const ix = buildSolTransferIx(PublicKey, buyerPK, escrowPK, priceLamports);
+        console.log("[buyNft] ix built:", ix);
+        const depositTx = new Transaction().add(ix);
+        console.log("[buyNft] tx built, getting blockhash...");
         const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
         depositTx.recentBlockhash = blockhash;
         depositTx.lastValidBlockHeight = lastValidBlockHeight;
