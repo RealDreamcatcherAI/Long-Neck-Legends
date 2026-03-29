@@ -1636,11 +1636,21 @@
         const authBytes = new TextEncoder().encode(authMsg);
 
         if (!walletProvider.signMessage) throw new Error("Wallet does not support signMessage");
-        const authSig = await walletProvider.signMessage(authBytes, "utf8");
+        const authSigRaw = await walletProvider.signMessage(authBytes, "utf8");
 
-        // Convert signature to base64
-        const sigBytes = authSig instanceof Uint8Array ? authSig : new Uint8Array(authSig);
+        // Different wallets return different shapes — normalize to Uint8Array
+        let sigBytes;
+        if (authSigRaw instanceof Uint8Array) {
+          sigBytes = authSigRaw;
+        } else if (authSigRaw?.signature instanceof Uint8Array) {
+          sigBytes = authSigRaw.signature; // Phantom returns { signature: Uint8Array }
+        } else if (authSigRaw?.data instanceof Uint8Array) {
+          sigBytes = authSigRaw.data;
+        } else {
+          sigBytes = new Uint8Array(Object.values(authSigRaw));
+        }
         const sigB64 = btoa(sigBytes.reduce((s, b) => s + String.fromCharCode(b), ""));
+        console.log("[acceptOffer] authSig bytes:", sigBytes.length, "b64 length:", sigB64.length);
 
         showToast("Settling offer...");
         const result = await cosign({
