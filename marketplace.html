@@ -864,10 +864,9 @@
       }
     }
   </style>
-  <!-- Buffer polyfill MUST load before web3.js -->
+  <!-- Buffer polyfill: loaded eagerly so it's available when web3.js lazy-loads -->
   <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.min.js"></script>
   <script>window.Buffer = window.Buffer || buffer.Buffer;</script>
-  <script src="https://unpkg.com/@solana/web3.js@1.91.8/lib/index.iife.min.js"></script>
 </head>
 
 <body>
@@ -1139,10 +1138,20 @@
     // ─────────────────────────────────────────────
     //  SOLANA WEB3 (lazy loaded)
     // ─────────────────────────────────────────────
-    // web3.js + Buffer polyfill loaded eagerly in <head> — always available
+    // web3.js lazy loader — Buffer polyfill is already in window from <head>
+    let _web3 = null;
     async function getWeb3() {
-      if (!window.solanaWeb3) throw new Error("@solana/web3.js failed to load");
-      return window.solanaWeb3;
+      if (_web3) return _web3;
+      if (window.solanaWeb3) { _web3 = window.solanaWeb3; return _web3; }
+      await new Promise((res, rej) => {
+        const s = document.createElement("script");
+        s.src = "https://unpkg.com/@solana/web3.js@1.91.8/lib/index.iife.min.js";
+        s.onload = res; s.onerror = rej;
+        document.head.appendChild(s);
+      });
+      _web3 = window.solanaWeb3;
+      if (!_web3) throw new Error("@solana/web3.js failed to load");
+      return _web3;
     }
 
     // ─────────────────────────────────────────────
