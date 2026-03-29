@@ -1201,7 +1201,7 @@
       if (!asset || !proof) throw new Error("Could not fetch cNFT data from Helius");
       const details = {
         treeId: asset.compression?.tree,
-        leafId: Number(asset.compression?.leaf_id),
+        leafId: asset.compression?.leaf_id,
         dataHash: asset.compression?.data_hash,
         creatorHash: asset.compression?.creator_hash,
         root: proof.root,
@@ -1211,17 +1211,6 @@
       };
       console.log("[cNFT] details:", JSON.stringify(details, null, 2));
       return details;
-    }
-
-    let BUY_IN_FLIGHT = false;
-
-    async function waitForOwner(mintId, expectedOwner, tries = 12, delayMs = 1500) {
-      for (let i = 0; i < tries; i++) {
-        const asset = await getAssetDetails(mintId);
-        if ((asset.owner || "").toLowerCase() === String(expectedOwner).toLowerCase()) return asset;
-        await new Promise(r => setTimeout(r, delayMs));
-      }
-      throw new Error("Settlement returned, but ownership did not update on-chain");
     }
 
     // Safe PublicKey construction with clear error messages
@@ -1456,120 +1445,134 @@
     }
 
     // ─────────────────────────────────────────────
-    //  BUY NOW (SOL transfer + Bubblegum transfer via escrow co-sign)
-    //  Frontend builds full tx → sends to Edge Function for escrow signature
-    //  → buyer signs SOL part → broadcasts. Fully atomic.
+    //  BUY NOW (two-step settle-buy flow)
+    //  1) Buyer deposits SOL to escrow
+    //  2) Edge Function settles: cNFT transfer + seller/treasury payout
+    //  This avoids the compressed-NFT proof size blowing past 1232 bytes.
     // ─────────────────────────────────────────────
+    let BUY_IN_FLIGHT = false;
+
+    async function waitForOwner(mint, expectedOwner, tries = 12, delayMs = 1500) {
+      for (let i = 0; i < tries; i++) {
+        const asset = await getAssetDetails(mint);
+        if ((asset.owner || "").toLowerCase() === expectedOwner.toLowerCase()) {
+          return asset;
+        }
+        await new Promise(r => setTimeout(r, delayMs));
+      }
+      throw new Error("Settlement returned, but ownership did not update on-chain");
+    }
+
     async function buyNft(listing) {
+      if (BUY_IN_FLIGHT) {
+        console.warn("[buyNft] blocked duplicate click");
+        return;
+      }
+
       console.log("[buyNft] cNFT flow — wallet:", walletAddress, "mint:", listing?.mint);
       if (!walletAddress || !walletProvider) { showToast("Connect wallet first", true); return; }
 
       const btn = document.getElementById("buy-btn");
-      const setBtn = (html, dis) => { if (btn) { btn.innerHTML = html; btn.disabled = dis; } };
-      setBtn(`<span class="spinner"></span>LOADING...`, true);
+      const setBtn = (html, dis) => { if (btn) { btn.innerHTML = html; btn.disabled = !!dis; } };
+      BUY_IN_FLIGHT = true;
+      setBtn(`<span class="spinner"></span>SENDING SOL...`, true);
 
       try {
         const web3 = await getWeb3();
-        const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = web3;
+        const { Connection, PublicKey, Transaction, LAMPORTS_PER_SOL } = web3;
         const conn = new Connection(RPC, "confirmed");
 
         const buyerPK = new PublicKey(walletAddress);
-        const sellerPK = new PublicKey(listing.seller);
         const escrowPK = new PublicKey(ESCROW_ADDRESS);
-        const treasuryPK = new PublicKey(TREASURY);
+        const priceLamports = Math.round(Number(listing.price_sol) * LAMPORTS_PER_SOL);
 
-        const priceLamports = Math.round(listing.price_sol * LAMPORTS_PER_SOL);
-        const feeLamports = Math.round(priceLamports * FEE_PCT);
-        const sellerLamports = priceLamports - feeLamports;
-
-        setBtn(`<span class="spinner"></span>FETCHING PROOF...`, true);
-        const details = await getAssetDetails(listing.mint);
-        const treePK = new PublicKey(details.treeId);
-        const [treeAuthorityPK] = getTreeAuthority(PublicKey, treePK);
-
-        // Build the full transaction
-        const tx = new Transaction();
-
-        // ① SOL → seller (buyer signs)
-        tx.add(SystemProgram.transfer({ fromPubkey: buyerPK, toPubkey: sellerPK, lamports: sellerLamports }));
-
-        // ② SOL → treasury fee (buyer signs)
-        if (feeLamports > 0) {
-          tx.add(SystemProgram.transfer({ fromPubkey: buyerPK, toPubkey: treasuryPK, lamports: feeLamports }));
+        if (walletAddress === TREASURY) {
+          throw new Error("Treasury wallet cannot buy NFTs");
+        }
+        if (walletAddress === listing.seller) {
+          throw new Error("Seller wallet cannot buy its own NFT");
         }
 
-        // ③ Bubblegum transfer: escrow (delegate) transfers cNFT → buyer
-        const transferIx = buildTransferIx(PublicKey, {
-          ownerPK: sellerPK,
-          delegatePK: escrowPK,
-          newOwnerPK: buyerPK,
-          treePK, treeAuthorityPK,
-          root: details.root, dataHash: details.dataHash, creatorHash: details.creatorHash,
-          nonce: details.leafId, index: details.leafId,
-          proofPath: details.proofPath,
-          delegateIsSigner: true // escrow signs this
-        });
-        tx.add(transferIx);
+        // Step 1: buyer deposits full price to escrow
+        const ix = buildSolTransferIx(PublicKey, buyerPK, escrowPK, priceLamports);
+        console.log("[buyNft] deposit ix built:", ix);
+        const depositTx = new Transaction().add(ix);
+        const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash("confirmed");
+        depositTx.recentBlockhash = blockhash;
+        depositTx.lastValidBlockHeight = lastValidBlockHeight;
+        depositTx.feePayer = buyerPK;
 
-        const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
-        tx.recentBlockhash = blockhash; tx.lastValidBlockHeight = lastValidBlockHeight;
-        tx.feePayer = buyerPK;
-
-        // Serialize (without signatures) and send to co-signer
-        console.log("[buyNft] building tx — instructions:", tx.instructions.length);
-        setBtn(`<span class="spinner"></span>CO-SIGNING...`, true);
-        let serialized;
-        try {
-          serialized = tx.serialize({ requireAllSignatures: false, verifySignatures: false });
-          console.log("[buyNft] serialized tx bytes:", serialized.length);
-        } catch(serErr) {
-          console.error("[buyNft] SERIALIZE FAILED:", serErr);
-          throw serErr;
-        }
-        // Use Uint8Array explicitly — avoids "Buffer is not defined" in browser environments
-        const serializedBytes = serialized instanceof Uint8Array ? serialized : new Uint8Array(serialized);
-        const txB64 = btoa(serializedBytes.reduce((s, b) => s + String.fromCharCode(b), ""));
-        console.log("[buyNft] txB64 length:", txB64.length, "— calling cosign...");
-
-        const cosigned = await cosign({ action: "cosign-buy", txBase64: txB64, mint: listing.mint });
-        console.log("[buyNft] cosign returned, tx length:", cosigned.tx?.length);
-
-        // Deserialize the co-signed tx and have buyer sign
         setBtn(`<span class="spinner"></span>SIGN IN WALLET...`, true);
-        const cosignedBuf = Uint8Array.from(atob(cosigned.tx), c => c.charCodeAt(0));
-        const cosignedTx = Transaction.from(cosignedBuf);
-        console.log("[buyNft] asking wallet to sign...");
-        const fullySigned = await walletProvider.signTransaction(cosignedTx);
+        const signed = await walletProvider.signTransaction(depositTx);
 
-        setBtn(`<span class="spinner"></span>CONFIRMING...`, true);
-        console.log("[buyNft] broadcasting tx...");
-        const sig = await conn.sendRawTransaction(fullySigned.serialize(), { skipPreflight: false });
-        showToast("Confirming on-chain...");
-        const result = await conn.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed");
-        if (result.value.err) throw new Error("Transaction failed on-chain");
+        setBtn(`<span class="spinner"></span>DEPOSITING SOL...`, true);
+        const depositSig = await conn.sendRawTransaction(signed.serialize(), { skipPreflight: false });
 
-        // Clean up
+        const depositConf = await conn.confirmTransaction(
+          { signature: depositSig, blockhash, lastValidBlockHeight },
+          "confirmed"
+        );
+        if (depositConf.value.err) {
+          throw new Error("Deposit transaction failed on-chain");
+        }
+
+        console.log("[buyNft] SOL deposited:", depositSig);
+
+        // Step 2: backend settles using escrow delegate + payout distribution
+        setBtn(`<span class="spinner"></span>SETTLING...`, true);
+        showToast("SOL deposited — settling trade...");
+
+        const result = await cosign({
+          action: "settle-buy",
+          mint: listing.mint,
+          buyer: walletAddress,
+          seller: listing.seller,
+          depositSig,
+          priceLamports
+        });
+
+        if (result.error) throw new Error(result.error);
+        console.log("[buyNft] settle response:", result);
+
+        // Verify ownership actually changed on-chain before marking sold in UI
+        setBtn(`<span class="spinner"></span>VERIFYING OWNERSHIP...`, true);
+        await waitForOwner(listing.mint, walletAddress);
+
         await sbDelete("marketplace_listings", { mint: listing.mint });
         delete listings[listing.mint];
         await sbDelete("marketplace_offers", { mint: listing.mint });
         delete offers[listing.mint];
-        await recordSale({ mint: listing.mint, seller: listing.seller, buyer: walletAddress, price_sol: listing.price_sol, name: listing.name, image: listing.image, tx_sig: sig });
+        await recordSale({
+          mint: listing.mint,
+          seller: listing.seller,
+          buyer: walletAddress,
+          price_sol: listing.price_sol,
+          name: listing.name,
+          image: listing.image,
+          tx_sig: result.sig || result.payoutSig || depositSig
+        });
 
         selectedNft = null;
         await fetchMyNfts();
         showToast("You own it! 🐦 " + listing.name);
+        setBtn(`BOUGHT`, true);
 
       } catch (e) {
         console.error("[buyNft] CAUGHT ERROR:", e);
         console.error("[buyNft] error name:", e?.name);
         console.error("[buyNft] error message:", e?.message);
         console.error("[buyNft] error stack:", e?.stack);
-        if (e.code === 4001 || e.message?.toLowerCase().includes("cancel") || e.message?.toLowerCase().includes("reject")) {
+        const msg = e?.message || "unknown";
+        if (e.code === 4001 || msg.toLowerCase().includes("cancel") || msg.toLowerCase().includes("reject")) {
           showToast("Cancelled", true);
+        } else if (msg.toLowerCase().includes("deposited")) {
+          showToast("SOL sent but settlement failed — use refund path", true);
         } else {
-          showToast("Failed: " + (e.message || "unknown"), true);
+          showToast("Failed: " + msg, true);
         }
         setBtn(`BUY NOW — ◎ ${listing.price_sol} SOL`, false);
+      } finally {
+        BUY_IN_FLIGHT = false;
       }
     }
 
