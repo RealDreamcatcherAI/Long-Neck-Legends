@@ -1451,22 +1451,13 @@
     }
 
     // ─────────────────────────────────────────────
-    //  BUY NOW — Versioned Transaction (v0) with Address Lookup Table
-    //  Uses ALT to compress proof path accounts, keeping tx under 1232 bytes
+    //  BUY NOW — 2-step atomic purchase
+    //  TX1 (buyer signs): SOL → seller + treasury fee
+    //  TX2 (edge fn): escrow delegate transfers cNFT → buyer
+    //  Splitting avoids the 1232-byte tx limit caused by 20 proof accounts
     // ─────────────────────────────────────────────
-
-    // Fetch the Address Lookup Table for the merkle tree from Helius
-    async function getTreeALT(treeId) {
-      const res = await fetch(RPC, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jsonrpc: "2.0", id: "alt", method: "getAddressLookupTable", params: [treeId] })
-      });
-      const data = await res.json();
-      return data.result?.value || null;
-    }
-
     async function buyNft(listing) {
-      console.log("[buyNft] v0 tx flow — wallet:", walletAddress, "mint:", listing?.mint);
+      console.log("[buyNft] 2-step flow — wallet:", walletAddress, "mint:", listing?.mint);
       if (!walletAddress || !walletProvider) { showToast("Connect wallet first", true); return; }
 
       const btn = document.getElementById("buy-btn");
@@ -1475,88 +1466,62 @@
 
       try {
         const web3 = await getWeb3();
-        const { Connection, PublicKey, SystemProgram, LAMPORTS_PER_SOL,
-                TransactionMessage, VersionedTransaction, AddressLookupTableAccount } = web3;
+        const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = web3;
         const conn = new Connection(RPC, "confirmed");
 
         const buyerPK = new PublicKey(walletAddress);
         const sellerPK = new PublicKey(listing.seller);
-        const escrowPK = new PublicKey(ESCROW_ADDRESS);
         const treasuryPK = new PublicKey(TREASURY);
+        const escrowPK = new PublicKey(ESCROW_ADDRESS);
 
         const priceLamports = Math.round(listing.price_sol * LAMPORTS_PER_SOL);
         const feeLamports = Math.round(priceLamports * FEE_PCT);
         const sellerLamports = priceLamports - feeLamports;
 
-        setBtn(`<span class="spinner"></span>FETCHING PROOF...`, true);
-        const details = await getAssetDetails(listing.mint);
-        const treePK = new PublicKey(details.treeId);
-        const [treeAuthorityPK] = getTreeAuthority(PublicKey, treePK);
+        // ── TX1: Buyer pays SOL ──────────────────────────────────
+        // Simple payment tx: buyer → seller + treasury fee
+        // Small, no proof accounts, buyer signs alone
+        setBtn(`<span class="spinner"></span>SIGN PAYMENT...`, true);
+        const payTx = new Transaction();
+        payTx.add(SystemProgram.transfer({ fromPubkey: buyerPK, toPubkey: sellerPK, lamports: sellerLamports }));
+        if (feeLamports > 0) {
+          payTx.add(SystemProgram.transfer({ fromPubkey: buyerPK, toPubkey: treasuryPK, lamports: feeLamports }));
+        }
+        const { blockhash: bh1, lastValidBlockHeight: lbh1 } = await conn.getLatestBlockhash();
+        payTx.recentBlockhash = bh1;
+        payTx.lastValidBlockHeight = lbh1;
+        payTx.feePayer = buyerPK;
 
-        // Load the tree's Address Lookup Table — compresses proof accounts from 32→1 byte each
-        console.log("[buyNft] loading ALT for tree:", details.treeId);
-        const altRes = await conn.getAddressLookupTable(treePK);
-        const altAccount = altRes?.value;
-        const lookupTables = altAccount ? [altAccount] : [];
-        if (!altAccount) console.warn("[buyNft] No ALT found for tree — tx may be too large");
+        const signedPayTx = await walletProvider.signTransaction(payTx);
+        setBtn(`<span class="spinner"></span>SENDING PAYMENT...`, true);
+        const paySig = await conn.sendRawTransaction(signedPayTx.serialize(), { skipPreflight: false });
+        showToast("Payment sent — transferring NFT...");
+        const payResult = await conn.confirmTransaction({ signature: paySig, blockhash: bh1, lastValidBlockHeight: lbh1 }, "confirmed");
+        if (payResult.value.err) throw new Error("Payment tx failed: " + JSON.stringify(payResult.value.err));
+        console.log("[buyNft] TX1 SOL payment confirmed:", paySig);
 
-        // Build instructions
-        const solToSeller = SystemProgram.transfer({ fromPubkey: buyerPK, toPubkey: sellerPK, lamports: sellerLamports });
-        const solToTreasury = feeLamports > 0
-          ? SystemProgram.transfer({ fromPubkey: buyerPK, toPubkey: treasuryPK, lamports: feeLamports })
-          : null;
-        const transferIx = buildTransferIx(PublicKey, {
-          ownerPK: sellerPK, delegatePK: escrowPK, newOwnerPK: buyerPK,
-          treePK, treeAuthorityPK,
-          root: details.root, dataHash: details.dataHash, creatorHash: details.creatorHash,
-          nonce: details.leafId, index: details.leafId,
-          proofPath: details.proofPath,
-          delegateIsSigner: true
+        // ── TX2: Edge fn transfers cNFT ──────────────────────────
+        // Escrow delegate transfers cNFT to buyer — edge fn builds + signs entirely
+        setBtn(`<span class="spinner"></span>TRANSFERRING NFT...`, true);
+        const result = await cosign({
+          action: "settle-buy",
+          mint: listing.mint,
+          buyer: walletAddress,
+          seller: listing.seller,
+          depositSig: paySig
         });
+        console.log("[buyNft] settle-buy result:", result);
 
-        const instructions = [solToSeller, solToTreasury, transferIx].filter(Boolean);
-
-        const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
-
-        // Build versioned message (v0)
-        const message = new TransactionMessage({
-          payerKey: buyerPK,
-          recentBlockhash: blockhash,
-          instructions,
-        }).compileToV0Message(lookupTables);
-
-        const vtx = new VersionedTransaction(message);
-        console.log("[buyNft] v0 tx built, sending to cosigner...");
-
-        // Serialize and send to co-signer
-        setBtn(`<span class="spinner"></span>CO-SIGNING...`, true);
-        const serializedBytes = vtx.serialize();
-        console.log("[buyNft] serialized v0 tx bytes:", serializedBytes.length);
-        const txB64 = btoa(serializedBytes.reduce((s, b) => s + String.fromCharCode(b), ""));
-
-        const cosigned = await cosign({ action: "cosign-buy", txBase64: txB64, mint: listing.mint });
-        console.log("[buyNft] cosign returned");
-
-        // Deserialize cosigned tx and have buyer sign
-        setBtn(`<span class="spinner"></span>SIGN IN WALLET...`, true);
-        const cosignedBuf = Uint8Array.from(atob(cosigned.tx), c => c.charCodeAt(0));
-        const cosignedVtx = VersionedTransaction.deserialize(cosignedBuf);
-        console.log("[buyNft] asking wallet to sign v0 tx...");
-        const fullySigned = await walletProvider.signTransaction(cosignedVtx);
-
-        setBtn(`<span class="spinner"></span>CONFIRMING...`, true);
-        console.log("[buyNft] broadcasting...");
-        const sig = await conn.sendRawTransaction(fullySigned.serialize(), { skipPreflight: false });
-        showToast("Confirming on-chain...");
-        const result = await conn.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed");
-        if (result.value.err) throw new Error("Transaction failed on-chain: " + JSON.stringify(result.value.err));
-
-        // Clean up
+        // Clean up Supabase (edge fn also does this, belt-and-suspenders)
         await sbDelete("marketplace_listings", { mint: listing.mint });
         delete listings[listing.mint];
         await sbDelete("marketplace_offers", { mint: listing.mint });
         delete offers[listing.mint];
-        await recordSale({ mint: listing.mint, seller: listing.seller, buyer: walletAddress, price_sol: listing.price_sol, name: listing.name, image: listing.image, tx_sig: sig });
+        await recordSale({
+          mint: listing.mint, seller: listing.seller, buyer: walletAddress,
+          price_sol: listing.price_sol, name: listing.name, image: listing.image,
+          tx_sig: result.sig || paySig
+        });
 
         selectedNft = null;
         await fetchMyNfts();
@@ -1651,8 +1616,7 @@
 
       try {
         const web3 = await getWeb3();
-        const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL,
-                TransactionMessage, VersionedTransaction } = web3;
+        const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = web3;
         const conn = new Connection(RPC, "confirmed");
 
         const sellerPK = new PublicKey(walletAddress);
@@ -1674,11 +1638,7 @@
         // If not listed, seller/owner signs directly
         const delegateIsSigner = isListed;
 
-        // Build instructions
-        const solToSeller = SystemProgram.transfer({ fromPubkey: escrowPK, toPubkey: sellerPK, lamports: sellerLamports });
-        const solToTreasury = feeLamports > 0
-          ? SystemProgram.transfer({ fromPubkey: escrowPK, toPubkey: treasuryPK, lamports: feeLamports })
-          : null;
+        // ── TX1: cNFT transfer only (fits under 1232 bytes without SOL transfers) ──
         const transferIx = buildTransferIx(PublicKey, {
           ownerPK: sellerPK,
           delegatePK: isListed ? escrowPK : sellerPK,
@@ -1689,41 +1649,40 @@
           proofPath: details.proofPath,
           delegateIsSigner
         });
-        const instructions = [solToSeller, solToTreasury, transferIx].filter(Boolean);
-
-        // Use v0 versioned tx with ALT to keep under 1232 byte limit
-        const altRes = await conn.getAddressLookupTable(treePK);
-        const lookupTables = altRes?.value ? [altRes.value] : [];
 
         const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
-        const message = new TransactionMessage({
-          payerKey: sellerPK,
-          recentBlockhash: blockhash,
-          instructions,
-        }).compileToV0Message(lookupTables);
+        const transferTx = new Transaction();
+        transferTx.add(transferIx);
+        transferTx.recentBlockhash = blockhash;
+        transferTx.lastValidBlockHeight = lastValidBlockHeight;
+        transferTx.feePayer = sellerPK;
 
-        const vtx = new VersionedTransaction(message);
-        const serializedBytes = vtx.serialize();
-        console.log("[acceptOffer] v0 tx bytes:", serializedBytes.length);
-        const txB64 = btoa(serializedBytes.reduce((s, b) => s + String.fromCharCode(b), ""));
+        const rawBytes = transferTx.serialize({ requireAllSignatures: false, verifySignatures: false });
+        const txBytes = rawBytes instanceof Uint8Array ? rawBytes : new Uint8Array(rawBytes);
+        console.log("[acceptOffer] cNFT-only tx bytes:", txBytes.length);
+        const txB64 = btoa(txBytes.reduce((s, b) => s + String.fromCharCode(b), ""));
 
         const cosigned = await cosign({ action: "cosign-accept", txBase64: txB64, mint: offerData.mint, buyer: offerData.buyer, seller: walletAddress });
 
-        // Seller signs the co-signed versioned tx
         const cosignedBuf = Uint8Array.from(atob(cosigned.tx), c => c.charCodeAt(0));
-        const cosignedVtx = VersionedTransaction.deserialize(cosignedBuf);
-        const fullySigned = await walletProvider.signTransaction(cosignedVtx);
+        const cosignedTx = Transaction.from(cosignedBuf);
+        const fullySigned = await walletProvider.signTransaction(cosignedTx);
 
-        showToast("Confirming...");
-        const sig = await conn.sendRawTransaction(fullySigned.serialize(), { skipPreflight: false });
-        await conn.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed");
+        showToast("Transferring NFT...");
+        const transferSig = await conn.sendRawTransaction(fullySigned.serialize(), { skipPreflight: false });
+        await conn.confirmTransaction({ signature: transferSig, blockhash, lastValidBlockHeight }, "confirmed");
+        console.log("[acceptOffer] cNFT transferred:", transferSig);
+
+        // ── TX2: Edge fn releases SOL from escrow to seller + treasury ──
+        showToast("Releasing payment...");
+        await cosign({ action: "settle-accept", mint: offerData.mint, buyer: offerData.buyer, seller: walletAddress, transferSig });
 
         // Clean up
         await sbDelete("marketplace_listings", { mint: offerData.mint });
         await sbDelete("marketplace_offers", { mint: offerData.mint });
         delete listings[offerData.mint];
         delete offers[offerData.mint];
-        await recordSale({ mint: offerData.mint, seller: walletAddress, buyer: offerData.buyer, price_sol: offerData.price_sol, name: offerData.name, image: offerData.image, tx_sig: sig });
+        await recordSale({ mint: offerData.mint, seller: walletAddress, buyer: offerData.buyer, price_sol: offerData.price_sol, name: offerData.name, image: offerData.image, tx_sig: transferSig });
 
         selectedNft = null;
         await fetchMyNfts();
