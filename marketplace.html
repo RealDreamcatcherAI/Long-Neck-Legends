@@ -864,9 +864,6 @@
       }
     }
   </style>
-  <!-- Buffer polyfill: loaded eagerly so it's available when web3.js lazy-loads -->
-  <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.min.js"></script>
-  <script>window.Buffer = window.Buffer || buffer.Buffer;</script>
 </head>
 
 <body>
@@ -1138,14 +1135,15 @@
     // ─────────────────────────────────────────────
     //  SOLANA WEB3 (lazy loaded)
     // ─────────────────────────────────────────────
-    // web3.js lazy loader — Buffer polyfill is already in window from <head>
+    // web3.js lazy loader — uses v1.73.3 which bundles its own Buffer polyfill
     let _web3 = null;
     async function getWeb3() {
       if (_web3) return _web3;
       if (window.solanaWeb3) { _web3 = window.solanaWeb3; return _web3; }
       await new Promise((res, rej) => {
         const s = document.createElement("script");
-        s.src = "https://unpkg.com/@solana/web3.js@1.91.8/lib/index.iife.min.js";
+        // v1.73.3 bundles Buffer internally — no external polyfill needed
+        s.src = "https://unpkg.com/@solana/web3.js@1.73.3/lib/index.iife.min.js";
         s.onload = res; s.onerror = rej;
         document.head.appendChild(s);
       });
