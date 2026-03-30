@@ -1181,7 +1181,7 @@
 
     // ── Trade State ──
     let trades = []; // all trades from Supabase
-    let tradeSubTab = "incoming"; // "incoming" | "outgoing" | "browse"
+    let tradeSubTab = "incoming"; // "incoming" | "outgoing" | "history"
     let counterpartyNfts = []; // NFTs of the counterparty wallet for trade creation
 
     const short = (a, s = 4, e = 4) => a ? `${a.slice(0, s)}...${a.slice(-e)}` : "";
@@ -2495,21 +2495,19 @@
 
       const incoming = trades.filter(t => t.to_wallet === walletAddress && t.status === "pending");
       const outgoing = trades.filter(t => t.from_wallet === walletAddress && t.status === "pending");
-      const browsable = trades.filter(t => t.status === "pending" && t.to_wallet !== walletAddress && t.from_wallet !== walletAddress);
       const history = trades.filter(t => t.status !== "pending" && (t.from_wallet === walletAddress || t.to_wallet === walletAddress));
 
       app.innerHTML += `<div style="max-width:800px;margin:0 auto;padding:0 16px 30px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
       <div>
         <div style="font-family:var(--d);font-size:20px;color:#fff;letter-spacing:3px">PEER-TO-PEER TRADES</div>
-        <div style="font-size:9px;color:var(--g2);margin-top:3px;letter-spacing:1px">SWAP CARDS DIRECTLY — NO SOL REQUIRED</div>
+        <div style="font-size:9px;color:var(--g2);margin-top:3px;letter-spacing:1px">SWAP CARDS DIRECTLY — BOTH SIDES GIVE & GET</div>
       </div>
       <button class="btn-primary" id="create-trade-btn" style="width:auto;padding:10px 22px;font-size:13px">+ NEW TRADE</button>
     </div>
     <div class="trade-tab-inner" id="trade-sub-tabs">
       <button class="${tradeSubTab === 'incoming' ? 'active' : ''}" data-st="incoming">INCOMING${incoming.length ? ` <span style="background:var(--grn);color:#000;border-radius:10px;padding:1px 6px;font-size:8px;font-weight:700">${incoming.length}</span>` : ""}</button>
       <button class="${tradeSubTab === 'outgoing' ? 'active' : ''}" data-st="outgoing">OUTGOING${outgoing.length ? ` <span style="background:var(--r);color:#fff;border-radius:10px;padding:1px 6px;font-size:8px">${outgoing.length}</span>` : ""}</button>
-      <button class="${tradeSubTab === 'browse' ? 'active' : ''}" data-st="browse">OPEN TRADES</button>
       <button class="${tradeSubTab === 'history' ? 'active' : ''}" data-st="history">HISTORY</button>
     </div>
     <div id="trade-list"></div>
@@ -2528,12 +2526,6 @@
           listEl.innerHTML = `<div class="trade-empty" style="padding:30px"><div style="font-size:36px;opacity:.08;margin-bottom:10px">📤</div><div style="font-size:10px;color:var(--g2);letter-spacing:2px">NO OUTGOING TRADE PROPOSALS</div></div>`;
         } else {
           listEl.innerHTML = outgoing.map(t => renderTradeCard(t, "outgoing")).join("");
-        }
-      } else if (tradeSubTab === "browse") {
-        if (!browsable.length) {
-          listEl.innerHTML = `<div class="trade-empty" style="padding:30px"><div style="font-size:36px;opacity:.08;margin-bottom:10px">🌐</div><div style="font-size:10px;color:var(--g2);letter-spacing:2px">NO OPEN TRADES RIGHT NOW</div></div>`;
-        } else {
-          listEl.innerHTML = browsable.map(t => renderTradeCard(t, "browse")).join("");
         }
       } else {
         if (!history.length) {
@@ -2596,21 +2588,23 @@
       let actions = "";
       if (trade.status === "pending") {
         if (isIncoming) {
-          actions = `<div class="trade-actions">
+          // Only allow accept if the trade has cards requested from you
+          const hasWantNfts = (trade.want_nfts || []).length > 0;
+          if (hasWantNfts) {
+            actions = `<div class="trade-actions">
         <button class="btn-green" style="flex:2;padding:8px 16px;font-size:12px" data-trade-accept="${trade.id}">ACCEPT TRADE</button>
         <button class="btn-danger" style="padding:8px 14px;font-size:11px" data-trade-decline="${trade.id}">DECLINE</button>
       </div>`;
+          } else {
+            actions = `<div class="trade-actions">
+        <div style="flex:2;padding:8px 12px;background:#060606;border:1px solid rgba(255,0,60,.15);border-radius:8px;font-size:9px;color:var(--r);text-align:center">INVALID — No cards requested from you</div>
+        <button class="btn-danger" style="padding:8px 14px;font-size:11px" data-trade-decline="${trade.id}">DECLINE</button>
+      </div>`;
+          }
         } else if (isOutgoing) {
           actions = `<div class="trade-actions">
         <button class="btn-danger" style="padding:8px 14px;font-size:11px" data-trade-cancel="${trade.id}">CANCEL TRADE</button>
       </div>`;
-        } else if (context === "browse") {
-          // Open trades that can be accepted by anyone if to_wallet is null
-          if (!trade.to_wallet) {
-            actions = `<div class="trade-actions">
-        <button class="btn-green" style="flex:1;padding:8px 16px;font-size:12px" data-trade-accept="${trade.id}">ACCEPT TRADE</button>
-      </div>`;
-          }
         }
       }
 
@@ -2694,18 +2688,12 @@
     <button class="btn-primary" id="trade-next" ${!_tradeOffer.length ? "disabled" : ""}>NEXT — CHOOSE RECIPIENT</button>`;
 
       } else if (_tradeStep === 2) {
-        // Step 2: Enter counterparty wallet or open trade
+        // Step 2: Enter counterparty wallet (required)
         content = `<div style="margin-bottom:14px">
       <div style="font-size:9px;color:var(--g2);letter-spacing:2px;margin-bottom:8px">ENTER THEIR SOLANA WALLET</div>
       <input class="input" id="cp-wallet" placeholder="e.g. 7xKX...j3nP" value="${_tradeCounterparty}" style="margin-bottom:10px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
-        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:10px;color:var(--g1)">
-          <input type="checkbox" id="open-trade-check" ${_tradeOpenToAll ? "checked" : ""} style="accent-color:var(--r);width:14px;height:14px;cursor:pointer">
-          OPEN TRADE — anyone can accept
-        </label>
-      </div>
       <div style="font-size:9px;color:var(--g2);line-height:1.7;padding:10px 12px;background:#050505;border:1px solid #111;border-radius:8px">
-        Enter a specific wallet to propose a direct trade, or check "open trade" to let anyone accept.
+        Enter the wallet address of who you want to trade with. You'll pick which of their cards you want next.
       </div>
     </div>
     <div style="display:flex;gap:8px">
@@ -2714,15 +2702,9 @@
     </div>`;
 
       } else if (_tradeStep === 3) {
-        // Step 3: Pick counterparty's NFTs (or describe what you want for open trade)
+        // Step 3: Pick counterparty's NFTs
         let pickContent = "";
-        if (_tradeOpenToAll) {
-          // For open trades, user describes what they want
-          pickContent = `<div style="margin-bottom:14px">
-        <div style="font-size:9px;color:var(--g2);letter-spacing:2px;margin-bottom:8px">DESCRIBE WHAT YOU WANT</div>
-        <textarea class="input" id="trade-want-desc" rows="3" placeholder="e.g. Any Long Neck Legend #500-#1000, or any Golf Addict with Rare background" style="resize:vertical">${_tradeNote}</textarea>
-      </div>`;
-        } else if (counterpartyNfts.length) {
+        if (counterpartyNfts.length) {
           const pickGrid = counterpartyNfts.map(n => {
             const sel = _tradeWant.some(w => w.mint === n.mint);
             return `<div class="nft-pick-card ${sel ? "selected" : ""}" data-want="${n.mint}">
@@ -2754,7 +2736,7 @@
         content = `${pickContent}${sweetenerHtml}
     <div style="display:flex;gap:8px;margin-top:14px">
       <button class="btn-ghost" id="trade-back3" style="flex:1">BACK</button>
-      <button class="btn-primary" id="trade-next3" style="flex:2" ${!_tradeOpenToAll && !_tradeWant.length ? "disabled" : ""}>REVIEW TRADE</button>
+      <button class="btn-primary" id="trade-next3" style="flex:2" ${!_tradeWant.length ? "disabled" : ""}>REVIEW TRADE</button>
     </div>`;
 
       } else if (_tradeStep === 4) {
@@ -2767,16 +2749,12 @@
         ).join("");
 
         let wantPreview = "";
-        if (_tradeOpenToAll && _tradeNote) {
-          wantPreview = `<div style="font-size:10px;color:var(--g1);font-style:italic;padding:8px">"${_tradeNote}"</div>`;
-        } else {
-          wantPreview = _tradeWant.map(n =>
+        wantPreview = _tradeWant.map(n =>
             `<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
           ${n.image ? `<img src="${n.image}" style="width:40px;height:40px;border-radius:6px;object-fit:cover;border:1px solid #1c1c1c">` : ""}
           <div><div style="font-family:var(--d);font-size:11px;color:#fff;letter-spacing:1px">${n.name}</div></div>
         </div>`
           ).join("");
-        }
 
         content = `<div style="padding:14px;background:#060606;border:1px solid #111;border-radius:10px;margin-bottom:6px">
       <div style="font-size:8px;color:var(--r);letter-spacing:2px;margin-bottom:8px;font-family:var(--d)">YOU GIVE</div>
@@ -2785,11 +2763,11 @@
     <div class="trade-arrow">⇅</div>
     <div style="padding:14px;background:#060606;border:1px solid #111;border-radius:10px;margin-bottom:10px">
       <div style="font-size:8px;color:var(--grn);letter-spacing:2px;margin-bottom:8px;font-family:var(--d)">YOU GET</div>
-      ${wantPreview || `<span style="font-size:10px;color:var(--g2)">Open trade — counterparty offers cards</span>`}
+      ${wantPreview}
     </div>
     ${_tradeSweetener > 0 ? `<div style="padding:8px 12px;background:rgba(0,255,136,.04);border:1px solid rgba(0,255,136,.1);border-radius:8px;margin-bottom:10px;font-size:10px;color:var(--grn);font-family:var(--d);letter-spacing:1px">+ ◎ ${_tradeSweetener} SOL SWEETENER</div>` : ""}
     <div style="padding:8px 12px;background:#050505;border:1px solid #111;border-radius:8px;margin-bottom:14px;font-size:9px;color:var(--g2);line-height:1.7">
-      ${_tradeOpenToAll ? "Open trade — anyone can accept" : `To: <span style="color:var(--g1)">${short(_tradeCounterparty, 8, 6)}</span>`}
+      To: <span style="color:var(--g1)">${short(_tradeCounterparty, 8, 6)}</span>
       &nbsp;•&nbsp; Both parties sign to swap
       ${_tradeSweetener > 0 ? `&nbsp;•&nbsp; ${_tradeSweetener} SOL locked in escrow` : ""}
     </div>
@@ -2836,21 +2814,15 @@
 
       // Step 2: wallet input
       document.getElementById("cp-wallet")?.addEventListener("input", e => { _tradeCounterparty = e.target.value.trim(); });
-      document.getElementById("open-trade-check")?.addEventListener("change", e => {
-        _tradeOpenToAll = e.target.checked;
-        renderTradeModal();
-      });
 
       // Step 2 → 3
       document.getElementById("trade-next2")?.addEventListener("click", async () => {
-        if (!_tradeOpenToAll && !_tradeCounterparty) { showToast("Enter a wallet address or check 'open trade'", true); return; }
-        if (!_tradeOpenToAll && _tradeCounterparty === walletAddress) { showToast("Can't trade with yourself", true); return; }
+        if (!_tradeCounterparty) { showToast("Enter a wallet address", true); return; }
+        if (_tradeCounterparty === walletAddress) { showToast("Can't trade with yourself", true); return; }
         _tradeStep = 3;
         renderTradeModal();
-        if (!_tradeOpenToAll && _tradeCounterparty) {
-          await loadCounterpartyNfts(_tradeCounterparty);
-          if (_tradeStep === 3) renderTradeModal();
-        }
+        await loadCounterpartyNfts(_tradeCounterparty);
+        if (_tradeStep === 3) renderTradeModal();
       });
 
       // Step 3: pick want NFTs
@@ -2866,9 +2838,8 @@
         };
       });
 
-      // Step 3: sweetener + description for open trades
+      // Step 3: sweetener
       document.getElementById("trade-sweet")?.addEventListener("input", e => { _tradeSweetener = parseFloat(e.target.value) || 0; });
-      document.getElementById("trade-want-desc")?.addEventListener("input", e => { _tradeNote = e.target.value; });
 
       // Step 3 → 4
       document.getElementById("trade-next3")?.addEventListener("click", () => { _tradeStep = 4; renderTradeModal(); });
@@ -2982,7 +2953,7 @@
         // Save to Supabase
         const tradeObj = {
           from_wallet: walletAddress,
-          to_wallet: _tradeOpenToAll ? null : _tradeCounterparty,
+          to_wallet: _tradeCounterparty,
           offer_nfts: _tradeOffer,
           want_nfts: _tradeWant,
           sweetener_sol: _tradeSweetener || 0,
@@ -3017,28 +2988,136 @@
       const trade = trades.find(t => String(t.id) === String(tradeId));
       if (!trade) { showToast("Trade not found", true); return; }
 
+      const wantNfts = trade.want_nfts || [];
+      if (!wantNfts.length) {
+        showToast("Invalid trade — no cards requested from you", true);
+        return;
+      }
+
       const btn = document.querySelector(`[data-trade-accept="${tradeId}"]`);
       if (btn) { btn.disabled = true; btn.innerHTML = `<span class="spinner"></span>`; }
+
+      // Track which NFTs we delegated so we can revoke on failure
+      const delegatedMints = [];
 
       try {
         const web3 = await getWeb3();
         const { Connection, PublicKey, Transaction } = web3;
         const conn = new Connection(RPC, "confirmed");
 
-        // Delegate the wanted NFTs (accepter's NFTs) to escrow
-        const wantNfts = trade.want_nfts || [];
+        // STEP 1: Verify you actually own all the wanted NFTs
+        showToast("Verifying ownership...");
         for (const nft of wantNfts) {
-          showToast(`Delegating ${nft.name || "NFT"} to escrow...`);
           const details = await getAssetDetails(nft.mint);
-          if (details.delegate !== ESCROW_ADDRESS) {
-            const ownerPK = safePK(PublicKey, walletAddress, "walletAddress");
-            const escrowPK = safePK(PublicKey, ESCROW_ADDRESS, "ESCROW_ADDRESS");
-            const treePK = safePK(PublicKey, details.treeId, "treeId");
+          if (details.owner !== walletAddress) {
+            throw new Error(`You don't own ${nft.name || nft.mint} — can't complete this trade`);
+          }
+        }
+
+        // STEP 2: Delegate the wanted NFTs (your NFTs) to escrow
+        for (const nft of wantNfts) {
+          const details = await getAssetDetails(nft.mint);
+          if (details.delegate === ESCROW_ADDRESS) {
+            delegatedMints.push(nft.mint);
+            continue; // already delegated
+          }
+
+          showToast(`Delegating ${nft.name || "NFT"} to escrow...`);
+          const ownerPK = safePK(PublicKey, walletAddress, "walletAddress");
+          const escrowPK = safePK(PublicKey, ESCROW_ADDRESS, "ESCROW_ADDRESS");
+          const treePK = safePK(PublicKey, details.treeId, "treeId");
+          const [treeAuthorityPK] = getTreeAuthority(PublicKey, treePK);
+          const prevDelegatePK = safePK(PublicKey, details.delegate, "delegate");
+
+          const delegateIx = buildDelegateIx(PublicKey, {
+            ownerPK, previousDelegatePK: prevDelegatePK, newDelegatePK: escrowPK,
+            treePK, treeAuthorityPK,
+            root: details.root, dataHash: details.dataHash, creatorHash: details.creatorHash,
+            nonce: details.leafId, index: details.leafId,
+            proofPath: details.proofPath
+          });
+
+          const tx = new Transaction().add(delegateIx);
+          const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
+          tx.recentBlockhash = blockhash; tx.lastValidBlockHeight = lastValidBlockHeight;
+          tx.feePayer = ownerPK;
+
+          const signed = await walletProvider.signTransaction(tx);
+          const sig = await conn.sendRawTransaction(signed.serialize(), { skipPreflight: false });
+          await conn.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed");
+          delegatedMints.push(nft.mint);
+        }
+
+        // STEP 3: Sign auth message to prove identity
+        const authMsg = `accept-trade:${tradeId}:${walletAddress}`;
+        const authBytes = new TextEncoder().encode(authMsg);
+        if (!walletProvider.signMessage) throw new Error("Wallet does not support signMessage");
+        const authSigRaw = await walletProvider.signMessage(authBytes, "utf8");
+        let sigBytes;
+        if (authSigRaw instanceof Uint8Array) sigBytes = authSigRaw;
+        else if (authSigRaw?.signature instanceof Uint8Array) sigBytes = authSigRaw.signature;
+        else if (authSigRaw?.data instanceof Uint8Array) sigBytes = authSigRaw.data;
+        else sigBytes = new Uint8Array(Object.values(authSigRaw));
+        const sigB64 = btoa(sigBytes.reduce((s, b) => s + String.fromCharCode(b), ""));
+
+        // STEP 4: Call edge function to settle
+        showToast("Settling trade...");
+        const result = await cosign({
+          action: "settle-trade",
+          tradeId: tradeId,
+          accepter: walletAddress,
+          authMessage: authMsg,
+          authSignature: sigB64
+        });
+        console.log("[acceptTrade] result:", result);
+
+        // Success
+        trade.status = "completed";
+        showToast("Trade completed! 🎉");
+        await fetchMyNfts();
+        render();
+
+      } catch (e) {
+        console.error("[acceptTrade]", e);
+        if (e.code === 4001 || e.message?.toLowerCase().includes("cancel") || e.message?.toLowerCase().includes("reject")) {
+          showToast("Cancelled", true);
+        } else {
+          showToast("Failed: " + (e.message || "unknown"), true);
+        }
+        if (btn) { btn.disabled = false; btn.innerHTML = "ACCEPT TRADE"; }
+
+        // RECOVERY: If we delegated NFTs but settle failed, offer to revoke
+        if (delegatedMints.length > 0) {
+          setTimeout(() => {
+            if (confirm(`Trade settlement failed but ${delegatedMints.length} NFT(s) were delegated to escrow.\n\nRevoke delegations to get them back?`)) {
+              revokeTradeDelegations(delegatedMints);
+            }
+          }, 500);
+        }
+      }
+    }
+
+    // Revoke escrow delegation on NFTs (recovery for failed trades)
+    async function revokeTradeDelegations(mints) {
+      if (!walletAddress || !walletProvider) return;
+      try {
+        const web3 = await getWeb3();
+        const { Connection, PublicKey, Transaction } = web3;
+        const conn = new Connection(RPC, "confirmed");
+
+        for (const mint of mints) {
+          try {
+            showToast(`Revoking delegation on ${short(mint, 6, 4)}...`);
+            const details = await getAssetDetails(mint);
+            if (details.delegate !== ESCROW_ADDRESS) continue; // already revoked
+            if (details.owner !== walletAddress) continue; // not ours
+
+            const ownerPK = new PublicKey(walletAddress);
+            const treePK = new PublicKey(details.treeId);
             const [treeAuthorityPK] = getTreeAuthority(PublicKey, treePK);
-            const prevDelegatePK = safePK(PublicKey, details.delegate, "delegate");
 
             const delegateIx = buildDelegateIx(PublicKey, {
-              ownerPK, previousDelegatePK: prevDelegatePK, newDelegatePK: escrowPK,
+              ownerPK, previousDelegatePK: new PublicKey(ESCROW_ADDRESS), newDelegatePK: ownerPK,
               treePK, treeAuthorityPK,
               root: details.root, dataHash: details.dataHash, creatorHash: details.creatorHash,
               nonce: details.leafId, index: details.leafId,
@@ -3053,45 +3132,14 @@
             const signed = await walletProvider.signTransaction(tx);
             const sig = await conn.sendRawTransaction(signed.serialize(), { skipPreflight: false });
             await conn.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed");
+          } catch (err) {
+            console.error("[revokeTradeDelegations] failed for", mint, err);
           }
         }
-
-        // Sign auth message to prove identity
-        const authMsg = `accept-trade:${tradeId}:${walletAddress}`;
-        const authBytes = new TextEncoder().encode(authMsg);
-        if (!walletProvider.signMessage) throw new Error("Wallet does not support signMessage");
-        const authSigRaw = await walletProvider.signMessage(authBytes, "utf8");
-        let sigBytes;
-        if (authSigRaw instanceof Uint8Array) sigBytes = authSigRaw;
-        else if (authSigRaw?.signature instanceof Uint8Array) sigBytes = authSigRaw.signature;
-        else if (authSigRaw?.data instanceof Uint8Array) sigBytes = authSigRaw.data;
-        else sigBytes = new Uint8Array(Object.values(authSigRaw));
-        const sigB64 = btoa(sigBytes.reduce((s, b) => s + String.fromCharCode(b), ""));
-
-        showToast("Settling trade...");
-        const result = await cosign({
-          action: "settle-trade",
-          tradeId: tradeId,
-          accepter: walletAddress,
-          authMessage: authMsg,
-          authSignature: sigB64
-        });
-        console.log("[acceptTrade] result:", result);
-
-        // Update local state
-        trade.status = "completed";
-        showToast("Trade completed! 🎉");
-        await fetchMyNfts();
-        render();
-
+        showToast("Delegations revoked — your NFTs are safe ✓");
       } catch (e) {
-        console.error("[acceptTrade]", e);
-        if (e.code === 4001 || e.message?.toLowerCase().includes("cancel") || e.message?.toLowerCase().includes("reject")) {
-          showToast("Cancelled", true);
-        } else {
-          showToast("Failed: " + (e.message || "unknown"), true);
-        }
-        if (btn) { btn.disabled = false; btn.innerHTML = "ACCEPT TRADE"; }
+        console.error("[revokeTradeDelegations]", e);
+        showToast("Revoke failed: " + (e.message || "unknown"), true);
       }
     }
 
