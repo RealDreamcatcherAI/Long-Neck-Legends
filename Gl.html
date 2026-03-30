@@ -823,6 +823,114 @@
       background: var(--rb)
     }
 
+    /* Cabbage & Leaderboard */
+    .cabbage-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      background: rgba(0, 200, 0, .06);
+      border: 1px solid rgba(0, 200, 0, .15);
+      border-radius: 20px;
+      font-family: var(--d);
+      font-size: 12px;
+      color: #4ade80;
+      letter-spacing: 1px;
+      cursor: default
+    }
+
+    .lb-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      background: var(--card);
+      border: 1px solid var(--bdr);
+      border-radius: 10px;
+      margin-bottom: 6px;
+      transition: all .2s
+    }
+
+    .lb-row:hover {
+      border-color: rgba(255, 0, 60, .15)
+    }
+
+    .lb-row.you {
+      border-color: rgba(0, 255, 136, .25);
+      background: rgba(0, 255, 136, .03)
+    }
+
+    .lb-rank {
+      font-family: var(--d);
+      font-size: 20px;
+      color: var(--g2);
+      min-width: 30px;
+      text-align: center;
+      letter-spacing: 1px
+    }
+
+    .lb-rank.gold { color: #ffd700 }
+    .lb-rank.silver { color: #c0c0c0 }
+    .lb-rank.bronze { color: #cd7f32 }
+
+    .streak-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      background: rgba(255, 165, 0, .04);
+      border: 1px solid rgba(255, 165, 0, .12);
+      border-radius: 8px;
+      margin-bottom: 14px
+    }
+
+    .streak-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #222;
+      border: 1px solid #333;
+      transition: all .3s
+    }
+
+    .streak-dot.lit {
+      background: #ffa500;
+      border-color: #ffa500;
+      box-shadow: 0 0 6px rgba(255, 165, 0, .5)
+    }
+
+    .featured-banner {
+      margin: 0 16px 14px;
+      max-width: 1400px;
+      margin-left: auto;
+      margin-right: auto;
+      padding: 14px 18px;
+      background: linear-gradient(135deg, rgba(255, 215, 0, .04), rgba(255, 0, 60, .04));
+      border: 1px solid rgba(255, 215, 0, .15);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      cursor: pointer;
+      transition: all .3s
+    }
+
+    .featured-banner:hover {
+      border-color: rgba(255, 215, 0, .3);
+      box-shadow: 0 0 20px rgba(255, 215, 0, .06)
+    }
+
+    .winner-banner {
+      padding: 12px 18px;
+      background: linear-gradient(135deg, rgba(255, 215, 0, .06), transparent);
+      border: 1px solid rgba(255, 215, 0, .12);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px
+    }
+
     /* Trade Tab */
     .trade-card {
       background: var(--card);
@@ -1184,6 +1292,13 @@
     let tradeSubTab = "live"; // "live" | "incoming" | "outgoing" | "history"
     let counterpartyNfts = []; // NFTs of the counterparty wallet for trade creation
 
+    // ── Cabbage Rewards State ──
+    let leaderboard = []; // top wallets by weekly points
+    let myPoints = null; // { total_points, weekly_points, current_streak, last_action_date }
+    let weeklyWinner = null; // last week's winner
+    let featuredListing = null; // today's featured { mint }
+    let recentActivity = []; // last 20 global actions
+
     const short = (a, s = 4, e = 4) => a ? `${a.slice(0, s)}...${a.slice(-e)}` : "";
     const getCollectionConfig = key => COLLECTIONS[key] || null;
     const getCollectionLabel = key => key === "all" ? "ALL COLLECTIONS" : (getCollectionConfig(key)?.label || "UNKNOWN COLLECTION");
@@ -1243,7 +1358,60 @@
         recentSales = sales; // already limited to 50 by query
         trades = Array.isArray(tr) ? tr : [];
       } catch (e) { console.error("loadMarketData:", e); }
+      // Load cabbage data (non-blocking)
+      loadCabbageData();
     }
+
+    // ─────────────────────────────────────────────
+    //  CABBAGE REWARDS
+    // ─────────────────────────────────────────────
+    async function loadCabbageData() {
+      try {
+        const [lb, act, feat, resetResult] = await Promise.all([
+          sbGet("marketplace_points?select=wallet,total_points,weekly_points,current_streak&order=weekly_points.desc&limit=25"),
+          sbGet("marketplace_activity?select=wallet,action_type,points,details,created_at&order=created_at.desc&limit=20"),
+          cosign({ action: "pick-featured" }).catch(() => null),
+          cosign({ action: "check-weekly-reset" }).catch(() => null),
+        ]);
+        leaderboard = Array.isArray(lb) ? lb : [];
+        recentActivity = Array.isArray(act) ? act : [];
+        if (feat?.featured) featuredListing = feat.featured;
+
+        // Weekly winner — check reset result first, fall back to DB query
+        if (resetResult?.winner) {
+          weeklyWinner = resetResult.winner;
+        } else {
+          const winners = await sbGet("marketplace_weekly_winners?select=*&order=week_start.desc&limit=1");
+          weeklyWinner = Array.isArray(winners) && winners.length ? winners[0] : null;
+        }
+
+        // Load my points if connected
+        if (walletAddress) {
+          const mp = await sbGet(`marketplace_points?wallet=eq.${walletAddress}&select=*`);
+          myPoints = Array.isArray(mp) && mp.length ? mp[0] : null;
+        }
+        render();
+      } catch (e) { console.error("[cabbage] load failed:", e); }
+    }
+
+    async function awardListPoints(mint) {
+      if (!walletAddress) return;
+      try {
+        await cosign({ action: "award-list-points", wallet: walletAddress, mint });
+        // Refresh points
+        const mp = await sbGet(`marketplace_points?wallet=eq.${walletAddress}&select=*`);
+        myPoints = Array.isArray(mp) && mp.length ? mp[0] : null;
+      } catch (e) { console.error("[cabbage] list points failed:", e); }
+    }
+
+    const ACTION_LABELS = {
+      list: "LISTED",
+      buy: "BOUGHT",
+      sell: "SOLD",
+      trade_propose: "TRADED",
+      trade_accept: "TRADED",
+      streak_bonus: "STREAK 🔥"
+    };
 
     // ─────────────────────────────────────────────
     //  ACTIVITY BAR
@@ -1657,6 +1825,7 @@
         });
         listings[nft.mint] = { mint: nft.mint, seller: walletAddress, price_sol: parseFloat(priceSol), name: nft.name, image: nft.image };
         showToast("Listed for " + priceSol + " SOL ✓");
+        awardListPoints(nft.mint); // +5 cabbage
         render();
 
       } catch (e) {
@@ -1805,6 +1974,7 @@
         selectedNft = null;
         await fetchMyNfts();
         showToast("You own it! 🐦 " + listing.name);
+        loadCabbageData(); // refresh points
 
       } catch (e) {
         console.error("[buyNft] CAUGHT ERROR:", e);
@@ -1950,6 +2120,7 @@
         selectedNft = null;
         await fetchMyNfts();
         showToast("Sold! SOL received. 🐦");
+        loadCabbageData(); // refresh points
 
       } catch (e) {
         console.error("[acceptOffer]", e);
@@ -2078,6 +2249,7 @@
         walletAddress = typeof pk === "string" ? pk : pk.toString();
         walletProvider = provider;
         showToast(label + " connected ✓");
+        loadCabbageData(); // load points for this wallet
         render();
         if (activeTab === "my-nfts") fetchMyNfts();
       } catch (e) {
@@ -2263,7 +2435,13 @@
 
       const wa = document.getElementById("wallet-area");
       if (walletAddress) {
-        wa.innerHTML = `<button class="conn-btn" id="disc-btn"><span class="dot-sm"></span>${short(walletAddress)} <span style="font-size:8px;opacity:.4">✕</span></button>`;
+        const cabbageCount = myPoints ? myPoints.total_points : 0;
+        const streakCount = myPoints ? myPoints.current_streak : 0;
+        wa.innerHTML = `<div style="display:flex;align-items:center;gap:6px">
+          ${cabbageCount > 0 ? `<span class="cabbage-badge" title="Your cabbage">🥬 ${cabbageCount}</span>` : ""}
+          ${streakCount >= 2 ? `<span style="font-size:10px;color:#ffa500;font-family:var(--d);letter-spacing:1px" title="${streakCount}-day streak">🔥${streakCount}</span>` : ""}
+          <button class="conn-btn" id="disc-btn"><span class="dot-sm"></span>${short(walletAddress)} <span style="font-size:8px;opacity:.4">✕</span></button>
+        </div>`;
         document.getElementById("disc-btn").onclick = disconnectWallet;
       } else {
         wa.innerHTML = `<button class="wallet-btn" id="conn-btn"><span>👛</span> CONNECT</button>`;
@@ -2301,10 +2479,11 @@
       app.innerHTML += `<div style="display:flex;gap:4px;justify-content:center;padding:0 16px 10px" id="tabs">
     <button class="tab-btn ${activeTab === 'market' ? 'active' : ''}" data-t="market">LISTINGS</button>
     <button class="tab-btn ${activeTab === 'trades' ? 'active' : ''}" data-t="trades">TRADES</button>
+    <button class="tab-btn ${activeTab === 'leaderboard' ? 'active' : ''}" data-t="leaderboard">🥬 LEADERBOARD</button>
     <button class="tab-btn ${activeTab === 'my-nfts' ? 'active' : ''}" data-t="my-nfts">MY NFTS</button>
   </div>`;
 
-      if (activeTab !== "trades") {
+      if (activeTab !== "trades" && activeTab !== "leaderboard") {
         app.innerHTML += `<div style="display:flex;gap:4px;justify-content:center;padding:0 16px 18px;flex-wrap:wrap" id="collection-tabs">
     <button class="tab-btn ${activeCollection === 'all' ? 'active' : ''}" data-c="all">ALL</button>
     <button class="tab-btn ${activeCollection === 'LNL' ? 'active' : ''}" data-c="LNL">LNL</button>
@@ -2314,6 +2493,7 @@
 
       if (activeTab === "market") renderMarket(app);
       else if (activeTab === "trades") renderTrades(app);
+      else if (activeTab === "leaderboard") renderLeaderboard(app);
       else renderMyNfts(app);
 
       app.innerHTML += `<footer class="site-footer">
@@ -2363,6 +2543,25 @@
         });
       }
       const activeFilterCount = Object.values(activeFilters).reduce((n, v) => n + v.length, 0);
+
+      // Featured listing banner
+      if (featuredListing && listings[featuredListing.mint]) {
+        const fl = listings[featuredListing.mint];
+        app.innerHTML += `<div class="featured-banner" data-mint="${fl.mint}" id="featured-click">
+      <div style="font-size:16px">⭐</div>
+      <div style="flex-shrink:0">
+        ${fl.image ? `<img src="${fl.image}" style="width:50px;height:50px;border-radius:8px;object-fit:cover;border:1px solid #1c1c1c" onerror="this.style.display='none'">` : ""}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:8px;color:#ffd700;font-family:var(--d);letter-spacing:2px;margin-bottom:2px">TODAY'S FEATURED</div>
+        <div style="font-family:var(--d);font-size:14px;color:#fff;letter-spacing:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${fl.name}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:var(--d);font-size:16px;color:var(--grn);letter-spacing:1px">◎ ${fl.price_sol}</div>
+        <div style="font-size:8px;color:var(--g2);margin-top:2px">+5 🥬 to list</div>
+      </div>
+    </div>`;
+      }
 
       app.innerHTML += `<div style="padding:0 16px 10px;max-width:1400px;margin:0 auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <input class="input" id="search" placeholder="Search listings..." value="${searchQuery}" style="max-width:200px;flex:1 1 140px">
@@ -2433,6 +2632,127 @@
           };
         });
       }, 0);
+    }
+
+
+    // ─────────────────────────────────────────────
+    //  LEADERBOARD
+    // ─────────────────────────────────────────────
+    function renderLeaderboard(app) {
+      const weekLabel = (() => {
+        const d = new Date(); d.setDate(d.getDate() - d.getDay());
+        return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      })();
+
+      // My stats card
+      let myCard = "";
+      if (walletAddress && myPoints) {
+        const rank = leaderboard.findIndex(l => l.wallet === walletAddress) + 1;
+        const streakDots = [1, 2, 3].map(i =>
+          `<div class="streak-dot ${i <= (myPoints.current_streak % 3 || (myPoints.current_streak >= 3 ? 3 : 0)) ? 'lit' : ''}"></div>`
+        ).join("");
+        myCard = `<div style="padding:18px;background:linear-gradient(135deg,rgba(0,200,0,.04),transparent);border:1px solid rgba(0,200,0,.12);border-radius:12px;margin-bottom:18px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-family:var(--d);font-size:18px;color:#fff;letter-spacing:3px">YOUR CABBAGE</div>
+          <div style="font-size:9px;color:var(--g2);margin-top:2px">${short(walletAddress, 6, 4)}${rank ? ` • RANK #${rank}` : ""}</div>
+        </div>
+        <div style="font-family:var(--d);font-size:32px;color:#4ade80;letter-spacing:2px">🥬 ${myPoints.total_points}</div>
+      </div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap">
+        <div><div style="font-size:8px;color:var(--g2);letter-spacing:2px;margin-bottom:2px">THIS WEEK</div><div style="font-family:var(--d);font-size:16px;color:#fff">${myPoints.weekly_points}</div></div>
+        <div><div style="font-size:8px;color:var(--g2);letter-spacing:2px;margin-bottom:2px">STREAK</div><div style="font-family:var(--d);font-size:16px;color:#ffa500">${myPoints.current_streak} DAY${myPoints.current_streak !== 1 ? "S" : ""} 🔥</div></div>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:4px">
+          <div style="font-size:8px;color:var(--g2);margin-right:4px">NEXT BONUS</div>
+          ${streakDots}
+          <div style="font-size:8px;color:#ffa500;margin-left:4px">+25 🥬</div>
+        </div>
+      </div>
+    </div>`;
+      } else if (walletAddress) {
+        myCard = `<div style="padding:16px;background:#0a0a0a;border:1px solid var(--bdr);border-radius:12px;margin-bottom:18px;text-align:center">
+      <div style="font-size:10px;color:var(--g2);letter-spacing:2px;margin-bottom:6px">YOU HAVEN'T EARNED ANY CABBAGE YET</div>
+      <div style="font-size:9px;color:var(--g1);line-height:1.7">List an NFT (+5 🥬) • Buy (+20 🥬) • Sell (+15 🥬) • Trade (+10 🥬)</div>
+    </div>`;
+      }
+
+      // Weekly winner banner
+      let winnerHtml = "";
+      if (weeklyWinner) {
+        const winnerWeek = new Date(weeklyWinner.week_start).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+        winnerHtml = `<div class="winner-banner">
+      <div style="font-size:20px">👑</div>
+      <div style="flex:1">
+        <div style="font-size:8px;color:#ffd700;font-family:var(--d);letter-spacing:2px">WEEK OF ${winnerWeek.toUpperCase()} — CHAMPION</div>
+        <div style="font-family:var(--d);font-size:14px;color:#fff;letter-spacing:2px;margin-top:2px">${short(weeklyWinner.wallet, 6, 4)} — ${weeklyWinner.points} 🥬</div>
+      </div>
+      ${weeklyWinner.prize ? `<div style="padding:4px 10px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.15);border-radius:6px;font-size:9px;color:var(--grn);letter-spacing:1px">${weeklyWinner.prize}</div>` : `<div style="font-size:8px;color:var(--g3);letter-spacing:1px">PRIZE TBD</div>`}
+    </div>`;
+      }
+
+      // How it works
+      const howItWorks = `<div style="padding:14px;background:#0a0a0a;border:1px solid var(--bdr);border-radius:10px;margin-bottom:18px">
+    <div style="font-size:9px;color:var(--g2);letter-spacing:2px;margin-bottom:10px;font-family:var(--d)">HOW TO EARN 🥬</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px">
+      <div style="padding:8px 10px;background:#060606;border-radius:6px;border:1px solid #111"><span style="font-family:var(--d);font-size:14px;color:var(--r)">+5</span><span style="font-size:9px;color:var(--g2);margin-left:6px">LIST AN NFT</span></div>
+      <div style="padding:8px 10px;background:#060606;border-radius:6px;border:1px solid #111"><span style="font-family:var(--d);font-size:14px;color:var(--grn)">+20</span><span style="font-size:9px;color:var(--g2);margin-left:6px">BUY</span></div>
+      <div style="padding:8px 10px;background:#060606;border-radius:6px;border:1px solid #111"><span style="font-family:var(--d);font-size:14px;color:var(--grn)">+15</span><span style="font-size:9px;color:var(--g2);margin-left:6px">SELL</span></div>
+      <div style="padding:8px 10px;background:#060606;border-radius:6px;border:1px solid #111"><span style="font-family:var(--d);font-size:14px;color:#ffa500">+10</span><span style="font-size:9px;color:var(--g2);margin-left:6px">TRADE</span></div>
+      <div style="padding:8px 10px;background:#060606;border-radius:6px;border:1px solid #111"><span style="font-family:var(--d);font-size:14px;color:#ffa500">+25</span><span style="font-size:9px;color:var(--g2);margin-left:6px">3-DAY STREAK 🔥</span></div>
+    </div>
+    <div style="font-size:8px;color:var(--g3);margin-top:8px;line-height:1.6">Top earner each week wins a prize. Do one action 3 days in a row = streak bonus. Cabbage resets weekly for the race, but your all-time total keeps climbing.</div>
+  </div>`;
+
+      // Leaderboard rows
+      let lbHtml = "";
+      if (leaderboard.length) {
+        lbHtml = leaderboard.map((entry, i) => {
+          const isYou = walletAddress && entry.wallet === walletAddress;
+          const rankClass = i === 0 ? "gold" : i === 1 ? "silver" : i === 2 ? "bronze" : "";
+          const rankIcon = i === 0 ? "👑" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}`;
+          return `<div class="lb-row ${isYou ? 'you' : ''}" style="animation:up .3s ease ${Math.min(i * .04, .5)}s both">
+        <div class="lb-rank ${rankClass}">${rankIcon}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-family:var(--d);font-size:12px;color:#fff;letter-spacing:2px">${short(entry.wallet, 6, 4)}${isYou ? ` <span style="color:var(--grn);font-size:9px">YOU</span>` : ""}</div>
+          ${entry.current_streak >= 3 ? `<div style="font-size:8px;color:#ffa500;margin-top:2px">🔥 ${entry.current_streak}-day streak</div>` : ""}
+        </div>
+        <div style="text-align:right">
+          <div style="font-family:var(--d);font-size:16px;color:#4ade80;letter-spacing:1px">${entry.weekly_points} 🥬</div>
+          <div style="font-size:8px;color:var(--g2);margin-top:1px">${entry.total_points} all-time</div>
+        </div>
+      </div>`;
+        }).join("");
+      } else {
+        lbHtml = `<div style="text-align:center;padding:30px"><div style="font-size:36px;opacity:.08;margin-bottom:10px">🥬</div><div style="font-size:10px;color:var(--g2);letter-spacing:2px">NO ACTIVITY YET</div><div style="font-size:9px;color:var(--g3);margin-top:6px">List, buy, sell, or trade to start earning</div></div>`;
+      }
+
+      // Recent activity feed
+      let feedHtml = "";
+      if (recentActivity.length) {
+        feedHtml = `<div style="margin-top:18px"><div style="font-size:9px;color:var(--g2);letter-spacing:2px;margin-bottom:8px;font-family:var(--d)">RECENT ACTIVITY</div>`;
+        feedHtml += recentActivity.map(a => {
+          const label = ACTION_LABELS[a.action_type] || a.action_type.toUpperCase();
+          const isYou = walletAddress && a.wallet === walletAddress;
+          return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #0e0e0e;font-size:10px">
+        <span style="color:var(--g2);min-width:48px">${timeAgo(a.created_at)}</span>
+        <span style="color:${isYou ? 'var(--grn)' : 'var(--g1)'}">${isYou ? "YOU" : short(a.wallet, 4, 3)}</span>
+        <span style="color:var(--g2)">${label}</span>
+        <span style="margin-left:auto;color:#4ade80;font-family:var(--d)">+${a.points} 🥬</span>
+      </div>`;
+        }).join("");
+        feedHtml += `</div>`;
+      }
+
+      app.innerHTML += `<div style="max-width:700px;margin:0 auto;padding:0 16px 30px">
+    <div style="font-family:var(--d);font-size:22px;color:#fff;letter-spacing:3px;margin-bottom:4px;text-align:center">🥬 CABBAGE LEADERBOARD</div>
+    <div style="font-size:9px;color:var(--g2);text-align:center;letter-spacing:2px;margin-bottom:18px">WEEK OF ${weekLabel.toUpperCase()} — TOP EARNER WINS A PRIZE</div>
+    ${winnerHtml}
+    ${myCard}
+    ${howItWorks}
+    <div style="font-size:9px;color:var(--g2);letter-spacing:2px;margin-bottom:8px;font-family:var(--d)">WEEKLY RANKINGS</div>
+    ${lbHtml}
+    ${feedHtml}
+  </div>`;
     }
 
 
@@ -3096,6 +3416,7 @@
         // Success
         trade.status = "completed";
         showToast("Trade completed! 🎉");
+        loadCabbageData(); // refresh points
         await fetchMyNfts();
         render();
 
