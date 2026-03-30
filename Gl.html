@@ -1181,7 +1181,7 @@
 
     // ── Trade State ──
     let trades = []; // all trades from Supabase
-    let tradeSubTab = "incoming"; // "incoming" | "outgoing" | "history"
+    let tradeSubTab = "live"; // "live" | "incoming" | "outgoing" | "history"
     let counterpartyNfts = []; // NFTs of the counterparty wallet for trade creation
 
     const short = (a, s = 4, e = 4) => a ? `${a.slice(0, s)}...${a.slice(-e)}` : "";
@@ -1229,7 +1229,7 @@
           sbGet("marketplace_listings?select=*"),
           sbGet("marketplace_offers?select=*"),
           sbGet("marketplace_sales?select=price_sol,name,image,sold_at&order=sold_at.desc&limit=50"),
-          sbGet("marketplace_trades?select=*&order=created_at.desc&limit=100")
+          sbGet("marketplace_trades?select=*&order=created_at.desc&limit=200")
         ]);
         listings = {};
         (Array.isArray(ls) ? ls : []).forEach(l => { listings[l.mint] = l; });
@@ -2482,20 +2482,17 @@
     //  TRADES TAB
     // ─────────────────────────────────────────────
     function renderTrades(app) {
-      if (!walletAddress) {
-        app.innerHTML += `<div class="trade-empty">
-      <div style="font-size:48px;opacity:.1;margin-bottom:14px">🔄</div>
-      <div style="font-family:var(--d);font-size:18px;color:var(--g2);letter-spacing:3px;margin-bottom:14px">CONNECT TO TRADE</div>
-      <p style="font-size:10px;color:var(--g2);max-width:360px;margin:0 auto 18px;line-height:1.7">Swap your Long Necks peer-to-peer. No SOL needed — just pick your cards and trade like the old days.</p>
-      <button class="wallet-btn" id="conn-trade" style="margin:0 auto"><span>👛</span> CONNECT</button>
-    </div>`;
-        setTimeout(() => document.getElementById("conn-trade")?.addEventListener("click", showWalletPicker), 0);
-        return;
+      if (!walletAddress && tradeSubTab !== "live") {
+        // Force to live tab if not connected
+        tradeSubTab = "live";
       }
 
-      const incoming = trades.filter(t => t.to_wallet === walletAddress && t.status === "pending");
-      const outgoing = trades.filter(t => t.from_wallet === walletAddress && t.status === "pending");
-      const history = trades.filter(t => t.status !== "pending" && (t.from_wallet === walletAddress || t.to_wallet === walletAddress));
+      const incoming = walletAddress ? trades.filter(t => t.to_wallet === walletAddress && t.status === "pending") : [];
+      const outgoing = walletAddress ? trades.filter(t => t.from_wallet === walletAddress && t.status === "pending") : [];
+      const allActive = trades.filter(t => t.status === "pending");
+      const recentCompleted = trades.filter(t => t.status === "completed").slice(0, 10);
+      const liveFeed = [...allActive, ...recentCompleted];
+      const history = walletAddress ? trades.filter(t => t.status !== "pending" && (t.from_wallet === walletAddress || t.to_wallet === walletAddress)) : [];
 
       app.innerHTML += `<div style="max-width:800px;margin:0 auto;padding:0 16px 30px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
@@ -2503,9 +2500,10 @@
         <div style="font-family:var(--d);font-size:20px;color:#fff;letter-spacing:3px">PEER-TO-PEER TRADES</div>
         <div style="font-size:9px;color:var(--g2);margin-top:3px;letter-spacing:1px">SWAP CARDS DIRECTLY — BOTH SIDES GIVE & GET</div>
       </div>
-      <button class="btn-primary" id="create-trade-btn" style="width:auto;padding:10px 22px;font-size:13px">+ NEW TRADE</button>
+      <button class="${walletAddress ? 'btn-primary' : 'wallet-btn'}" id="create-trade-btn" style="width:auto;padding:10px 22px;font-size:13px">${walletAddress ? '+ NEW TRADE' : '<span>👛</span> CONNECT TO TRADE'}</button>
     </div>
     <div class="trade-tab-inner" id="trade-sub-tabs">
+      <button class="${tradeSubTab === 'live' ? 'active' : ''}" data-st="live">LIVE${allActive.length ? ` <span style="background:var(--grn);color:#000;border-radius:10px;padding:1px 6px;font-size:8px;font-weight:700;animation:pulse 2s infinite">${allActive.length}</span>` : ""}</button>
       <button class="${tradeSubTab === 'incoming' ? 'active' : ''}" data-st="incoming">INCOMING${incoming.length ? ` <span style="background:var(--grn);color:#000;border-radius:10px;padding:1px 6px;font-size:8px;font-weight:700">${incoming.length}</span>` : ""}</button>
       <button class="${tradeSubTab === 'outgoing' ? 'active' : ''}" data-st="outgoing">OUTGOING${outgoing.length ? ` <span style="background:var(--r);color:#fff;border-radius:10px;padding:1px 6px;font-size:8px">${outgoing.length}</span>` : ""}</button>
       <button class="${tradeSubTab === 'history' ? 'active' : ''}" data-st="history">HISTORY</button>
@@ -2515,7 +2513,15 @@
 
       const listEl = document.getElementById("trade-list");
 
-      if (tradeSubTab === "incoming") {
+      if (tradeSubTab === "live") {
+        if (!liveFeed.length) {
+          listEl.innerHTML = `<div class="trade-empty" style="padding:30px"><div style="font-size:36px;opacity:.08;margin-bottom:10px">🔄</div><div style="font-size:10px;color:var(--g2);letter-spacing:2px">NO TRADES YET — BE THE FIRST</div><div style="font-size:9px;color:var(--g3);margin-top:8px">Propose a trade and it'll show up here for everyone</div></div>`;
+        } else {
+          let liveHtml = `<div style="display:flex;align-items:center;gap:6px;padding:8px 0;margin-bottom:8px"><span class="dot-sm"></span><span style="font-size:9px;color:var(--g2);letter-spacing:2px">${allActive.length} ACTIVE TRADE${allActive.length !== 1 ? "S" : ""} ON THE MARKET</span></div>`;
+          liveHtml += liveFeed.map(t => renderTradeCard(t, "live")).join("");
+          listEl.innerHTML = liveHtml;
+        }
+      } else if (tradeSubTab === "incoming") {
         if (!incoming.length) {
           listEl.innerHTML = `<div class="trade-empty" style="padding:30px"><div style="font-size:36px;opacity:.08;margin-bottom:10px">📥</div><div style="font-size:10px;color:var(--g2);letter-spacing:2px">NO INCOMING TRADE PROPOSALS</div></div>`;
         } else {
@@ -2536,9 +2542,15 @@
       }
 
       setTimeout(() => {
-        document.getElementById("create-trade-btn")?.addEventListener("click", () => showCreateTradeModal());
+        document.getElementById("create-trade-btn")?.addEventListener("click", () => {
+          if (!walletAddress) { showWalletPicker(); return; }
+          showCreateTradeModal();
+        });
         document.querySelectorAll("[data-st]").forEach(b => {
-          b.onclick = () => { tradeSubTab = b.dataset.st; render(); };
+          b.onclick = () => {
+            if (b.dataset.st !== "live" && !walletAddress) { showWalletPicker(); return; }
+            tradeSubTab = b.dataset.st; render();
+          };
         });
         document.querySelectorAll("[data-trade-accept]").forEach(b => {
           b.onclick = () => acceptTrade(b.dataset.tradeAccept);
@@ -2553,8 +2565,9 @@
     }
 
     function renderTradeCard(trade, context) {
-      const isIncoming = context === "incoming";
-      const isOutgoing = context === "outgoing";
+      const isIncoming = context === "incoming" || (context === "live" && trade.to_wallet === walletAddress && trade.status === "pending");
+      const isOutgoing = context === "outgoing" || (context === "live" && trade.from_wallet === walletAddress && trade.status === "pending");
+      const isLive = context === "live";
       const cardClass = isIncoming ? "trade-card incoming" : "trade-card";
 
       // Parse NFT arrays
@@ -2566,10 +2579,19 @@
       const toLabel = trade.to_wallet === walletAddress ? "YOU" : (trade.to_wallet ? short(trade.to_wallet, 4, 4) : "ANYONE");
 
       let statusBadge = "";
-      if (trade.status === "pending") statusBadge = `<span class="trade-status pending">⏳ PENDING</span>`;
-      else if (trade.status === "completed") statusBadge = `<span class="trade-status completed">✓ COMPLETED</span>`;
-      else if (trade.status === "cancelled") statusBadge = `<span class="trade-status cancelled">✕ CANCELLED</span>`;
-      else if (trade.status === "declined") statusBadge = `<span class="trade-status cancelled">✕ DECLINED</span>`;
+      if (trade.status === "pending" && isLive && !isIncoming && !isOutgoing) {
+        statusBadge = `<span class="trade-status pending" style="background:rgba(0,255,136,.06);border-color:rgba(0,255,136,.2);color:var(--grn)"><span class="dot-sm" style="width:4px;height:4px"></span> ACTIVE</span>`;
+      } else if (trade.status === "pending") {
+        statusBadge = `<span class="trade-status pending">⏳ PENDING</span>`;
+      } else if (trade.status === "completed" && isLive) {
+        statusBadge = `<span class="trade-status completed">🤝 SWAPPED</span>`;
+      } else if (trade.status === "completed") {
+        statusBadge = `<span class="trade-status completed">✓ COMPLETED</span>`;
+      } else if (trade.status === "cancelled") {
+        statusBadge = `<span class="trade-status cancelled">✕ CANCELLED</span>`;
+      } else if (trade.status === "declined") {
+        statusBadge = `<span class="trade-status cancelled">✕ DECLINED</span>`;
+      }
 
       const offerThumbsHtml = offerNfts.map(n =>
         `<div style="display:flex;gap:8px;align-items:center">
