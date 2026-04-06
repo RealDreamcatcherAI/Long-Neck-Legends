@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>LNL Holder Dashboard | Profile</title>
 
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Orbitron:wght@400;700;900&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Rubik+Spray+Paint&family=Russo+One&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
 
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -16,7 +16,7 @@ a.plink,
 a.plink:visited,
 a.plink:hover,
 a.plink:active {
-  color: #e0e0ff;          /* your “white” */
+  color: #f0e8e8;          /* your “white” */
   text-decoration: none;
 }
 a.plink:hover{
@@ -25,13 +25,84 @@ a.plink:hover{
     
     body {
       font-family: 'Space Grotesk', sans-serif;
-      background: #0a0a1a;
-      color: #e0e0ff;
+      background: #080808;
+      color: #f0e8e8;
       overflow-x: hidden;
       opacity: 0;
       transition: opacity 0.8s ease;
     }
     body.loaded { opacity: 1; }
+
+    /* ── BRICK + NOISE TEXTURE ── */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.02;
+      background-image:
+        repeating-linear-gradient(0deg, transparent, transparent 38px, rgba(255,255,255,0.03) 38px, rgba(255,255,255,0.03) 40px),
+        repeating-linear-gradient(90deg, transparent, transparent 78px, rgba(255,255,255,0.02) 78px, rgba(255,255,255,0.02) 80px);
+    }
+    body::after {
+      content: '';
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.04;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      background-repeat: repeat;
+    }
+
+    /* ── GRAFFITI SPRAY TAG SYSTEM ── */
+    .spray-tag {
+      position: absolute;
+      font-family: 'Rubik Spray Paint', 'Permanent Marker', cursive;
+      pointer-events: none;
+      user-select: none;
+      white-space: nowrap;
+      z-index: 0;
+      line-height: 1;
+    }
+    .spray-tag.huge  { font-size: clamp(70px, 12vw, 180px); opacity: 0.025; }
+    .spray-tag.large { font-size: clamp(45px, 7vw, 100px);  opacity: 0.04; }
+    .spray-tag.medium{ font-size: clamp(26px, 4vw, 55px);   opacity: 0.055; }
+    .spray-tag.small { font-size: clamp(16px, 2.5vw, 32px); opacity: 0.07; }
+    .spray-tag.red      { color: #e01020; }
+    .spray-tag.dark-red  { color: #8b0000; }
+    .spray-tag.white    { color: rgba(255,255,255,1); }
+    .spray-tag.ghost    { color: rgba(255,255,255,0.5); }
+    .spray-tag.outline  { -webkit-text-stroke: 1.5px currentColor; color: transparent !important; }
+    .spray-tag.drip::after {
+      content: ''; position: absolute;
+      bottom: -18px; left: 20%;
+      width: 3px; height: 22px;
+      background: currentColor; opacity: 0.5;
+      border-radius: 0 0 2px 2px;
+    }
+    .spray-tag.drip-2::after {
+      content: ''; position: absolute;
+      bottom: -28px; left: 55%;
+      width: 2px; height: 30px;
+      background: currentColor; opacity: 0.4;
+      border-radius: 0 0 2px 2px;
+    }
+    @media (max-width: 768px) {
+      .spray-tag.huge  { font-size: 50px; }
+      .spray-tag.large { font-size: 35px; }
+      .spray-tag.medium{ font-size: 20px; }
+      .spray-tag.small { font-size: 14px; }
+    }
+
+    ::selection { background: #e01020; color: #fff; }
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #080808; }
+    ::-webkit-scrollbar-thumb { background: #8b0000; border-radius: 0; }
+    ::-webkit-scrollbar-thumb:hover { background: #e01020; }
 
     /* ---- TOP NAV (SITE) ---- */
     nav {
@@ -39,19 +110,24 @@ a.plink:hover{
       top: 0;
       width: 100%;
       padding: 1rem 0;
-      background: rgba(10,10,26,0.9);
-      backdrop-filter: blur(10px);
+      background: rgba(8,8,8,0.96);
+      backdrop-filter: blur(12px);
       z-index: 1000;
       text-align: center;
-      border-bottom: 1px solid rgba(255,255,255,0.04);
+      border-bottom: 3px solid #8b0000;
+      box-shadow: 0 2px 25px rgba(224,16,32,0.15);
     }
     nav a {
-      color: #e0e0ff;
+      color: #f0e8e8;
       margin: 0 1.5rem;
       text-decoration: none;
-      font-weight: 600;
+      font-family: 'Russo One', sans-serif;
+      font-weight: 400;
       position: relative;
-      font-size: 0.9rem;
+      font-size: 0.82rem;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      transition: color 0.3s, text-shadow 0.3s;
     }
     nav a::after {
       content: '';
@@ -59,10 +135,12 @@ a.plink:hover{
       bottom: -5px;
       left: 0;
       width: 0;
-      height: 2px;
-      background: #00d4ff;
+      height: 3px;
+      background: #e01020;
+      box-shadow: 0 0 8px rgba(224,16,32,0.5);
       transition: 0.3s;
     }
+    nav a:hover { color: #e01020; text-shadow: 0 0 15px rgba(224,16,32,0.5); }
     nav a:hover::after { width: 100%; }
 
     /* ---- HERO ---- */
@@ -72,28 +150,37 @@ a.plink:hover{
       text-align: center;
       position: relative;
       overflow: hidden;
+      background:
+        radial-gradient(ellipse at 15% 85%, rgba(139,0,0,0.15), transparent 50%),
+        radial-gradient(ellipse at 85% 15%, rgba(224,16,32,0.08), transparent 50%);
     }
     .hero::before {
-      content: 'HOLDER';
+      content: 'LNL';
       position: absolute;
       top: 50%;
       left: 50%;
-      transform: translate(-50%, -50%);
-      font-family: 'Bebas Neue', sans-serif;
+      transform: translate(-50%, -50%) rotate(-3deg);
+      font-family: 'Rubik Spray Paint', 'Permanent Marker', cursive;
       font-size: clamp(120px, 20vw, 400px);
-      color: rgba(0,212,255,0.03);
+      color: rgba(224,16,32,0.03);
       pointer-events: none;
       white-space: nowrap;
       letter-spacing: 20px;
+      text-shadow: 4px 4px 0 rgba(0,0,0,0.2);
     }
     .hero h1 {
-      font-family: 'Orbitron', sans-serif;
+      font-family: 'Permanent Marker', cursive;
       font-size: clamp(1.6rem, 4vw, 2.8rem);
-      font-weight: 900;
+      font-weight: 400;
       letter-spacing: 3px;
       margin-bottom: 0.5rem;
+      text-shadow: 3px 3px 0 rgba(0,0,0,0.8), -1px -1px 0 rgba(224,16,32,0.2);
+      transform: rotate(-0.5deg);
     }
-    .hero h1 span { color: #00d4ff; text-shadow: 0 0 30px rgba(0,212,255,0.4); }
+    .hero h1 span {
+      color: #e01020;
+      text-shadow: 3px 3px 0 rgba(0,0,0,0.9), 0 0 30px rgba(224,16,32,0.4);
+    }
     .hero-sub {
       color: #888;
       font-size: 0.95rem;
@@ -104,10 +191,11 @@ a.plink:hover{
       position: sticky;
       top: 60px;
       z-index: 900;
-      background: rgba(10,10,26,0.96);
+      background: rgba(8,8,8,0.96);
       backdrop-filter: blur(10px);
-      border-top: 1px solid rgba(255,255,255,0.04);
-      border-bottom: 1px solid rgba(255,255,255,0.06);
+      border-top: 2px solid rgba(139,0,0,0.3);
+      border-bottom: 2px solid rgba(139,0,0,0.4);
+      box-shadow: 0 2px 15px rgba(224,16,32,0.08);
       display: none;
     }
     .dash-nav-wrap.show { display: block; }
@@ -134,30 +222,31 @@ a.plink:hover{
 
     .dash-tab{
       background: transparent;
-      border: 1px solid rgba(255,255,255,0.08);
-      color: #bfc2ff;
+      border: 2px solid rgba(255,255,255,0.08);
+      color: #c0b0b0;
       padding: 8px 14px;
       font-size: 0.78rem;
       letter-spacing: 2px;
       text-transform: uppercase;
       cursor: pointer;
-      border-radius: 6px;
+      border-radius: 0px;
       transition: all 0.2s;
       font-weight: 700;
-      font-family: 'Space Grotesk', sans-serif;
+      font-family: 'Russo One', sans-serif;
       white-space: nowrap;
       flex-shrink: 0;
     }
     .dash-tab:hover{
-      border-color: rgba(0,212,255,0.45);
-      color: #e0e0ff;
-      box-shadow: 0 0 18px rgba(0,212,255,0.12);
+      border-color: rgba(224,16,32,0.5);
+      color: #f0e8e8;
+      box-shadow: 0 0 18px rgba(224,16,32,0.12);
       transform: translateY(-1px);
     }
     .dash-tab.active{
-      border-color: rgba(0,212,255,0.65);
-      color: #00d4ff;
-      box-shadow: 0 0 22px rgba(0,212,255,0.16);
+      border-color: rgba(224,16,32,0.7);
+      color: #e01020;
+      box-shadow: 0 0 22px rgba(224,16,32,0.16);
+      text-shadow: 0 0 10px rgba(224,16,32,0.3);
     }
 
     .dash-right{
@@ -214,7 +303,7 @@ a.plink:hover{
         padding: 6px 11px;
         font-size: 0.65rem;
         letter-spacing: 0.8px;
-        border-radius: 6px;
+        border-radius: 0px;
         flex-shrink: 0;
       }
     }
@@ -224,8 +313,8 @@ a.plink:hover{
       align-items: center;
       gap: 0.55rem;
       padding: 8px 12px;
-      border-radius: 999px;
-      background: rgba(17,17,37,0.55);
+      border-radius: 0px;
+      background: rgba(14,8,8,0.55);
       border: 1px solid rgba(255,255,255,0.08);
     }
     .wallet-dot {
@@ -242,20 +331,20 @@ a.plink:hover{
       letter-spacing: 0.5px;
       white-space: nowrap;
     }
-    .wallet-addr strong { color: #e0e0ff; }
+    .wallet-addr strong { color: #f0e8e8; }
 
     .disconnect-btn {
       background: transparent;
-      border: 1px solid rgba(255,255,255,0.10);
-      color: #7a7aa6;
+      border: 2px solid rgba(255,255,255,0.10);
+      color: #8a6060;
       padding: 8px 12px;
       font-size: 0.7rem;
       text-transform: uppercase;
       letter-spacing: 1.8px;
       cursor: pointer;
-      font-family: 'Space Grotesk', sans-serif;
+      font-family: 'Russo One', sans-serif;
       transition: all 0.2s;
-      border-radius: 8px;
+      border-radius: 0px;
       font-weight: 700;
     }
     .disconnect-btn:hover { border-color: #ff3c5c; color: #ff3c5c; box-shadow: 0 0 18px rgba(255,60,92,0.14); }
@@ -266,8 +355,8 @@ a.plink:hover{
       padding: 4rem 2rem;
     }
     .connect-btn {
-      background: linear-gradient(135deg, #00d4ff 0%, #7b68ee 100%);
-      color: #000;
+      background: #e01020;
+      color: #fff;
       border: none;
       padding: 16px 48px;
       font-weight: 700;
@@ -275,14 +364,17 @@ a.plink:hover{
       text-transform: uppercase;
       letter-spacing: 3px;
       cursor: pointer;
-      font-family: 'Space Grotesk', sans-serif;
-      border-radius: 4px;
+      font-family: 'Russo One', sans-serif;
+      border-radius: 0px;
       transition: all 0.3s;
-      box-shadow: 0 4px 30px rgba(0,212,255,0.3);
+      box-shadow: 4px 4px 0 #8b0000, 0 0 30px rgba(224,16,32,0.3);
+      text-shadow: 1px 1px 0 rgba(0,0,0,0.5);
+      clip-path: polygon(0 0, 100% 0, 98% 75%, 100% 100%, 0 100%, 2% 30%);
     }
     .connect-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 40px rgba(0,212,255,0.5);
+      transform: translateY(-2px) rotate(-1deg);
+      box-shadow: 6px 6px 0 #8b0000, 0 0 40px rgba(224,16,32,0.5);
+      background: #ff1a2e;
     }
     .connect-prompt {
       color: #555;
@@ -328,9 +420,9 @@ a.plink:hover{
     /* ---- TIER CARD ---- */
     .tier-card {
       grid-column: 1 / -1;
-      background: linear-gradient(135deg, #111125 0%, #0d0d20 100%);
-      border: 1px solid #1e1e3a;
-      border-radius: 16px;
+      background: linear-gradient(135deg, #0e0e0e 0%, #0a0a0a 100%);
+      border: 2px solid #2a1515;
+      border-radius: 0px;
       padding: 2.3rem;
       display: flex;
       align-items: center;
@@ -338,6 +430,7 @@ a.plink:hover{
       position: relative;
       overflow: hidden;
       min-height: 180px;
+      box-shadow: 6px 6px 0 rgba(139,0,0,0.15);
     }
     .tier-card::before {
       content: '';
@@ -350,8 +443,8 @@ a.plink:hover{
       opacity: 0.08;
       pointer-events: none;
     }
-    .tier-card.tier-neck::before { background: radial-gradient(circle, #00d4ff, transparent); }
-    .tier-card.tier-longneck::before { background: radial-gradient(circle, #7b68ee, transparent); }
+    .tier-card.tier-neck::before { background: radial-gradient(circle, #e01020, transparent); }
+    .tier-card.tier-longneck::before { background: radial-gradient(circle, #8b0000, transparent); }
     .tier-card.tier-legend::before { background: radial-gradient(circle, #ffd700, transparent); }
     .tier-card.tier-og::before { background: radial-gradient(circle, #ffd700, transparent); }
     .tier-card.tier-sardine::before { background: radial-gradient(circle, #ff3c5c, transparent); }
@@ -372,7 +465,7 @@ a.plink:hover{
       justify-content: center;
       flex-shrink: 0;
       position: relative;
-      font-family: 'Orbitron', sans-serif;
+      font-family: 'Russo One', sans-serif;
       font-weight: 900;
       font-size: 1.8rem;
       background: rgba(255,255,255,0.03);
@@ -400,10 +493,10 @@ a.plink:hover{
       filter: saturate(1.05) contrast(1.05);
     }
 
-    .tier-neck .tier-badge { color: #00d4ff; }
-    .tier-neck .tier-badge::after { border-color: #00d4ff; }
-    .tier-longneck .tier-badge { color: #7b68ee; }
-    .tier-longneck .tier-badge::after { border-color: #7b68ee; }
+    .tier-neck .tier-badge { color: #e01020; }
+    .tier-neck .tier-badge::after { border-color: #e01020; }
+    .tier-longneck .tier-badge { color: #8b0000; }
+    .tier-longneck .tier-badge::after { border-color: #8b0000; }
     .tier-legend .tier-badge { color: #ffd700; }
     .tier-legend .tier-badge::after { border-color: #ffd700; }
     .tier-og .tier-badge { color: #ffd700; }
@@ -426,14 +519,15 @@ a.plink:hover{
       margin-bottom: 0.3rem;
     }
     .tier-name {
-      font-family: 'Bebas Neue', sans-serif;
+      font-family: 'Permanent Marker', cursive;
       font-size: 2.8rem;
       letter-spacing: 4px;
       line-height: 1;
       margin-bottom: 0.3rem;
+      text-shadow: 2px 2px 0 rgba(0,0,0,0.7);
     }
-    .tier-neck .tier-name { color: #00d4ff; }
-    .tier-longneck .tier-name { color: #7b68ee; }
+    .tier-neck .tier-name { color: #e01020; }
+    .tier-longneck .tier-name { color: #8b0000; }
     .tier-legend .tier-name { color: #ffd700; }
     .tier-og .tier-name { color: #ffd700; }
     .tier-sardine .tier-name { color: #ff3c5c; }
@@ -446,7 +540,7 @@ a.plink:hover{
       font-size: 0.85rem;
       margin-bottom: 1rem;
     }
-    .tier-nfts-held strong { color: #e0e0ff; font-weight: 700; }
+    .tier-nfts-held strong { color: #f0e8e8; font-weight: 700; }
 
     .tier-progress-wrap { max-width: 320px; }
     .tier-progress-label {
@@ -470,8 +564,8 @@ a.plink:hover{
       border-radius: 3px;
       transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    .tier-neck .tier-progress-fill { background: #00d4ff; box-shadow: 0 0 10px rgba(0,212,255,0.5); }
-    .tier-longneck .tier-progress-fill { background: #7b68ee; box-shadow: 0 0 10px rgba(123,104,238,0.5); }
+    .tier-neck .tier-progress-fill { background: #e01020; box-shadow: 0 0 10px rgba(224,16,32,0.5); }
+    .tier-longneck .tier-progress-fill { background: #8b0000; box-shadow: 0 0 10px rgba(139,0,0,0.5); }
     .tier-legend .tier-progress-fill { background: #ffd700; box-shadow: 0 0 10px rgba(255,215,0,0.5); }
     .tier-og .tier-progress-fill { background: #ffd700; box-shadow: 0 0 10px rgba(255,215,0,0.5); }
     .tier-sardine .tier-progress-fill { background: #ff3c5c; box-shadow: 0 0 10px rgba(255,60,92,0.5); }
@@ -524,7 +618,7 @@ a.plink:hover{
 }
 
 .profile-username{
-  font-family: 'Bebas Neue', sans-serif;
+  font-family: 'Permanent Marker', cursive;
   font-size: 2.4rem;
   letter-spacing: 4px;
   line-height: 1;
@@ -536,8 +630,8 @@ a.plink:hover{
 }
 
 /* username color mimics tier-name color */
-.tier-neck .profile-username { color: #00d4ff; }
-.tier-longneck .profile-username { color: #7b68ee; }
+.tier-neck .profile-username { color: #e01020; }
+.tier-longneck .profile-username { color: #8b0000; }
 .tier-legend .profile-username { color: #ffd700; }
 .tier-og .profile-username { color: #ffd700; }
 .tier-sardine .profile-username { color: #ff3c5c; }
@@ -548,7 +642,7 @@ a.plink:hover{
 .profile-name-inner{
   width: 100%;
   padding: 0.7rem 0.8rem;
-  border-radius: 14px;
+  border-radius: 0px;
   background: rgba(0,0,0,0.18);
   border: 1px solid rgba(255,255,255,0.06);
 }
@@ -573,13 +667,14 @@ a.plink:hover{
 
     /* ---- STATS CARD ---- */
     .stats-card {
-      background: #111125;
-      border: 1px solid #1e1e3a;
-      border-radius: 14px;
+      background: #0e0e0e;
+      border: 2px solid #2a1515;
+      border-radius: 0px;
       padding: 2rem;
+      box-shadow: 4px 4px 0 rgba(139,0,0,0.15);
     }
     .stats-title {
-      font-family: 'Bebas Neue', sans-serif;
+      font-family: 'Permanent Marker', cursive;
       font-size: 1.3rem;
       letter-spacing: 3px;
       color: #555;
@@ -595,22 +690,23 @@ a.plink:hover{
     .stat-row:last-child { border-bottom: none; }
     .stat-label { color: #888; font-size: 0.8rem; }
     .stat-value { font-weight: 700; font-size: 1.1rem; }
-    .stat-value.cyan { color: #00d4ff; }
-    .stat-value.purple { color: #7b68ee; }
+    .stat-value.cyan { color: #e01020; }
+    .stat-value.purple { color: #8b0000; }
     .stat-value.gold { color: #ffd700; }
     .stat-value.green { color: #00ff88; }
 
     /* ---- POINTS DISPLAY ---- */
     .points-display { text-align: center; padding: 1.5rem 0; }
     .points-number {
-      font-family: 'Orbitron', sans-serif;
+      font-family: 'Russo One', sans-serif;
       font-size: 3.5rem;
       font-weight: 900;
-      background: linear-gradient(135deg, #00d4ff, #7b68ee);
+      background: linear-gradient(135deg, #e01020, #ff1a2e);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
       line-height: 1;
+      text-shadow: none;
     }
     .points-label {
       font-size: 0.7rem;
@@ -623,10 +719,11 @@ a.plink:hover{
     /* ---- PROFILE ACTIONS ---- */
     .profile-actions{
       grid-column: 1 / -1;
-      background: #111125;
-      border: 1px solid #1e1e3a;
-      border-radius: 14px;
+      background: #0e0e0e;
+      border: 2px solid #2a1515;
+      border-radius: 0px;
       padding: 1.6rem 2rem;
+      box-shadow: 4px 4px 0 rgba(139,0,0,0.15);
     }
     .profile-actions.is-hidden { display: none; }
     .actions-grid{
@@ -644,24 +741,24 @@ a.plink:hover{
     }
     .action-btn{
       background: rgba(0,0,0,0.22);
-      border: 1px solid rgba(255,255,255,0.08);
-      color: #cfd2ff;
+      border: 2px solid rgba(255,255,255,0.08);
+      color: #c0b0b0;
       padding: 12px 12px;
-      border-radius: 10px;
+      border-radius: 0px;
       cursor: pointer;
       transition: all 0.2s;
       font-weight: 800;
       font-size: 0.74rem;
       letter-spacing: 1.6px;
       text-transform: uppercase;
-      font-family: 'Space Grotesk', sans-serif;
+      font-family: 'Russo One', sans-serif;
       text-align: center;
     }
     .action-btn:hover{
-      border-color: rgba(0,212,255,0.45);
-      box-shadow: 0 0 22px rgba(0,212,255,0.12);
+      border-color: rgba(224,16,32,0.5);
+      box-shadow: 0 0 22px rgba(224,16,32,0.12);
       transform: translateY(-1px);
-      color: #e0e0ff;
+      color: #f0e8e8;
     }
     .action-btn.danger:hover{
       border-color: rgba(255,60,92,0.6);
@@ -672,10 +769,11 @@ a.plink:hover{
     /* ---- PERKS CARD ---- */
     .perks-card {
       grid-column: 1 / -1;
-      background: #111125;
-      border: 1px solid #1e1e3a;
-      border-radius: 14px;
+      background: #0e0e0e;
+      border: 2px solid #2a1515;
+      border-radius: 0px;
       padding: 2rem;
+      box-shadow: 4px 4px 0 rgba(139,0,0,0.15);
     }
     .perks-grid {
       display: grid;
@@ -685,13 +783,14 @@ a.plink:hover{
     }
     .perk {
       background: rgba(0,0,0,0.3);
-      border: 1px solid #1e1e3a;
-      border-radius: 10px;
+      border: 2px solid #2a1515;
+      border-radius: 0px;
       padding: 1.2rem;
       position: relative;
       transition: all 0.3s;
+      box-shadow: 3px 3px 0 rgba(139,0,0,0.1);
     }
-    .perk.unlocked { border-color: rgba(0,212,255,0.3); background: rgba(0,212,255,0.04); }
+    .perk.unlocked { border-color: rgba(224,16,32,0.3); background: rgba(224,16,32,0.04); }
     .perk.locked { opacity: 0.4; }
     .perk-icon { font-size: 1.8rem; margin-bottom: 0.6rem; }
     .perk-name { font-weight: 700; font-size: 0.85rem; margin-bottom: 0.3rem; letter-spacing: 0.5px; }
@@ -712,10 +811,11 @@ a.plink:hover{
     /* ---- NFT GALLERY ---- */
     .gallery-card {
       grid-column: 1 / -1;
-      background: #111125;
-      border: 1px solid #1e1e3a;
-      border-radius: 14px;
+      background: #0e0e0e;
+      border: 2px solid #2a1515;
+      border-radius: 0px;
       padding: 2rem;
+      box-shadow: 4px 4px 0 rgba(139,0,0,0.15);
     }
     .gallery-grid {
       display: grid;
@@ -724,17 +824,18 @@ a.plink:hover{
       margin-top: 1rem;
     }
     .nft-tile {
-      background: #0a0a1a;
-      border: 1px solid #1e1e3a;
-      border-radius: 10px;
+      background: #080808;
+      border: 2px solid #2a1515;
+      border-radius: 0px;
       overflow: hidden;
       transition: all 0.3s;
       cursor: pointer;
+      box-shadow: 3px 3px 0 rgba(139,0,0,0.1);
     }
     .nft-tile:hover {
       transform: translateY(-4px);
-      border-color: rgba(0,212,255,0.4);
-      box-shadow: 0 8px 30px rgba(0,212,255,0.15);
+      border-color: rgba(224,16,32,0.4);
+      box-shadow: 0 8px 30px rgba(224,16,32,0.15);
     }
     .nft-tile img {
       width: 100%;
@@ -756,7 +857,7 @@ a.plink:hover{
     .share-section { grid-column: 1 / -1; text-align: center; padding: 1rem 0; }
     .share-btn {
       background: transparent;
-      border: 1px solid #1e1e3a;
+      border: 2px solid #2a1515;
       color: #888;
       padding: 10px 28px;
       font-size: 0.75rem;
@@ -764,14 +865,15 @@ a.plink:hover{
       text-transform: uppercase;
       letter-spacing: 2px;
       cursor: pointer;
-      font-family: 'Space Grotesk', sans-serif;
+      font-family: 'Russo One', sans-serif;
       transition: all 0.2s;
-      border-radius: 4px;
+      border-radius: 0px;
+      box-shadow: 3px 3px 0 rgba(139,0,0,0.1);
     }
     .share-btn:hover {
-      border-color: #00d4ff;
-      color: #00d4ff;
-      box-shadow: 0 0 20px rgba(0,212,255,0.15);
+      border-color: #e01020;
+      color: #e01020;
+      box-shadow: 0 0 20px rgba(224,16,32,0.15);
     }
 
     /* ---- NO NFTS STATE ---- */
@@ -779,12 +881,13 @@ a.plink:hover{
       grid-column: 1 / -1;
       text-align: center;
       padding: 3rem 2rem;
-      background: #111125;
-      border: 1px solid #1e1e3a;
-      border-radius: 14px;
+      background: #0e0e0e;
+      border: 2px solid #2a1515;
+      border-radius: 0px;
+      box-shadow: 4px 4px 0 rgba(139,0,0,0.15);
     }
     .no-nfts h2 {
-      font-family: 'Bebas Neue', sans-serif;
+      font-family: 'Permanent Marker', cursive;
       font-size: 2rem;
       letter-spacing: 3px;
       margin-bottom: 0.5rem;
@@ -792,26 +895,30 @@ a.plink:hover{
     .no-nfts p { color: #666; margin-bottom: 1.5rem; font-size: 0.9rem; }
     .no-nfts a {
       display: inline-block;
-      background: linear-gradient(135deg, #00d4ff, #7b68ee);
-      color: #000;
+      background: #e01020;
+      color: #fff;
       text-decoration: none;
       padding: 12px 36px;
       font-weight: 700;
       font-size: 0.85rem;
       text-transform: uppercase;
       letter-spacing: 2px;
-      border-radius: 4px;
+      border-radius: 0px;
       transition: all 0.2s;
+      font-family: 'Russo One', sans-serif;
+      box-shadow: 4px 4px 0 #8b0000, 0 0 25px rgba(224,16,32,0.3);
+      text-shadow: 1px 1px 0 rgba(0,0,0,0.5);
+      clip-path: polygon(0 0, 100% 0, 98% 75%, 100% 100%, 0 100%, 2% 30%);
     }
-    .no-nfts a:hover { box-shadow: 0 4px 30px rgba(0,212,255,0.4); transform: translateY(-2px); }
+    .no-nfts a:hover { box-shadow: 6px 6px 0 #8b0000, 0 0 40px rgba(224,16,32,0.5); transform: translateY(-2px) rotate(-1deg); }
 
     /* ---- LOADING ---- */
     .loading-spinner {
       display: inline-block;
       width: 40px;
       height: 40px;
-      border: 3px solid rgba(0,212,255,0.15);
-      border-top-color: #00d4ff;
+      border: 3px solid rgba(224,16,32,0.2);
+      border-top-color: #e01020;
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
       margin-bottom: 1rem;
@@ -840,11 +947,11 @@ a.plink:hover{
     .modal{
       width: min(920px, 100%);
       max-height: 85vh; 
-      background: linear-gradient(135deg, #111125 0%, #0d0d20 100%);
-      border: 1px solid rgba(255,255,255,0.10);
-      border-radius: 16px;
+      background: linear-gradient(135deg, #0e0e0e 0%, #0a0a0a 100%);
+      border: 2px solid #2a1515;
+      border-radius: 0px;
       overflow: hidden;
-      box-shadow: 0 18px 70px rgba(0,0,0,0.55);
+      box-shadow: 6px 6px 0 rgba(139,0,0,0.2), 0 18px 70px rgba(0,0,0,0.55);
     }
     .modal-head{
       display: flex;
@@ -855,19 +962,20 @@ a.plink:hover{
       background: rgba(0,0,0,0.18);
     }
     .modal-title{
-      font-family: 'Orbitron', sans-serif;
-      font-weight: 900;
+      font-family: 'Permanent Marker', cursive;
+      font-weight: 400;
       letter-spacing: 2px;
-      font-size: 0.95rem;
-      color: #e0e0ff;
+      font-size: 1rem;
+      color: #f0e8e8;
       text-transform: uppercase;
+      text-shadow: 2px 2px 0 rgba(0,0,0,0.5);
     }
     .modal-close{
       background: transparent;
       border: 1px solid rgba(255,255,255,0.12);
-      color: #9a9abd;
+      color: #8a7070;
       padding: 8px 10px;
-      border-radius: 10px;
+      border-radius: 0px;
       cursor: pointer;
       font-weight: 900;
       transition: all 0.2s;
@@ -889,18 +997,19 @@ a.plink:hover{
       gap: 0.9rem;
     }
     .pfp-tile{
-      border: 1px solid rgba(255,255,255,0.08);
+      border: 2px solid rgba(255,255,255,0.08);
       background: rgba(0,0,0,0.22);
-      border-radius: 14px;
+      border-radius: 0px;
       overflow: hidden;
       cursor: pointer;
       transition: all 0.2s;
       position: relative;
+      box-shadow: 3px 3px 0 rgba(139,0,0,0.1);
     }
     .pfp-tile:hover{
-      border-color: rgba(0,212,255,0.45);
+      border-color: rgba(224,16,32,0.45);
       transform: translateY(-2px);
-      box-shadow: 0 10px 30px rgba(0,212,255,0.10);
+      box-shadow: 0 10px 30px rgba(224,16,32,0.10);
     }
     .pfp-tile img{
       width: 100%;
@@ -913,7 +1022,7 @@ a.plink:hover{
       font-size: 0.75rem;
       font-weight: 800;
       letter-spacing: 0.4px;
-      color: #e0e0ff;
+      color: #f0e8e8;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -942,7 +1051,7 @@ a.plink:hover{
     footer {
       text-align: center;
       padding: 3rem 2rem;
-      border-top: 1px solid #1e1e3a;
+      border-top: 1px solid #2a1515;
       color: #333;
       font-size: 0.7rem;
       letter-spacing: 1px;
@@ -951,9 +1060,9 @@ a.plink:hover{
 
     /* ---- SCROLLBAR ---- */
     ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: #0a0a1a; }
-    ::-webkit-scrollbar-thumb { background: #1e1e3a; border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: #00d4ff; }
+    ::-webkit-scrollbar-track { background: #080808; }
+    ::-webkit-scrollbar-thumb { background: #2a1515; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #e01020; }
 
     @media (max-width: 600px) {
       .perks-grid { grid-template-columns: 1fr 1fr; }
@@ -986,10 +1095,10 @@ a.plink:hover{
       align-items:center;
       gap:6px;
       padding: 6px 10px;
-      border-radius: 999px;
+      border-radius: 0px;
       border: 1px solid rgba(255,255,255,0.10);
       background: rgba(0,0,0,0.22);
-      color:#bfc2ff;
+      color:#c0b0b0;
       font-size:0.7rem;
       letter-spacing:0.6px;
       text-transform: uppercase;
@@ -1016,12 +1125,180 @@ a.plink:hover{
       vertical-align: top;
     }
     .trait-table th{
-      font-family: 'Bebas Neue', sans-serif;
+      font-family: 'Permanent Marker', cursive;
       letter-spacing: 2px;
       color:#777;
       font-size: 0.95rem;
     }
     .trait-muted{ color:#666; font-size:0.78rem; }
+
+    /* ═══════════════════════════════════════
+       LEGENDARY BADGE SYSTEM
+       ═══════════════════════════════════════ */
+    .badge-card {
+      grid-column: 1 / -1;
+      position: relative;
+      overflow: hidden;
+      border: 2px solid #2a1515;
+      border-radius: 0px;
+      padding: 2.2rem;
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      box-shadow: 6px 6px 0 rgba(139,0,0,0.2);
+      transition: all 0.4s;
+    }
+    @media (max-width: 600px) {
+      .badge-card { flex-direction: column; text-align: center; padding: 1.8rem 1.4rem; }
+    }
+
+    /* ── State A: Eligible unclaimed ── */
+    .badge-card.badge-eligible {
+      background: linear-gradient(135deg, #0e0e0e 0%, #1a0808 100%);
+      border-color: rgba(224,16,32,0.4);
+      animation: badge-eligible-pulse 3s ease-in-out infinite;
+    }
+    @keyframes badge-eligible-pulse {
+      0%,100% { box-shadow: 6px 6px 0 rgba(139,0,0,0.2), 0 0 30px rgba(224,16,32,0.08); }
+      50% { box-shadow: 6px 6px 0 rgba(139,0,0,0.25), 0 0 50px rgba(224,16,32,0.15); }
+    }
+
+    /* ── State B: Claimed ── */
+    .badge-card.badge-claimed {
+      background: linear-gradient(135deg, #1a0a00 0%, #0e0e0e 50%, #1a0a00 100%);
+      border-color: rgba(255,215,0,0.4);
+      box-shadow: 6px 6px 0 rgba(139,0,0,0.2), 0 0 40px rgba(255,215,0,0.08), inset 0 0 60px rgba(255,215,0,0.02);
+    }
+
+    /* ── State C: Not eligible ── */
+    .badge-card.badge-locked {
+      background: #0a0a0a;
+      border-color: #1a1010;
+      opacity: 0.6;
+      box-shadow: 4px 4px 0 rgba(0,0,0,0.3);
+    }
+
+    /* ── Badge emblem ── */
+    .badge-emblem {
+      width: 110px;
+      height: 110px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      border-radius: 0px;
+      font-size: 2.5rem;
+    }
+    .badge-eligible .badge-emblem {
+      background: rgba(224,16,32,0.06);
+      border: 2px solid rgba(224,16,32,0.3);
+      box-shadow: inset 0 0 20px rgba(224,16,32,0.1), 0 0 20px rgba(224,16,32,0.1);
+    }
+    .badge-claimed .badge-emblem {
+      background: linear-gradient(135deg, rgba(255,215,0,0.08), rgba(224,16,32,0.06));
+      border: 2px solid rgba(255,215,0,0.4);
+      box-shadow: inset 0 0 25px rgba(255,215,0,0.08), 0 0 25px rgba(255,215,0,0.1);
+      animation: badge-emblem-shine 4s ease-in-out infinite;
+    }
+    @keyframes badge-emblem-shine {
+      0%,100% { box-shadow: inset 0 0 25px rgba(255,215,0,0.08), 0 0 25px rgba(255,215,0,0.1); }
+      50% { box-shadow: inset 0 0 35px rgba(255,215,0,0.12), 0 0 40px rgba(255,215,0,0.18); }
+    }
+    .badge-locked .badge-emblem {
+      background: rgba(255,255,255,0.02);
+      border: 2px solid rgba(255,255,255,0.06);
+    }
+
+    .badge-emblem-inner {
+      font-family: 'Rubik Spray Paint', 'Permanent Marker', cursive;
+      font-size: 1.6rem;
+      letter-spacing: 2px;
+      line-height: 1;
+    }
+    .badge-eligible .badge-emblem-inner { color: #e01020; text-shadow: 0 0 15px rgba(224,16,32,0.4); }
+    .badge-claimed .badge-emblem-inner { color: #ffd700; text-shadow: 0 0 20px rgba(255,215,0,0.4); }
+    .badge-locked .badge-emblem-inner { color: #333; }
+
+    /* ── Badge info ── */
+    .badge-info { flex: 1; min-width: 200px; position: relative; z-index: 1; }
+    .badge-label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      margin-bottom: 0.3rem;
+    }
+    .badge-eligible .badge-label { color: #e01020; }
+    .badge-claimed .badge-label { color: #ffd700; }
+    .badge-locked .badge-label { color: #333; }
+
+    .badge-title {
+      font-family: 'Permanent Marker', cursive;
+      font-size: 1.8rem;
+      letter-spacing: 3px;
+      margin-bottom: 0.4rem;
+      text-shadow: 2px 2px 0 rgba(0,0,0,0.7);
+    }
+    .badge-eligible .badge-title { color: #f0e8e8; }
+    .badge-claimed .badge-title { color: #ffd700; }
+    .badge-locked .badge-title { color: #2a2020; }
+
+    .badge-desc {
+      font-size: 0.82rem;
+      line-height: 1.6;
+      margin-bottom: 1rem;
+    }
+    .badge-eligible .badge-desc { color: #888; }
+    .badge-claimed .badge-desc { color: #999; }
+    .badge-locked .badge-desc { color: #333; }
+
+    .badge-claim-btn {
+      background: #e01020;
+      color: #fff;
+      border: none;
+      padding: 12px 32px;
+      font-family: 'Russo One', sans-serif;
+      font-weight: 700;
+      font-size: 0.82rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 4px 4px 0 #8b0000, 0 0 20px rgba(224,16,32,0.2);
+      clip-path: polygon(0 0, 100% 0, 98% 75%, 100% 100%, 0 100%, 2% 30%);
+    }
+    .badge-claim-btn:hover {
+      transform: translateY(-2px) rotate(-1deg);
+      box-shadow: 6px 6px 0 #8b0000, 0 0 35px rgba(224,16,32,0.4);
+      background: #ff1a2e;
+    }
+    .badge-claim-btn:disabled {
+      background: #333;
+      box-shadow: 2px 2px 0 #1a1a1a;
+      cursor: not-allowed;
+      clip-path: none;
+    }
+
+    .badge-status-pills {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.8rem;
+    }
+    .badge-pill {
+      font-size: 0.62rem;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 5px 12px;
+      border: 1px solid;
+      font-family: 'Russo One', sans-serif;
+    }
+    .badge-pill.active { color: #00ff88; border-color: rgba(0,255,136,0.3); background: rgba(0,255,136,0.05); }
+    .badge-pill.bound  { color: #ffd700; border-color: rgba(255,215,0,0.3); background: rgba(255,215,0,0.04); }
+    .badge-pill.access  { color: #e01020; border-color: rgba(224,16,32,0.3); background: rgba(224,16,32,0.04); }
+
+    /* spray tag inside badge card */
+    .badge-card .spray-tag { z-index: 0; }
 
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -1085,6 +1362,11 @@ a.plink:hover{
   </nav>
 
   <section class="hero">
+    <span class="spray-tag huge red drip" style="top:5%;left:-2%;transform:rotate(-12deg);">LNL</span>
+    <span class="spray-tag large white outline" style="top:10%;right:1%;transform:rotate(8deg);">LEGENDS</span>
+    <span class="spray-tag medium dark-red drip-2" style="bottom:15%;left:4%;transform:rotate(-5deg);">STICK YOUR NECK OUT</span>
+    <span class="spray-tag small red" style="bottom:8%;right:7%;transform:rotate(15deg);">LNL LNL LNL</span>
+    <span class="spray-tag large ghost" style="top:35%;right:-4%;transform:rotate(-90deg);">LONG NECK</span>
     <h1>HOLDER <span>DASHBOARD</span></h1>
     <p class="hero-sub">Customize your profile, connect your wallet, and manage your Cabbage staking</p>
   </section>
@@ -1114,7 +1396,10 @@ a.plink:hover{
   </div>
 
   <!-- CONNECT PROMPT -->
-  <div class="connect-section" id="connectSection">
+  <div class="connect-section" id="connectSection" style="position:relative;overflow:hidden;">
+    <span class="spray-tag large red outline" style="top:10%;left:5%;transform:rotate(-8deg);">LNL</span>
+    <span class="spray-tag medium white drip" style="bottom:15%;right:8%;transform:rotate(10deg);">STICK YOUR NECK OUT</span>
+    <span class="spray-tag small dark-red" style="top:20%;right:15%;transform:rotate(5deg);">LONG NECK LEGENDS</span>
     <button class="connect-btn" onclick="connectWallet()">CONNECT WALLET</button>
     <p class="connect-prompt">Phantom &bull; Solflare &bull; Magic Eden</p>
   </div>
@@ -1126,7 +1411,15 @@ a.plink:hover{
   </div>
 
   <!-- DASHBOARD WRAP -->
-  <div class="dashboard" id="dashboard">
+  <div class="dashboard" id="dashboard" style="position:relative;">
+    <span class="spray-tag huge red drip" style="top:2%;left:-3%;transform:rotate(-10deg);z-index:0;">LNL</span>
+    <span class="spray-tag large white outline" style="top:8%;right:-2%;transform:rotate(6deg);z-index:0;">LONG NECK LEGENDS</span>
+    <span class="spray-tag medium dark-red drip-2" style="top:20%;left:0%;transform:rotate(-4deg);z-index:0;">STICK YOUR NECK OUT</span>
+    <span class="spray-tag small red" style="top:35%;right:2%;transform:rotate(12deg);z-index:0;">LNL</span>
+    <span class="spray-tag large ghost" style="top:50%;left:-4%;transform:rotate(-90deg);z-index:0;">LEGENDS</span>
+    <span class="spray-tag medium red outline" style="top:65%;right:-1%;transform:rotate(5deg);z-index:0;">LNL</span>
+    <span class="spray-tag huge dark-red" style="top:75%;left:10%;transform:rotate(-6deg);z-index:0;">STICK YOUR NECK OUT</span>
+    <span class="spray-tag small white drip" style="top:88%;right:8%;transform:rotate(14deg);z-index:0;">LNL LNL LNL</span>
     <div class="view show" id="view-profile"></div>
     <div class="view" id="view-chat"></div>
     <div class="view" id="view-games"></div>
@@ -2067,7 +2360,7 @@ a.plink:hover{
       // Store frames
       var frameStyle = '';
       if (shop_owns('frame_diamond')) {
-        frameStyle = 'box-shadow:0 0 20px rgba(0,212,255,0.4),0 0 40px rgba(123,104,238,0.2);border:3px solid #00d4ff;animation:g_pulse 2s infinite;';
+        frameStyle = 'box-shadow:0 0 20px rgba(224,16,32,0.4),0 0 40px rgba(139,0,0,0.2);border:3px solid #e01020;animation:g_pulse 2s infinite;';
       } else if (shop_owns('frame_gold')) {
         frameStyle = 'box-shadow:0 0 15px rgba(255,215,0,0.3);border:3px solid #ffd700;';
       }
@@ -2128,14 +2421,14 @@ a.plink:hover{
               '<div class="points-number" id="cabbageBalance">—</div>' +
               '<div class="points-label">Cabbage Balance</div>' +
             '</div>' +
-            '<div style="background:rgba(0,255,136,0.04);border:1px solid rgba(0,255,136,0.12);border-radius:10px;padding:14px 16px;margin:10px 0 14px;">' +
+            '<div style="background:rgba(0,255,136,0.04);border:1px solid rgba(0,255,136,0.12);border-radius:0px;padding:14px 16px;margin:10px 0 14px;">' +
               '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">' +
                 '<span style="color:#888;font-size:0.78rem;">LNLs Earning</span>' +
                 '<span style="font-weight:700;font-size:1.05rem;color:#00ff88;" id="cabbageNftCount">—</span>' +
               '</div>' +
               '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">' +
                 '<span style="color:#888;font-size:0.78rem;">Rate Per NFT</span>' +
-                '<span style="font-weight:700;font-size:1.05rem;color:#e0e0ff;">1 \uD83E\uDD6C / week</span>' +
+                '<span style="font-weight:700;font-size:1.05rem;color:#f0e8e8;">1 \uD83E\uDD6C / week</span>' +
               '</div>' +
               '<div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid rgba(0,255,136,0.1);padding-top:8px;">' +
                 '<span style="color:#888;font-size:0.78rem;font-weight:600;">Total Weekly Earn</span>' +
@@ -2148,7 +2441,7 @@ a.plink:hover{
             '<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:12px;flex-wrap:wrap;">' +
               '<button class="disconnect-btn" style="border-color:rgba(255,255,255,0.12);" onclick="refreshCabbageUI()">Refresh</button>' +
               '<button class="disconnect-btn" id="cabbageStartBtn" style="border-color:rgba(0,255,136,0.35);color:#00ff88;" onclick="startCabbage()">Restart</button>' +
-              '<button class="disconnect-btn" id="cabbageClaimBtn" style="border-color:rgba(0,212,255,0.35);color:#00d4ff;" onclick="claimCabbage()">Claim</button>' +
+              '<button class="disconnect-btn" id="cabbageClaimBtn" style="border-color:rgba(224,16,32,0.35);color:#e01020;" onclick="claimCabbage()">Claim</button>' +
             '</div>' +
             '<div style="margin-top:10px;color:#555;font-size:0.72rem;letter-spacing:1px;line-height:1.45;">' +
               'Click <strong>Restart</strong> anytime to re-sync your NFT count. Each LNL earns <strong>1 \uD83E\uDD6C per week</strong>. Claim anytime.' +
@@ -2161,14 +2454,14 @@ a.plink:hover{
               '<div class="points-number" id="gaCabbageBalance">—</div>' +
               '<div class="points-label">Cabbage Balance (GA)</div>' +
             '</div>' +
-            '<div style="background:rgba(74,222,128,0.04);border:1px solid rgba(74,222,128,0.12);border-radius:10px;padding:14px 16px;margin:10px 0 14px;">' +
+            '<div style="background:rgba(74,222,128,0.04);border:1px solid rgba(74,222,128,0.12);border-radius:0px;padding:14px 16px;margin:10px 0 14px;">' +
               '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">' +
                 '<span style="color:#888;font-size:0.78rem;">Golf Addicts Earning</span>' +
                 '<span style="font-weight:700;font-size:1.05rem;color:#4ade80;">' + gaCount + '</span>' +
               '</div>' +
               '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">' +
                 '<span style="color:#888;font-size:0.78rem;">Rate Per NFT</span>' +
-                '<span style="font-weight:700;font-size:1.05rem;color:#e0e0ff;">5 \uD83E\uDD6C / week</span>' +
+                '<span style="font-weight:700;font-size:1.05rem;color:#f0e8e8;">5 \uD83E\uDD6C / week</span>' +
               '</div>' +
               '<div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid rgba(74,222,128,0.1);padding-top:8px;">' +
                 '<span style="color:#888;font-size:0.78rem;font-weight:600;">Total Weekly Earn</span>' +
@@ -2194,6 +2487,11 @@ a.plink:hover{
       // Populate cabbage values after DOM updates
       setTimeout(function(){ try { refreshCabbageUI(); } catch(e){} }, 50);
       setTimeout(function(){ try { refreshGaCabbageUI(); } catch(e){} }, 80);
+
+      // ── LEGENDARY BADGE SECTION ──
+      var badgeWallet = walletPublicKey.toBase58();
+      _badgeStatus = await fetchBadgeStatus(badgeWallet);
+      view.innerHTML += '<div id="badgeCardContainer">' + renderBadgeCardHTML() + '</div>';
 
       // Compute achievements FIRST (player card needs the count)
       var xp = pp_computeXP(pp_stats);
@@ -2317,7 +2615,7 @@ a.plink:hover{
       var galleryHTML = nfts.map(function(nft) {
         var img = nft.image
           ? '<img src="' + nft.image + '" alt="' + escapeHtml(nft.name) + '" loading="lazy">'
-          : '<div style="aspect-ratio:1;background:#1e1e3a;display:flex;align-items:center;justify-content:center;color:#555;font-size:0.8rem;">No Image</div>';
+          : '<div style="aspect-ratio:1;background:#2a1515;display:flex;align-items:center;justify-content:center;color:#555;font-size:0.8rem;">No Image</div>';
         var mintShort = nft.mint ? nft.mint.slice(0,4) + "..." + nft.mint.slice(-4) : "";
         return '' +
           '<div class="nft-tile" onclick="window.open(\'https://magiceden.us/item-details/' + nft.mint + '\', \'_blank\')">' +
@@ -2339,7 +2637,7 @@ a.plink:hover{
       var gaGalleryHTML = (session.loadedGolfAddicts || []).map(function(nft) {
         var img = nft.image
           ? '<img src="' + nft.image + '" alt="' + escapeHtml(nft.name) + '" loading="lazy">'
-          : '<div style="aspect-ratio:1;background:#1e1e3a;display:flex;align-items:center;justify-content:center;color:#555;font-size:0.8rem;">No Image</div>';
+          : '<div style="aspect-ratio:1;background:#2a1515;display:flex;align-items:center;justify-content:center;color:#555;font-size:0.8rem;">No Image</div>';
         var mintShort = nft.mint ? nft.mint.slice(0,4) + "..." + nft.mint.slice(-4) : "";
         return '' +
           '<div class="nft-tile" style="border-color:rgba(74,222,128,0.12);" onclick="window.open(\'https://magiceden.us/item-details/' + nft.mint + '\', \'_blank\')">' +
@@ -2358,7 +2656,7 @@ a.plink:hover{
             '<div style="text-align:center;color:#555;padding:2rem;">' +
               '<div style="font-size:2rem;margin-bottom:0.5rem;">⛳</div>' +
               '<div style="font-size:0.82rem;margin-bottom:1rem;">No Golf Addicts in this wallet.</div>' +
-              '<a href="' + CONFIG.GA_MAGIC_EDEN_LINK + '" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#4ade80,#f97316);color:#000;text-decoration:none;padding:10px 28px;font-weight:700;font-size:0.8rem;text-transform:uppercase;letter-spacing:2px;border-radius:4px;">BUY ON MAGIC EDEN ⛳</a>' +
+              '<a href="' + CONFIG.GA_MAGIC_EDEN_LINK + '" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#4ade80,#f97316);color:#000;text-decoration:none;padding:10px 28px;font-weight:700;font-size:0.8rem;text-transform:uppercase;letter-spacing:2px;border-radius: 0px;">BUY ON MAGIC EDEN ⛳</a>' +
             '</div>') +
         '</div>';
 
@@ -2536,7 +2834,7 @@ a.plink:hover{
         } else {
           var ph = document.createElement("div");
           ph.style.aspectRatio = "1";
-          ph.style.background = "#1e1e3a";
+          ph.style.background = "#2a1515";
           tile.appendChild(ph);
         }
 
@@ -2817,6 +3115,197 @@ a.plink:hover{
         supaClient = supabase.createClient(SUPA_URL, SUPA_KEY);
       }
       return supaClient;
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       LEGENDARY BADGE SYSTEM
+       ═══════════════════════════════════════════════════════
+       Tables: badge_eligibility, legendary_badges, badge_claim_events
+       Flow: wallet connects → fetchBadgeStatus → render card → claim if eligible
+    ═══════════════════════════════════════════════════════ */
+
+    var _badgeStatus = null; // cached status for current session
+
+    async function fetchBadgeStatus(wallet) {
+      if (!wallet) return null;
+      try {
+        var sb = getSupaClient();
+
+        // Check eligibility
+        var eR = await sb.from('badge_eligibility')
+          .select('wallet,eligible,qualification_type,qualification_reason,score')
+          .eq('wallet', wallet)
+          .eq('eligible', true)
+          .maybeSingle();
+
+        // Check if already claimed
+        var bR = await sb.from('legendary_badges')
+          .select('wallet,badge_type,active,granted_at,granted_reason,used_count,max_uses')
+          .eq('wallet', wallet)
+          .maybeSingle();
+
+        var status = {
+          eligible: !!(eR.data),
+          claimed: !!(bR.data),
+          active: bR.data ? bR.data.active : false,
+          qualification_type: eR.data ? eR.data.qualification_type : null,
+          qualification_reason: eR.data ? eR.data.qualification_reason : null,
+          score: eR.data ? eR.data.score : 0,
+          granted_at: bR.data ? bR.data.granted_at : null,
+          badge_type: bR.data ? bR.data.badge_type : null
+        };
+
+        _badgeStatus = status;
+        return status;
+      } catch (e) {
+        console.warn('[Badge] fetchBadgeStatus error:', e);
+        return { eligible: false, claimed: false, active: false, score: 0 };
+      }
+    }
+
+    async function claimBadge() {
+      if (!walletPublicKey || !walletProvider) {
+        return alert('Connect your wallet first.');
+      }
+
+      var wallet = walletPublicKey.toBase58();
+      var btn = document.getElementById('badgeClaimBtn');
+      if (btn) { btn.disabled = true; btn.textContent = 'SIGNING...'; }
+
+      try {
+        // 1. Sign message for proof of ownership
+        if (!walletProvider.signMessage) {
+          throw new Error('Wallet does not support message signing. Use Phantom or Solflare.');
+        }
+
+        var nonce = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (String(Date.now()) + '_' + Math.random().toString(16).slice(2));
+        var msg =
+          'LNL Legendary Badge Claim\n' +
+          'Wallet: ' + wallet + '\n' +
+          'Nonce: ' + nonce + '\n' +
+          'Time: ' + new Date().toISOString();
+
+        var msgBytes = new TextEncoder().encode(msg);
+        var signed = await walletProvider.signMessage(msgBytes, 'utf8');
+
+        var sigBytes = signed && signed.signature ? signed.signature : signed;
+        if (!sigBytes) throw new Error('No signature returned.');
+
+        if (btn) { btn.textContent = 'VERIFYING...'; }
+
+        // 2. Send signed payload to secure Edge Function
+        // The Edge Function verifies the signature server-side, checks eligibility,
+        // prevents duplicates, and grants the badge using service_role.
+        var claimUrl = SUPA_URL.replace(/\/+$/, '') + '/functions/v1/claim-badge';
+
+        var resp = await fetch(claimUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + SUPA_KEY
+          },
+          body: JSON.stringify({
+            wallet: wallet,
+            message: msg,
+            signature: Array.from(sigBytes),
+            publicKey: walletPublicKey.toBase58()
+          })
+        });
+
+        var result = await resp.json();
+
+        if (!resp.ok) {
+          throw new Error(result.error || ('Server error: HTTP ' + resp.status));
+        }
+
+        // 3. Update local status from server response
+        if (result.badge) {
+          _badgeStatus = result.badge;
+        } else {
+          _badgeStatus = await fetchBadgeStatus(wallet);
+        }
+
+        // 4. Refresh UI
+        var container = document.getElementById('badgeCardContainer');
+        if (container) container.innerHTML = renderBadgeCardHTML();
+
+        console.log('[Badge] Claimed successfully via Edge Function');
+
+      } catch (e) {
+        console.error('[Badge] Claim error:', e);
+        alert('Badge claim failed: ' + (e.message || e));
+        if (btn) { btn.disabled = false; btn.textContent = 'CLAIM BADGE'; }
+      }
+    }
+
+    function renderBadgeCardHTML() {
+      var s = _badgeStatus || { eligible: false, claimed: false, active: false };
+
+      if (s.claimed && s.active) {
+        // ── STATE B: CLAIMED ──
+        var grantedDate = s.granted_at ? new Date(s.granted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+        return '' +
+          '<div class="badge-card badge-claimed">' +
+            '<span class="spray-tag medium red outline" style="top:-5%;right:2%;transform:rotate(8deg);">LNL</span>' +
+            '<span class="spray-tag small ghost drip" style="bottom:5%;left:5%;transform:rotate(-6deg);">LEGENDARY</span>' +
+            '<div class="badge-emblem">' +
+              '<div class="badge-emblem-inner">LNL</div>' +
+            '</div>' +
+            '<div class="badge-info">' +
+              '<div class="badge-label">LEGENDARY BADGE</div>' +
+              '<div class="badge-title">ACCESS UNLOCKED</div>' +
+              '<div class="badge-desc">' +
+                'This badge is permanently bound to your wallet. ' +
+                'Future <strong style="color:#ffd700;">Burn 3 → Mint 1</strong> access for the next Long Neck Legends collection is secured.' +
+                (grantedDate ? '<br><span style="color:#555;font-size:0.72rem;">Claimed ' + grantedDate + '</span>' : '') +
+              '</div>' +
+              '<div class="badge-status-pills">' +
+                '<span class="badge-pill active">✓ Active</span>' +
+                '<span class="badge-pill bound">Bound to Wallet</span>' +
+                '<span class="badge-pill access">Burn Access</span>' +
+              '</div>' +
+            '</div>' +
+          '</div>';
+
+      } else if (s.eligible && !s.claimed) {
+        // ── STATE A: ELIGIBLE, UNCLAIMED ──
+        var reason = s.qualification_reason || 'Top activity wallet';
+        return '' +
+          '<div class="badge-card badge-eligible">' +
+            '<span class="spray-tag large red drip" style="top:-8%;left:-2%;transform:rotate(-10deg);">LNL</span>' +
+            '<span class="spray-tag small white outline" style="bottom:8%;right:4%;transform:rotate(12deg);">STICK YOUR NECK OUT</span>' +
+            '<div class="badge-emblem">' +
+              '<div class="badge-emblem-inner">LNL</div>' +
+            '</div>' +
+            '<div class="badge-info">' +
+              '<div class="badge-label">LEGACY ACCESS</div>' +
+              '<div class="badge-title">LEGENDARY BADGE AVAILABLE</div>' +
+              '<div class="badge-desc">' +
+                'This wallet qualified for the Legendary Badge. Claim it to lock in your ' +
+                '<strong style="color:#e01020;">Burn 3 → Mint 1</strong> access for the next collection.' +
+                '<br><span style="color:#555;font-size:0.72rem;">' + escapeHtml(reason) + '</span>' +
+              '</div>' +
+              '<button class="badge-claim-btn" id="badgeClaimBtn" onclick="claimBadge()">CLAIM BADGE</button>' +
+            '</div>' +
+          '</div>';
+
+      } else {
+        // ── STATE C: NOT ELIGIBLE ──
+        return '' +
+          '<div class="badge-card badge-locked">' +
+            '<div class="badge-emblem">' +
+              '<div class="badge-emblem-inner">🔒</div>' +
+            '</div>' +
+            '<div class="badge-info">' +
+              '<div class="badge-label">LEGACY ACCESS</div>' +
+              '<div class="badge-title">LEGENDARY BADGE</div>' +
+              '<div class="badge-desc">' +
+                'This wallet is not currently eligible for the Legendary Badge. ' +
+                'Top 20 activity wallets earn access to the next collection\'s Burn 3 → Mint 1 route.' +
+              '</div>' +
+            '</div>' +
+          '</div>';
+      }
     }
 
     /* ===============================
@@ -3309,7 +3798,7 @@ a.plink:hover{
 
     // Deterministic color per wallet so each user always looks the same
     function walletColor(addr) {
-      var palette = ['#00d4ff','#7b68ee','#00ff88','#f5a623','#ff6b9d','#4ecdc4','#ffd93d','#ff8c42'];
+      var palette = ['#e01020','#8b0000','#00ff88','#f5a623','#ff6b9d','#4ecdc4','#ffd93d','#ff8c42'];
       var hash = 0;
       for (var i = 0; i < (addr || '').length; i++) {
         hash = ((hash << 5) - hash) + addr.charCodeAt(i);
@@ -3340,19 +3829,19 @@ a.plink:hover{
         // ── Header ──
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.6rem;">' +
           '<div>' +
-            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.5rem;letter-spacing:3px;color:#e0e0ff;">🪶 HOLDER CHAT</div>' +
+            '<div style="font-family:\'Permanent Marker\',sans-serif;font-size:1.5rem;letter-spacing:3px;color:#f0e8e8;">🪶 HOLDER CHAT</div>' +
             '<div style="font-size:0.7rem;color:#444;letter-spacing:1px;margin-top:2px;">Live · Open to all connected wallets</div>' +
           '</div>' +
           '<div style="display:flex;align-items:center;gap:0.7rem;">' +
             '<div id="chatLiveDot" style="display:flex;align-items:center;gap:5px;font-size:0.7rem;color:#555;">' +
               '<div style="width:7px;height:7px;border-radius:50%;background:#555;"></div>Connecting…' +
             '</div>' +
-            '<button onclick="switchView(\'profile\')" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#888;padding:7px 14px;border-radius:7px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;transition:all 0.2s;" onmouseover="this.style.borderColor=\'rgba(0,212,255,0.4)\';this.style.color=\'#00d4ff\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,0.1)\';this.style.color=\'#888\'">← Home</button>' +
+            '<button onclick="switchView(\'profile\')" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#888;padding:7px 14px;border-radius:7px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;transition:all 0.2s;" onmouseover="this.style.borderColor=\'rgba(224,16,32,0.4)\';this.style.color=\'#e01020\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,0.1)\';this.style.color=\'#888\'">← Home</button>' +
           '</div>' +
         '</div>' +
 
         // ── Announcements (team-only post, visible to all) ──
-        '<div id="chatAnnounceWrap" style="margin-bottom:10px;border:1px solid rgba(255,180,0,0.18);border-radius:10px;background:rgba(255,160,0,0.04);overflow:hidden;">' +
+        '<div id="chatAnnounceWrap" style="margin-bottom:10px;border:1px solid rgba(255,180,0,0.18);border-radius:0px;background:rgba(255,160,0,0.04);overflow:hidden;">' +
           '<div id="chatAnnounceBar" style="display:flex;align-items:center;gap:8px;padding:8px 14px;cursor:pointer;user-select:none;" onclick="toggleAnnouncements()">' +
             '<span style="font-size:0.65rem;">📢</span>' +
             '<span style="font-size:0.65rem;letter-spacing:2px;color:#aa7700;font-weight:700;text-transform:uppercase;flex:1;">Announcements</span>' +
@@ -3360,8 +3849,8 @@ a.plink:hover{
           '</div>' +
           '<div id="chatAnnounceList" style="padding:0 14px 10px;"></div>' +
           '<div id="chatAnnouncePostWrap" style="display:none;padding:0 14px 10px;gap:8px;align-items:center;">' +
-            '<input id="chatAnnounceInput" maxlength="280" placeholder="Post an announcement..." style="flex:1;background:#0a0a18;border:1px solid rgba(255,180,0,0.25);border-radius:8px;color:#e0e0ff;font-family:\'Space Grotesk\',sans-serif;font-size:0.82rem;padding:9px 12px;outline:none;width:100%;box-sizing:border-box;margin-bottom:7px;" />' +
-            '<button id="chatAnnouncePostBtn" onclick="postAnnouncement()" style="background:linear-gradient(135deg,rgba(255,180,0,0.22),rgba(255,100,0,0.18));border:1px solid rgba(255,180,0,0.4);color:#ffb000;padding:8px 18px;border-radius:8px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">📢 Post</button>' +
+            '<input id="chatAnnounceInput" maxlength="280" placeholder="Post an announcement..." style="flex:1;background:#0a0a18;border:1px solid rgba(255,180,0,0.25);border-radius: 0px;color:#f0e8e8;font-family:\'Space Grotesk\',sans-serif;font-size:0.82rem;padding:9px 12px;outline:none;width:100%;box-sizing:border-box;margin-bottom:7px;" />' +
+            '<button id="chatAnnouncePostBtn" onclick="postAnnouncement()" style="background:linear-gradient(135deg,rgba(255,180,0,0.22),rgba(255,100,0,0.18));border:1px solid rgba(255,180,0,0.4);color:#ffb000;padding:8px 18px;border-radius: 0px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">📢 Post</button>' +
           '</div>' +
         '</div>' +
 
@@ -3372,12 +3861,12 @@ a.plink:hover{
 
         // ── Input ──
         '<div style="display:flex;gap:8px;align-items:center;">' +
-          '<div id="chatInputWrap" style="flex:1;display:flex;align-items:center;gap:8px;background:#0d0d1e;border:1px solid #1a1a30;border-radius:10px;padding:0 12px;transition:border-color 0.2s;">' +
+          '<div id="chatInputWrap" style="flex:1;display:flex;align-items:center;gap:8px;background:#0d0d1e;border:1px solid #221010;border-radius:0px;padding:0 12px;transition:border-color 0.2s;">' +
             '<span id="chatWalletTag" style="font-size:0.78rem;font-weight:700;flex-shrink:0;white-space:nowrap;"></span>' +
-            '<input id="chatInput" style="flex:1;background:transparent;border:none;outline:none;color:#e0e0ff;font-family:\'Space Grotesk\',sans-serif;font-size:0.88rem;padding:12px 0;" placeholder="Say something legend…" maxlength="400" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();sendChatMessage();}" />' +
+            '<input id="chatInput" style="flex:1;background:transparent;border:none;outline:none;color:#f0e8e8;font-family:\'Space Grotesk\',sans-serif;font-size:0.88rem;padding:12px 0;" placeholder="Say something legend…" maxlength="400" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();sendChatMessage();}" />' +
             '<span id="chatCount" style="font-size:0.62rem;color:#252540;flex-shrink:0;min-width:28px;text-align:right;"></span>' +
           '</div>' +
-          '<button id="chatSendBtn" onclick="sendChatMessage()" style="background:linear-gradient(135deg,rgba(0,212,255,0.18),rgba(123,104,238,0.18));border:1px solid rgba(0,212,255,0.35);color:#00d4ff;padding:12px 22px;border-radius:10px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.8rem;letter-spacing:1.5px;text-transform:uppercase;transition:all 0.2s;white-space:nowrap;">Send</button>' +
+          '<button id="chatSendBtn" onclick="sendChatMessage()" style="background:linear-gradient(135deg,rgba(224,16,32,0.18),rgba(139,0,0,0.18));border:1px solid rgba(224,16,32,0.35);color:#e01020;padding:12px 22px;border-radius:0px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.8rem;letter-spacing:1.5px;text-transform:uppercase;transition:all 0.2s;white-space:nowrap;">Send</button>' +
         '</div>';
 
       // Wallet tag
@@ -3391,8 +3880,8 @@ a.plink:hover{
       // Focus ring
       var wrap = document.getElementById('chatInputWrap');
       var inp  = document.getElementById('chatInput');
-      inp.addEventListener('focus', function(){ wrap.style.borderColor = 'rgba(0,212,255,0.45)'; });
-      inp.addEventListener('blur',  function(){ wrap.style.borderColor = '#1a1a30'; });
+      inp.addEventListener('focus', function(){ wrap.style.borderColor = 'rgba(224,16,32,0.45)'; });
+      inp.addEventListener('blur',  function(){ wrap.style.borderColor = '#221010'; });
       inp.addEventListener('input', function(){
         var left = 400 - inp.value.length;
         var c = document.getElementById('chatCount');
@@ -3560,7 +4049,7 @@ a.plink:hover{
           '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:340px;gap:0.7rem;">' +
             '<div style="font-size:2.5rem;">🪶</div>' +
             '<div style="color:#252540;font-size:0.78rem;letter-spacing:2px;text-transform:uppercase;">No messages yet</div>' +
-            '<div style="color:#1a1a30;font-size:0.7rem;">Be the first legend</div>' +
+            '<div style="color:#221010;font-size:0.7rem;">Be the first legend</div>' +
           '</div>';
         return;
       }
@@ -3601,13 +4090,13 @@ a.plink:hover{
               '<span style="font-weight:700;font-size:0.8rem;color:' + color + ';">' + escapeHtml(name) + '</span>' +
               (badge ? '<span style="font-size:0.7rem;">' + badge + '</span>' : '') +
               (achBadge ? '<span style="font-size:0.65rem;">' + achBadge + '</span>' : '') +
-              (achCount > 0 ? '<span style="font-size:0.48rem;color:#ffd700;font-weight:700;background:rgba(255,215,0,0.1);padding:1px 4px;border-radius:4px;">' + achCount + '🏅</span>' : '') +
+              (achCount > 0 ? '<span style="font-size:0.48rem;color:#ffd700;font-weight:700;background:rgba(255,215,0,0.1);padding:1px 4px;border-radius: 0px;">' + achCount + '🏅</span>' : '') +
               '<span style="font-size:0.6rem;color:#252540;">' + timeStr + '</span>' +
-              (isMe ? '<span style="font-size:0.55rem;letter-spacing:1px;color:#1e1e3a;text-transform:uppercase;">you</span>' : '') +
+              (isMe ? '<span style="font-size:0.55rem;letter-spacing:1px;color:#2a1515;text-transform:uppercase;">you</span>' : '') +
             '</div>';
         }
 
-        var glowStyle = glow ? 'text-shadow:0 0 8px rgba(0,212,255,0.15);' : '';
+        var glowStyle = glow ? 'text-shadow:0 0 8px rgba(224,16,32,0.15);' : '';
         html += '<div style="font-size:0.87rem;color:#c8c8e8;line-height:1.6;word-break:break-word;padding:1px 0;' + glowStyle + '">' + escapeHtml(m.text) + '</div>';
       });
 
@@ -3948,7 +4437,7 @@ a.plink:hover{
       var ta = document.getElementById('g_winnerTx');
       if (ta) {
         if (txSig && !txSig.startsWith('FAILED')) {
-          ta.innerHTML = '<a href="https://solscan.io/tx/' + txSig + '" target="_blank" style="color:#00d4ff;text-decoration:underline;font-size:0.65rem;word-break:break-all;">View on Solscan →</a>';
+          ta.innerHTML = '<a href="https://solscan.io/tx/' + txSig + '" target="_blank" style="color:#e01020;text-decoration:underline;font-size:0.65rem;word-break:break-all;">View on Solscan →</a>';
         } else {
           ta.textContent = 'Transfer processing…';
         }
@@ -3966,7 +4455,7 @@ a.plink:hover{
       var container = document.getElementById('g_confettiContainer');
       if (!container) return;
       container.innerHTML = '';
-      var colors = ['#ffd700','#00d4ff','#7b68ee','#00ff88','#ff3c5c'];
+      var colors = ['#ffd700','#e01020','#8b0000','#00ff88','#ff3c5c'];
       for (var i = 0; i < 80; i++) {
         var p = document.createElement('div');
         var size = 6 + Math.random() * 8;
@@ -4195,17 +4684,17 @@ a.plink:hover{
         '@keyframes g_fall{to{top:110%;opacity:0;transform:rotate(720deg) translateX(30px)}}' +
         '@keyframes g_spin{0%{transform:translateY(0)}100%{transform:translateY(-300px)}}' +
         '@keyframes g_pulse{0%,100%{opacity:1}50%{opacity:0.6}}' +
-        '.g_card{background:#0f0f22;border:1px solid #1e1e3a;border-radius:14px;padding:1.4rem;margin-bottom:1.2rem;}' +
+        '.g_card{background:#0a0a0a;border:1px solid #2a1515;border-radius:0px;padding:1.4rem;margin-bottom:1.2rem;}' +
         '.g_title{font-family:"Bebas Neue",sans-serif;font-size:1rem;letter-spacing:3px;color:#555;margin-bottom:1rem;}' +
-        '.g_btn{background:transparent;border:1px solid rgba(255,255,255,0.12);color:#aaa;padding:10px 18px;border-radius:8px;cursor:pointer;font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:0.75rem;letter-spacing:1.5px;text-transform:uppercase;transition:all 0.2s;}' +
-        '.g_btn:hover:not(:disabled){border-color:rgba(0,212,255,0.5);color:#00d4ff;transform:translateY(-1px);}' +
+        '.g_btn{background:transparent;border:1px solid rgba(255,255,255,0.12);color:#aaa;padding:10px 18px;border-radius: 0px;cursor:pointer;font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:0.75rem;letter-spacing:1.5px;text-transform:uppercase;transition:all 0.2s;}' +
+        '.g_btn:hover:not(:disabled){border-color:rgba(224,16,32,0.5);color:#e01020;transform:translateY(-1px);}' +
         '.g_btn:disabled{opacity:0.4;cursor:not-allowed;}' +
-        '.g_btn-primary{border-color:rgba(0,212,255,0.45);color:#00d4ff;}' +
-        '.g_btn-primary:hover:not(:disabled){background:rgba(0,212,255,0.08);box-shadow:0 0 20px rgba(0,212,255,0.15);}' +
-        '.g_result{min-height:48px;text-align:center;padding:0.8rem;border-radius:8px;background:rgba(0,0,0,0.2);margin-top:0.8rem;font-weight:700;font-size:0.9rem;transition:all 0.3s;}' +
-        '.g_reel{font-size:2.2rem;background:#06060f;border:1px solid #161628;border-radius:10px;width:60px;height:60px;display:inline-flex;align-items:center;justify-content:center;}' +
-        '.g_pot-bar{height:8px;background:rgba(255,255,255,0.05);border-radius:4px;overflow:hidden;margin-top:5px;}' +
-        '.g_pot-fill{height:100%;border-radius:4px;transition:width 1s ease;}' +
+        '.g_btn-primary{border-color:rgba(224,16,32,0.45);color:#e01020;}' +
+        '.g_btn-primary:hover:not(:disabled){background:rgba(224,16,32,0.08);box-shadow:0 0 20px rgba(224,16,32,0.15);}' +
+        '.g_result{min-height:48px;text-align:center;padding:0.8rem;border-radius: 0px;background:rgba(0,0,0,0.2);margin-top:0.8rem;font-weight:700;font-size:0.9rem;transition:all 0.3s;}' +
+        '.g_reel{font-size:2.2rem;background:#06060f;border:1px solid #161628;border-radius:0px;width:60px;height:60px;display:inline-flex;align-items:center;justify-content:center;}' +
+        '.g_pot-bar{height:8px;background:rgba(255,255,255,0.05);border-radius: 0px;overflow:hidden;margin-top:5px;}' +
+        '.g_pot-fill{height:100%;border-radius: 0px;transition:width 1s ease;}' +
         '@keyframes g_coinFlip{0%{transform:rotateY(0)}100%{transform:rotateY(1800deg)}}' +
         '@keyframes g_coinLand{0%{transform:scale(1.15)}50%{transform:scale(0.95)}100%{transform:scale(1)}}' +
         '.g_coin{width:80px;height:80px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;perspective:600px;margin:0 auto;}' +
@@ -4214,7 +4703,7 @@ a.plink:hover{
         '.g_coin-inner.landed{animation:g_coinLand 0.3s ease-out;}' +
         '.g_coin-heads{background:linear-gradient(135deg,#ffd700,#f0c000);color:#6b4c00;border:3px solid #e6b800;text-shadow:0 1px 2px rgba(0,0,0,0.2);}' +
         '.g_coin-tails{background:linear-gradient(135deg,#c0c0c0,#a0a0a0);color:#333;border:3px solid #909090;text-shadow:0 1px 2px rgba(0,0,0,0.15);}' +
-        '.bj_card{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:62px;height:88px;border-radius:8px;font-weight:700;font-size:0.95rem;margin:3px;box-shadow:0 3px 12px rgba(0,0,0,0.4);}' +
+        '.bj_card{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:62px;height:88px;border-radius: 0px;font-weight:700;font-size:0.95rem;margin:3px;box-shadow:0 3px 12px rgba(0,0,0,0.4);}' +
         '.bj_front{background:linear-gradient(135deg,#fff,#f0f0f0);border:2px solid #ddd;}' +
         '.bj_back{background:linear-gradient(135deg,#1a3a6a,#0d2240);border:2px solid #2a4a7a;background-image:repeating-linear-gradient(45deg,transparent,transparent 5px,rgba(255,255,255,0.03) 5px,rgba(255,255,255,0.03) 10px);}' +
         '.bj_red{color:#cc0000;} .bj_blk{color:#111;}' +
@@ -4222,18 +4711,18 @@ a.plink:hover{
         '.pk_seat.occ{border-color:rgba(0,255,136,0.3);background:rgba(0,255,136,0.04);}' +
         '.pk_seat.turn{border-color:rgba(255,215,0,0.6);box-shadow:0 0 15px rgba(255,215,0,0.15);}' +
         '.pk_seat.fold{opacity:0.4;}' +
-        '.plinko_canvas{width:100%;border-radius:8px;background:#06060f;border:1px solid #161628;display:block;}' +
-        '.crash_canvas{width:100%;height:200px;border-radius:8px;background:#06060f;border:1px solid #161628;display:block;}' +
+        '.plinko_canvas{width:100%;border-radius: 0px;background:#06060f;border:1px solid #161628;display:block;}' +
+        '.crash_canvas{width:100%;height:200px;border-radius: 0px;background:#06060f;border:1px solid #161628;display:block;}' +
         '.crash_multi{font-family:"Bebas Neue",sans-serif;font-size:2.8rem;letter-spacing:2px;text-align:center;margin:0.3rem 0;transition:color 0.15s;}' +
         '.mines_grid{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin:0.5rem 0;}' +
-        '.mines_cell{aspect-ratio:1;border-radius:8px;border:1px solid #1e1e3a;background:#0a0a1a;display:flex;align-items:center;justify-content:center;font-size:1.4rem;cursor:pointer;transition:all 0.15s;user-select:none;}' +
-        '.mines_cell:hover:not(.revealed){border-color:rgba(0,212,255,0.4);background:rgba(0,212,255,0.04);}' +
+        '.mines_cell{aspect-ratio:1;border-radius: 0px;border:1px solid #2a1515;background:#080808;display:flex;align-items:center;justify-content:center;font-size:1.4rem;cursor:pointer;transition:all 0.15s;user-select:none;}' +
+        '.mines_cell:hover:not(.revealed){border-color:rgba(224,16,32,0.4);background:rgba(224,16,32,0.04);}' +
         '.mines_cell.gem{background:rgba(0,255,136,0.08);border-color:rgba(0,255,136,0.3);}' +
         '.mines_cell.mine{background:rgba(255,60,92,0.1);border-color:rgba(255,60,92,0.4);}' +
         '.tower_grid{display:flex;flex-direction:column-reverse;gap:3px;margin:0.5rem 0;}' +
         '.tower_row{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;}' +
-        '.tower_cell{height:38px;border-radius:6px;border:1px solid #1e1e3a;background:#0a0a1a;display:flex;align-items:center;justify-content:center;font-size:1rem;cursor:pointer;transition:all 0.15s;font-weight:700;}' +
-        '.tower_cell:hover:not(.done){border-color:rgba(0,212,255,0.4);background:rgba(0,212,255,0.04);}' +
+        '.tower_cell{height:38px;border-radius: 0px;border:1px solid #2a1515;background:#080808;display:flex;align-items:center;justify-content:center;font-size:1rem;cursor:pointer;transition:all 0.15s;font-weight:700;}' +
+        '.tower_cell:hover:not(.done){border-color:rgba(224,16,32,0.4);background:rgba(224,16,32,0.04);}' +
         '.tower_cell.safe{background:rgba(0,255,136,0.1);border-color:rgba(0,255,136,0.3);cursor:default;}' +
         '.tower_cell.trap{background:rgba(255,60,92,0.12);border-color:rgba(255,60,92,0.4);cursor:default;}' +
         '.tower_cell.locked{opacity:0.3;cursor:default;}' +
@@ -4242,18 +4731,18 @@ a.plink:hover{
         // ── Header ──
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;flex-wrap:wrap;gap:0.6rem;">' +
           '<div>' +
-            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.5rem;letter-spacing:3px;color:#e0e0ff;">🎰 LNL CASINO</div>' +
+            '<div style="font-family:\'Permanent Marker\',sans-serif;font-size:1.5rem;letter-spacing:3px;color:#f0e8e8;">🎰 LNL CASINO</div>' +
             '<div style="font-size:0.7rem;color:#444;letter-spacing:1px;margin-top:2px;">All wins paid in \ud83e\udd6c Cabbage \u00b7 SOL bets fill the treasury</div>' +
           '</div>' +
-          '<button onclick="switchView(\'profile\')" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#888;padding:7px 14px;border-radius:7px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;" onmouseover="this.style.borderColor=\'rgba(0,212,255,0.4)\';this.style.color=\'#00d4ff\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,0.1)\';this.style.color=\'#888\'">← Home</button>' +
+          '<button onclick="switchView(\'profile\')" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#888;padding:7px 14px;border-radius:7px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;" onmouseover="this.style.borderColor=\'rgba(224,16,32,0.4)\';this.style.color=\'#e01020\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,0.1)\';this.style.color=\'#888\'">← Home</button>' +
         '</div>' +
 
         // ── Balance bar ──
         '<div class="g_card" style="display:flex;gap:1.2rem;flex-wrap:wrap;align-items:center;padding:1rem 1.4rem;">' +
           '<div style="display:flex;gap:1.5rem;flex:1;flex-wrap:wrap;">' +
-            '<div><div style="color:#555;font-size:0.65rem;letter-spacing:1px;text-transform:uppercase;">SOL Balance</div><div style="font-weight:700;color:#00d4ff;font-size:1rem;" id="g_solBal">…</div></div>' +
+            '<div><div style="color:#555;font-size:0.65rem;letter-spacing:1px;text-transform:uppercase;">SOL Balance</div><div style="font-weight:700;color:#e01020;font-size:1rem;" id="g_solBal">…</div></div>' +
             '<div><div style="color:#555;font-size:0.65rem;letter-spacing:1px;text-transform:uppercase;">Cabbage Balance</div><div style="font-weight:700;color:#00ff88;font-size:1rem;" id="g_cabBal">…</div></div>' +
-            '<div><div style="color:#555;font-size:0.65rem;letter-spacing:1px;text-transform:uppercase;">LNL NFTs</div><div style="font-weight:700;color:#7b68ee;font-size:1rem;">' + nftCount + (bonus > 0 ? ' <span style="font-size:0.65rem;color:#ffd700;">+' + (bonus*100).toFixed(0) + '% boost</span>' : '') + '</div></div>' +
+            '<div><div style="color:#555;font-size:0.65rem;letter-spacing:1px;text-transform:uppercase;">LNL NFTs</div><div style="font-weight:700;color:#8b0000;font-size:1rem;">' + nftCount + (bonus > 0 ? ' <span style="font-size:0.65rem;color:#ffd700;">+' + (bonus*100).toFixed(0) + '% boost</span>' : '') + '</div></div>' +
           '</div>' +
           '<div style="display:flex;gap:0.5rem;">' +
             '<button class="g_btn ' + (g_currency==='sol'?'g_btn-primary':'') + '" id="g_btnSol" onclick="g_setCurrency(\'sol\')">◎ SOL</button>' +
@@ -4266,11 +4755,11 @@ a.plink:hover{
           '<div class="g_title">🏆 NFT PRIZE POT</div>' +
           '<div style="margin-bottom:0.9rem;">' +
             '<div style="display:flex;justify-content:space-between;font-size:0.65rem;color:#555;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;"><span>◎ SOL POT</span><span id="g_solPotLabel">Loading…</span></div>' +
-            '<div class="g_pot-bar"><div class="g_pot-fill" id="g_solPotBar" style="width:0%;background:linear-gradient(90deg,#9945ff,#00d4ff);"></div></div>' +
+            '<div class="g_pot-bar"><div class="g_pot-fill" id="g_solPotBar" style="width:0%;background:linear-gradient(90deg,#9945ff,#e01020);"></div></div>' +
           '</div>' +
           '<div>' +
             '<div style="display:flex;justify-content:space-between;font-size:0.65rem;color:#555;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;"><span>🥬 CABBAGE POT</span><span id="g_cabPotLabel">Loading…</span></div>' +
-            '<div class="g_pot-bar"><div class="g_pot-fill" id="g_cabPotBar" style="width:0%;background:linear-gradient(90deg,#00ff88,#00d4ff);"></div></div>' +
+            '<div class="g_pot-bar"><div class="g_pot-fill" id="g_cabPotBar" style="width:0%;background:linear-gradient(90deg,#00ff88,#e01020);"></div></div>' +
           '</div>' +
           '<div style="margin-top:0.8rem;font-size:0.65rem;color:#333;letter-spacing:0.5px;">When a pot fills, a random recent player wins an LNL NFT airdropped to their wallet automatically.</div>' +
         '</div>' +
@@ -4286,7 +4775,7 @@ a.plink:hover{
             '<button class="g_btn" onclick="g_setBet(0.5)">0.5</button>' +
             '<button class="g_btn" onclick="g_setBet(1)">1</button>' +
             '<span style="color:#555;margin:0 4px;">|</span>' +
-            '<input id="g_betInput" type="number" min="0.001" step="0.001" value="' + g_betAmount + '" onchange="g_betAmount=parseFloat(this.value)||0.05" style="width:80px;background:#06060f;border:1px solid #1e1e3a;color:#e0e0ff;padding:8px 10px;border-radius:8px;font-family:\'Space Grotesk\',sans-serif;font-size:0.85rem;text-align:center;" />' +
+            '<input id="g_betInput" type="number" min="0.001" step="0.001" value="' + g_betAmount + '" onchange="g_betAmount=parseFloat(this.value)||0.05" style="width:80px;background:#06060f;border:1px solid #2a1515;color:#f0e8e8;padding:8px 10px;border-radius: 0px;font-family:\'Space Grotesk\',sans-serif;font-size:0.85rem;text-align:center;" />' +
             '<span id="g_betCurrLabel" style="color:#555;font-size:0.78rem;">' + (g_currency==='sol'?'◎':'🥬') + '</span>' +
           '</div>' +
         '</div>' +
@@ -4381,7 +4870,7 @@ a.plink:hover{
             '</div>' +
             '<div style="display:flex;align-items:center;gap:6px;margin-top:6px;">' +
               '<span style="color:#555;font-size:0.65rem;">Auto cash:</span>' +
-              '<input id="crash_auto" type="number" min="1.1" step="0.1" value="2" style="width:60px;background:#06060f;border:1px solid #1e1e3a;color:#e0e0ff;padding:5px 8px;border-radius:6px;font-family:\'Space Grotesk\',sans-serif;font-size:0.78rem;text-align:center;" />' +
+              '<input id="crash_auto" type="number" min="1.1" step="0.1" value="2" style="width:60px;background:#06060f;border:1px solid #2a1515;color:#f0e8e8;padding:5px 8px;border-radius: 0px;font-family:\'Space Grotesk\',sans-serif;font-size:0.78rem;text-align:center;" />' +
               '<span style="color:#555;font-size:0.65rem;">×</span>' +
             '</div>' +
             '<div class="g_result" id="crash_result" style="display:none;"></div>' +
@@ -4392,11 +4881,11 @@ a.plink:hover{
             '<div class="g_title">💣 MINES</div>' +
             '<div style="display:flex;align-items:center;gap:8px;margin-bottom:0.5rem;">' +
               '<span style="color:#555;font-size:0.65rem;">Mines:</span>' +
-              '<input id="mines_count" type="number" min="1" max="24" value="5" style="width:50px;background:#06060f;border:1px solid #1e1e3a;color:#e0e0ff;padding:5px 8px;border-radius:6px;font-family:\'Space Grotesk\',sans-serif;font-size:0.78rem;text-align:center;" />' +
+              '<input id="mines_count" type="number" min="1" max="24" value="5" style="width:50px;background:#06060f;border:1px solid #2a1515;color:#f0e8e8;padding:5px 8px;border-radius: 0px;font-family:\'Space Grotesk\',sans-serif;font-size:0.78rem;text-align:center;" />' +
               '<button class="g_btn g_btn-primary" id="mines_startBtn" onclick="mines_start()">START</button>' +
               '<button class="g_btn" id="mines_cashBtn" onclick="mines_cashout()" disabled style="border-color:rgba(0,255,136,0.3);color:#00ff88;">CASH OUT</button>' +
             '</div>' +
-            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.6rem;color:#555;text-align:center;letter-spacing:2px;" id="mines_multi">1.00×</div>' +
+            '<div style="font-family:\'Permanent Marker\',sans-serif;font-size:1.6rem;color:#555;text-align:center;letter-spacing:2px;" id="mines_multi">1.00×</div>' +
             '<div class="mines_grid" id="mines_grid"></div>' +
             '<div class="g_result" id="mines_result" style="display:none;"></div>' +
           '</div>' +
@@ -4416,14 +4905,14 @@ a.plink:hover{
             '</div>' +
             // Target input + chance + GO
             '<div style="display:flex;align-items:center;gap:8px;margin-bottom:0.6rem;flex-wrap:wrap;">' +
-              '<div style="display:flex;align-items:center;gap:4px;background:#06060f;border:1px solid #1e1e3a;border-radius:8px;padding:4px 8px;">' +
+              '<div style="display:flex;align-items:center;gap:4px;background:#06060f;border:1px solid #2a1515;border-radius: 0px;padding:4px 8px;">' +
                 '<span style="color:#555;font-size:0.6rem;letter-spacing:1px;">TARGET</span>' +
-                '<input id="limbo_target" type="number" min="1.1" max="100" step="0.1" value="2" style="width:55px;background:transparent;border:none;color:#ffd700;font-family:\'Bebas Neue\',sans-serif;font-size:1.1rem;text-align:center;outline:none;letter-spacing:1px;" />' +
+                '<input id="limbo_target" type="number" min="1.1" max="100" step="0.1" value="2" style="width:55px;background:transparent;border:none;color:#ffd700;font-family:\'Permanent Marker\',sans-serif;font-size:1.1rem;text-align:center;outline:none;letter-spacing:1px;" />' +
                 '<span style="color:#555;font-size:0.7rem;">×</span>' +
               '</div>' +
               '<div style="display:flex;flex-direction:column;gap:1px;">' +
                 '<span style="color:#555;font-size:0.5rem;letter-spacing:1px;text-transform:uppercase;">Win Chance</span>' +
-                '<span style="color:#00d4ff;font-size:0.85rem;font-weight:900;font-family:\'Space Grotesk\',sans-serif;" id="limbo_chance">47.5%</span>' +
+                '<span style="color:#e01020;font-size:0.85rem;font-weight:900;font-family:\'Space Grotesk\',sans-serif;" id="limbo_chance">47.5%</span>' +
               '</div>' +
               '<div style="display:flex;flex-direction:column;gap:1px;">' +
                 '<span style="color:#555;font-size:0.5rem;letter-spacing:1px;text-transform:uppercase;">Profit</span>' +
@@ -4432,10 +4921,10 @@ a.plink:hover{
               '<button class="g_btn g_btn-primary" id="limbo_btn" onclick="limbo_play()" style="padding:10px 24px;font-size:0.85rem;">GO</button>' +
             '</div>' +
             // Big result display
-            '<div style="position:relative;background:#06060f;border:1px solid #1e1e3a;border-radius:14px;padding:1.5rem 1rem;margin:0.4rem 0;overflow:hidden;">' +
-              '<div id="limbo_bg_flash" style="position:absolute;inset:0;border-radius:14px;opacity:0;transition:opacity 0.3s;"></div>' +
+            '<div style="position:relative;background:#06060f;border:1px solid #2a1515;border-radius:0px;padding:1.5rem 1rem;margin:0.4rem 0;overflow:hidden;">' +
+              '<div id="limbo_bg_flash" style="position:absolute;inset:0;border-radius:0px;opacity:0;transition:opacity 0.3s;"></div>' +
               '<div style="position:relative;z-index:1;text-align:center;">' +
-                '<div id="limbo_result_num" style="font-family:\'Bebas Neue\',sans-serif;font-size:4.5rem;letter-spacing:4px;color:#333;transition:transform 0.15s;line-height:1;">—</div>' +
+                '<div id="limbo_result_num" style="font-family:\'Permanent Marker\',sans-serif;font-size:4.5rem;letter-spacing:4px;color:#333;transition:transform 0.15s;line-height:1;">—</div>' +
                 '<div id="limbo_target_line" style="font-size:0.65rem;color:#333;letter-spacing:1px;margin-top:2px;">Target: 2.00×</div>' +
               '</div>' +
             '</div>' +
@@ -4450,7 +4939,7 @@ a.plink:hover{
             '<div style="display:flex;align-items:center;gap:8px;margin-bottom:0.5rem;">' +
               '<button class="g_btn g_btn-primary" id="tower_startBtn" onclick="tower_start()">CLIMB</button>' +
               '<button class="g_btn" id="tower_cashBtn" onclick="tower_cashout()" disabled style="border-color:rgba(0,255,136,0.3);color:#00ff88;">CASH OUT</button>' +
-              '<span style="font-family:\'Bebas Neue\',sans-serif;font-size:1.4rem;color:#555;letter-spacing:2px;" id="tower_multi">1.00×</span>' +
+              '<span style="font-family:\'Permanent Marker\',sans-serif;font-size:1.4rem;color:#555;letter-spacing:2px;" id="tower_multi">1.00×</span>' +
             '</div>' +
             '<div class="tower_grid" id="tower_grid"></div>' +
             '<div class="g_result" id="tower_result" style="display:none;"></div>' +
@@ -4483,7 +4972,7 @@ a.plink:hover{
             '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.8rem;flex-wrap:wrap;gap:0.5rem;">' +
               '<div class="g_title" style="margin:0;" id="pk_tableName">TABLE</div>' +
               '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
-                '<span id="pk_viewerBadge" style="display:none;font-size:0.6rem;color:#555;border:1px solid #1e1e3a;padding:4px 10px;border-radius:6px;letter-spacing:1px;">&#128065; SPECTATING</span>' +
+                '<span id="pk_viewerBadge" style="display:none;font-size:0.6rem;color:#555;border:1px solid #2a1515;padding:4px 10px;border-radius: 0px;letter-spacing:1px;">&#128065; SPECTATING</span>' +
                 '<button id="pk_sitBtn" class="g_btn g_btn-primary" style="display:none;font-size:0.72rem;" onclick="pk_sitFromSpectate()">SIT DOWN</button>' +
                 '<button id="pk_standBtn" class="g_btn" style="display:none;font-size:0.72rem;border-color:rgba(255,60,92,0.35);color:#ff3c5c;" onclick="pk_standUp()">STAND UP</button>' +
                 '<button class="g_btn" style="font-size:0.72rem;" onclick="pk_closePanel()">&#x2715; CLOSE</button>' +
@@ -4494,7 +4983,7 @@ a.plink:hover{
         '</div>' +
 
         // ── Footer ──
-        '<div style="background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.04);border-radius:10px;padding:0.9rem 1.2rem;font-size:0.63rem;color:#2a2a44;letter-spacing:0.8px;text-align:center;line-height:2.2;text-transform:uppercase;">' +
+        '<div style="background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.04);border-radius:0px;padding:0.9rem 1.2rem;font-size:0.63rem;color:#3a2020;letter-spacing:0.8px;text-align:center;line-height:2.2;text-transform:uppercase;">' +
           '◎ SOL Bets → <span style="font-family:monospace;color:#333;">' + g_SOL_TREASURY + '</span><br>' +
           '🏆 NFT Prizes From → <span style="font-family:monospace;color:#333;">' + g_NFT_TREASURY + '</span><br>' +
           'SOL bets → treasury · All wins paid in 🥬 (1 ◎ = 100 🥬) · House profit fills NFT prize pot · Play responsibly' +
@@ -4503,12 +4992,12 @@ a.plink:hover{
         // ── Winner Modal ──
         '<div id="g_winnerModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;align-items:center;justify-content:center;padding:2rem;">' +
           '<div id="g_confettiContainer" style="position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:10000;"></div>' +
-          '<div style="position:relative;z-index:10001;background:linear-gradient(135deg,#111125,#0d0d20);border:2px solid #ffd700;box-shadow:0 0 60px rgba(255,215,0,0.3);border-radius:20px;padding:2.5rem;max-width:480px;width:100%;text-align:center;">' +
+          '<div style="position:relative;z-index:10001;background:linear-gradient(135deg,#0e0e0e,#0a0a0a);border:2px solid #ffd700;box-shadow:0 0 60px rgba(255,215,0,0.3);border-radius:20px;padding:2.5rem;max-width:480px;width:100%;text-align:center;">' +
             '<div style="font-size:4rem;animation:g_pulse 1.5s infinite;">🪶</div>' +
-            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:2rem;letter-spacing:4px;color:#ffd700;margin:0.5rem 0;">🎉 NFT AIRDROP!</div>' +
+            '<div style="font-family:\'Permanent Marker\',sans-serif;font-size:2rem;letter-spacing:4px;color:#ffd700;margin:0.5rem 0;">🎉 NFT AIRDROP!</div>' +
             '<div style="color:#00ff88;font-size:1rem;font-weight:700;margin-bottom:0.5rem;" id="g_winnerNFT">LNL NFT</div>' +
             '<div style="color:#888;font-size:0.8rem;margin-bottom:1rem;">Airdropped to lucky winner:</div>' +
-            '<div style="font-family:monospace;font-size:0.7rem;color:#555;word-break:break-all;background:rgba(0,0,0,0.3);padding:0.8rem;border-radius:8px;margin-bottom:0.8rem;" id="g_winnerWallet"></div>' +
+            '<div style="font-family:monospace;font-size:0.7rem;color:#555;word-break:break-all;background:rgba(0,0,0,0.3);padding:0.8rem;border-radius: 0px;margin-bottom:0.8rem;" id="g_winnerWallet"></div>' +
             '<div style="margin-bottom:1.5rem;" id="g_winnerTx"></div>' +
             '<div style="color:#888;font-size:0.72rem;margin-bottom:1.5rem;">The pot has been reset. Keep playing for the next NFT drop!</div>' +
             '<button class="g_btn g_btn-primary" onclick="g_closeWinnerModal()">AWESOME!</button>' +
@@ -4528,8 +5017,8 @@ a.plink:hover{
       var bs = document.getElementById('g_btnSol');
       var bc = document.getElementById('g_btnCab');
       var bl = document.getElementById('g_betCurrLabel');
-      if (bs) { bs.classList.toggle('g_btn-primary', cur==='sol'); bs.style.borderColor=cur==='sol'?'rgba(0,212,255,0.45)':''; bs.style.color=cur==='sol'?'#00d4ff':''; }
-      if (bc) { bc.classList.toggle('g_btn-primary', cur==='cabbage'); bc.style.borderColor=cur==='cabbage'?'rgba(0,212,255,0.45)':''; bc.style.color=cur==='cabbage'?'#00d4ff':''; }
+      if (bs) { bs.classList.toggle('g_btn-primary', cur==='sol'); bs.style.borderColor=cur==='sol'?'rgba(224,16,32,0.45)':''; bs.style.color=cur==='sol'?'#e01020':''; }
+      if (bc) { bc.classList.toggle('g_btn-primary', cur==='cabbage'); bc.style.borderColor=cur==='cabbage'?'rgba(224,16,32,0.45)':''; bc.style.color=cur==='cabbage'?'#e01020':''; }
       if (bl) bl.textContent = cur==='sol' ? '◎' : '🥬';
     }
 
@@ -4755,21 +5244,21 @@ a.plink:hover{
         var hand = bj_hands[hi];
         var isActive = (hi === bj_activeIdx && bj_state === 'play');
         var val = bj_hv(hand.cards);
-        var borderCol = isActive ? 'rgba(0,212,255,0.5)' : (hand.status==='bust' ? 'rgba(255,60,92,0.3)' : 'rgba(255,255,255,0.06)');
-        var bgCol = isActive ? 'rgba(0,212,255,0.04)' : 'transparent';
+        var borderCol = isActive ? 'rgba(224,16,32,0.5)' : (hand.status==='bust' ? 'rgba(255,60,92,0.3)' : 'rgba(255,255,255,0.06)');
+        var bgCol = isActive ? 'rgba(224,16,32,0.04)' : 'transparent';
 
-        if(multiHand) html += '<div style="flex:1;min-width:120px;max-width:200px;border:1px solid '+borderCol+';border-radius:10px;padding:8px 6px;background:'+bgCol+';transition:all 0.2s;">';
+        if(multiHand) html += '<div style="flex:1;min-width:120px;max-width:200px;border:1px solid '+borderCol+';border-radius:0px;padding:8px 6px;background:'+bgCol+';transition:all 0.2s;">';
 
         // Hand label for multi-hand
         if(multiHand){
           var label = 'Hand ' + (hi+1);
           if(hand.doubled) label += ' (2×)';
-          var labelCol = isActive ? '#00d4ff' : '#444';
+          var labelCol = isActive ? '#e01020' : '#444';
           html += '<div style="font-size:0.55rem;color:'+labelCol+';letter-spacing:1px;margin-bottom:3px;text-transform:uppercase;">'+label+'</div>';
         }
 
         // Score
-        var scoreCol = hand.status==='bust' ? '#ff3c5c' : (hand.status==='stand' ? '#888' : '#e0e0ff');
+        var scoreCol = hand.status==='bust' ? '#ff3c5c' : (hand.status==='stand' ? '#888' : '#f0e8e8');
         html += '<div style="font-size:0.7rem;color:'+scoreCol+';margin:2px 0;min-height:16px;">';
         if(hand.cards.length) html += (hand.status==='bust' ? 'BUST ' : 'Hand: ') + val;
         if(hand.bet !== bj_bet && multiHand) html += ' <span style="color:#ffd700;font-size:0.55rem;">('+hand.bet.toFixed(4)+')</span>';
@@ -5117,7 +5606,7 @@ a.plink:hover{
 
     function pk_rc(card, hide){
       var w='width:42px;height:60px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;border:1px solid;';
-      if(hide||!card) return '<div style="'+w+'background:#1a1a2e;border-color:#2a2a44;color:#333;">?</div>';
+      if(hide||!card) return '<div style="'+w+'background:#1a1a2e;border-color:#3a2020;color:#333;">?</div>';
       var v=card[0],s=card[1]||'';
       var col=PK_SCOL[s]||'#ccc';
       return '<div style="'+w+'background:#0d0d1a;border-color:#3a3a5a;color:'+col+';flex-direction:column;line-height:1;">'
@@ -5161,7 +5650,7 @@ a.plink:hover{
         var sym=isSol?'\u25ce CAB':'\uD83E\uDD6C CAB';
         var statusDot=t.status==='playing'?'<span style="color:#00ff88;font-size:0.55rem;">\u25cf LIVE</span>':'<span style="color:#555;font-size:0.55rem;">\u25cb WAITING</span>';
         return '<div class="g_card" style="cursor:pointer;transition:border-color 0.2s;'+(iAmHere?'border-color:rgba(0,255,136,0.4);':'')+'" onclick="pk_viewTable(\''+t.id+'\')">'
-          +'<div style="font-weight:700;font-size:0.9rem;color:#e0e0ff;margin-bottom:4px;">'+escapeHtml(t.name||'Table')+'</div>'
+          +'<div style="font-weight:700;font-size:0.9rem;color:#f0e8e8;margin-bottom:4px;">'+escapeHtml(t.name||'Table')+'</div>'
           +'<div style="font-size:0.65rem;color:#555;margin-bottom:6px;">'+statusDot+'</div>'
           +'<div style="font-size:0.7rem;color:#888;">Blinds: '+t.small_blind+'/'+t.big_blind+' \uD83E\uDD6C</div>'
           +'<div style="font-size:0.7rem;color:#888;">Players: '+seated+'/5</div>'
@@ -5217,7 +5706,7 @@ a.plink:hover{
 
     function pk_showBustToast(){
       var toast=document.createElement('div');
-      toast.style.cssText='position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:9999;background:#1a0a0f;border:1px solid rgba(255,60,92,0.5);border-radius:10px;padding:12px 28px;color:#ff3c5c;font-family:Space Grotesk,sans-serif;font-weight:700;font-size:0.9rem;letter-spacing:1px;text-align:center;';
+      toast.style.cssText='position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:9999;background:#1a0a0f;border:1px solid rgba(255,60,92,0.5);border-radius:0px;padding:12px 28px;color:#ff3c5c;font-family:Space Grotesk,sans-serif;font-weight:700;font-size:0.9rem;letter-spacing:1px;text-align:center;';
       toast.innerHTML='\uD83D\uDCB8 BUSTED OUT \u2014 now spectating';
       document.body.appendChild(toast);
       setTimeout(function(){toast.remove();},3000);
@@ -5309,14 +5798,14 @@ a.plink:hover{
       var tblNameLower=(tbl.name||'').toLowerCase();
       var maxBuy=tblNameLower.indexOf('ostrich')!==-1?1:minBuy*10;
       var infoEl=document.getElementById('pkBuyInTableInfo');
-      if(infoEl)infoEl.innerHTML='<span style="color:#e0e0ff;font-weight:700;">'+escapeHtml(tbl.name||'Table')+'</span><br>Blinds: <span style="color:#00d4ff;">'+tbl.small_blind+'/'+tbl.big_blind+' '+sym+'</span> &nbsp;\u00b7&nbsp; Min: <span style="color:#00d4ff;">'+minBuy+'</span> &nbsp;\u00b7&nbsp; Max: <span style="color:#00d4ff;">'+maxBuy+'</span>';
+      if(infoEl)infoEl.innerHTML='<span style="color:#f0e8e8;font-weight:700;">'+escapeHtml(tbl.name||'Table')+'</span><br>Blinds: <span style="color:#e01020;">'+tbl.small_blind+'/'+tbl.big_blind+' '+sym+'</span> &nbsp;\u00b7&nbsp; Min: <span style="color:#e01020;">'+minBuy+'</span> &nbsp;\u00b7&nbsp; Max: <span style="color:#e01020;">'+maxBuy+'</span>';
       var symEl=document.getElementById('pkBuyInSym');if(symEl)symEl.textContent='\uD83E\uDD6C';
       var presets=[minBuy,Math.round(minBuy*2),Math.round(minBuy*5),maxBuy].filter(function(v,i,a){return a.indexOf(v)===i&&v<=maxBuy;});
       var labels=['MIN','2\u00d7','5\u00d7','MAX'].slice(0,presets.length);
       var presetsEl=document.getElementById('pkBuyInPresets');
       if(presetsEl){
         presetsEl.innerHTML=presets.map(function(v,i){
-          return '<button onclick="pkBuyInSetPreset('+v+')" style="background:rgba(0,212,255,0.07);border:1px solid rgba(0,212,255,0.2);color:#00d4ff;padding:7px 14px;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.72rem;letter-spacing:1px;">'
+          return '<button onclick="pkBuyInSetPreset('+v+')" style="background:rgba(224,16,32,0.07);border:1px solid rgba(224,16,32,0.2);color:#e01020;padding:7px 14px;border-radius: 0px;cursor:pointer;font-weight:700;font-size:0.72rem;letter-spacing:1px;">'
             +'<span style="font-size:0.55rem;color:#555;display:block;letter-spacing:2px;margin-bottom:2px;">'+labels[i]+'</span>'+v+' \uD83E\uDD6C</button>';
         }).join('');
       }
@@ -5458,7 +5947,7 @@ a.plink:hover{
 
       // ── Winner message ──
       if(t.last_winner_msg){
-        html+='<div style="text-align:center;background:rgba(255,215,0,0.07);border:1px solid rgba(255,215,0,0.2);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:0.78rem;color:#ffd700;font-weight:700;">'
+        html+='<div style="text-align:center;background:rgba(255,215,0,0.07);border:1px solid rgba(255,215,0,0.2);border-radius: 0px;padding:8px 12px;margin-bottom:10px;font-size:0.78rem;color:#ffd700;font-weight:700;">'
           +'\uD83C\uDFC6 '+escapeHtml(t.last_winner_msg)+'</div>';
       }
 
@@ -5487,9 +5976,9 @@ a.plink:hover{
         var isSB=false; // small_blind_seat not in schema
         var isBB=pl&&t.bb_seat===s;
         var seated=!!pl;
-        var borderCol=isTurn?'rgba(0,255,136,0.6)':isMe?'rgba(0,212,255,0.4)':'rgba(255,255,255,0.05)';
+        var borderCol=isTurn?'rgba(0,255,136,0.6)':isMe?'rgba(224,16,32,0.4)':'rgba(255,255,255,0.05)';
         var bg=folded?'rgba(10,10,20,0.6)':'rgba(13,13,26,0.9)';
-        html+='<div style="border:1px solid '+borderCol+';background:'+bg+';border-radius:10px;padding:10px 8px;min-width:90px;text-align:center;transition:border-color 0.3s;'+(isTurn?'box-shadow:0 0 12px rgba(0,255,136,0.3);':'')+'">';
+        html+='<div style="border:1px solid '+borderCol+';background:'+bg+';border-radius:0px;padding:10px 8px;min-width:90px;text-align:center;transition:border-color 0.3s;'+(isTurn?'box-shadow:0 0 12px rgba(0,255,136,0.3);':'')+'">';
         if(pl){
           var hole=[];try{hole=JSON.parse(pl.hole_cards||'[]');}catch(e){}
           var dn=pl.username||(pl.wallet.slice(0,4)+'\u2026');
@@ -5497,7 +5986,7 @@ a.plink:hover{
           if(isDealer)badges+='<span style="background:#ffd700;color:#000;padding:1px 4px;border-radius:3px;font-size:0.42rem;margin-right:2px;">D</span>';
           if(isSB)badges+='<span style="background:#555;color:#fff;padding:1px 4px;border-radius:3px;font-size:0.42rem;margin-right:2px;">SB</span>';
           if(isBB)badges+='<span style="background:#333;color:#aaa;padding:1px 4px;border-radius:3px;font-size:0.42rem;">BB</span>';
-          html+='<div style="font-size:0.62rem;font-weight:700;color:'+(isMe?'#00d4ff':'#e0e0ff')+';margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:86px;">'+badges+escapeHtml(dn)+(isMe?' \u25b7':'')+' </div>';
+          html+='<div style="font-size:0.62rem;font-weight:700;color:'+(isMe?'#e01020':'#f0e8e8')+';margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:86px;">'+badges+escapeHtml(dn)+(isMe?' \u25b7':'')+' </div>';
           html+='<div style="display:flex;justify-content:center;gap:2px;margin:4px 0;">';
           if(hole.length===2&&(isMe||isShowdown)&&!folded)html+=pk_rc(hole[0],false)+pk_rc(hole[1],false);
           else if(isPlay&&!folded&&hole.length===2)html+=pk_rc(null,true)+pk_rc(null,true);
@@ -5514,8 +6003,8 @@ a.plink:hover{
             html+='<div style="font-size:0.48rem;color:#9945ff;margin-top:2px;">'+pk_handName(sc)+'</div>';
           }
         }else{
-          html+='<div style="color:#1e1e3a;font-size:0.58rem;margin-bottom:4px;">EMPTY</div>'
-            +'<div style="font-size:0.5rem;color:#1a1a30;">Seat '+(s+1)+'</div>';
+          html+='<div style="color:#2a1515;font-size:0.58rem;margin-bottom:4px;">EMPTY</div>'
+            +'<div style="font-size:0.5rem;color:#221010;">Seat '+(s+1)+'</div>';
         }
         html+='</div>';
       }
@@ -5527,7 +6016,7 @@ a.plink:hover{
       if(!me){
         // Spectator
       } else if(isSittingOut){
-        html+='<div style="width:100%;text-align:center;padding:10px;background:rgba(255,215,0,0.05);border:1px solid rgba(255,215,0,0.15);border-radius:8px;">'
+        html+='<div style="width:100%;text-align:center;padding:10px;background:rgba(255,215,0,0.05);border:1px solid rgba(255,215,0,0.15);border-radius: 0px;">'
           +'<div style="font-size:0.7rem;color:#ffd700;">\u23F3 SITTING OUT THIS HAND</div>'
           +'<div style="font-size:0.58rem;color:#555;margin-top:3px;">You will be dealt in on the next hand.</div>'
           +'</div>';
@@ -5566,7 +6055,7 @@ a.plink:hover{
         var kickable=pk_plrs.filter(function(p){return p.is_active&&p.wallet!==myW;});
         if(kickable.length){
           html+='<div style="margin-top:14px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.04);text-align:center;">'
-            +'<div style="font-size:0.55rem;color:#2a2a44;letter-spacing:1px;margin-bottom:6px;">KICK INACTIVE PLAYER</div>'
+            +'<div style="font-size:0.55rem;color:#3a2020;letter-spacing:1px;margin-bottom:6px;">KICK INACTIVE PLAYER</div>'
             +'<div style="display:flex;justify-content:center;gap:6px;flex-wrap:wrap;">';
           kickable.forEach(function(p){
             var dn=p.username||(p.wallet.slice(0,4)+'\u2026');
@@ -6185,7 +6674,7 @@ a.plink:hover{
         grad.addColorStop(1, '#ff6b35');
       } else {
         grad.addColorStop(0, '#00ff88');
-        grad.addColorStop(1, '#00d4ff');
+        grad.addColorStop(1, '#e01020');
       }
       ctx.strokeStyle = grad;
 
@@ -6554,8 +7043,8 @@ a.plink:hover{
       el.innerHTML = limbo_history.map(function(h) {
         var col = h.won ? '#00ff88' : '#ff3c5c';
         var bg = h.won ? 'rgba(0,255,136,0.08)' : 'rgba(255,60,92,0.06)';
-        return '<div style="flex-shrink:0;background:' + bg + ';border:1px solid ' + col + '33;border-radius:6px;padding:4px 8px;text-align:center;">' +
-          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:0.9rem;color:' + col + ';letter-spacing:1px;">' + h.roll.toFixed(2) + '×</div>' +
+        return '<div style="flex-shrink:0;background:' + bg + ';border:1px solid ' + col + '33;border-radius: 0px;padding:4px 8px;text-align:center;">' +
+          '<div style="font-family:\'Permanent Marker\',sans-serif;font-size:0.9rem;color:' + col + ';letter-spacing:1px;">' + h.roll.toFixed(2) + '×</div>' +
           '<div style="font-size:0.45rem;color:#444;">' + h.target.toFixed(1) + '×</div>' +
         '</div>';
       }).join('');
@@ -6826,8 +7315,8 @@ a.plink:hover{
       { min: 1,  name: 'Hatchling',     color: '#666' },
       { min: 3,  name: 'Short Neck',    color: '#888' },
       { min: 6,  name: 'Neck',          color: '#aaa' },
-      { min: 10, name: 'Long Neck',     color: '#00d4ff' },
-      { min: 15, name: 'Extra Long',    color: '#7b68ee' },
+      { min: 10, name: 'Long Neck',     color: '#e01020' },
+      { min: 15, name: 'Extra Long',    color: '#8b0000' },
       { min: 25, name: 'Mega Neck',     color: '#ffd700' },
       { min: 40, name: 'Ultra Neck',    color: '#ff8c00' },
       { min: 60, name: 'God Neck',      color: '#ff3c5c' },
@@ -6972,25 +7461,25 @@ a.plink:hover{
       var joinStr = stats.joinDate ? new Date(stats.joinDate).toLocaleDateString() : 'N/A';
 
       var html =
-        '<div style="background:linear-gradient(135deg,#0d0d20 0%,#111130 50%,#0a0a1a 100%);border:1px solid #1e1e3a;border-radius:16px;padding:1.5rem;margin-bottom:1rem;position:relative;overflow:hidden;">' +
+        '<div style="background:linear-gradient(135deg,#0a0a0a 0%,#111130 50%,#080808 100%);border:1px solid #2a1515;border-radius:0px;padding:1.5rem;margin-bottom:1rem;position:relative;overflow:hidden;">' +
           // Subtle pattern overlay
-          '<div style="position:absolute;top:0;right:0;width:200px;height:200px;background:radial-gradient(circle at top right,rgba(0,212,255,0.04),transparent 70%);pointer-events:none;"></div>' +
+          '<div style="position:absolute;top:0;right:0;width:200px;height:200px;background:radial-gradient(circle at top right,rgba(224,16,32,0.04),transparent 70%);pointer-events:none;"></div>' +
 
           // Top: Level + XP bar
           '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">' +
             '<div>' +
-              '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.6rem;letter-spacing:4px;color:#e0e0ff;">LEVEL <span style="color:#ffd700;">' + level + '</span></div>' +
+              '<div style="font-family:\'Permanent Marker\',sans-serif;font-size:1.6rem;letter-spacing:4px;color:#f0e8e8;">LEVEL <span style="color:#ffd700;">' + level + '</span></div>' +
               '<div style="font-size:0.72rem;color:' + neckTitle.color + ';font-weight:700;letter-spacing:2px;text-transform:uppercase;">' + neckTitle.name + '</div>' +
             '</div>' +
             '<div style="text-align:right;">' +
               '<div style="font-size:0.6rem;color:#444;letter-spacing:1px;margin-bottom:3px;">XP</div>' +
-              '<div style="font-size:1rem;font-weight:900;color:#00d4ff;font-family:\'Space Grotesk\',sans-serif;">' + xp.toLocaleString() + '</div>' +
+              '<div style="font-size:1rem;font-weight:900;color:#e01020;font-family:\'Space Grotesk\',sans-serif;">' + xp.toLocaleString() + '</div>' +
             '</div>' +
           '</div>' +
 
           // XP Progress bar
-          '<div style="background:rgba(255,255,255,0.04);border-radius:6px;height:8px;margin-bottom:1.2rem;overflow:hidden;position:relative;">' +
-            '<div style="position:absolute;top:0;left:0;height:100%;width:' + Math.min(xpProgress, 100) + '%;background:linear-gradient(90deg,#7b68ee,#00d4ff);border-radius:6px;transition:width 0.5s;"></div>' +
+          '<div style="background:rgba(255,255,255,0.04);border-radius: 0px;height:8px;margin-bottom:1.2rem;overflow:hidden;position:relative;">' +
+            '<div style="position:absolute;top:0;left:0;height:100%;width:' + Math.min(xpProgress, 100) + '%;background:linear-gradient(90deg,#8b0000,#e01020);border-radius: 0px;transition:width 0.5s;"></div>' +
           '</div>' +
           '<div style="display:flex;justify-content:space-between;margin-top:-8px;margin-bottom:1rem;">' +
             '<span style="font-size:0.55rem;color:#333;">LVL ' + level + '</span>' +
@@ -6999,16 +7488,16 @@ a.plink:hover{
 
           // Titles Row
           '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1.2rem;">' +
-            '<div style="background:rgba(123,104,238,0.1);border:1px solid rgba(123,104,238,0.25);border-radius:8px;padding:5px 10px;font-size:0.62rem;font-weight:700;color:#7b68ee;letter-spacing:0.8px;">🎰 ' + casinoTitle.name + '</div>' +
-            '<div style="background:rgba(0,255,136,0.06);border:1px solid rgba(0,255,136,0.2);border-radius:8px;padding:5px 10px;font-size:0.62rem;font-weight:700;color:#00ff88;letter-spacing:0.8px;">🥬 ' + cabTitle.name + '</div>' +
-            '<div style="background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);border-radius:8px;padding:5px 10px;font-size:0.62rem;font-weight:700;color:#00d4ff;letter-spacing:0.8px;">💬 ' + chatTitle.name + '</div>' +
-            (stats.itemsOwned > 0 ? '<div style="background:rgba(255,215,0,0.08);border:1px solid rgba(255,215,0,0.2);border-radius:8px;padding:5px 10px;font-size:0.62rem;font-weight:700;color:#ffd700;letter-spacing:0.8px;">🛒 Collector</div>' : '') +
-            '<div style="background:rgba(255,140,0,0.08);border:1px solid rgba(255,140,0,0.2);border-radius:8px;padding:5px 10px;font-size:0.62rem;font-weight:700;color:#ff8c00;letter-spacing:0.8px;">🏅 ' + ach_myBadges.length + '/' + ACH_LIST.length + '</div>' +
+            '<div style="background:rgba(139,0,0,0.1);border:1px solid rgba(139,0,0,0.25);border-radius: 0px;padding:5px 10px;font-size:0.62rem;font-weight:700;color:#8b0000;letter-spacing:0.8px;">🎰 ' + casinoTitle.name + '</div>' +
+            '<div style="background:rgba(0,255,136,0.06);border:1px solid rgba(0,255,136,0.2);border-radius: 0px;padding:5px 10px;font-size:0.62rem;font-weight:700;color:#00ff88;letter-spacing:0.8px;">🥬 ' + cabTitle.name + '</div>' +
+            '<div style="background:rgba(224,16,32,0.08);border:1px solid rgba(224,16,32,0.2);border-radius: 0px;padding:5px 10px;font-size:0.62rem;font-weight:700;color:#e01020;letter-spacing:0.8px;">💬 ' + chatTitle.name + '</div>' +
+            (stats.itemsOwned > 0 ? '<div style="background:rgba(255,215,0,0.08);border:1px solid rgba(255,215,0,0.2);border-radius: 0px;padding:5px 10px;font-size:0.62rem;font-weight:700;color:#ffd700;letter-spacing:0.8px;">🛒 Collector</div>' : '') +
+            '<div style="background:rgba(255,140,0,0.08);border:1px solid rgba(255,140,0,0.2);border-radius: 0px;padding:5px 10px;font-size:0.62rem;font-weight:700;color:#ff8c00;letter-spacing:0.8px;">🏅 ' + ach_myBadges.length + '/' + ACH_LIST.length + '</div>' +
           '</div>' +
 
           // Stats Grid
           '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;">' +
-            pp_statCell('🎰 Games Played', stats.gamesPlayed.toLocaleString(), '#e0e0ff') +
+            pp_statCell('🎰 Games Played', stats.gamesPlayed.toLocaleString(), '#f0e8e8') +
             pp_statCell('🏆 Wins', stats.gamesWon.toLocaleString(), '#00ff88') +
             pp_statCell('💀 Losses', stats.gamesLost.toLocaleString(), '#ff3c5c') +
             pp_statCell('📊 Win Rate', winRate + '%', winRate >= 50 ? '#00ff88' : '#ff3c5c') +
@@ -7016,11 +7505,11 @@ a.plink:hover{
             pp_statCell('🥬 Total Won', Math.floor(stats.totalWon).toLocaleString(), '#00ff88') +
             pp_statCell('💸 Total Lost', Math.floor(stats.totalLost).toLocaleString(), '#ff3c5c') +
             pp_statCell('🎯 Biggest Win', Math.floor(stats.biggestWin).toLocaleString(), '#ffd700') +
-            pp_statCell('💬 Messages', stats.chatMsgs.toLocaleString(), '#7b68ee') +
-            pp_statCell('🪶 LNLs Held', nftCount.toString(), '#00d4ff') +
+            pp_statCell('💬 Messages', stats.chatMsgs.toLocaleString(), '#8b0000') +
+            pp_statCell('🪶 LNLs Held', nftCount.toString(), '#e01020') +
             pp_statCell('⛳ Golf Addicts', ((session.loadedGolfAddicts || []).length).toString(), '#4ade80') +
             pp_statCell('📅 Member Since', joinStr, '#888') +
-            pp_statCell('⏳ Days Active', stats.daysHeld.toString(), '#00d4ff') +
+            pp_statCell('⏳ Days Active', stats.daysHeld.toString(), '#e01020') +
           '</div>' +
 
           // Bottom: Lucky game + Store items
@@ -7034,7 +7523,7 @@ a.plink:hover{
     }
 
     function pp_statCell(label, value, color) {
-      return '<div style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.03);border-radius:10px;padding:10px;text-align:center;">' +
+      return '<div style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.03);border-radius:0px;padding:10px;text-align:center;">' +
         '<div style="font-size:0.58rem;color:#444;letter-spacing:1px;margin-bottom:4px;text-transform:uppercase;">' + label + '</div>' +
         '<div style="font-size:1rem;font-weight:900;color:' + color + ';font-family:\'Space Grotesk\',sans-serif;">' + value + '</div>' +
       '</div>';
@@ -7113,8 +7602,8 @@ a.plink:hover{
     var ACH_RARITY_COLORS = {
       common:    { bg: 'rgba(150,150,150,0.08)', border: 'rgba(150,150,150,0.2)', text: '#888' },
       uncommon:  { bg: 'rgba(0,255,136,0.06)',   border: 'rgba(0,255,136,0.2)',   text: '#00ff88' },
-      rare:      { bg: 'rgba(0,212,255,0.08)',   border: 'rgba(0,212,255,0.25)',  text: '#00d4ff' },
-      epic:      { bg: 'rgba(123,104,238,0.08)', border: 'rgba(123,104,238,0.3)', text: '#7b68ee' },
+      rare:      { bg: 'rgba(224,16,32,0.08)',   border: 'rgba(224,16,32,0.25)',  text: '#e01020' },
+      epic:      { bg: 'rgba(139,0,0,0.08)', border: 'rgba(139,0,0,0.3)', text: '#8b0000' },
       legendary: { bg: 'rgba(255,215,0,0.08)',   border: 'rgba(255,215,0,0.25)',  text: '#ffd700' }
     };
 
@@ -7254,22 +7743,22 @@ a.plink:hover{
       var pct = Math.round((earned / total) * 100);
 
       var html =
-        '<div style="grid-column:1/-1;background:linear-gradient(135deg,#0d0d20,#0a0a1a);border:1px solid #1e1e3a;border-radius:16px;padding:1.5rem;margin-bottom:1rem;">' +
+        '<div style="grid-column:1/-1;background:linear-gradient(135deg,#0a0a0a,#080808);border:1px solid #2a1515;border-radius:0px;padding:1.5rem;margin-bottom:1rem;">' +
           '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">' +
-            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.3rem;letter-spacing:3px;color:#e0e0ff;">🏅 ACHIEVEMENTS</div>' +
+            '<div style="font-family:\'Permanent Marker\',sans-serif;font-size:1.3rem;letter-spacing:3px;color:#f0e8e8;">🏅 ACHIEVEMENTS</div>' +
             '<div style="font-size:0.78rem;font-weight:700;color:#ffd700;">' + earned + ' / ' + total + ' <span style="color:#444;font-weight:400;">(' + pct + '%)</span></div>' +
           '</div>' +
 
           // Progress bar
-          '<div style="background:rgba(255,255,255,0.04);border-radius:6px;height:6px;margin-bottom:1rem;overflow:hidden;">' +
-            '<div style="height:100%;width:' + pct + '%;background:linear-gradient(90deg,#ffd700,#ff8c00);border-radius:6px;transition:width 0.5s;"></div>' +
+          '<div style="background:rgba(255,255,255,0.04);border-radius: 0px;height:6px;margin-bottom:1rem;overflow:hidden;">' +
+            '<div style="height:100%;width:' + pct + '%;background:linear-gradient(90deg,#ffd700,#ff8c00);border-radius: 0px;transition:width 0.5s;"></div>' +
           '</div>' +
 
           // Category filter
           '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:1rem;" id="ach_cats"></div>' +
 
           // Badge grid
-          '<div id="ach_grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;max-height:460px;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:rgba(0,212,255,0.3) transparent;padding-right:4px;"></div>' +
+          '<div id="ach_grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;max-height:460px;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:rgba(224,16,32,0.3) transparent;padding-right:4px;"></div>' +
         '</div>';
 
       return html;
@@ -7284,7 +7773,7 @@ a.plink:hover{
       var cHTML = '';
       ACH_CATS.forEach(function(c) {
         var count = c.id === 'all' ? ACH_LIST.length : c.id === 'achieved' ? unlocked.length : ACH_LIST.filter(function(a) { return a.cat === c.id; }).length;
-        cHTML += '<div style="padding:4px 10px;border-radius:6px;border:1px solid ' + (c.id === ach_activeCat ? 'rgba(0,212,255,0.5)' : 'rgba(255,255,255,0.06)') + ';background:' + (c.id === ach_activeCat ? 'rgba(0,212,255,0.08)' : 'rgba(0,0,0,0.2)') + ';color:' + (c.id === ach_activeCat ? '#00d4ff' : '#555') + ';font-size:0.6rem;font-weight:700;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;letter-spacing:0.5px;" onclick="ach_activeCat=\'' + c.id + '\';ach_paintGrid(ach_myBadges);">' + c.label + ' (' + count + ')</div>';
+        cHTML += '<div style="padding:4px 10px;border-radius: 0px;border:1px solid ' + (c.id === ach_activeCat ? 'rgba(224,16,32,0.5)' : 'rgba(255,255,255,0.06)') + ';background:' + (c.id === ach_activeCat ? 'rgba(224,16,32,0.08)' : 'rgba(0,0,0,0.2)') + ';color:' + (c.id === ach_activeCat ? '#e01020' : '#555') + ';font-size:0.6rem;font-weight:700;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;letter-spacing:0.5px;" onclick="ach_activeCat=\'' + c.id + '\';ach_paintGrid(ach_myBadges);">' + c.label + ' (' + count + ')</div>';
       });
       catsEl.innerHTML = cHTML;
 
@@ -7294,9 +7783,9 @@ a.plink:hover{
       items.forEach(function(ach) {
         var earned = unlocked.indexOf(ach.id) !== -1;
         var rc = ACH_RARITY_COLORS[ach.rarity] || ACH_RARITY_COLORS.common;
-        gHTML += '<div style="background:' + (earned ? rc.bg : 'rgba(0,0,0,0.3)') + ';border:1px solid ' + (earned ? rc.border : 'rgba(255,255,255,0.03)') + ';border-radius:10px;padding:10px;text-align:center;opacity:' + (earned ? '1' : '0.35') + ';transition:all 0.2s;' + (earned ? '' : 'filter:grayscale(1);') + '">' +
+        gHTML += '<div style="background:' + (earned ? rc.bg : 'rgba(0,0,0,0.3)') + ';border:1px solid ' + (earned ? rc.border : 'rgba(255,255,255,0.03)') + ';border-radius:0px;padding:10px;text-align:center;opacity:' + (earned ? '1' : '0.35') + ';transition:all 0.2s;' + (earned ? '' : 'filter:grayscale(1);') + '">' +
           '<div style="font-size:1.5rem;margin-bottom:4px;">' + ach.icon + '</div>' +
-          '<div style="font-size:0.68rem;font-weight:700;color:' + (earned ? '#e0e0ff' : '#444') + ';margin-bottom:2px;">' + ach.name + '</div>' +
+          '<div style="font-size:0.68rem;font-weight:700;color:' + (earned ? '#f0e8e8' : '#444') + ';margin-bottom:2px;">' + ach.name + '</div>' +
           '<div style="font-size:0.55rem;color:' + (earned ? '#666' : '#333') + ';line-height:1.3;margin-bottom:4px;">' + ach.desc + '</div>' +
           '<div style="font-size:0.5rem;font-weight:700;color:' + rc.text + ';letter-spacing:1px;text-transform:uppercase;">' + (earned ? '✅ ' : '') + ach.rarity + '</div>' +
         '</div>';
@@ -7497,38 +7986,38 @@ a.plink:hover{
       view.innerHTML =
         '<style>' +
         '.sh_cats{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:1rem;}' +
-        '.sh_cat{padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:rgba(0,0,0,0.2);color:#555;font-size:0.68rem;font-weight:700;cursor:pointer;transition:all 0.2s;font-family:"Space Grotesk",sans-serif;}' +
-        '.sh_cat:hover{border-color:rgba(0,212,255,0.3);color:#888;}' +
-        '.sh_cat.active{border-color:rgba(0,212,255,0.5);color:#00d4ff;background:rgba(0,212,255,0.08);}' +
+        '.sh_cat{padding:6px 12px;border-radius: 0px;border:1px solid rgba(255,255,255,0.06);background:rgba(0,0,0,0.2);color:#555;font-size:0.68rem;font-weight:700;cursor:pointer;transition:all 0.2s;font-family:"Space Grotesk",sans-serif;}' +
+        '.sh_cat:hover{border-color:rgba(224,16,32,0.3);color:#888;}' +
+        '.sh_cat.active{border-color:rgba(224,16,32,0.5);color:#e01020;background:rgba(224,16,32,0.08);}' +
         '.sh_grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;}' +
-        '.sh_item{background:#0a0a1a;border:1px solid #1a1a30;border-radius:12px;padding:1rem;text-align:center;transition:all 0.2s;}' +
-        '.sh_item:hover{border-color:rgba(0,212,255,0.3);transform:translateY(-2px);}' +
+        '.sh_item{background:#080808;border:1px solid #221010;border-radius:12px;padding:1rem;text-align:center;transition:all 0.2s;}' +
+        '.sh_item:hover{border-color:rgba(224,16,32,0.3);transform:translateY(-2px);}' +
         '.sh_item.owned{border-color:rgba(0,255,136,0.3);background:rgba(0,255,136,0.03);}' +
         '.sh_icon{font-size:2rem;margin-bottom:0.4rem;}' +
-        '.sh_name{font-weight:700;font-size:0.78rem;color:#e0e0ff;margin-bottom:4px;}' +
+        '.sh_name{font-weight:700;font-size:0.78rem;color:#f0e8e8;margin-bottom:4px;}' +
         '.sh_desc{font-size:0.62rem;color:#444;margin-bottom:0.7rem;line-height:1.4;}' +
         '.sh_price{font-size:0.82rem;font-weight:900;color:#ffd700;margin-bottom:0.6rem;}' +
-        '.sh_buy{padding:6px 16px;border-radius:7px;border:1px solid rgba(0,212,255,0.4);background:rgba(0,212,255,0.1);color:#00d4ff;font-weight:700;font-size:0.68rem;cursor:pointer;font-family:"Space Grotesk",sans-serif;letter-spacing:1px;text-transform:uppercase;transition:all 0.2s;}' +
-        '.sh_buy:hover{background:rgba(0,212,255,0.2);box-shadow:0 0 12px rgba(0,212,255,0.2);}' +
+        '.sh_buy{padding:6px 16px;border-radius:7px;border:1px solid rgba(224,16,32,0.4);background:rgba(224,16,32,0.1);color:#e01020;font-weight:700;font-size:0.68rem;cursor:pointer;font-family:"Space Grotesk",sans-serif;letter-spacing:1px;text-transform:uppercase;transition:all 0.2s;}' +
+        '.sh_buy:hover{background:rgba(224,16,32,0.2);box-shadow:0 0 12px rgba(224,16,32,0.2);}' +
         '.sh_buy.owned{border-color:rgba(0,255,136,0.3);color:#00ff88;cursor:default;}' +
-        '.sh_raffle{background:#0f0f22;border:1px solid #1e1e3a;border-radius:14px;padding:1.4rem;margin-bottom:1rem;}' +
+        '.sh_raffle{background:#0a0a0a;border:1px solid #2a1515;border-radius:0px;padding:1.4rem;margin-bottom:1rem;}' +
         '</style>' +
 
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.6rem;">' +
           '<div>' +
-            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.5rem;letter-spacing:3px;color:#e0e0ff;">🛒 CABBAGE STORE</div>' +
+            '<div style="font-family:\'Permanent Marker\',sans-serif;font-size:1.5rem;letter-spacing:3px;color:#f0e8e8;">🛒 CABBAGE STORE</div>' +
             '<div style="font-size:0.7rem;color:#444;letter-spacing:1px;margin-top:2px;">Spend cabbage. Flex on everyone.</div>' +
           '</div>' +
           '<div style="display:flex;align-items:center;gap:1rem;">' +
             '<div style="font-size:0.82rem;font-weight:700;color:#00ff88;" id="sh_balance">' + Math.floor(cabBal).toLocaleString() + ' 🥬</div>' +
-            '<button onclick="switchView(\'profile\')" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#888;padding:7px 14px;border-radius:7px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;" onmouseover="this.style.borderColor=\'rgba(0,212,255,0.4)\';this.style.color=\'#00d4ff\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,0.1)\';this.style.color=\'#888\'">← Home</button>' +
+            '<button onclick="switchView(\'profile\')" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#888;padding:7px 14px;border-radius:7px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;" onmouseover="this.style.borderColor=\'rgba(224,16,32,0.4)\';this.style.color=\'#e01020\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,0.1)\';this.style.color=\'#888\'">← Home</button>' +
           '</div>' +
         '</div>' +
 
         '<div class="sh_cats" id="sh_cats"></div>' +
         '<div id="sh_body"></div>' +
 
-        '<div style="background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.04);border-radius:10px;padding:0.9rem 1.2rem;margin-top:1rem;font-size:0.62rem;color:#2a2a44;letter-spacing:0.8px;text-align:center;text-transform:uppercase;">' +
+        '<div style="background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.04);border-radius:0px;padding:0.9rem 1.2rem;margin-top:1rem;font-size:0.62rem;color:#3a2020;letter-spacing:0.8px;text-align:center;text-transform:uppercase;">' +
           'Earn → Spend → Flex · Chat cosmetics show for everyone · Boosts apply to your next games' +
         '</div>';
 
@@ -7563,12 +8052,12 @@ a.plink:hover{
           var r = shop_raffleCurrent;
           var endsStr = r.ends_at ? new Date(r.ends_at).toLocaleDateString() : 'TBD';
           html += '<div class="sh_raffle">' +
-            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.2rem;letter-spacing:3px;color:#ffd700;margin-bottom:0.5rem;">🎟️ ' + escapeHtml(r.title) + '</div>' +
+            '<div style="font-family:\'Permanent Marker\',sans-serif;font-size:1.2rem;letter-spacing:3px;color:#ffd700;margin-bottom:0.5rem;">🎟️ ' + escapeHtml(r.title) + '</div>' +
             '<div style="font-size:0.78rem;color:#c8c8e8;margin-bottom:0.5rem;">' + escapeHtml(r.prize_desc || 'NFT Prize') + '</div>' +
             '<div style="display:flex;gap:2rem;flex-wrap:wrap;margin:1rem 0;">' +
-              '<div><div style="color:#555;font-size:0.6rem;letter-spacing:1px;">ENDS</div><div style="font-weight:700;color:#00d4ff;">' + endsStr + '</div></div>' +
-              '<div><div style="color:#555;font-size:0.6rem;letter-spacing:1px;">TOTAL ENTRIES</div><div style="font-weight:700;color:#7b68ee;">' + (r._totalTickets || 0) + '</div></div>' +
-              '<div><div style="color:#555;font-size:0.6rem;letter-spacing:1px;">ENTRANTS</div><div style="font-weight:700;color:#e0e0ff;">' + (r._totalEntrants || 0) + '</div></div>' +
+              '<div><div style="color:#555;font-size:0.6rem;letter-spacing:1px;">ENDS</div><div style="font-weight:700;color:#e01020;">' + endsStr + '</div></div>' +
+              '<div><div style="color:#555;font-size:0.6rem;letter-spacing:1px;">TOTAL ENTRIES</div><div style="font-weight:700;color:#8b0000;">' + (r._totalTickets || 0) + '</div></div>' +
+              '<div><div style="color:#555;font-size:0.6rem;letter-spacing:1px;">ENTRANTS</div><div style="font-weight:700;color:#f0e8e8;">' + (r._totalEntrants || 0) + '</div></div>' +
               '<div><div style="color:#555;font-size:0.6rem;letter-spacing:1px;">YOUR TICKETS</div><div style="font-weight:700;color:#00ff88;">' + shop_raffleMyTickets + '</div></div>' +
             '</div>' +
             '<div style="display:flex;align-items:center;gap:1rem;margin-top:0.8rem;">' +
@@ -7799,8 +8288,8 @@ a.plink:hover{
 
       var html = tabBar;
       html += "<div style=\"display:flex;align-items:center;justify-content:space-between;margin-bottom:0.8rem;flex-wrap:wrap;gap:6px;\">";
-      html += "<div style=\"font-size:0.8rem;font-weight:700;color:#e0e0ff;\">" + dao.icon + " " + dao.name + " SubDAO";
-      if (hasGa) html += " <span style=\"font-size:0.55rem;color:#4ade80;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.2);padding:2px 6px;border-radius:4px;margin-left:4px;\">LNL + GA Combined</span>";
+      html += "<div style=\"font-size:0.8rem;font-weight:700;color:#f0e8e8;\">" + dao.icon + " " + dao.name + " SubDAO";
+      if (hasGa) html += " <span style=\"font-size:0.55rem;color:#4ade80;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.2);padding:2px 6px;border-radius: 0px;margin-left:4px;\">LNL + GA Combined</span>";
       html += " <span style=\"font-size:0.62rem;color:#555;font-weight:400;\">- " + data.length + " holders</span></div>";
       html += "<button onclick=\"lb_exportSubdao('" + dao.id + "')\" style=\"background:transparent;border:1px solid rgba(0,255,136,0.3);color:#00ff88;padding:5px 12px;border-radius:7px;cursor:pointer;font-size:0.65rem;font-weight:700;letter-spacing:1px;\">EXPORT CSV</button>";
       html += "</div>";
@@ -7816,8 +8305,8 @@ a.plink:hover{
         // isMe: check if any of their wallets match
         var isMe = myW && row.wallets && row.wallets.indexOf(myW) !== -1;
         var name = row.username || lb_shortWallet(row.wallet);
-        var rowBg = isMe ? "background:rgba(0,212,255,0.06);" : "";
-        var nameCol = isMe ? "#00d4ff" : "#c8c8e8";
+        var rowBg = isMe ? "background:rgba(224,16,32,0.06);" : "";
+        var nameCol = isMe ? "#e01020" : "#c8c8e8";
         var nameWt  = isMe ? 700 : 400;
         var walletCount = row.wallets && row.wallets.length > 1 ? " <span style=\"font-size:0.5rem;color:#444;\">(" + row.wallets.length + " wallets)</span>" : "";
         html += "<tr style=\"" + rowBg + "\">";
@@ -7826,7 +8315,7 @@ a.plink:hover{
           + escapeHtml(name) + walletCount + (isMe ? " <span style=\"font-size:0.55rem;opacity:0.6;\">(you)</span>" : "") + "</span>"
           + "<div class=\"lb_wallet\" style=\"color:" + walletColor(row.wallet) + ";\">" + lb_shortWallet(row.wallet) + "</div></td>";
         if (hasGa) {
-          html += "<td class=\"lb_val\" style=\"color:#7b68ee;\">" + row.lnlCount + "</td>";
+          html += "<td class=\"lb_val\" style=\"color:#8b0000;\">" + row.lnlCount + "</td>";
           html += "<td class=\"lb_val\" style=\"color:#4ade80;\">" + row.gaCount + "</td>";
         }
         html += "<td class=\"lb_val\" style=\"color:#9945ff;font-size:0.9rem;\">" + row.count + "</td></tr>";
@@ -7885,22 +8374,22 @@ a.plink:hover{
       var html = "";
       html += "<div style=\"margin-top:1.5rem;border-top:1px solid rgba(255,255,255,0.06);padding-top:1.2rem;\">";
       html += "<div style=\"display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:6px;\">";
-      html += "<div><div style=\"font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:3px;color:#9945ff;\">RAFFLE DRAW</div>";
+      html += "<div><div style=\"font-family:'Permanent Marker',cursive;font-size:1.2rem;letter-spacing:3px;color:#9945ff;\">RAFFLE DRAW</div>";
       html += "<div style=\"font-size:0.6rem;color:#444;letter-spacing:1px;\">" + totalTickets + " TICKETS ACROSS " + data.length + " HOLDERS — WEIGHTED BY NFT COUNT</div></div>";
       html += "</div>";
       // Stage
-      html += "<div style=\"position:relative;background:#05050f;border:1px solid rgba(153,69,255,0.2);border-radius:16px;overflow:hidden;height:320px;\">";
+      html += "<div style=\"position:relative;background:#05050f;border:1px solid rgba(153,69,255,0.2);border-radius:0px;overflow:hidden;height:320px;\">";
       html += "<canvas id=\"lb_raffleCanvas\" style=\"position:absolute;inset:0;width:100%;height:100%;\"></canvas>";
       html += "<div id=\"lb_raffleOverlay\" style=\"position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;\">";
-      html += "<div id=\"lb_raffleStatus\" style=\"font-family:'Bebas Neue',sans-serif;font-size:0.9rem;letter-spacing:3px;color:#333;\">READY</div>";
+      html += "<div id=\"lb_raffleStatus\" style=\"font-family:'Permanent Marker',cursive;font-size:0.9rem;letter-spacing:3px;color:#333;\">READY</div>";
       html += "<div id=\"lb_raffleNames\" style=\"font-family:'Space Grotesk',sans-serif;font-size:1.4rem;font-weight:900;color:#fff;text-shadow:0 0 20px #9945ff;min-height:40px;text-align:center;padding:0 1rem;\"></div>";
       html += "<div id=\"lb_raffleWallet\" style=\"font-family:monospace;font-size:0.65rem;color:#555;margin-top:4px;\"></div>";
       html += "<div id=\"lb_raffleTickets\" style=\"font-size:0.6rem;color:#9945ff;margin-top:6px;letter-spacing:1px;\"></div>";
       html += "</div></div>";
       // Button row
       html += "<div style=\"display:flex;gap:8px;margin-top:0.8rem;\">";
-      html += "<button onclick=\"lb_startRaffle()\" id=\"lb_raffleBtn\" style=\"flex:1;padding:12px;background:linear-gradient(135deg,#9945ff,#6620d4);border:none;border-radius:10px;color:#fff;font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:4px;cursor:pointer;transition:opacity 0.2s;\">DRAW WINNER</button>";
-      html += "<button onclick=\"lb_resetRaffle()\" style=\"padding:12px 16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#555;font-family:'Space Grotesk',sans-serif;font-size:0.7rem;font-weight:700;cursor:pointer;\">RESET</button>";
+      html += "<button onclick=\"lb_startRaffle()\" id=\"lb_raffleBtn\" style=\"flex:1;padding:12px;background:linear-gradient(135deg,#9945ff,#6620d4);border:none;border-radius:0px;color:#fff;font-family:'Permanent Marker',cursive;font-size:1.3rem;letter-spacing:4px;cursor:pointer;transition:opacity 0.2s;\">DRAW WINNER</button>";
+      html += "<button onclick=\"lb_resetRaffle()\" style=\"padding:12px 16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:0px;color:#555;font-family:'Space Grotesk',sans-serif;font-size:0.7rem;font-weight:700;cursor:pointer;\">RESET</button>";
       html += "</div>";
       html += "</div>";
       return html;
@@ -8055,7 +8544,7 @@ a.plink:hover{
           if (frameCount === 8 || frameCount === 24 || frameCount === 40) {
             var cx = (canvas.offsetWidth || 600) / 2;
             var cy = (canvas.offsetHeight || 320) / 2;
-            var colors = ["#9945ff","#00ff88","#ffd700","#ff3c5c","#00d4ff"];
+            var colors = ["#9945ff","#00ff88","#ffd700","#ff3c5c","#e01020"];
             spawnParticles(cx, cy, colors[frameCount % colors.length]);
           }
           if (frameCount >= 55) {
@@ -8241,15 +8730,15 @@ a.plink:hover{
       view.innerHTML =
         '<style>' +
         '.lb_tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:1rem;}' +
-        '.lb_tab{padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:rgba(0,0,0,0.2);color:#555;font-size:0.68rem;font-weight:700;cursor:pointer;transition:all 0.2s;font-family:"Space Grotesk",sans-serif;letter-spacing:0.5px;}' +
-        '.lb_tab:hover{border-color:rgba(0,212,255,0.3);color:#888;}' +
-        '.lb_tab.active{border-color:rgba(0,212,255,0.5);color:#00d4ff;background:rgba(0,212,255,0.08);}' +
+        '.lb_tab{padding:6px 12px;border-radius: 0px;border:1px solid rgba(255,255,255,0.06);background:rgba(0,0,0,0.2);color:#555;font-size:0.68rem;font-weight:700;cursor:pointer;transition:all 0.2s;font-family:"Space Grotesk",sans-serif;letter-spacing:0.5px;}' +
+        '.lb_tab:hover{border-color:rgba(224,16,32,0.3);color:#888;}' +
+        '.lb_tab.active{border-color:rgba(224,16,32,0.5);color:#e01020;background:rgba(224,16,32,0.08);}' +
         '.lb_table{width:100%;border-collapse:collapse;}' +
         '.lb_table th{text-align:left;font-size:0.6rem;color:#333;letter-spacing:1.5px;text-transform:uppercase;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.04);}' +
         '.lb_table td{padding:10px;font-size:0.78rem;border-bottom:1px solid rgba(255,255,255,0.02);}' +
         '.lb_rank{font-weight:900;width:32px;text-align:center;}' +
         '.lb_gold{color:#ffd700;}.lb_silver{color:#c0c0c0;}.lb_bronze{color:#cd7f32;}' +
-        '.lb_me{background:rgba(0,212,255,0.06) !important;}' +
+        '.lb_me{background:rgba(224,16,32,0.06) !important;}' +
         '.lb_wallet{font-family:monospace;font-size:0.72rem;}' +
         '.lb_val{text-align:right;font-weight:700;font-family:"Space Grotesk",sans-serif;}' +
         '.lb_loading{text-align:center;color:#333;padding:3rem;font-size:0.8rem;letter-spacing:1px;}' +
@@ -8257,18 +8746,18 @@ a.plink:hover{
 
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.6rem;">' +
           '<div>' +
-            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.5rem;letter-spacing:3px;color:#e0e0ff;">🏆 LEADERBOARDS</div>' +
+            '<div style="font-family:\'Permanent Marker\',sans-serif;font-size:1.5rem;letter-spacing:3px;color:#f0e8e8;">🏆 LEADERBOARDS</div>' +
             '<div style="font-size:0.7rem;color:#444;letter-spacing:1px;margin-top:2px;">See who\'s on top. Compete. Win rewards.</div>' +
           '</div>' +
-          '<button onclick="switchView(\'profile\')" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#888;padding:7px 14px;border-radius:7px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;" onmouseover="this.style.borderColor=\'rgba(0,212,255,0.4)\';this.style.color=\'#00d4ff\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,0.1)\';this.style.color=\'#888\'">← Home</button>' +
+          '<button onclick="switchView(\'profile\')" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#888;padding:7px 14px;border-radius:7px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;" onmouseover="this.style.borderColor=\'rgba(224,16,32,0.4)\';this.style.color=\'#e01020\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,0.1)\';this.style.color=\'#888\'">← Home</button>' +
         '</div>' +
 
         '<div class="lb_tabs" id="lb_tabs"></div>' +
-        '<div style="background:#0f0f22;border:1px solid #1e1e3a;border-radius:14px;padding:1.2rem;min-height:300px;" id="lb_body">' +
+        '<div style="background:#0a0a0a;border:1px solid #2a1515;border-radius:0px;padding:1.2rem;min-height:300px;" id="lb_body">' +
           '<div class="lb_loading">Loading…</div>' +
         '</div>' +
 
-        '<div style="background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.04);border-radius:10px;padding:0.9rem 1.2rem;margin-top:1rem;font-size:0.62rem;color:#2a2a44;letter-spacing:0.8px;text-align:center;text-transform:uppercase;">' +
+        '<div style="background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.04);border-radius:0px;padding:0.9rem 1.2rem;margin-top:1rem;font-size:0.62rem;color:#3a2020;letter-spacing:0.8px;text-align:center;text-transform:uppercase;">' +
           'Top players earn rewards · Free mints · Casino credits · Store discounts · Special roles' +
         '</div>';
 
@@ -8342,8 +8831,8 @@ a.plink:hover{
         html += '<tr class="' + meClass + '">';
         html += '<td class="lb_rank ' + rankClass + '">' + medal + '</td>';
         html += '<td>';
-        html += '<span style="color:' + (lb_isMe(w) ? '#00d4ff' : '#c8c8e8') + ';font-weight:' + (lb_isMe(w) ? '700' : '400') + ';">' + escapeHtml(name) + '</span>';
-        if (lb_isMe(w)) html += ' <span style="font-size:0.58rem;color:#00d4ff;opacity:0.6;">(you)</span>';
+        html += '<span style="color:' + (lb_isMe(w) ? '#e01020' : '#c8c8e8') + ';font-weight:' + (lb_isMe(w) ? '700' : '400') + ';">' + escapeHtml(name) + '</span>';
+        if (lb_isMe(w)) html += ' <span style="font-size:0.58rem;color:#e01020;opacity:0.6;">(you)</span>';
         html += '<div class="lb_wallet" style="color:' + walletColor(w) + ';">' + lb_shortWallet(w) + '</div>';
         html += '</td>';
         html += '<td class="lb_val">';
@@ -8356,7 +8845,7 @@ a.plink:hover{
           html += '<span style="color:' + pnlColor + ';">' + pnlSign + Math.floor(row.pnl).toLocaleString() + ' 🥬</span>';
           html += '<div style="font-size:0.58rem;color:#555;">' + row.wins + 'W / ' + row.losses + 'L</div>';
         } else if (lb_activeTab === 'chatters') {
-          html += '<span style="color:#7b68ee;">' + row.count.toLocaleString() + '</span>';
+          html += '<span style="color:#8b0000;">' + row.count.toLocaleString() + '</span>';
         } else if (lb_activeTab === 'holders') {
           html += '<span style="color:#555;">—</span>';
         } else if (lb_activeTab === 'bigwins') {
@@ -8375,7 +8864,7 @@ a.plink:hover{
       if (myW) {
         var myIdx = data.findIndex(function(r) { return r.wallet === myW; });
         if (myIdx >= 0) {
-          html += '<div style="text-align:center;margin-top:1rem;font-size:0.72rem;color:#00d4ff;font-weight:700;">Your rank: #' + (myIdx + 1) + '</div>';
+          html += '<div style="text-align:center;margin-top:1rem;font-size:0.72rem;color:#e01020;font-weight:700;">Your rank: #' + (myIdx + 1) + '</div>';
         } else {
           html += '<div style="text-align:center;margin-top:1rem;font-size:0.68rem;color:#333;">You\'re not on this board yet — keep going!</div>';
         }
@@ -8507,53 +8996,53 @@ a.plink:hover{
 
       view.innerHTML =
         '<style>' +
-        '.mq_card{background:#0f0f22;border:1px solid #1e1e3a;border-radius:14px;padding:1.4rem;margin-bottom:1.2rem;}' +
+        '.mq_card{background:#0a0a0a;border:1px solid #2a1515;border-radius:0px;padding:1.4rem;margin-bottom:1.2rem;}' +
         '.mq_row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.03);}' +
         '.mq_row:last-child{border-bottom:none;}' +
         '.mq_icon{font-size:1.5rem;width:36px;text-align:center;flex-shrink:0;}' +
         '.mq_info{flex:1;min-width:0;}' +
-        '.mq_name{font-weight:700;font-size:0.82rem;color:#e0e0ff;margin-bottom:2px;}' +
+        '.mq_name{font-weight:700;font-size:0.82rem;color:#f0e8e8;margin-bottom:2px;}' +
         '.mq_desc{font-size:0.65rem;color:#444;letter-spacing:0.5px;}' +
         '.mq_bar{height:6px;background:rgba(255,255,255,0.05);border-radius:3px;overflow:hidden;margin-top:6px;}' +
         '.mq_fill{height:100%;border-radius:3px;transition:width 0.6s ease;}' +
         '.mq_right{text-align:right;flex-shrink:0;min-width:70px;}' +
         '.mq_reward{font-size:0.7rem;color:#ffd700;font-weight:700;}' +
         '.mq_prog{font-size:0.62rem;color:#555;margin-top:2px;}' +
-        '.mq_claim{background:linear-gradient(135deg,rgba(0,255,136,0.15),rgba(0,212,255,0.15));border:1px solid rgba(0,255,136,0.4);color:#00ff88;padding:5px 12px;border-radius:6px;cursor:pointer;font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:0.68rem;letter-spacing:1px;text-transform:uppercase;transition:all 0.2s;margin-top:4px;}' +
+        '.mq_claim{background:linear-gradient(135deg,rgba(0,255,136,0.15),rgba(224,16,32,0.15));border:1px solid rgba(0,255,136,0.4);color:#00ff88;padding:5px 12px;border-radius: 0px;cursor:pointer;font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:0.68rem;letter-spacing:1px;text-transform:uppercase;transition:all 0.2s;margin-top:4px;}' +
         '.mq_claim:hover{background:rgba(0,255,136,0.12);box-shadow:0 0 12px rgba(0,255,136,0.2);}' +
         '.mq_done{font-size:0.68rem;color:#555;font-weight:700;letter-spacing:1px;}' +
         '</style>' +
 
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;flex-wrap:wrap;gap:0.6rem;">' +
           '<div>' +
-            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.5rem;letter-spacing:3px;color:#e0e0ff;">🎯 MISSIONS</div>' +
+            '<div style="font-family:\'Permanent Marker\',sans-serif;font-size:1.5rem;letter-spacing:3px;color:#f0e8e8;">🎯 MISSIONS</div>' +
             '<div style="font-size:0.7rem;color:#444;letter-spacing:1px;margin-top:2px;">Complete tasks. Earn 🥬 Cabbage. Come back daily.</div>' +
           '</div>' +
-          '<button onclick="switchView(\'profile\')" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#888;padding:7px 14px;border-radius:7px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;" onmouseover="this.style.borderColor=\'rgba(0,212,255,0.4)\';this.style.color=\'#00d4ff\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,0.1)\';this.style.color=\'#888\'">← Home</button>' +
+          '<button onclick="switchView(\'profile\')" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#888;padding:7px 14px;border-radius:7px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;" onmouseover="this.style.borderColor=\'rgba(224,16,32,0.4)\';this.style.color=\'#e01020\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,0.1)\';this.style.color=\'#888\'">← Home</button>' +
         '</div>' +
 
         // Summary card
         '<div class="mq_card" style="display:flex;gap:1.5rem;flex-wrap:wrap;align-items:center;padding:1rem 1.4rem;">' +
-          '<div><div style="color:#555;font-size:0.65rem;letter-spacing:1px;">TODAY</div><div style="font-weight:700;color:#00d4ff;font-size:1rem;" id="mq_dailyCount">0/5</div></div>' +
-          '<div><div style="color:#555;font-size:0.65rem;letter-spacing:1px;">THIS WEEK</div><div style="font-weight:700;color:#7b68ee;font-size:1rem;" id="mq_weeklyCount">0/4</div></div>' +
+          '<div><div style="color:#555;font-size:0.65rem;letter-spacing:1px;">TODAY</div><div style="font-weight:700;color:#e01020;font-size:1rem;" id="mq_dailyCount">0/5</div></div>' +
+          '<div><div style="color:#555;font-size:0.65rem;letter-spacing:1px;">THIS WEEK</div><div style="font-weight:700;color:#8b0000;font-size:1rem;" id="mq_weeklyCount">0/4</div></div>' +
           '<div><div style="color:#555;font-size:0.65rem;letter-spacing:1px;">EARNED TODAY</div><div style="font-weight:700;color:#ffd700;font-size:1rem;" id="mq_earnedToday">0 🥬</div></div>' +
           '<div><div style="color:#555;font-size:0.65rem;letter-spacing:1px;">HOLDING</div><div style="font-weight:700;color:#00ff88;font-size:1rem;">' + nftCount + ' NFTs</div></div>' +
         '</div>' +
 
         // Daily
         '<div class="mq_card">' +
-          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1rem;letter-spacing:3px;color:#555;margin-bottom:0.8rem;">📋 DAILY MISSIONS <span style="font-size:0.7rem;color:#333;font-family:\'Space Grotesk\',sans-serif;letter-spacing:0;">Resets at midnight UTC</span></div>' +
+          '<div style="font-family:\'Permanent Marker\',sans-serif;font-size:1rem;letter-spacing:3px;color:#555;margin-bottom:0.8rem;">📋 DAILY MISSIONS <span style="font-size:0.7rem;color:#333;font-family:\'Space Grotesk\',sans-serif;letter-spacing:0;">Resets at midnight UTC</span></div>' +
           '<div id="mq_dailyList"></div>' +
         '</div>' +
 
         // Weekly
         '<div class="mq_card">' +
-          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1rem;letter-spacing:3px;color:#555;margin-bottom:0.8rem;">🗓️ WEEKLY MISSIONS <span style="font-size:0.7rem;color:#333;font-family:\'Space Grotesk\',sans-serif;letter-spacing:0;">Resets every Monday</span></div>' +
+          '<div style="font-family:\'Permanent Marker\',sans-serif;font-size:1rem;letter-spacing:3px;color:#555;margin-bottom:0.8rem;">🗓️ WEEKLY MISSIONS <span style="font-size:0.7rem;color:#333;font-family:\'Space Grotesk\',sans-serif;letter-spacing:0;">Resets every Monday</span></div>' +
           '<div id="mq_weeklyList"></div>' +
         '</div>' +
 
         // Streak / info
-        '<div style="background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.04);border-radius:10px;padding:0.9rem 1.2rem;font-size:0.65rem;color:#2a2a44;letter-spacing:0.8px;text-align:center;text-transform:uppercase;">' +
+        '<div style="background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.04);border-radius:0px;padding:0.9rem 1.2rem;font-size:0.65rem;color:#3a2020;letter-spacing:0.8px;text-align:center;text-transform:uppercase;">' +
           'Complete all daily missions for bonus rewards · Holding NFTs unlocks future exclusive missions · More missions coming soon' +
         '</div>';
 
@@ -8580,7 +9069,7 @@ a.plink:hover{
         if (claimed && !isWeekly) dailyEarned += m.reward;
         if (claimed && isWeekly) dailyEarned += m.reward;
 
-        var fillColor = complete ? (claimed ? '#555' : 'linear-gradient(90deg,#00ff88,#00d4ff)') : 'linear-gradient(90deg,#9945ff,#00d4ff)';
+        var fillColor = complete ? (claimed ? '#555' : 'linear-gradient(90deg,#00ff88,#e01020)') : 'linear-gradient(90deg,#9945ff,#e01020)';
         var rightHTML = '';
         if (claimed) {
           rightHTML = '<div class="mq_done">✅ CLAIMED</div>';
@@ -8953,7 +9442,7 @@ a.plink:hover{
         var color = walletColor(m.wallet);
         var badge = m.isMe ? '' : shop_getBadge(m.wallet);
         var speakColor = (m.isMe && !voice_muted) ? '#00ff88' : '#333';
-        return '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.04);border-radius:10px;">'
+        return '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.04);border-radius:0px;">'
           + '<div id="voice_dot_' + m.peerId + '" style="width:10px;height:10px;border-radius:50%;background:' + speakColor + ';flex-shrink:0;transition:background 0.1s;box-shadow:0 0 8px ' + speakColor + ';"></div>'
           + '<div style="font-weight:700;font-size:0.82rem;color:' + color + ';flex:1;">' + escapeHtml(m.name) + (badge ? ' ' + badge : '') + (m.isMe ? ' <span style="font-size:0.55rem;color:#333;letter-spacing:1px;">YOU</span>' : '') + '</div>'
           + (m.isMe ? '<span style="font-size:0.65rem;color:' + (voice_muted ? '#ff3c5c' : '#00ff88') + ';letter-spacing:1px;">' + (voice_muted ? '🔇 MUTED' : '🎙️ LIVE') + '</span>' : '')
@@ -8965,14 +9454,14 @@ a.plink:hover{
         '<div style="background:rgba(0,255,136,0.04);border:1px solid rgba(0,255,136,0.15);border-radius:12px;padding:1rem 1.2rem;margin-bottom:1.2rem;">'
           + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.8rem;">'
             + '<div>'
-              + '<div style="font-weight:700;font-size:1rem;color:#e0e0ff;">' + escapeHtml(room.name) + '</div>'
+              + '<div style="font-weight:700;font-size:1rem;color:#f0e8e8;">' + escapeHtml(room.name) + '</div>'
               + '<div style="font-size:0.65rem;color:#444;letter-spacing:1px;margin-top:2px;">' + (peerCount + 1) + ' member' + (peerCount !== 0 ? 's' : '') + ' connected</div>'
             + '</div>'
             + '<div style="display:flex;gap:8px;">'
-              + '<button onclick="voice_toggleMute()" style="background:' + (voice_muted ? 'rgba(255,60,92,0.12)' : 'rgba(0,255,136,0.08)') + ';border:1px solid ' + (voice_muted ? 'rgba(255,60,92,0.4)' : 'rgba(0,255,136,0.35)') + ';color:' + (voice_muted ? '#ff3c5c' : '#00ff88') + ';padding:8px 18px;border-radius:8px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.75rem;letter-spacing:1px;text-transform:uppercase;transition:all 0.2s;">'
+              + '<button onclick="voice_toggleMute()" style="background:' + (voice_muted ? 'rgba(255,60,92,0.12)' : 'rgba(0,255,136,0.08)') + ';border:1px solid ' + (voice_muted ? 'rgba(255,60,92,0.4)' : 'rgba(0,255,136,0.35)') + ';color:' + (voice_muted ? '#ff3c5c' : '#00ff88') + ';padding:8px 18px;border-radius: 0px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.75rem;letter-spacing:1px;text-transform:uppercase;transition:all 0.2s;">'
                 + (voice_muted ? '🔇 UNMUTE' : '🎙️ MUTE')
               + '</button>'
-              + '<button onclick="voice_leave()" style="background:rgba(255,60,92,0.08);border:1px solid rgba(255,60,92,0.3);color:#ff3c5c;padding:8px 18px;border-radius:8px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.75rem;letter-spacing:1px;text-transform:uppercase;transition:all 0.2s;">✕ LEAVE</button>'
+              + '<button onclick="voice_leave()" style="background:rgba(255,60,92,0.08);border:1px solid rgba(255,60,92,0.3);color:#ff3c5c;padding:8px 18px;border-radius: 0px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.75rem;letter-spacing:1px;text-transform:uppercase;transition:all 0.2s;">✕ LEAVE</button>'
             + '</div>'
           + '</div>'
         + '</div>'
@@ -8987,14 +9476,14 @@ a.plink:hover{
 
       var roomListHtml = VOICE_ROOMS.map(function(room) {
         var active = voice_roomId === room.id;
-        return '<div style="background:' + (active ? 'rgba(0,212,255,0.06)' : '#0a0a1a') + ';border:1px solid ' + (active ? 'rgba(0,212,255,0.3)' : '#1a1a30') + ';border-radius:12px;padding:1.1rem 1.4rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;transition:all 0.2s;">'
+        return '<div style="background:' + (active ? 'rgba(224,16,32,0.06)' : '#080808') + ';border:1px solid ' + (active ? 'rgba(224,16,32,0.3)' : '#221010') + ';border-radius:12px;padding:1.1rem 1.4rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;transition:all 0.2s;">'
           + '<div>'
-            + '<div style="font-weight:700;font-size:0.9rem;color:#e0e0ff;">' + escapeHtml(room.name) + '</div>'
+            + '<div style="font-weight:700;font-size:0.9rem;color:#f0e8e8;">' + escapeHtml(room.name) + '</div>'
             + '<div style="font-size:0.65rem;color:#444;margin-top:3px;">' + escapeHtml(room.desc) + '</div>'
           + '</div>'
           + (active
-              ? '<span style="font-size:0.65rem;color:#00d4ff;font-weight:700;letter-spacing:1px;">CONNECTED</span>'
-              : '<button onclick="voice_join(\'' + room.id + '\')" style="background:transparent;border:1px solid rgba(0,212,255,0.35);color:#00d4ff;padding:7px 18px;border-radius:8px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1px;text-transform:uppercase;transition:all 0.2s;">JOIN</button>')
+              ? '<span style="font-size:0.65rem;color:#e01020;font-weight:700;letter-spacing:1px;">CONNECTED</span>'
+              : '<button onclick="voice_join(\'' + room.id + '\')" style="background:transparent;border:1px solid rgba(224,16,32,0.35);color:#e01020;padding:7px 18px;border-radius: 0px;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:1px;text-transform:uppercase;transition:all 0.2s;">JOIN</button>')
         + '</div>';
       }).join('');
 
@@ -9006,7 +9495,7 @@ a.plink:hover{
         // Header
         + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.4rem;flex-wrap:wrap;gap:0.6rem;">'
           + '<div>'
-            + '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.5rem;letter-spacing:3px;color:#e0e0ff;">🎙️ VOICE ROOMS</div>'
+            + '<div style="font-family:\'Permanent Marker\',sans-serif;font-size:1.5rem;letter-spacing:3px;color:#f0e8e8;">🎙️ VOICE ROOMS</div>'
             + '<div style="font-size:0.7rem;color:#444;letter-spacing:1px;margin-top:2px;">Live voice chat for LNL holders · No account needed · Browser only</div>'
           + '</div>'
           + (voice_roomId
@@ -9018,15 +9507,15 @@ a.plink:hover{
         + '<div id="voice_room_body"></div>'
 
         // Room list
-        + '<div style="background:#0f0f22;border:1px solid #1e1e3a;border-radius:14px;padding:1.2rem;margin-bottom:1.2rem;">'
-          + '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:0.9rem;letter-spacing:3px;color:#555;margin-bottom:1rem;">VOICE ROOMS</div>'
+        + '<div style="background:#0a0a0a;border:1px solid #2a1515;border-radius:0px;padding:1.2rem;margin-bottom:1.2rem;">'
+          + '<div style="font-family:\'Permanent Marker\',sans-serif;font-size:0.9rem;letter-spacing:3px;color:#555;margin-bottom:1rem;">VOICE ROOMS</div>'
           + '<div style="display:flex;flex-direction:column;gap:8px;">' + roomListHtml + '</div>'
         + '</div>'
 
         // How it works
-        + '<div style="background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.04);border-radius:10px;padding:1rem 1.2rem;">'
-          + '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:0.75rem;letter-spacing:2px;color:#333;margin-bottom:0.7rem;">HOW IT WORKS</div>'
-          + '<div style="font-size:0.65rem;color:#2a2a44;line-height:2;letter-spacing:0.5px;">'
+        + '<div style="background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.04);border-radius:0px;padding:1rem 1.2rem;">'
+          + '<div style="font-family:\'Permanent Marker\',sans-serif;font-size:0.75rem;letter-spacing:2px;color:#333;margin-bottom:0.7rem;">HOW IT WORKS</div>'
+          + '<div style="font-size:0.65rem;color:#3a2020;line-height:2;letter-spacing:0.5px;">'
             + '🎙️ Click JOIN and allow microphone access in your browser<br>'
             + '🔊 Your voice streams directly to everyone else in the room (peer-to-peer)<br>'
             + '🔇 Mute / unmute yourself anytime — green dot means speaking<br>'
@@ -9051,22 +9540,22 @@ a.plink:hover{
         <button class="modal-close" onclick="pkBuyInCancel()">&#x2715;</button>
       </div>
       <div class="modal-body" style="padding:1.6rem;">
-        <div id="pkBuyInTableInfo" style="background:rgba(0,212,255,0.04);border:1px solid rgba(0,212,255,0.15);border-radius:10px;padding:0.9rem 1.1rem;margin-bottom:1.4rem;font-size:0.78rem;color:#888;line-height:1.9;"></div>
+        <div id="pkBuyInTableInfo" style="background:rgba(224,16,32,0.04);border:1px solid rgba(224,16,32,0.15);border-radius:0px;padding:0.9rem 1.1rem;margin-bottom:1.4rem;font-size:0.78rem;color:#888;line-height:1.9;"></div>
         <div style="margin-bottom:1.4rem;">
           <div style="font-size:0.7rem;letter-spacing:2px;color:#555;text-transform:uppercase;margin-bottom:0.8rem;font-weight:700;">How Much Are You Bringing to the Table?</div>
           <div id="pkBuyInPresets" style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:1rem;"></div>
           <div style="display:flex;align-items:center;gap:0.6rem;">
             <input id="pkBuyInInput" type="number" min="1" placeholder="Custom amount"
-              style="flex:1;background:#0a0a1a;border:1px solid rgba(255,255,255,0.12);border-radius:8px;color:#e0e0ff;padding:10px 14px;font-size:0.9rem;font-weight:600;outline:none;transition:border-color 0.2s;"
+              style="flex:1;background:#080808;border:1px solid rgba(255,255,255,0.12);border-radius: 0px;color:#f0e8e8;padding:10px 14px;font-size:0.9rem;font-weight:600;outline:none;transition:border-color 0.2s;"
               oninput="pkBuyInSync(this.value)"
-              onfocus="this.style.borderColor='rgba(0,212,255,0.5)'"
+              onfocus="this.style.borderColor='rgba(224,16,32,0.5)'"
               onblur="this.style.borderColor='rgba(255,255,255,0.12)'" />
             <span id="pkBuyInSym" style="font-size:0.85rem;color:#555;white-space:nowrap;">CAB</span>
           </div>
           <div id="pkBuyInWarn" style="margin-top:0.5rem;font-size:0.68rem;color:#ff3c5c;min-height:1em;"></div>
         </div>
         <button id="pkBuyInConfirm" onclick="pkBuyInConfirm()"
-          style="width:100%;padding:14px;background:linear-gradient(135deg,rgba(0,212,255,0.18),rgba(0,212,255,0.08));border:1px solid rgba(0,212,255,0.5);border-radius:10px;color:#00d4ff;font-weight:900;font-size:0.82rem;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;">
+          style="width:100%;padding:14px;background:linear-gradient(135deg,rgba(224,16,32,0.18),rgba(224,16,32,0.08));border:1px solid rgba(224,16,32,0.5);border-radius:0px;color:#e01020;font-weight:900;font-size:0.82rem;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;">
           Sit Down
         </button>
       </div>
