@@ -6,22 +6,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>LNL STORE | Long Neck Legends</title>
 
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Orbitron:wght@700;900&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Rubik+Spray+Paint&family=Russo+One&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
   <style>
     :root {
-      --bg-dark: #0a0a1a;
-      --bg-card: #111125;
-      --bg-card-hover: #1a1a35;
-      --accent: #00d4ff;
-      --accent-glow: rgba(0, 212, 255, 0.35);
-      --purple: #7b68ee;
-      --purple-glow: rgba(123, 104, 238, 0.25);
-      --text-primary: #e0e0ff;
-      --text-secondary: #888;
+      --red: #e01020;
+      --red-hot: #ff1a2e;
+      --red-dark: #8b0000;
+      --red-glow: rgba(224,16,32,0.5);
+      --bg-dark: #080808;
+      --bg-card: #0e0e0e;
+      --bg-card-hover: #141414;
+      --border: #2a1515;
+      --text-primary: #f0e8e8;
+      --text-secondary: #c0b0b0;
       --text-dim: #555;
-      --border: #1e1e3a;
       --success: #00ff88;
+      --gold: #ffd700;
+      --tag-font: 'Permanent Marker', cursive;
+      --spray-font: 'Rubik Spray Paint', 'Permanent Marker', cursive;
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -36,27 +41,98 @@
     }
     body.loaded { opacity: 1; }
 
-    /* ---- NAV (matches site) ---- */
+    /* ── BRICK + NOISE ── */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.02;
+      background-image:
+        repeating-linear-gradient(0deg, transparent, transparent 38px, rgba(255,255,255,0.03) 38px, rgba(255,255,255,0.03) 40px),
+        repeating-linear-gradient(90deg, transparent, transparent 78px, rgba(255,255,255,0.02) 78px, rgba(255,255,255,0.02) 80px);
+    }
+    body::after {
+      content: '';
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.04;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      background-repeat: repeat;
+    }
+
+    /* ── SPRAY TAGS ── */
+    .spray-tag {
+      position: absolute;
+      font-family: var(--spray-font);
+      pointer-events: none;
+      user-select: none;
+      white-space: nowrap;
+      z-index: 0;
+      line-height: 1;
+    }
+    .spray-tag.huge  { font-size: clamp(80px,14vw,200px); opacity: 0.03; }
+    .spray-tag.large { font-size: clamp(50px,8vw,120px);  opacity: 0.04; }
+    .spray-tag.medium{ font-size: clamp(28px,5vw,65px);   opacity: 0.06; }
+    .spray-tag.small { font-size: clamp(16px,3vw,38px);   opacity: 0.07; }
+    .spray-tag.red   { color: var(--red); }
+    .spray-tag.dark-red { color: var(--red-dark); }
+    .spray-tag.white { color: rgba(255,255,255,1); }
+    .spray-tag.ghost { color: rgba(255,255,255,0.5); }
+    .spray-tag.outline { -webkit-text-stroke: 1.5px currentColor; color: transparent !important; }
+    .spray-tag.drip::after {
+      content:''; position:absolute; bottom:-18px; left:20%;
+      width:3px; height:22px; background:currentColor; opacity:0.5;
+    }
+    .spray-tag.drip-2::after {
+      content:''; position:absolute; bottom:-28px; left:55%;
+      width:2px; height:30px; background:currentColor; opacity:0.4;
+    }
+    @media (max-width:768px){
+      .spray-tag.huge { font-size: 60px; }
+      .spray-tag.large { font-size: 38px; }
+      .spray-tag.medium { font-size: 22px; }
+    }
+
+    @keyframes flicker {
+      0%,100% { opacity: 1; }
+      5% { opacity: 0.7; }
+      10% { opacity: 1; }
+      55% { opacity: 0.6; }
+      60% { opacity: 1; }
+    }
+
+    ::selection { background: var(--red); color: #fff; }
+
+    /* ── NAV ── */
     nav {
       position: fixed;
       top: 0;
       width: 100%;
       padding: 1rem 0;
-      background: rgba(10,10,26,0.92);
+      background: rgba(8,8,8,0.96);
       backdrop-filter: blur(12px);
       z-index: 1000;
       text-align: center;
-      border-bottom: 1px solid rgba(0,212,255,0.15);
+      border-bottom: 3px solid var(--red-dark);
+      box-shadow: 0 2px 25px rgba(224,16,32,0.15);
     }
     nav a {
       color: var(--text-primary);
-      margin: 0 1.5rem;
+      margin: 0 1.2rem;
       text-decoration: none;
-      font-weight: 600;
+      font-family: 'Russo One', sans-serif;
+      font-weight: 400;
       position: relative;
-      font-size: 0.9rem;
+      font-size: 0.82rem;
       text-transform: uppercase;
       letter-spacing: 1.5px;
+      transition: color 0.3s, text-shadow 0.3s;
     }
     nav a::after {
       content: '';
@@ -64,150 +140,191 @@
       bottom: -5px;
       left: 0;
       width: 0;
-      height: 2px;
-      background: var(--accent);
+      height: 3px;
+      background: var(--red);
+      box-shadow: 0 0 8px var(--red-glow);
       transition: 0.3s;
     }
+    nav a:hover { color: var(--red); text-shadow: 0 0 15px var(--red-glow); }
     nav a:hover::after { width: 100%; }
-    nav a:hover { color: var(--accent); }
 
-    /* ---- HERO ---- */
+    /* ── HERO ── */
     .hero {
       margin-top: 60px;
       padding: 5rem 2rem 3rem;
       text-align: center;
       position: relative;
       overflow: hidden;
-      border-bottom: 1px solid var(--border);
-    }
-    .hero::before {
-      content: 'LNL';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: clamp(200px, 30vw, 500px);
-      color: rgba(0,212,255,0.04);
-      pointer-events: none;
-      white-space: nowrap;
-      letter-spacing: 20px;
+      border-bottom: 2px solid var(--border);
+      background:
+        radial-gradient(ellipse at 15% 85%, rgba(139,0,0,0.15), transparent 50%),
+        radial-gradient(ellipse at 85% 15%, rgba(224,16,32,0.08), transparent 50%);
     }
     .hero-tag {
       display: inline-block;
-      background: var(--accent);
-      color: #000;
+      background: var(--red);
+      color: #fff;
+      font-family: 'Russo One', sans-serif;
       font-weight: 700;
       font-size: 0.7rem;
-      padding: 4px 14px;
+      padding: 6px 18px;
       letter-spacing: 3px;
       text-transform: uppercase;
       margin-bottom: 1.5rem;
+      box-shadow: 3px 3px 0 var(--red-dark);
+      text-shadow: 1px 1px 0 rgba(0,0,0,0.5);
+      position: relative;
+      z-index: 2;
     }
     .hero h1 {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: clamp(3rem, 8vw, 7rem);
-      letter-spacing: 6px;
+      font-family: var(--tag-font);
+      font-size: clamp(3rem, 8vw, 6rem);
+      letter-spacing: 4px;
       line-height: 0.95;
       margin-bottom: 1rem;
+      text-shadow: 4px 4px 0 rgba(0,0,0,0.9), -2px -2px 0 rgba(224,16,32,0.2);
+      transform: rotate(-1deg);
+      position: relative;
+      z-index: 2;
     }
     .hero h1 span {
-      color: var(--accent);
-      text-shadow: 0 0 40px var(--accent-glow);
+      color: var(--red);
+      text-shadow: 4px 4px 0 rgba(0,0,0,0.95), 0 0 40px var(--red-glow);
+      animation: flicker 4s infinite;
     }
     .hero-sub {
       color: var(--text-secondary);
-      font-size: 1.05rem;
+      font-size: 1rem;
       max-width: 500px;
       margin: 0 auto;
       line-height: 1.6;
+      font-family: 'Russo One', sans-serif;
+      position: relative;
+      z-index: 2;
     }
 
-    /* ---- WALLET BAR ---- */
+    /* ── WALLET BAR ── */
     .wallet-bar {
       background: var(--bg-card);
-      border-bottom: 1px solid var(--border);
-      padding: 0.9rem 2rem;
+      border-bottom: 2px solid var(--border);
+      border-top: 2px solid var(--border);
+      padding: 1rem 2rem;
       display: flex;
       justify-content: center;
       align-items: center;
-      gap: 1rem;
+      gap: 1.2rem;
       flex-wrap: wrap;
+      position: relative;
+      box-shadow: inset 0 0 30px rgba(0,0,0,0.4);
     }
     .wallet-bar .wallet-info {
       color: var(--text-secondary);
       font-size: 0.85rem;
+      font-family: 'Russo One', sans-serif;
     }
     .wallet-bar .wallet-info strong {
       color: var(--text-primary);
       font-weight: 700;
     }
     .wallet-btn {
-      background: var(--accent);
-      color: #000;
+      background: var(--red);
+      color: #fff;
       border: none;
-      padding: 8px 22px;
+      padding: 12px 28px;
       font-weight: 700;
-      font-size: 0.8rem;
+      font-size: 0.82rem;
       text-transform: uppercase;
       letter-spacing: 2px;
       cursor: pointer;
-      transition: all 0.2s;
-      font-family: 'Space Grotesk', sans-serif;
+      transition: all 0.3s;
+      font-family: 'Russo One', sans-serif;
+      box-shadow: 4px 4px 0 var(--red-dark);
+      text-shadow: 1px 1px 0 rgba(0,0,0,0.5);
+      clip-path: polygon(0 0, 100% 0, 98% 75%, 100% 100%, 0 100%, 2% 30%);
     }
     .wallet-btn:hover {
-      background: #fff;
-      box-shadow: 0 0 20px var(--accent-glow);
+      background: var(--red-hot);
+      transform: translateY(-2px) rotate(-1deg);
+      box-shadow: 6px 6px 0 var(--red-dark), 0 0 30px rgba(224,16,32,0.4);
     }
     .wallet-btn.disconnect {
       background: transparent;
       color: var(--text-secondary);
-      border: 1px solid var(--border);
-      font-size: 0.75rem;
-      padding: 6px 14px;
+      border: 2px solid var(--border);
+      font-size: 0.7rem;
+      padding: 8px 16px;
+      box-shadow: 2px 2px 0 rgba(139,0,0,0.3);
+      clip-path: none;
+      text-shadow: none;
     }
     .wallet-btn.disconnect:hover {
-      border-color: var(--accent);
-      color: var(--accent);
+      border-color: var(--red);
+      color: var(--red);
       background: transparent;
-      box-shadow: none;
+      box-shadow: 3px 3px 0 var(--red-dark);
     }
     .wallet-status {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
     }
     .wallet-dot {
-      width: 8px;
-      height: 8px;
+      width: 9px;
+      height: 9px;
       border-radius: 50%;
       background: var(--success);
-      box-shadow: 0 0 8px var(--success);
+      box-shadow: 0 0 10px var(--success);
     }
 
-    /* ---- FILTER TABS ---- */
+    /* ── TIER BADGE in wallet bar ── */
+    .tier-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: rgba(224,16,32,0.08);
+      border: 2px solid var(--red-dark);
+      box-shadow: 3px 3px 0 rgba(139,0,0,0.3);
+      font-family: 'Russo One', sans-serif;
+      font-size: 0.72rem;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+    .tier-chip .tier-icon { font-size: 0.9rem; }
+    .tier-chip .tier-name { color: var(--red); font-weight: 700; }
+    .tier-chip .tier-discount {
+      color: var(--gold);
+      font-weight: 800;
+      text-shadow: 0 0 8px rgba(255,215,0,0.4);
+    }
+    .tier-chip.no-discount .tier-name { color: var(--text-dim); }
+    .tier-chip.no-discount .tier-discount { color: var(--text-dim); text-shadow: none; }
+
+    /* ── FILTER TABS ── */
     .filter-bar {
       display: flex;
       justify-content: center;
       gap: 0;
       padding: 0;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 2px solid var(--border);
+      background: rgba(0,0,0,0.3);
     }
     .filter-tab {
       background: none;
       border: none;
       color: var(--text-dim);
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.2rem;
+      font-family: var(--tag-font);
+      font-size: 1.4rem;
       letter-spacing: 3px;
-      padding: 1rem 2.5rem;
+      padding: 1.1rem 2.5rem;
       cursor: pointer;
       position: relative;
-      transition: color 0.2s;
+      transition: color 0.2s, text-shadow 0.2s;
     }
     .filter-tab:hover { color: var(--text-primary); }
     .filter-tab.active {
       color: var(--text-primary);
+      text-shadow: 2px 2px 0 rgba(0,0,0,0.7);
     }
     .filter-tab.active::after {
       content: '';
@@ -215,19 +332,21 @@
       bottom: 0;
       left: 0;
       width: 100%;
-      height: 3px;
-      background: var(--accent);
-      box-shadow: 0 0 10px var(--accent-glow);
+      height: 4px;
+      background: var(--red);
+      box-shadow: 0 0 12px var(--red-glow);
     }
 
-    /* ---- PRODUCT GRID ---- */
+    /* ── PRODUCT GRID ── */
     .store-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 1px;
+      gap: 2px;
       background: var(--border);
       max-width: 1400px;
-      margin: 0 auto;
+      margin: 2rem auto;
+      position: relative;
+      border: 2px solid var(--border);
     }
 
     .product-card {
@@ -235,11 +354,13 @@
       position: relative;
       overflow: hidden;
       cursor: pointer;
-      transition: background 0.3s;
+      transition: all 0.3s;
     }
-    .product-card:hover { background: var(--bg-card-hover); }
+    .product-card:hover {
+      background: var(--bg-card-hover);
+    }
     .product-card:hover .product-img img {
-      transform: scale(1.05);
+      transform: scale(1.08);
     }
     .product-card:hover .quick-buy {
       opacity: 1;
@@ -249,7 +370,7 @@
     .product-img {
       position: relative;
       overflow: hidden;
-      background: #0d0d0d;
+      background: #050505;
       aspect-ratio: 1;
     }
     .product-img img {
@@ -258,109 +379,121 @@
       object-fit: cover;
       display: block;
       transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+      filter: contrast(1.05) saturate(1.05);
     }
 
     .product-tag {
       position: absolute;
       top: 14px;
       left: 14px;
-      background: var(--accent);
-      color: #000;
+      background: var(--red);
+      color: #fff;
+      font-family: 'Russo One', sans-serif;
       font-weight: 700;
       font-size: 0.65rem;
-      padding: 3px 10px;
+      padding: 4px 12px;
       letter-spacing: 2px;
       text-transform: uppercase;
       z-index: 2;
+      box-shadow: 2px 2px 0 var(--red-dark);
+      text-shadow: 1px 1px 0 rgba(0,0,0,0.5);
     }
-    .product-tag.sold-out {
-      background: #333;
-      color: #888;
-    }
-    .product-tag.limited {
-      background: var(--purple);
-    }
+    .product-tag.sold-out { background: #2a1515; color: #555; box-shadow: 2px 2px 0 #1a0a0a; }
+    .product-tag.limited { background: var(--gold); color: #000; text-shadow: none; box-shadow: 2px 2px 0 #b8a000; }
 
     .quick-buy {
       position: absolute;
       bottom: 0;
       left: 0;
       right: 0;
-      background: linear-gradient(transparent, rgba(0,0,0,0.9));
-      padding: 2rem 1rem 1rem;
+      background: linear-gradient(transparent, rgba(0,0,0,0.95));
+      padding: 2.5rem 1.2rem 1.2rem;
       opacity: 0;
-      transform: translateY(10px);
+      transform: translateY(15px);
       transition: all 0.3s;
     }
     .quick-buy button {
       width: 100%;
-      background: var(--accent);
-      color: #000;
+      background: var(--red);
+      color: #fff;
       border: none;
-      padding: 12px;
+      padding: 13px;
       font-weight: 700;
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       text-transform: uppercase;
-      letter-spacing: 3px;
+      letter-spacing: 2.5px;
       cursor: pointer;
-      font-family: 'Space Grotesk', sans-serif;
-      transition: background 0.2s;
+      font-family: 'Russo One', sans-serif;
+      transition: all 0.2s;
+      box-shadow: 3px 3px 0 var(--red-dark);
+      text-shadow: 1px 1px 0 rgba(0,0,0,0.5);
     }
-    .quick-buy button:hover { background: #fff; }
+    .quick-buy button:hover {
+      background: var(--red-hot);
+      box-shadow: 4px 4px 0 var(--red-dark);
+    }
     .quick-buy button:disabled {
-      background: #333;
-      color: #666;
+      background: #2a1515;
+      color: #555;
       cursor: not-allowed;
+      box-shadow: none;
     }
 
     .product-info {
-      padding: 1.2rem 1.2rem 1.5rem;
+      padding: 1.2rem 1.4rem 1.5rem;
+      position: relative;
     }
     .product-name {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.35rem;
-      letter-spacing: 2px;
-      margin-bottom: 0.2rem;
+      font-family: var(--tag-font);
+      font-size: 1.4rem;
+      letter-spacing: 1.5px;
+      margin-bottom: 0.3rem;
+      text-shadow: 2px 2px 0 rgba(0,0,0,0.7);
     }
     .product-desc {
       color: var(--text-secondary);
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       line-height: 1.5;
-      margin-bottom: 0.8rem;
+      margin-bottom: 0.9rem;
     }
     .product-price {
       display: flex;
-      align-items: center;
+      align-items: baseline;
       gap: 0.6rem;
+      flex-wrap: wrap;
     }
     .sol-price {
+      font-family: 'Russo One', sans-serif;
       font-weight: 700;
-      font-size: 1.1rem;
+      font-size: 1.2rem;
       color: var(--text-primary);
     }
-    .sol-icon {
-      width: 16px;
-      height: 16px;
-      opacity: 0.7;
+    .sol-price.discounted {
+      color: var(--gold);
+      text-shadow: 0 0 12px rgba(255,215,0,0.3);
     }
-    .usd-equiv {
+    .sol-price-original {
+      font-size: 0.85rem;
       color: var(--text-dim);
-      font-size: 0.75rem;
+      text-decoration: line-through;
+      text-decoration-color: var(--red);
+      text-decoration-thickness: 2px;
     }
     .stock-info {
       color: var(--text-dim);
       font-size: 0.7rem;
       text-transform: uppercase;
       letter-spacing: 1.5px;
-      margin-top: 0.5rem;
+      margin-top: 0.6rem;
+      font-family: 'Russo One', sans-serif;
     }
-    .stock-info.low { color: var(--accent); }
+    .stock-info.low { color: var(--red); }
 
-    /* ---- CART DRAWER ---- */
+    /* ── CART DRAWER ── */
     .cart-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.7);
+      background: rgba(0,0,0,0.8);
       z-index: 2000;
       opacity: 0;
       visibility: hidden;
@@ -371,16 +504,17 @@
     .cart-drawer {
       position: fixed;
       top: 0;
-      right: -420px;
-      width: 400px;
-      max-width: 90vw;
+      right: -440px;
+      width: 420px;
+      max-width: 92vw;
       height: 100vh;
       background: var(--bg-card);
-      border-left: 1px solid var(--border);
+      border-left: 3px solid var(--red-dark);
       z-index: 2001;
       transition: right 0.35s cubic-bezier(0.16, 1, 0.3, 1);
       display: flex;
       flex-direction: column;
+      box-shadow: -4px 0 30px rgba(224,16,32,0.15);
     }
     .cart-drawer.open { right: 0; }
 
@@ -389,23 +523,28 @@
       justify-content: space-between;
       align-items: center;
       padding: 1.5rem;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 2px solid var(--border);
+      background: rgba(0,0,0,0.3);
     }
     .cart-header h3 {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.5rem;
+      font-family: var(--tag-font);
+      font-size: 1.6rem;
       letter-spacing: 3px;
+      text-shadow: 2px 2px 0 rgba(0,0,0,0.7);
     }
+    .cart-header h3 span { color: var(--red); }
     .cart-close {
-      background: none;
-      border: none;
+      background: transparent;
+      border: 2px solid var(--border);
       color: var(--text-secondary);
-      font-size: 1.5rem;
+      width: 36px;
+      height: 36px;
+      font-size: 1.2rem;
       cursor: pointer;
-      padding: 4px 8px;
-      transition: color 0.2s;
+      transition: all 0.2s;
+      font-family: 'Russo One', sans-serif;
     }
-    .cart-close:hover { color: var(--accent); }
+    .cart-close:hover { color: var(--red); border-color: var(--red); }
 
     .cart-items {
       flex: 1;
@@ -415,10 +554,11 @@
     .cart-empty {
       text-align: center;
       color: var(--text-dim);
-      padding: 3rem 1rem;
+      padding: 4rem 1rem;
       font-size: 0.85rem;
-      letter-spacing: 1px;
+      letter-spacing: 1.5px;
       text-transform: uppercase;
+      font-family: 'Russo One', sans-serif;
     }
     .cart-item {
       display: flex;
@@ -431,116 +571,139 @@
       width: 70px;
       height: 70px;
       object-fit: cover;
-      background: #0d0d0d;
+      background: #050505;
       flex-shrink: 0;
+      border: 1px solid var(--border);
     }
-    .cart-item-details { flex: 1; }
+    .cart-item-details { flex: 1; min-width: 0; }
     .cart-item-name {
+      font-family: 'Russo One', sans-serif;
       font-weight: 700;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       letter-spacing: 0.5px;
-      margin-bottom: 2px;
+      margin-bottom: 3px;
     }
     .cart-item-variant {
       color: var(--text-dim);
-      font-size: 0.75rem;
+      font-size: 0.72rem;
+      font-family: 'Russo One', sans-serif;
+      letter-spacing: 0.5px;
     }
     .cart-item-price {
+      font-family: 'Russo One', sans-serif;
       font-weight: 700;
-      font-size: 0.9rem;
+      font-size: 0.88rem;
       white-space: nowrap;
+      color: var(--text-primary);
     }
     .cart-item-remove {
       background: none;
       border: none;
       color: var(--text-dim);
       cursor: pointer;
-      font-size: 0.7rem;
+      font-size: 0.65rem;
       text-transform: uppercase;
-      letter-spacing: 1px;
+      letter-spacing: 1.5px;
       margin-top: 4px;
       padding: 0;
       transition: color 0.2s;
+      font-family: 'Russo One', sans-serif;
     }
-    .cart-item-remove:hover { color: var(--accent); }
+    .cart-item-remove:hover { color: var(--red); }
 
     .cart-footer {
-      border-top: 1px solid var(--border);
+      border-top: 2px solid var(--border);
       padding: 1.5rem;
+      background: rgba(0,0,0,0.3);
     }
-    .cart-total {
+    .cart-totals { margin-bottom: 1rem; }
+    .cart-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 1rem;
+      padding: 5px 0;
+      font-family: 'Russo One', sans-serif;
+      font-size: 0.78rem;
+      letter-spacing: 1px;
     }
-    .cart-total-label {
-      font-family: 'Bebas Neue', sans-serif;
+    .cart-row .label { color: var(--text-secondary); }
+    .cart-row .value { color: var(--text-primary); font-weight: 700; }
+    .cart-row.discount .label { color: var(--gold); }
+    .cart-row.discount .value { color: var(--gold); }
+    .cart-row.total {
+      border-top: 1px solid var(--border);
+      padding-top: 12px;
+      margin-top: 8px;
+      font-family: var(--tag-font);
       font-size: 1.2rem;
       letter-spacing: 2px;
     }
-    .cart-total-amount {
-      font-weight: 700;
-      font-size: 1.3rem;
-    }
+    .cart-row.total .label { color: var(--text-primary); }
+    .cart-row.total .value { color: var(--red); text-shadow: 0 0 15px var(--red-glow); }
+
     .cart-checkout-btn {
       width: 100%;
-      background: var(--accent);
-      color: #000;
+      background: var(--red);
+      color: #fff;
       border: none;
-      padding: 14px;
+      padding: 16px;
       font-weight: 700;
       font-size: 0.85rem;
       text-transform: uppercase;
       letter-spacing: 3px;
       cursor: pointer;
-      font-family: 'Space Grotesk', sans-serif;
+      font-family: 'Russo One', sans-serif;
       transition: all 0.2s;
+      box-shadow: 4px 4px 0 var(--red-dark);
+      text-shadow: 1px 1px 0 rgba(0,0,0,0.5);
+      clip-path: polygon(0 0, 100% 0, 98% 75%, 100% 100%, 0 100%, 2% 30%);
     }
     .cart-checkout-btn:hover {
-      background: #fff;
-      box-shadow: 0 0 30px var(--accent-glow);
+      background: var(--red-hot);
+      box-shadow: 6px 6px 0 var(--red-dark), 0 0 35px rgba(224,16,32,0.4);
     }
     .cart-checkout-btn:disabled {
-      background: #333;
-      color: #666;
+      background: #2a1515;
+      color: #555;
       cursor: not-allowed;
-      box-shadow: none;
+      box-shadow: 2px 2px 0 #1a0a0a;
     }
 
-    /* Cart count badge */
+    /* Cart toggle floating button */
     .cart-toggle {
       position: fixed;
       bottom: 2rem;
       right: 2rem;
-      width: 60px;
-      height: 60px;
-      background: var(--accent);
+      width: 64px;
+      height: 64px;
+      background: var(--red);
       border: none;
-      border-radius: 50%;
       cursor: pointer;
       z-index: 1500;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 30px var(--accent-glow);
+      box-shadow: 5px 5px 0 var(--red-dark), 0 0 30px rgba(224,16,32,0.3);
       transition: all 0.2s;
+      clip-path: polygon(0 0, 100% 0, 98% 75%, 100% 100%, 0 100%, 2% 30%);
     }
     .cart-toggle:hover {
-      transform: scale(1.1);
-      box-shadow: 0 4px 40px rgba(0,212,255,0.5);
+      transform: scale(1.08) rotate(-3deg);
+      box-shadow: 6px 6px 0 var(--red-dark), 0 0 45px rgba(224,16,32,0.6);
+      background: var(--red-hot);
     }
-    .cart-toggle svg { width: 24px; height: 24px; fill: #000; }
+    .cart-toggle svg { width: 26px; height: 26px; fill: #fff; }
     .cart-badge {
       position: absolute;
-      top: -4px;
-      right: -4px;
+      top: -6px;
+      right: -6px;
       background: #fff;
-      color: #000;
+      color: var(--red);
+      font-family: 'Russo One', sans-serif;
       font-weight: 800;
-      font-size: 0.7rem;
-      width: 20px;
-      height: 20px;
+      font-size: 0.72rem;
+      width: 22px;
+      height: 22px;
       border-radius: 50%;
       display: flex;
       align-items: center;
@@ -548,38 +711,42 @@
       opacity: 0;
       transform: scale(0);
       transition: all 0.2s;
+      border: 2px solid var(--red-dark);
     }
     .cart-badge.show { opacity: 1; transform: scale(1); }
 
-    /* ---- STATUS TOAST ---- */
+    /* ── TOAST ── */
     .toast {
       position: fixed;
-      bottom: 6rem;
+      bottom: 6.5rem;
       right: 2rem;
       background: var(--bg-card);
-      border: 1px solid var(--border);
-      padding: 0.9rem 1.4rem;
-      font-size: 0.8rem;
-      font-weight: 600;
+      border: 2px solid var(--border);
+      padding: 1rem 1.5rem;
+      font-size: 0.78rem;
+      font-weight: 700;
+      font-family: 'Russo One', sans-serif;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
       z-index: 3000;
       opacity: 0;
       transform: translateY(20px);
       transition: all 0.3s;
-      max-width: 300px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+      max-width: 320px;
+      box-shadow: 4px 4px 0 rgba(139,0,0,0.3), 0 10px 40px rgba(0,0,0,0.5);
     }
     .toast.show {
       opacity: 1;
       transform: translateY(0);
     }
     .toast.success { border-color: var(--success); color: var(--success); }
-    .toast.error { border-color: var(--accent); color: var(--accent); }
+    .toast.error { border-color: var(--red); color: var(--red); }
 
-    /* ---- PRODUCT MODAL ---- */
+    /* ── PRODUCT MODAL ── */
     .modal-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.85);
+      background: rgba(0,0,0,0.9);
       z-index: 3000;
       display: none;
       align-items: center;
@@ -589,13 +756,15 @@
     .modal-overlay.open { display: flex; }
     .modal {
       background: var(--bg-card);
-      border: 1px solid var(--border);
+      border: 3px solid var(--red-dark);
       max-width: 900px;
       width: 100%;
       max-height: 90vh;
       overflow-y: auto;
       display: grid;
       grid-template-columns: 1fr 1fr;
+      box-shadow: 8px 8px 0 rgba(139,0,0,0.3), 0 0 60px rgba(224,16,32,0.15);
+      position: relative;
     }
     @media (max-width: 700px) {
       .modal { grid-template-columns: 1fr; }
@@ -603,7 +772,7 @@
     .modal-img {
       aspect-ratio: 1;
       overflow: hidden;
-      background: #0d0d0d;
+      background: #050505;
     }
     .modal-img img {
       width: 100%;
@@ -620,27 +789,30 @@
       position: absolute;
       top: 1rem;
       right: 1rem;
-      background: rgba(0,0,0,0.6);
-      border: 1px solid var(--border);
+      background: rgba(0,0,0,0.7);
+      border: 2px solid var(--border);
       color: var(--text-primary);
-      width: 36px;
-      height: 36px;
+      width: 38px;
+      height: 38px;
       font-size: 1.2rem;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       transition: all 0.2s;
+      z-index: 5;
+      font-family: 'Russo One', sans-serif;
     }
     .modal-close:hover {
-      background: var(--accent);
-      color: #000;
-      border-color: var(--accent);
+      background: var(--red);
+      color: #fff;
+      border-color: var(--red);
     }
     .modal-name {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 2rem;
+      font-family: var(--tag-font);
+      font-size: 2.2rem;
       letter-spacing: 3px;
+      text-shadow: 3px 3px 0 rgba(0,0,0,0.8);
     }
     .modal-desc {
       color: var(--text-secondary);
@@ -648,8 +820,23 @@
       line-height: 1.7;
     }
     .modal-price {
-      font-size: 1.5rem;
+      display: flex;
+      align-items: baseline;
+      gap: 0.8rem;
+      flex-wrap: wrap;
+      font-size: 1.6rem;
+      font-family: 'Russo One', sans-serif;
       font-weight: 700;
+    }
+    .modal-price .modal-discounted {
+      color: var(--gold);
+      text-shadow: 0 0 15px rgba(255,215,0,0.3);
+    }
+    .modal-price .modal-original {
+      font-size: 1rem;
+      color: var(--text-dim);
+      text-decoration: line-through;
+      text-decoration-color: var(--red);
     }
     .modal-variants {
       display: flex;
@@ -658,64 +845,92 @@
     }
     .variant-btn {
       background: transparent;
-      border: 1px solid var(--border);
+      border: 2px solid var(--border);
       color: var(--text-secondary);
-      padding: 6px 16px;
+      padding: 8px 18px;
       font-size: 0.75rem;
       text-transform: uppercase;
       letter-spacing: 1px;
       cursor: pointer;
-      font-family: 'Space Grotesk', sans-serif;
+      font-family: 'Russo One', sans-serif;
+      font-weight: 700;
       transition: all 0.2s;
+      box-shadow: 2px 2px 0 rgba(139,0,0,0.2);
     }
     .variant-btn:hover,
     .variant-btn.selected {
-      border-color: var(--accent);
-      color: var(--text-primary);
-      background: rgba(0,212,255,0.08);
+      border-color: var(--red);
+      color: var(--red);
+      background: rgba(224,16,32,0.06);
+      box-shadow: 3px 3px 0 var(--red-dark);
     }
     .modal-add-btn {
-      background: var(--accent);
-      color: #000;
+      background: var(--red);
+      color: #fff;
       border: none;
-      padding: 14px;
+      padding: 16px;
       font-weight: 700;
       font-size: 0.85rem;
       text-transform: uppercase;
       letter-spacing: 3px;
       cursor: pointer;
-      font-family: 'Space Grotesk', sans-serif;
+      font-family: 'Russo One', sans-serif;
       transition: all 0.2s;
       margin-top: auto;
+      box-shadow: 4px 4px 0 var(--red-dark);
+      text-shadow: 1px 1px 0 rgba(0,0,0,0.5);
+      clip-path: polygon(0 0, 100% 0, 98% 75%, 100% 100%, 0 100%, 2% 30%);
     }
     .modal-add-btn:hover {
-      background: #fff;
+      background: var(--red-hot);
+      box-shadow: 6px 6px 0 var(--red-dark);
     }
 
-    /* ---- FOOTER ---- */
+    /* ── DISCOUNT BANNER (when active) ── */
+    .discount-banner {
+      max-width: 1400px;
+      margin: 1.5rem auto 0;
+      padding: 1rem 1.5rem;
+      background: linear-gradient(135deg, rgba(255,215,0,0.06), rgba(224,16,32,0.04));
+      border: 2px solid rgba(255,215,0,0.3);
+      box-shadow: 4px 4px 0 rgba(139,0,0,0.2);
+      text-align: center;
+      font-family: 'Russo One', sans-serif;
+      font-size: 0.85rem;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--gold);
+      text-shadow: 0 0 12px rgba(255,215,0,0.3);
+    }
+    .discount-banner strong { color: var(--red); text-shadow: 0 0 12px var(--red-glow); }
+
+    /* ── FOOTER ── */
     footer {
       text-align: center;
       padding: 3rem 2rem;
-      border-top: 1px solid var(--border);
+      border-top: 3px solid var(--red-dark);
       color: var(--text-dim);
-      font-size: 0.75rem;
-      letter-spacing: 1px;
+      font-size: 0.72rem;
+      letter-spacing: 1.5px;
       text-transform: uppercase;
+      font-family: 'Russo One', sans-serif;
+      position: relative;
     }
 
-    /* ---- RESPONSIVE ---- */
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg-dark); }
+    ::-webkit-scrollbar-thumb { background: var(--red-dark); }
+    ::-webkit-scrollbar-thumb:hover { background: var(--red); }
+
+    /* ── RESPONSIVE ── */
     @media (max-width: 600px) {
       .store-grid { grid-template-columns: repeat(2, 1fr); }
       .hero { padding: 4rem 1.5rem 2rem; }
-      .filter-tab { padding: 0.8rem 1.2rem; font-size: 1rem; }
-      nav a { margin: 0 0.8rem; font-size: 0.75rem; }
+      .filter-tab { padding: 0.9rem 1.4rem; font-size: 1.1rem; }
+      nav a { margin: 0 0.6rem; font-size: 0.7rem; }
+      .cart-toggle { bottom: 1.5rem; right: 1.5rem; }
     }
-
-    /* Scrollbar */
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: var(--bg-dark); }
-    ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
   </style>
 </head>
 <body>
@@ -729,9 +944,15 @@
 
   <!-- HERO -->
   <section class="hero">
+    <span class="spray-tag huge red drip" style="top:5%;left:-3%;transform:rotate(-12deg);">LNL</span>
+    <span class="spray-tag large white outline" style="top:12%;right:1%;transform:rotate(8deg);">SUPPLY</span>
+    <span class="spray-tag medium dark-red drip-2" style="bottom:18%;left:5%;transform:rotate(-5deg);">STICK YOUR NECK OUT</span>
+    <span class="spray-tag small red" style="bottom:8%;right:8%;transform:rotate(15deg);">LNL LNL</span>
+    <span class="spray-tag large ghost" style="top:40%;right:-5%;transform:rotate(-90deg);">LONG NECK</span>
+
     <div class="hero-tag">NOW SHIPPING WORLDWIDE</div>
     <h1>LNL <span>SUPPLY</span></h1>
-    <p class="hero-sub">Official drops. Hot sauce, merch, and everything Long Neck. Pay with SOL.</p>
+    <p class="hero-sub">Official drops. Hot sauce, merch, and everything Long Neck. Pay with SOL. Holders get discounts.</p>
   </section>
 
   <!-- WALLET BAR -->
@@ -740,6 +961,9 @@
       <button class="wallet-btn" id="btnConnectStore" onclick="connectWallet()">CONNECT WALLET</button>
     </div>
   </div>
+
+  <!-- DISCOUNT BANNER (shown when discount active) -->
+  <div id="discountBanner" style="display:none;"></div>
 
   <!-- FILTER TABS -->
   <div class="filter-bar">
@@ -751,7 +975,7 @@
   <!-- PRODUCT GRID -->
   <div class="store-grid" id="productGrid"></div>
 
-  <!-- CART TOGGLE BUTTON -->
+  <!-- CART TOGGLE -->
   <button class="cart-toggle" onclick="toggleCart()">
     <svg viewBox="0 0 24 24"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>
     <span class="cart-badge" id="cartBadge">0</span>
@@ -764,16 +988,15 @@
   <div class="cart-overlay" id="cartOverlay" onclick="toggleCart()"></div>
   <div class="cart-drawer" id="cartDrawer">
     <div class="cart-header">
-      <h3>YOUR BAG</h3>
+      <h3>YOUR <span>BAG</span></h3>
       <button class="cart-close" onclick="toggleCart()">&times;</button>
     </div>
     <div class="cart-items" id="cartItems">
       <div class="cart-empty">YOUR BAG IS EMPTY</div>
     </div>
     <div class="cart-footer">
-      <div class="cart-total">
-        <span class="cart-total-label">TOTAL</span>
-        <span class="cart-total-amount" id="cartTotal">0 SOL</span>
+      <div class="cart-totals" id="cartTotals">
+        <div class="cart-row total"><span class="label">TOTAL</span><span class="value" id="cartTotal">0 SOL</span></div>
       </div>
       <button class="cart-checkout-btn" id="btnCheckout" onclick="checkout()" disabled>PAY WITH SOL</button>
     </div>
@@ -803,78 +1026,87 @@
     window.addEventListener('load', () => document.body.classList.add('loaded'));
 
     // =========================================================================
-    // PRODUCT DATA — edit these to update your store
+    // CONFIG (matches dashboard exactly)
     // =========================================================================
-    const PRODUCTS = [
-      {
-        id: "mango-hab-single",
-        name: "Mango Habanero Hot Sauce",
-        desc: "Our flagship sauce. Sweet mango heat meets smoky habanero. 5oz bottle, handcrafted in small batches.",
-        price: 0.33,
-        image: "https://i.imgur.com/7EMngYE.jpeg",
-        category: "sauce",
-        tag: "DROP 1",
-        stock: 100,
-        variants: null
-      },
-      {
-        id: "mango-hab-3pack",
-        name: "Mango Habanero 3-Pack",
-        desc: "Three bottles of the Mango Habanero. Perfect for the kitchen, the grill, and the stash.",
-        price: 0.75,
-        image: "https://i.imgur.com/wCOHgWL.gif",
-        category: "sauce",
-        tag: "BUNDLE",
-        stock: 50,
-        variants: null
-      },
-      {
-        id: "lnl=graphic-tee",
-        name: "LNL Graphic Tee",
-        desc: "Heavyweight 100% cotton. Oversized fit. Long Neck Legends logo front and graphic on back. Limited Drop 5 per Size!",
-        price: 0.55,
-        image: "https://i.imgur.com/PbX17zS.jpeg",
-        category: "merch",
-        tag: "NEW",
-        stock: 75,
-        variants: ["S", "M", "L", "XL", "XXL"]
-      },
-      {
-        id: "lnl-hoodie",
-        name: "LNL Heavyweight Hoodie",
-        desc: "400gsm French terry. Embroidered logo. Dropped shoulders, ribbed cuffs. The hoodie that goes hard.",
-        price: 1.0,
-        image: "https://placehold.co/600x600/111125/7b68ee?text=COMING+SOON",
-        category: "merch",
-        tag: "LIMITED",
-        stock: 30,
-        variants: ["S", "M", "L", "XL", "XXL"]
-      },
-      {
-        id: "lnl-hat",
-        name: "LNL Snapback",
-        desc: "Structured 6-panel snapback. Embroidered LNL on front, Long Neck Legends script on back.",
-        price: 0.35,
-        image: "https://placehold.co/600x600/111125/7b68ee?text=COMING+SOON",
-        category: "merch",
-        tag: "NEW",
-        stock: 100,
-        variants: null
-      },
-      {
-        id: "lnl-sauce-bundle-all",
-        name: "The Collectors Box",
-        desc: "One of each sauce we make, plus an exclusive LNL sticker pack. Only available here.",
-        price: 3.5,
-        image: "https://placehold.co/600x600/111125/7b68ee?text=COMING+SOON",
-        category: "sauce",
-        tag: "EXCLUSIVE",
-        stock: 15,
-        variants: null
-      }
+    const SUPA_URL = 'https://hypqndasopdkrqvkllvc.supabase.co';
+    const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5cHFuZGFzb3Bka3JxdmtsbHZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5NTI1NjEsImV4cCI6MjA4NzUyODU2MX0.jXLaLfFudJf-xytfHAvMe5oV0DVeWi7xNB53Ib0GD_s';
+
+    const RPC_URL = "https://mainnet.helius-rpc.com/?api-key=44cfd082-9089-430d-8de3-cd310c478b1c";
+    const COLLECTION_MINT = "8Rt3Ayqth4DAiPnW9MDFi63TiQJHmohfTWLMQFHi4KZH";
+    const TREASURY = "ChnzFpK4ty2vpzM48HUrtDVY7tWD8StmYaNxQcKSBuyc";
+
+    // ── TIERS — copied verbatim from dashboard ──
+    const TIERS = [
+      { id: "civilian",  name: "CIVILIAN",  min: 0,   icon: "👤", discount: 0 },
+      { id: "neck",      name: "NECK",      min: 1,   icon: "🦒", discount: 10 },
+      { id: "longneck",  name: "LONG NECK", min: 5,   icon: "🔥", discount: 15 },
+      { id: "legend",    name: "LEGEND",    min: 10,  icon: "⭐", discount: 20 },
+      { id: "og",        name: "OG LEGEND", min: 20,  icon: "👑", discount: 25 },
+      { id: "sardine",   name: "SARDINE",   min: 30,  icon: "🐟", discount: 30 },
+      { id: "barracuda", name: "BARRACUDA", min: 50,  icon: "🔪", discount: 35 },
+      { id: "shark",     name: "SHARK",     min: 75,  icon: "🦈", discount: 35 },
+      { id: "whale",     name: "WHALE",     min: 100, icon: "🐋", discount: 40 }
     ];
 
-    const TREASURY = "ChnzFpK4ty2vpzM48HUrtDVY7tWD8StmYaNxQcKSBuyc";
+    const GA_TIERS = [
+      { id: "ga_civilian", name: "CIVILIAN",    min: 0,  icon: "⛳", discount: 0 },
+      { id: "ga_addict",   name: "GOLF ADDICT", min: 1,  icon: "🏌️", discount: 10 },
+      { id: "ga_legend",   name: "CLUB LEGEND", min: 5,  icon: "🏆", discount: 15 },
+      { id: "ga_king",     name: "COURSE KING", min: 15, icon: "👑", discount: 20 }
+    ];
+
+    function getTier(count) {
+      for (let i = TIERS.length - 1; i >= 0; i--) {
+        if (count >= TIERS[i].min) return TIERS[i];
+      }
+      return TIERS[0];
+    }
+    function getGaTier(count) {
+      for (let i = GA_TIERS.length - 1; i >= 0; i--) {
+        if (count >= GA_TIERS[i].min) return GA_TIERS[i];
+      }
+      return GA_TIERS[0];
+    }
+
+    // =========================================================================
+    // PRODUCT DATA — fetched live from Supabase store_products table
+    // To add/remove/edit products: Supabase Dashboard → Table Editor → store_products
+    // =========================================================================
+    let PRODUCTS = [];
+
+    async function loadProducts() {
+      try {
+        const r = await sb()
+          .from('store_products')
+          .select('id, name, description, price, image, category, tag, stock, variants, sort_order')
+          .eq('active', true)
+          .order('sort_order', { ascending: true });
+
+        if (r.error) throw r.error;
+
+        // Map Supabase rows → store's internal product shape (desc instead of description)
+        PRODUCTS = (r.data || []).map(row => ({
+          id: row.id,
+          name: row.name,
+          desc: row.description || '',
+          price: Number(row.price || 0),
+          image: row.image || '',
+          category: row.category || 'merch',
+          tag: row.tag || 'NEW',
+          stock: Number(row.stock || 0),
+          variants: Array.isArray(row.variants) ? row.variants : null
+        }));
+
+        console.log('[Store] Loaded ' + PRODUCTS.length + ' products from Supabase');
+      } catch (e) {
+        console.error('[Store] Failed to load products:', e);
+        PRODUCTS = [];
+        const grid = document.getElementById('productGrid');
+        if (grid) {
+          grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:4rem 2rem;color:var(--text-dim);font-family:\'Russo One\',sans-serif;letter-spacing:1.5px;text-transform:uppercase;font-size:0.85rem;">Failed to load products. Refresh the page.</div>';
+        }
+      }
+    }
 
     // =========================================================================
     // STATE
@@ -885,6 +1117,150 @@
     let currentFilter = "all";
     let modalProduct = null;
     let modalVariant = null;
+
+    // Holder tier state
+    let holderState = {
+      lnlCount: 0,
+      gaCount: 0,
+      lnlTier: TIERS[0],
+      gaTier: GA_TIERS[0],
+      bestDiscount: 0,    // higher of LNL or GA discount
+      bestTierLabel: ""   // human-readable
+    };
+
+    // Supabase client (singleton)
+    let _sb = null;
+    function sb() {
+      if (!_sb) _sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+      return _sb;
+    }
+
+    // =========================================================================
+    // DASHBOARD INTEGRATION — fetch holdings via Helius + linked wallets
+    // =========================================================================
+
+    // Fetch all wallets linked to the same profile (so 2nd wallets count)
+    async function fetchLinkedWallets(wallet) {
+      try {
+        const r = await sb().from('wallet_links').select('wallet, profile_id').eq('wallet', wallet).maybeSingle();
+        if (!r.data || !r.data.profile_id) return [wallet];
+
+        const r2 = await sb().from('wallet_links').select('wallet').eq('profile_id', r.data.profile_id);
+        const linked = (r2.data || []).map(row => row.wallet);
+        if (linked.indexOf(wallet) === -1) linked.push(wallet);
+        return linked;
+      } catch (e) {
+        console.warn('[Store] fetchLinkedWallets error:', e);
+        return [wallet];
+      }
+    }
+
+    // Helius getAssetsByOwner — returns LNL count and GA count for one wallet
+    async function fetchHoldingsForWallet(ownerAddress) {
+      try {
+        const res = await fetch(RPC_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: "store",
+            method: "getAssetsByOwner",
+            params: {
+              ownerAddress: ownerAddress,
+              page: 1,
+              limit: 1000,
+              displayOptions: { showCollectionMetadata: true }
+            }
+          })
+        });
+        const json = await res.json();
+        const items = (json && json.result && json.result.items) ? json.result.items : [];
+
+        // LNL match: by collection mint OR by symbol/name
+        const lnlByCollection = items.filter(a => {
+          const groups = a.grouping || [];
+          const g = groups.find(x => x.group_key === "collection");
+          return g && g.group_value === COLLECTION_MINT;
+        });
+        const lnlPicked = lnlByCollection.length > 0 ? lnlByCollection : items.filter(a => {
+          const sym = (a.content?.metadata?.symbol) || (a.content?.json?.symbol) || "";
+          const name = (a.content?.metadata?.name) || (a.content?.json?.name) || "";
+          return sym === "LNL" || String(name).toLowerCase().indexOf("long neck") !== -1;
+        });
+
+        // GA match: by symbol or name
+        const gaPicked = items.filter(a => {
+          const sym = ((a.content?.metadata?.symbol) || (a.content?.json?.symbol) || "").trim();
+          if (sym === "GA" || sym === "GOLF" || sym === "GOLF_ADDICTS" || sym === "GOLFADDICTS") return true;
+          const name = ((a.content?.metadata?.name) || (a.content?.json?.name) || "").toLowerCase();
+          if (name.indexOf("golf addict") !== -1) return true;
+          return false;
+        });
+
+        return {
+          lnlMints: lnlPicked.map(a => a.id).filter(Boolean),
+          gaMints: gaPicked.map(a => a.id).filter(Boolean)
+        };
+      } catch (e) {
+        console.warn('[Store] fetchHoldingsForWallet error:', e);
+        return { lnlMints: [], gaMints: [] };
+      }
+    }
+
+    // After connect: load all linked wallets, count LNL+GA across all of them
+    async function loadHolderState(connectedWallet) {
+      try {
+        const allWallets = await fetchLinkedWallets(connectedWallet);
+        console.log('[Store] Linked wallets:', allWallets);
+
+        const lnlSet = new Set();
+        const gaSet  = new Set();
+
+        for (const w of allWallets) {
+          const h = await fetchHoldingsForWallet(w);
+          h.lnlMints.forEach(m => lnlSet.add(m));
+          h.gaMints.forEach(m => gaSet.add(m));
+        }
+
+        const lnlCount = lnlSet.size;
+        const gaCount  = gaSet.size;
+        const lnlTier  = getTier(lnlCount);
+        const gaTier   = getGaTier(gaCount);
+
+        // Take the HIGHER discount (do not stack — same as dashboard logic)
+        const bestDiscount = Math.max(lnlTier.discount, gaTier.discount);
+        let bestTierLabel = "";
+        if (lnlTier.discount >= gaTier.discount && lnlTier.discount > 0) {
+          bestTierLabel = lnlTier.icon + " " + lnlTier.name;
+        } else if (gaTier.discount > 0) {
+          bestTierLabel = gaTier.icon + " " + gaTier.name;
+        }
+
+        holderState = { lnlCount, gaCount, lnlTier, gaTier, bestDiscount, bestTierLabel };
+
+        console.log('[Store] Holder state:', holderState);
+
+        // Re-render everything with discount applied
+        updateWalletBar();
+        updateDiscountBanner();
+        renderProducts(currentFilter);
+        renderCart();
+
+      } catch (e) {
+        console.error('[Store] loadHolderState error:', e);
+      }
+    }
+
+    // =========================================================================
+    // PRICE HELPERS
+    // =========================================================================
+    function applyDiscount(originalPrice) {
+      if (holderState.bestDiscount <= 0) return originalPrice;
+      return +(originalPrice * (1 - holderState.bestDiscount / 100)).toFixed(4);
+    }
+    function formatSol(n) {
+      return Number(n).toFixed(3) + " SOL";
+    }
 
     // =========================================================================
     // RENDER PRODUCTS
@@ -910,6 +1286,14 @@
         if (soldOut) tagClass = "sold-out";
         else if (product.tag === "LIMITED") tagClass = "limited";
 
+        const finalPrice = applyDiscount(product.price);
+        const hasDiscount = holderState.bestDiscount > 0;
+
+        const priceHtml = hasDiscount
+          ? `<span class="sol-price discounted">${formatSol(finalPrice)}</span>
+             <span class="sol-price-original">${formatSol(product.price)}</span>`
+          : `<span class="sol-price">${formatSol(product.price)}</span>`;
+
         card.innerHTML = `
           <div class="product-img">
             <div class="product-tag ${tagClass}">${soldOut ? "SOLD OUT" : product.tag}</div>
@@ -921,9 +1305,7 @@
           <div class="product-info">
             <div class="product-name">${product.name}</div>
             <div class="product-desc">${product.desc.substring(0, 70)}${product.desc.length > 70 ? "..." : ""}</div>
-            <div class="product-price">
-              <span class="sol-price">${product.price} SOL</span>
-            </div>
+            <div class="product-price">${priceHtml}</div>
             ${isLow && !soldOut ? `<div class="stock-info low">Only ${product.stock} left</div>` : ""}
           </div>
         `;
@@ -949,7 +1331,15 @@
       document.getElementById("modalImg").src = product.image;
       document.getElementById("modalName").textContent = product.name;
       document.getElementById("modalDesc").textContent = product.desc;
-      document.getElementById("modalPrice").textContent = product.price + " SOL";
+
+      const priceEl = document.getElementById("modalPrice");
+      const finalPrice = applyDiscount(product.price);
+      if (holderState.bestDiscount > 0) {
+        priceEl.innerHTML = `<span class="modal-discounted">${formatSol(finalPrice)}</span><span class="modal-original">${formatSol(product.price)}</span>`;
+      } else {
+        priceEl.innerHTML = formatSol(product.price);
+      }
+
       document.getElementById("modalTag").textContent = product.tag;
       document.getElementById("modalTag").className = "product-tag" +
         (product.tag === "LIMITED" ? " limited" : "");
@@ -995,7 +1385,7 @@
     function quickAdd(productId) {
       const product = PRODUCTS.find(p => p.id === productId);
       if (!product || product.stock <= 0) return;
-      const defaultVariant = product.variants ? product.variants[1] || product.variants[0] : null; // default M
+      const defaultVariant = product.variants ? (product.variants[1] || product.variants[0]) : null;
       addToCart(productId, defaultVariant);
     }
 
@@ -1015,7 +1405,7 @@
           variant,
           name: product.name,
           image: product.image,
-          price: product.price,
+          price: product.price,    // ALWAYS store original; discount applied at render
           qty: 1
         });
       }
@@ -1031,36 +1421,53 @@
 
     function renderCart() {
       const container = document.getElementById("cartItems");
-      const totalEl = document.getElementById("cartTotal");
+      const totalsEl = document.getElementById("cartTotals");
       const badge = document.getElementById("cartBadge");
       const checkoutBtn = document.getElementById("btnCheckout");
 
       const totalQty = cart.reduce((s, c) => s + c.qty, 0);
-      const totalPrice = cart.reduce((s, c) => s + c.price * c.qty, 0);
+      const subtotal = cart.reduce((s, c) => s + c.price * c.qty, 0);
+      const discountAmt = subtotal * (holderState.bestDiscount / 100);
+      const total = subtotal - discountAmt;
 
       badge.textContent = totalQty;
       badge.classList.toggle("show", totalQty > 0);
 
-      totalEl.textContent = totalPrice.toFixed(3) + " SOL";
       checkoutBtn.disabled = totalQty === 0 || !walletPublicKey;
+
+      // Build totals (subtotal + discount + total)
+      let totalsHtml = '';
+      if (holderState.bestDiscount > 0 && cart.length > 0) {
+        totalsHtml += `<div class="cart-row"><span class="label">Subtotal</span><span class="value">${formatSol(subtotal)}</span></div>`;
+        totalsHtml += `<div class="cart-row discount"><span class="label">${holderState.bestTierLabel} (-${holderState.bestDiscount}%)</span><span class="value">-${formatSol(discountAmt)}</span></div>`;
+      }
+      totalsHtml += `<div class="cart-row total"><span class="label">TOTAL</span><span class="value">${formatSol(total)}</span></div>`;
+      totalsEl.innerHTML = totalsHtml;
 
       if (cart.length === 0) {
         container.innerHTML = '<div class="cart-empty">YOUR BAG IS EMPTY</div>';
         return;
       }
 
-      container.innerHTML = cart.map(item => `
-        <div class="cart-item">
-          <img class="cart-item-img" src="${item.image}" alt="${item.name}">
-          <div class="cart-item-details">
-            <div class="cart-item-name">${item.name}</div>
-            ${item.variant ? `<div class="cart-item-variant">Size: ${item.variant}</div>` : ""}
-            <div class="cart-item-variant">Qty: ${item.qty}</div>
-            <button class="cart-item-remove" onclick="removeFromCart('${item.key}')">Remove</button>
+      container.innerHTML = cart.map(item => {
+        const lineTotal = applyDiscount(item.price * item.qty);
+        const lineOrig = item.price * item.qty;
+        const linePriceHtml = holderState.bestDiscount > 0
+          ? `<div class="cart-item-price"><span style="color:var(--gold);">${formatSol(lineTotal)}</span></div>`
+          : `<div class="cart-item-price">${formatSol(lineOrig)}</div>`;
+        return `
+          <div class="cart-item">
+            <img class="cart-item-img" src="${item.image}" alt="${item.name}">
+            <div class="cart-item-details">
+              <div class="cart-item-name">${item.name}</div>
+              ${item.variant ? `<div class="cart-item-variant">Size: ${item.variant}</div>` : ""}
+              <div class="cart-item-variant">Qty: ${item.qty}</div>
+              <button class="cart-item-remove" onclick="removeFromCart('${item.key}')">Remove</button>
+            </div>
+            ${linePriceHtml}
           </div>
-          <div class="cart-item-price">${(item.price * item.qty).toFixed(3)} SOL</div>
-        </div>
-      `).join("");
+        `;
+      }).join("");
     }
 
     function toggleCart() {
@@ -1069,7 +1476,49 @@
     }
 
     // =========================================================================
-    // WALLET
+    // WALLET BAR + DISCOUNT BANNER
+    // =========================================================================
+    function updateWalletBar() {
+      if (!walletPublicKey) return;
+      const short = walletPublicKey.toBase58();
+      const display = short.slice(0, 4) + "..." + short.slice(-4);
+
+      let tierChipHtml = '';
+      if (holderState.bestDiscount > 0) {
+        tierChipHtml = `
+          <div class="tier-chip">
+            <span class="tier-icon">${holderState.bestTierLabel.split(' ')[0]}</span>
+            <span class="tier-name">${holderState.bestTierLabel.split(' ').slice(1).join(' ')}</span>
+            <span class="tier-discount">−${holderState.bestDiscount}%</span>
+          </div>
+        `;
+      } else {
+        tierChipHtml = `<div class="tier-chip no-discount"><span class="tier-icon">👤</span><span class="tier-name">No Discount</span></div>`;
+      }
+
+      document.getElementById("walletInfoArea").innerHTML = `
+        <div class="wallet-status">
+          <div class="wallet-dot"></div>
+          <span class="wallet-info"><strong>${display}</strong></span>
+        </div>
+        ${tierChipHtml}
+        <button class="wallet-btn disconnect" onclick="disconnectWallet()">DISCONNECT</button>
+      `;
+    }
+
+    function updateDiscountBanner() {
+      const banner = document.getElementById("discountBanner");
+      if (holderState.bestDiscount > 0) {
+        banner.className = "discount-banner";
+        banner.innerHTML = `🦒 <strong>${holderState.bestTierLabel}</strong> tier active — <strong>${holderState.bestDiscount}% OFF</strong> all items at checkout. Holding ${holderState.lnlCount} LNL${holderState.gaCount > 0 ? ' + ' + holderState.gaCount + ' Golf Addict' + (holderState.gaCount !== 1 ? 's' : '') : ''}.`;
+        banner.style.display = "block";
+      } else {
+        banner.style.display = "none";
+      }
+    }
+
+    // =========================================================================
+    // WALLET CONNECT
     // =========================================================================
     async function connectWallet() {
       try {
@@ -1087,19 +1536,17 @@
         walletProvider = provider;
         walletPublicKey = resp.publicKey;
 
-        const short = walletPublicKey.toBase58();
-        const display = short.slice(0, 4) + "..." + short.slice(-4);
-
-        document.getElementById("walletInfoArea").innerHTML = `
-          <div class="wallet-status">
-            <div class="wallet-dot"></div>
-            <span class="wallet-info"><strong>${display}</strong></span>
-          </div>
-          <button class="wallet-btn disconnect" onclick="disconnectWallet()">DISCONNECT</button>
-        `;
-
+        updateWalletBar();
         renderCart();
         showToast("Wallet connected", "success");
+
+        // Load holdings & discount in background
+        showToast("Loading your holder tier...", "success");
+        await loadHolderState(walletPublicKey.toBase58());
+        if (holderState.bestDiscount > 0) {
+          showToast(`${holderState.bestDiscount}% discount unlocked!`, "success");
+        }
+
       } catch (err) {
         console.error("Wallet connect error:", err);
         showToast("Connection failed", "error");
@@ -1110,29 +1557,33 @@
       if (walletProvider?.disconnect) walletProvider.disconnect();
       walletProvider = null;
       walletPublicKey = null;
+      holderState = { lnlCount: 0, gaCount: 0, lnlTier: TIERS[0], gaTier: GA_TIERS[0], bestDiscount: 0, bestTierLabel: "" };
 
       document.getElementById("walletInfoArea").innerHTML =
         '<button class="wallet-btn" onclick="connectWallet()">CONNECT WALLET</button>';
 
+      updateDiscountBanner();
+      renderProducts(currentFilter);
       renderCart();
     }
 
     // =========================================================================
-    // CHECKOUT — SOL TRANSFER
+    // CHECKOUT — applies discount and logs to store_orders
     // =========================================================================
     async function checkout() {
       if (!walletPublicKey || cart.length === 0) return;
 
-      const totalSOL = cart.reduce((s, c) => s + c.price * c.qty, 0);
+      const subtotal = cart.reduce((s, c) => s + c.price * c.qty, 0);
+      const discountAmt = subtotal * (holderState.bestDiscount / 100);
+      const totalSOL = subtotal - discountAmt;
 
       try {
         showToast("Preparing transaction...", "success");
 
-        // Dynamic import for checkout only
         const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } =
           await import("https://esm.sh/@solana/web3.js@1.95.2");
 
-        const connection = new Connection("https://mainnet.helius-rpc.com/?api-key=44cfd082-9089-430d-8de3-cd310c478b1c", "confirmed");
+        const connection = new Connection(RPC_URL, "confirmed");
 
         const lamports = Math.round(totalSOL * LAMPORTS_PER_SOL);
 
@@ -1151,28 +1602,47 @@
         const signed = await walletProvider.signTransaction(tx);
         const sig = await connection.sendRawTransaction(signed.serialize());
 
-        showToast("Confirming...", "success");
+        showToast("Confirming on-chain...", "success");
         await connection.confirmTransaction(sig, "confirmed");
 
-        // Build order summary for records
-        const orderSummary = cart.map(c =>
-          `${c.qty}x ${c.name}${c.variant ? " ("+c.variant+")" : ""}`
-        ).join(", ");
+        // ── Log order to Supabase store_orders ──
+        try {
+          const orderItems = cart.map(c => ({
+            product_id: c.productId,
+            name: c.name,
+            variant: c.variant,
+            qty: c.qty,
+            unit_price: c.price
+          }));
 
-        console.log("ORDER CONFIRMED:", {
-          signature: sig,
-          total: totalSOL + " SOL",
-          items: orderSummary,
-          buyer: walletPublicKey.toBase58()
-        });
+          const tierLabel = holderState.bestTierLabel || "CIVILIAN";
+
+          const orderInsert = await sb().from('store_orders').insert({
+            wallet: walletPublicKey.toBase58(),
+            signature: sig,
+            items: orderItems,
+            subtotal_sol: subtotal,
+            discount_pct: holderState.bestDiscount,
+            total_sol: totalSOL,
+            tier_at_purchase: tierLabel,
+            lnl_count: holderState.lnlCount,
+            ga_count: holderState.gaCount
+          });
+
+          if (orderInsert.error) {
+            console.warn('[Store] Order log failed:', orderInsert.error);
+          } else {
+            console.log('[Store] Order logged to Supabase');
+          }
+        } catch (logErr) {
+          console.warn('[Store] Order logging error:', logErr);
+        }
 
         cart = [];
         renderCart();
         toggleCart();
 
         showToast(`Order confirmed! Tx: ${sig.slice(0,8)}...`, "success");
-
-        // TODO: Send order details to your backend/Discord webhook
 
       } catch (err) {
         console.error("Checkout error:", err);
@@ -1199,8 +1669,17 @@
     // =========================================================================
     // INIT
     // =========================================================================
-    renderProducts();
-    renderCart();
+    (async function init() {
+      // Show loading state in grid
+      const grid = document.getElementById('productGrid');
+      if (grid) {
+        grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:4rem 2rem;color:var(--text-dim);font-family:\'Russo One\',sans-serif;letter-spacing:1.5px;text-transform:uppercase;font-size:0.85rem;">Loading drops...</div>';
+      }
+
+      await loadProducts();
+      renderProducts();
+      renderCart();
+    })();
   </script>
 </body>
 </html>
