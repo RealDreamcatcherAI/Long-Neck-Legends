@@ -396,7 +396,8 @@
 (function(){
 'use strict';
 
-var LOAN_DAYS    = 10/1440; // 10 MINUTES — switch back to 7 for prod
+var LOAN_MINUTES = 10;        // 10 MINUTES — switch back to 7*24*60 for prod
+var LOAN_DAYS    = LOAN_MINUTES / 1440; // fractional days used for math/interest calc
 var MIN_INT      = 0.01;
 var APY          = 0.07;
 var LNL_SYM      = 'long_neck_legends';
@@ -569,11 +570,11 @@ function lUpdatePreview(){
   var o=LS.selOffer;
   if(!o){ setEl('lp-amount','—');setEl('lp-interest','—');setEl('lp-repay','—');setEl('lp-due','—'); lUpdBtn(); return; }
   var int=calcInt(o.amount), total=o.amount+int;
-  var due=new Date(); due.setDate(due.getDate()+LOAN_DAYS);
+  var due=new Date(); due.setTime(due.getTime()+LOAN_MINUTES*60*1000);
   setEl('lp-amount',parseFloat(o.amount).toFixed(2)+' SOL');
   setEl('lp-interest',int.toFixed(4)+' SOL');
   setEl('lp-repay',total.toFixed(4)+' SOL');
-  setEl('lp-due',due.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}));
+  setEl('lp-due',due.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}));
   lUpdBtn();
 }
 
@@ -598,14 +599,14 @@ window.lOpenModal=function(){
   if(!LS.selNFT||!LS.selOffer)return;
   var n=LS.selNFT.nft, o=LS.selOffer;
   var int=calcInt(o.amount), total=o.amount+int;
-  var due=new Date(); due.setDate(due.getDate()+LOAN_DAYS);
+  var due=new Date(); due.setTime(due.getTime()+LOAN_MINUTES*60*1000);
   var nm=n.name||(LS.selNFT.col==='lnl'?'LNL NFT':'Golf Addict');
   var mi=document.getElementById('m-nft-img'); if(mi)mi.src=n.image||n.pfpImage||'';
   setEl('m-nft-name',nm); setEl('m-nft-tag',(LS.selNFT.col==='lnl'?'LNL':'Golf Addicts')+' · Collateral');
   setEl('m-amount',parseFloat(o.amount).toFixed(2)+' SOL');
   setEl('m-interest',int.toFixed(4)+' SOL');
   setEl('m-repay',total.toFixed(4)+' SOL');
-  setEl('m-due',due.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}));
+  setEl('m-due',due.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}));
   document.getElementById('l-modal').classList.add('open');
 };
 window.lCloseModal=function(){ document.getElementById('l-modal').classList.remove('open'); };
@@ -621,7 +622,7 @@ window.lConfirmBorrow=async function(){
     lCloseModal(); return;
   }
   var w=getW(), n=LS.selNFT.nft, o=LS.selOffer;
-  var int=calcInt(o.amount), due=new Date(); due.setTime(due.getTime()+LOAN_DAYS*24*60*60*1000);
+  var int=calcInt(o.amount), due=new Date(); due.setTime(due.getTime()+LOAN_MINUTES*60*1000);
   var nm=n.name||(LS.selNFT.col==='lnl'?'LNL NFT':'Golf Addict');
   try {
     var db=getDb();
@@ -697,7 +698,7 @@ window.lPlaceOffer=async function(){
   var w=getW();
   try {
     var r=await getDb().from('loan_offers').insert({
-      lender_wallet:w, amount:a, duration_days:LOAN_DAYS,
+      lender_wallet:w, amount:a, duration_days:LOAN_MINUTES,
       min_interest:MIN_INT, apy:APY,
       accepted_collections: LS.lendCol,
       status:'open', created_at:new Date().toISOString()
