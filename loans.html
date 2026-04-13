@@ -35,7 +35,7 @@
 
   /* ── STATS ── */
   .loans-stats {
-    display: grid; grid-template-columns: repeat(3,1fr);
+    display: grid; grid-template-columns: repeat(4,1fr);
     gap: 12px; margin-bottom: 24px;
   }
   @media(max-width:640px){ .loans-stats { gap:8px; } }
@@ -208,6 +208,7 @@
     <!-- ═══ BORROW ═══ -->
     <div id="lp-borrow">
       <div class="loans-stats">
+        <div class="loan-stat-card"><div class="sv" id="bs-total-borrowed">—</div><div class="sl">Total Borrowed</div></div>
         <div class="loan-stat-card"><div class="sv" id="bs-lnl-fp">—</div><div class="sl">LNL Floor</div></div>
         <div class="loan-stat-card"><div class="sv" id="bs-ga-fp">—</div><div class="sl">GA Floor</div></div>
         <div class="loan-stat-card"><div class="sv" id="bs-best">—</div><div class="sl">Best Offer</div></div>
@@ -283,6 +284,7 @@
     <!-- ═══ LEND ═══ -->
     <div id="lp-lend" style="display:none">
       <div class="loans-stats">
+        <div class="loan-stat-card green"><div class="sv" id="ls-total-loaned">—</div><div class="sl">Total Loaned</div></div>
         <div class="loan-stat-card green"><div class="sv" id="ls-lnl-fp">—</div><div class="sl">LNL Floor</div></div>
         <div class="loan-stat-card green"><div class="sv" id="ls-ga-fp">—</div><div class="sl">GA Floor</div></div>
         <div class="loan-stat-card green"><div class="sv" id="ls-my-active">0</div><div class="sl">My Active Offers</div></div>
@@ -414,7 +416,7 @@ window.init_loans_tab = function() {
   var w = getW();
   if (!w) { show('loans-gate'); hide('loans-main'); return; }
   hide('loans-gate'); show('loans-main');
-  lLoadNFTs(); lLoadOffers(); lLoadActiveLoans(); lFetchFloors();
+  lLoadNFTs(); lLoadOffers(); lLoadActiveLoans(); lFetchFloors(); lFetchTotals();
 };
 
 function getW() {
@@ -454,6 +456,24 @@ async function lFetchFloors() {
       setEl('bs-ga-fp', gStr2); setEl('ls-ga-fp', gStr2);
     } catch(e2) {}
   }
+}
+
+// ─── PLATFORM TOTALS ─────────────────────────────────────────────────────────
+async function lFetchTotals(){
+  if(typeof getDb==='undefined') return;
+  try {
+    var db=getDb();
+    // Sum all loans ever created (any status) for total borrowed
+    var rb = await db.from('loans').select('amount');
+    var totalBorrowed = (rb.data||[]).reduce(function(sum,r){ return sum+parseFloat(r.amount||0); },0);
+    // Sum all loan_offers ever placed (any status) for total loaned
+    var rl = await db.from('loan_offers').select('amount');
+    var totalLoaned = (rl.data||[]).reduce(function(sum,r){ return sum+parseFloat(r.amount||0); },0);
+    var bStr = totalBorrowed>0 ? totalBorrowed.toFixed(2)+' ◎' : '0 ◎';
+    var lStr = totalLoaned>0  ? totalLoaned.toFixed(2)+' ◎'  : '0 ◎';
+    setEl('bs-total-borrowed', bStr);
+    setEl('ls-total-loaned',   lStr);
+  } catch(e){}
 }
 
 // ─── NFTs ─────────────────────────────────────────────────────────────────────
