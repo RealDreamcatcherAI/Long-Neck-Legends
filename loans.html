@@ -4,1326 +4,778 @@
 <body>
 
 <style>
-  /* ── LOANS TAB ROOT ── */
   #loans-root {
     font-family: 'Space Grotesk', sans-serif;
     color: #f0e8e8;
     min-height: 80vh;
     padding: 0 0 60px 0;
-    position: relative;
   }
 
-  /* ── MODE TOGGLE (Borrow / Lend) ── */
+  /* ── MODE BAR ── */
   .loans-mode-bar {
     display: flex;
     align-items: center;
-    gap: 0;
     background: #0d0d0d;
     border: 1px solid rgba(224,16,32,0.2);
     border-radius: 10px;
     padding: 4px;
     width: fit-content;
-    margin: 28px auto 32px;
+    margin: 28px auto 28px;
   }
   .loans-mode-btn {
-    background: none;
-    border: none;
-    color: #666;
-    font-family: 'Space Grotesk', sans-serif;
-    font-weight: 700;
-    font-size: 0.78rem;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    padding: 9px 28px;
-    border-radius: 7px;
-    cursor: pointer;
-    transition: all 0.2s;
+    background: none; border: none; color: #555;
+    font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+    font-size: 0.75rem; letter-spacing: 2px; text-transform: uppercase;
+    padding: 9px 22px; border-radius: 7px; cursor: pointer; transition: all 0.2s;
   }
-  .loans-mode-btn.active {
-    background: #e01020;
-    color: #fff;
-  }
+  .loans-mode-btn.active { background: #e01020; color: #fff; }
   .loans-mode-btn:not(.active):hover { color: #e01020; }
 
-  /* ── STATS ROW ── */
+  /* ── STATS ── */
   .loans-stats {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 12px;
-    margin-bottom: 28px;
+    display: grid; grid-template-columns: repeat(3,1fr);
+    gap: 12px; margin-bottom: 24px;
   }
-  @media (max-width: 700px) {
-    .loans-stats { grid-template-columns: repeat(2, 1fr); }
-  }
+  @media(max-width:640px){ .loans-stats { gap:8px; } }
   .loan-stat-card {
-    background: #0d0d0d;
-    border: 1px solid rgba(255,255,255,0.07);
-    border-radius: 10px;
-    padding: 16px 18px;
-    text-align: center;
+    background: #0d0d0d; border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 10px; padding: 14px 16px; text-align: center;
   }
-  .loan-stat-card .stat-val {
-    font-size: 1.45rem;
-    font-weight: 700;
-    color: #e01020;
-    line-height: 1;
-    margin-bottom: 5px;
-  }
-  .loan-stat-card .stat-lbl {
-    font-size: 0.68rem;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    color: #555;
-  }
+  .loan-stat-card .sv { font-size:1.35rem; font-weight:700; color:#e01020; line-height:1; margin-bottom:5px; }
+  .loan-stat-card.green .sv { color: #22c55e; }
+  .loan-stat-card .sl { font-size:0.62rem; letter-spacing:1.5px; text-transform:uppercase; color:#444; }
 
-  /* ── PANEL LAYOUT ── */
-  .loans-panels {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    align-items: start;
-  }
-  @media (max-width: 860px) {
-    .loans-panels { grid-template-columns: 1fr; }
-  }
+  /* ── PANELS ── */
+  .loans-panels { display:grid; grid-template-columns:1fr 1fr; gap:20px; align-items:start; }
+  @media(max-width:860px){ .loans-panels { grid-template-columns:1fr; } }
+  .loan-panel { background:#0a0a0a; border:1px solid rgba(255,255,255,0.07); border-radius:14px; overflow:hidden; margin-bottom:16px; }
+  .loan-panel:last-child { margin-bottom:0; }
+  .lp-head { display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid rgba(255,255,255,0.05); background:#0d0d0d; }
+  .lp-title { font-size:0.68rem; font-weight:700; letter-spacing:2.5px; text-transform:uppercase; color:#777; }
+  .lp-body { padding:18px; }
 
-  /* ── PANEL CARD ── */
-  .loan-panel {
-    background: #0a0a0a;
-    border: 1px solid rgba(255,255,255,0.07);
-    border-radius: 14px;
-    overflow: hidden;
-  }
-  .loan-panel-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px 20px;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
-    background: #0d0d0d;
-  }
-  .loan-panel-title {
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 2.5px;
-    text-transform: uppercase;
-    color: #888;
-  }
-  .loan-panel-body { padding: 20px; }
+  /* ── NFT TYPE TABS ── */
+  .nft-type-tabs { display:flex; gap:6px; margin-bottom:14px; }
+  .nft-type-tab { background:#111; border:1px solid rgba(255,255,255,0.08); color:#555; font-family:'Space Grotesk',sans-serif; font-size:0.68rem; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; padding:6px 14px; border-radius:6px; cursor:pointer; transition:all 0.18s; }
+  .nft-type-tab.active { border-color:#e01020; color:#e01020; background:rgba(224,16,32,0.08); }
 
-  /* ── NFT COLLATERAL GRID ── */
-  .nft-collateral-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    margin-bottom: 16px;
-    max-height: 300px;
-    overflow-y: auto;
-    padding-right: 2px;
-  }
-  .nft-collateral-grid::-webkit-scrollbar { width: 3px; }
-  .nft-collateral-grid::-webkit-scrollbar-track { background: transparent; }
-  .nft-collateral-grid::-webkit-scrollbar-thumb { background: #e01020; border-radius: 2px; }
+  /* ── NFT GRID ── */
+  .nft-col-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; max-height:260px; overflow-y:auto; padding-right:2px; }
+  .nft-col-grid::-webkit-scrollbar { width:3px; }
+  .nft-col-grid::-webkit-scrollbar-thumb { background:#e01020; border-radius:2px; }
+  .nft-col-card { border-radius:7px; overflow:hidden; border:2px solid transparent; cursor:pointer; transition:all 0.16s; position:relative; background:#111; aspect-ratio:1; }
+  .nft-col-card:hover { border-color:rgba(224,16,32,0.45); transform:scale(1.03); }
+  .nft-col-card.selected { border-color:#e01020; }
+  .nft-col-card.selected::after { content:'✓'; position:absolute; top:4px; right:4px; background:#e01020; color:#fff; font-size:0.6rem; font-weight:700; width:16px; height:16px; border-radius:50%; line-height:16px; text-align:center; }
+  .nft-col-card img { width:100%; height:100%; object-fit:cover; display:block; }
+  .nft-col-label { position:absolute; bottom:0; left:0; right:0; background:linear-gradient(transparent,rgba(0,0,0,0.88)); font-size:0.55rem; font-weight:700; color:#f0e8e8; padding:10px 4px 4px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .nft-empty { grid-column:1/-1; text-align:center; padding:30px 10px; color:#333; font-size:0.75rem; letter-spacing:1px; }
 
-  .nft-col-card {
-    border-radius: 8px;
-    overflow: hidden;
-    border: 2px solid transparent;
-    cursor: pointer;
-    transition: all 0.18s;
-    position: relative;
-    background: #111;
-    aspect-ratio: 1;
-  }
-  .nft-col-card:hover { border-color: rgba(224,16,32,0.5); transform: scale(1.03); }
-  .nft-col-card.selected { border-color: #e01020; }
-  .nft-col-card.selected::after {
-    content: '✓';
-    position: absolute;
-    top: 5px; right: 5px;
-    background: #e01020;
-    color: #fff;
-    font-size: 0.65rem;
-    font-weight: 700;
-    width: 18px; height: 18px;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    line-height: 18px;
-    text-align: center;
-  }
-  .nft-col-card img {
-    width: 100%; height: 100%;
-    object-fit: cover;
-    display: block;
-  }
-  .nft-col-name {
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
-    background: linear-gradient(transparent, rgba(0,0,0,0.85));
-    font-size: 0.58rem;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    color: #f0e8e8;
-    padding: 10px 5px 5px;
-    text-align: center;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .nft-empty-state {
-    text-align: center;
-    padding: 40px 20px;
-    color: #444;
-    font-size: 0.8rem;
-    letter-spacing: 1px;
-  }
-  .nft-empty-state .empty-icon { font-size: 2.5rem; margin-bottom: 10px; opacity: 0.4; }
+  /* ── SELECTED PREVIEW ── */
+  .sel-preview { display:flex; gap:12px; align-items:center; background:#111; border:1px solid rgba(224,16,32,0.22); border-radius:9px; padding:11px; margin-bottom:14px; }
+  .sel-preview img { width:46px; height:46px; border-radius:6px; object-fit:cover; }
+  .sp-name { font-size:0.82rem; font-weight:700; margin-bottom:2px; }
+  .sp-tag { font-size:0.62rem; letter-spacing:1.5px; text-transform:uppercase; color:#e01020; }
+  .sp-clear { background:none; border:none; color:#444; font-size:1.1rem; cursor:pointer; transition:color 0.15s; margin-left:auto; }
+  .sp-clear:hover { color:#e01020; }
 
-  /* ── LOAN TERMS FORM ── */
-  .loan-field { margin-bottom: 16px; }
-  .loan-field label {
-    display: block;
-    font-size: 0.68rem;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: #555;
-    margin-bottom: 7px;
-  }
-  .loan-field-row {
-    display: flex;
-    align-items: center;
-    background: #111;
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 8px;
-    overflow: hidden;
-    transition: border-color 0.2s;
-  }
-  .loan-field-row:focus-within { border-color: rgba(224,16,32,0.4); }
-  .loan-field-row input[type="number"], .loan-field-row select {
-    flex: 1;
-    background: none;
-    border: none;
-    outline: none;
-    color: #f0e8e8;
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 1rem;
-    font-weight: 600;
-    padding: 12px 14px;
-  }
-  .loan-field-row select option { background: #111; }
-  .loan-field-unit {
-    padding: 0 14px 0 4px;
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 1px;
-    color: #e01020;
-  }
+  /* ── OFFER LIST ── */
+  .offer-list { display:flex; flex-direction:column; gap:10px; }
+  .offer-card { background:#0d0d0d; border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:13px 15px; display:flex; align-items:center; justify-content:space-between; gap:10px; cursor:pointer; transition:border-color 0.18s; }
+  .offer-card:hover { border-color:rgba(224,16,32,0.3); }
+  .offer-card.selected-offer { border-color:#e01020; background:rgba(224,16,32,0.04); }
+  .oc-amount { font-size:1.1rem; font-weight:700; margin-bottom:3px; }
+  .oc-meta { font-size:0.68rem; color:#555; }
+  .oc-earn { font-size:0.9rem; font-weight:700; color:#22c55e; }
+  .oc-earn-lbl { font-size:0.6rem; letter-spacing:1.5px; text-transform:uppercase; color:#444; margin-top:2px; }
+  .oc-sel-btn { margin-top:6px; background:none; border:1px solid rgba(224,16,32,0.3); color:#e01020; font-family:'Space Grotesk',sans-serif; font-size:0.6rem; font-weight:700; letter-spacing:2px; text-transform:uppercase; padding:4px 10px; border-radius:4px; cursor:pointer; transition:all 0.15s; }
+  .oc-sel-btn:hover { background:rgba(224,16,32,0.1); }
+  .offer-card.selected-offer .oc-sel-btn { background:#e01020; color:#fff; border-color:#e01020; }
+  .no-offers { text-align:center; padding:30px; color:#333; font-size:0.75rem; letter-spacing:1px; }
 
-  /* Duration pills */
-  .duration-pills {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-  .dur-pill {
-    background: #111;
-    border: 1px solid rgba(255,255,255,0.08);
-    color: #888;
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    padding: 8px 14px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.18s;
-  }
-  .dur-pill:hover { border-color: rgba(224,16,32,0.4); color: #e01020; }
-  .dur-pill.active { background: rgba(224,16,32,0.12); border-color: #e01020; color: #e01020; }
+  /* ── SUMMARY ── */
+  .loan-summary { background:#111; border:1px solid rgba(255,255,255,0.05); border-radius:9px; padding:14px; margin-bottom:14px; }
+  .ls-row { display:flex; justify-content:space-between; align-items:center; font-size:0.78rem; margin-bottom:8px; color:#555; }
+  .ls-row:last-child { margin-bottom:0; }
+  .ls-row .lv { font-weight:700; color:#f0e8e8; }
+  .ls-row.red .lv { color:#e01020; }
+  .ls-row.green .lv { color:#22c55e; }
+  hr.ls-div { border:none; border-top:1px solid rgba(255,255,255,0.05); margin:8px 0; }
 
-  /* ── LOAN SUMMARY BOX ── */
-  .loan-summary {
-    background: #111;
-    border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 10px;
-    padding: 16px;
-    margin-bottom: 16px;
-  }
-  .loan-summary-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 0.8rem;
-    margin-bottom: 9px;
-    color: #666;
-  }
-  .loan-summary-row:last-child { margin-bottom: 0; }
-  .loan-summary-row .val {
-    font-weight: 700;
-    color: #f0e8e8;
-  }
-  .loan-summary-row.highlight .val { color: #e01020; }
-  .loan-summary-divider {
-    border: none;
-    border-top: 1px solid rgba(255,255,255,0.06);
-    margin: 10px 0;
-  }
+  /* ── BUTTONS ── */
+  .btn-red { width:100%; padding:13px; background:#e01020; border:none; border-radius:9px; color:#fff; font-family:'Space Grotesk',sans-serif; font-size:0.78rem; font-weight:700; letter-spacing:2.5px; text-transform:uppercase; cursor:pointer; transition:all 0.18s; }
+  .btn-red:hover { background:#c80e1c; }
+  .btn-red:active { transform:scale(0.99); }
+  .btn-red:disabled { background:#1a1a1a; color:#333; cursor:not-allowed; }
+  .btn-outline-red { background:none; border:1px solid #e01020; color:#e01020; font-family:'Space Grotesk',sans-serif; font-size:0.62rem; font-weight:700; letter-spacing:2px; text-transform:uppercase; padding:5px 12px; border-radius:5px; cursor:pointer; transition:all 0.18s; }
+  .btn-outline-red:hover { background:rgba(224,16,32,0.1); }
+  .btn-green { width:100%; padding:13px; background:#16a34a; border:none; border-radius:9px; color:#fff; font-family:'Space Grotesk',sans-serif; font-size:0.78rem; font-weight:700; letter-spacing:2.5px; text-transform:uppercase; cursor:pointer; transition:all 0.18s; margin-top:14px; }
+  .btn-green:hover { background:#15803d; }
 
-  /* ── SELECTED NFT PREVIEW ── */
-  .selected-nft-preview {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    background: #111;
-    border: 1px solid rgba(224,16,32,0.2);
-    border-radius: 10px;
-    padding: 12px;
-    margin-bottom: 16px;
-  }
-  .selected-nft-preview img {
-    width: 52px; height: 52px;
-    border-radius: 6px;
-    object-fit: cover;
-    border: 1px solid rgba(255,255,255,0.08);
-  }
-  .selected-nft-preview .nft-info { flex: 1; }
-  .selected-nft-preview .nft-name {
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: #f0e8e8;
-    margin-bottom: 3px;
-  }
-  .selected-nft-preview .nft-tag {
-    font-size: 0.65rem;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    color: #e01020;
-  }
-  .selected-nft-preview .clear-btn {
-    background: none;
-    border: none;
-    color: #444;
-    font-size: 1.1rem;
-    cursor: pointer;
-    padding: 4px;
-    line-height: 1;
-    transition: color 0.18s;
-  }
-  .selected-nft-preview .clear-btn:hover { color: #e01020; }
+  /* ── ACTIVE LOANS ── */
+  .active-loan-row { display:grid; grid-template-columns:46px 1fr auto; gap:12px; align-items:center; background:#0d0d0d; border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:12px 14px; margin-bottom:10px; transition:border-color 0.18s; }
+  .active-loan-row:hover { border-color:rgba(224,16,32,0.2); }
+  .active-loan-row.overdue { border-color:rgba(224,16,32,0.5); }
+  .active-loan-row img { width:46px; height:46px; border-radius:6px; object-fit:cover; }
+  .alr-name { font-size:0.82rem; font-weight:700; margin-bottom:3px; }
+  .alr-meta { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .badge { font-size:0.58rem; letter-spacing:1.5px; text-transform:uppercase; padding:2px 7px; border-radius:3px; font-weight:700; }
+  .badge.active  { background:rgba(34,197,94,0.12); color:#22c55e; }
+  .badge.overdue { background:rgba(224,16,32,0.14); color:#e01020; }
+  .badge.lnl     { background:rgba(224,16,32,0.1); color:#e01020; }
+  .badge.ga      { background:rgba(249,115,22,0.12); color:#f97316; }
+  .alr-time { font-size:0.68rem; color:#444; }
+  .alr-right { text-align:right; }
+  .alr-amount { font-size:1rem; font-weight:700; }
+  .alr-repay { font-size:0.68rem; color:#444; margin-top:2px; }
 
-  /* ── BORROW BUTTON ── */
-  .btn-borrow {
-    width: 100%;
-    padding: 14px;
-    background: #e01020;
-    border: none;
-    border-radius: 10px;
-    color: #fff;
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 0.82rem;
-    font-weight: 700;
-    letter-spacing: 2.5px;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: all 0.2s;
-    position: relative;
-    overflow: hidden;
-  }
-  .btn-borrow::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: rgba(255,255,255,0);
-    transition: background 0.15s;
-  }
-  .btn-borrow:hover::after { background: rgba(255,255,255,0.07); }
-  .btn-borrow:active { transform: scale(0.99); }
-  .btn-borrow:disabled {
-    background: #222;
-    color: #444;
-    cursor: not-allowed;
-  }
-  .btn-borrow:disabled::after { display: none; }
+  /* ── LEND FORM ── */
+  .lend-form-field { margin-bottom:14px; }
+  .lend-form-field label { display:block; font-size:0.62rem; letter-spacing:2px; text-transform:uppercase; color:#444; margin-bottom:6px; }
+  .lf-input-row { display:flex; align-items:center; background:#111; border:1px solid rgba(255,255,255,0.08); border-radius:7px; overflow:hidden; transition:border-color 0.2s; }
+  .lf-input-row:focus-within { border-color:rgba(34,197,94,0.4); }
+  .lf-input-row input { flex:1; background:none; border:none; outline:none; color:#f0e8e8; font-family:'Space Grotesk',sans-serif; font-size:1rem; font-weight:600; padding:11px 13px; }
+  .lf-unit { padding:0 12px 0 3px; font-size:0.72rem; font-weight:700; color:#22c55e; }
 
-  /* ── ACTIVE LOANS LIST ── */
-  .active-loans-list { display: flex; flex-direction: column; gap: 12px; }
-  .active-loan-card {
-    background: #0d0d0d;
-    border: 1px solid rgba(255,255,255,0.07);
-    border-radius: 12px;
-    padding: 14px 16px;
-    display: grid;
-    grid-template-columns: 50px 1fr auto;
-    gap: 12px;
-    align-items: center;
-    transition: border-color 0.2s;
-  }
-  .active-loan-card:hover { border-color: rgba(224,16,32,0.25); }
-  .active-loan-card.overdue { border-color: rgba(224,16,32,0.5); }
-  .active-loan-card img {
-    width: 50px; height: 50px;
-    border-radius: 7px;
-    object-fit: cover;
-    border: 1px solid rgba(255,255,255,0.08);
-  }
-  .alc-info .alc-name {
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: #f0e8e8;
-    margin-bottom: 3px;
-  }
-  .alc-meta {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-  .alc-badge {
-    font-size: 0.62rem;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    padding: 3px 8px;
-    border-radius: 4px;
-    font-weight: 700;
-  }
-  .alc-badge.active-b { background: rgba(0,200,100,0.12); color: #00c864; }
-  .alc-badge.overdue-b { background: rgba(224,16,32,0.15); color: #e01020; }
-  .alc-badge.sol { background: rgba(153,69,255,0.12); color: #9945ff; }
-  .alc-time { font-size: 0.72rem; color: #555; }
-  .alc-right { text-align: right; }
-  .alc-amount { font-size: 1.05rem; font-weight: 700; color: #f0e8e8; }
-  .alc-repay-total { font-size: 0.72rem; color: #555; margin-top: 2px; }
-  .btn-repay {
-    margin-top: 8px;
-    background: none;
-    border: 1px solid #e01020;
-    color: #e01020;
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 0.65rem;
-    font-weight: 700;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    padding: 5px 12px;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: all 0.18s;
-  }
-  .btn-repay:hover { background: rgba(224,16,32,0.1); }
+  /* ── HISTORY ── */
+  .history-filters { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+  .hf-pill { background:#111; border:1px solid rgba(255,255,255,0.07); color:#555; font-family:'Space Grotesk',sans-serif; font-size:0.65rem; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; padding:6px 13px; border-radius:6px; cursor:pointer; transition:all 0.16s; }
+  .hf-pill.active { border-color:#e01020; color:#e01020; background:rgba(224,16,32,0.07); }
+  .hist-row { display:grid; grid-template-columns:40px 1fr auto; gap:11px; align-items:center; background:#0a0a0a; border:1px solid rgba(255,255,255,0.05); border-radius:9px; padding:11px 13px; margin-bottom:8px; }
+  .hist-row img { width:40px; height:40px; border-radius:5px; object-fit:cover; }
+  .hr-name { font-size:0.78rem; font-weight:700; margin-bottom:3px; }
+  .hr-meta { font-size:0.65rem; color:#444; }
+  .hr-pnl { font-size:0.95rem; font-weight:700; text-align:right; }
+  .hr-pnl.pos { color:#22c55e; }
+  .hr-pnl.neg { color:#e01020; }
+  .hr-detail { font-size:0.6rem; color:#333; text-align:right; margin-top:2px; }
 
-  /* ── LEND PANEL ── */
-  .lend-offers-list { display: flex; flex-direction: column; gap: 10px; }
-  .lend-offer-card {
-    background: #0d0d0d;
-    border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 10px;
-    padding: 14px 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    transition: border-color 0.18s;
-  }
-  .lend-offer-card:hover { border-color: rgba(224,16,32,0.2); }
-  .lend-offer-left { display: flex; gap: 10px; align-items: center; }
-  .lend-offer-icon {
-    width: 38px; height: 38px;
-    border-radius: 8px;
-    background: rgba(224,16,32,0.1);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.2rem;
-    flex-shrink: 0;
-  }
-  .lend-offer-name { font-size: 0.82rem; font-weight: 700; color: #f0e8e8; margin-bottom: 2px; }
-  .lend-offer-meta { font-size: 0.68rem; color: #555; letter-spacing: 0.5px; }
-  .lend-offer-right { text-align: right; flex-shrink: 0; }
-  .lend-apy { font-size: 1.1rem; font-weight: 700; color: #e01020; }
-  .lend-apy-lbl { font-size: 0.62rem; letter-spacing: 1.5px; text-transform: uppercase; color: #444; margin-top: 1px; }
-  .btn-lend-offer {
-    display: block;
-    width: 100%;
-    margin-top: 6px;
-    background: rgba(224,16,32,0.08);
-    border: 1px solid rgba(224,16,32,0.25);
-    color: #e01020;
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    padding: 5px 10px;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: all 0.18s;
-  }
-  .btn-lend-offer:hover { background: rgba(224,16,32,0.14); }
+  /* ── PNL CARD ── */
+  .pnl-card { background:#0a0a0a; border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:18px; margin-bottom:20px; display:grid; grid-template-columns:repeat(3,1fr); gap:14px; text-align:center; }
+  .pnl-item .pv { font-size:1.2rem; font-weight:700; margin-bottom:4px; }
+  .pnl-item .pl { font-size:0.6rem; letter-spacing:1.5px; text-transform:uppercase; color:#444; }
 
-  /* ── HOW IT WORKS ── */
-  .how-it-works {
-    margin-top: 28px;
-    background: #0a0a0a;
-    border: 1px solid rgba(255,255,255,0.05);
-    border-radius: 14px;
-    padding: 24px;
-  }
-  .hiw-title {
-    font-size: 0.7rem;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    color: #444;
-    margin-bottom: 18px;
-    text-align: center;
-  }
-  .hiw-steps {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-    text-align: center;
-  }
-  @media (max-width: 700px) { .hiw-steps { grid-template-columns: repeat(2, 1fr); } }
-  .hiw-step .step-icon {
-    font-size: 1.6rem;
-    margin-bottom: 8px;
-  }
-  .hiw-step .step-num {
-    font-size: 0.62rem;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: #e01020;
-    margin-bottom: 5px;
-  }
-  .hiw-step .step-text {
-    font-size: 0.75rem;
-    color: #555;
-    line-height: 1.5;
-  }
+  /* ── GATE ── */
+  .loans-gate { text-align:center; padding:80px 20px; }
+  .loans-gate .gi { font-size:2.5rem; margin-bottom:14px; opacity:0.25; }
+  .loans-gate .gt { font-size:0.9rem; font-weight:700; letter-spacing:3px; text-transform:uppercase; color:#444; margin-bottom:8px; }
+  .loans-gate .gs { font-size:0.75rem; color:#2a2a2a; }
 
-  /* ── WALLET NOT CONNECTED ── */
-  .loans-connect-wall {
-    text-align: center;
-    padding: 80px 20px;
-    color: #444;
-  }
-  .loans-connect-wall .cw-icon { font-size: 3rem; margin-bottom: 16px; opacity: 0.3; }
-  .loans-connect-wall .cw-title {
-    font-size: 1rem;
-    font-weight: 700;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    color: #555;
-    margin-bottom: 8px;
-  }
-  .loans-connect-wall .cw-sub { font-size: 0.78rem; color: #333; }
+  /* ── INFO BOX ── */
+  .info-box { background:#0d0d0d; border:1px dashed rgba(255,255,255,0.07); border-radius:8px; padding:12px 14px; font-size:0.7rem; color:#444; line-height:1.6; margin-bottom:14px; }
+  .info-box strong { color:#666; }
 
-  /* ── MODAL OVERLAY ── */
-  .loan-modal-bg {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.82);
-    z-index: 9000;
-    align-items: center;
-    justify-content: center;
-    backdrop-filter: blur(4px);
-  }
-  .loan-modal-bg.open { display: flex; }
-  .loan-modal {
-    background: #0d0d0d;
-    border: 1px solid rgba(224,16,32,0.3);
-    border-radius: 16px;
-    padding: 28px;
-    max-width: 420px;
-    width: 90%;
-    position: relative;
-  }
-  .loan-modal-close {
-    position: absolute;
-    top: 16px; right: 16px;
-    background: none;
-    border: none;
-    color: #444;
-    font-size: 1.3rem;
-    cursor: pointer;
-    line-height: 1;
-    transition: color 0.15s;
-  }
-  .loan-modal-close:hover { color: #e01020; }
-  .loan-modal-title {
-    font-size: 0.82rem;
-    font-weight: 700;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    color: #888;
-    margin-bottom: 20px;
-  }
-  .modal-nft-row {
-    display: flex;
-    gap: 14px;
-    align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
-  }
-  .modal-nft-row img {
-    width: 64px; height: 64px;
-    border-radius: 8px;
-    object-fit: cover;
-    border: 1px solid rgba(255,255,255,0.1);
-  }
-  .modal-warning {
-    background: rgba(224,16,32,0.08);
-    border: 1px solid rgba(224,16,32,0.2);
-    border-radius: 8px;
-    padding: 12px 14px;
-    font-size: 0.75rem;
-    color: #a0404a;
-    line-height: 1.5;
-    margin-bottom: 20px;
-  }
-  .modal-warning strong { color: #e01020; }
+  /* ── MODAL ── */
+  .loan-modal-bg { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.84); z-index:9000; align-items:center; justify-content:center; backdrop-filter:blur(4px); }
+  .loan-modal-bg.open { display:flex; }
+  .loan-modal { background:#0d0d0d; border:1px solid rgba(224,16,32,0.3); border-radius:14px; padding:26px; max-width:400px; width:90%; position:relative; }
+  .lm-close { position:absolute; top:14px; right:14px; background:none; border:none; color:#444; font-size:1.2rem; cursor:pointer; transition:color 0.14s; }
+  .lm-close:hover { color:#e01020; }
+  .lm-title { font-size:0.78rem; font-weight:700; letter-spacing:3px; text-transform:uppercase; color:#777; margin-bottom:18px; }
+  .lm-nft-row { display:flex; gap:13px; align-items:center; margin-bottom:18px; padding-bottom:18px; border-bottom:1px solid rgba(255,255,255,0.05); }
+  .lm-nft-row img { width:58px; height:58px; border-radius:7px; object-fit:cover; }
+  .lm-warn { background:rgba(224,16,32,0.07); border:1px solid rgba(224,16,32,0.18); border-radius:7px; padding:11px 13px; font-size:0.72rem; color:#7a3040; line-height:1.5; margin-bottom:16px; }
+  .lm-warn strong { color:#e01020; }
 
   /* ── TOAST ── */
-  .loan-toast {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    background: #111;
-    border: 1px solid rgba(224,16,32,0.4);
-    border-radius: 10px;
-    padding: 14px 18px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #f0e8e8;
-    z-index: 9999;
-    opacity: 0;
-    transform: translateY(10px);
-    transition: all 0.25s;
-    max-width: 300px;
-    pointer-events: none;
-  }
-  .loan-toast.show { opacity: 1; transform: translateY(0); }
-  .loan-toast.success { border-color: rgba(0,200,100,0.4); }
-  .loan-toast.error { border-color: rgba(224,16,32,0.6); }
+  .loan-toast { position:fixed; bottom:22px; right:22px; background:#111; border:1px solid rgba(224,16,32,0.4); border-radius:9px; padding:13px 17px; font-size:0.78rem; font-weight:600; color:#f0e8e8; z-index:9999; opacity:0; transform:translateY(8px); transition:all 0.22s; max-width:280px; pointer-events:none; }
+  .loan-toast.show { opacity:1; transform:translateY(0); }
+  .loan-toast.success { border-color:rgba(34,197,94,0.45); }
+  .loan-toast.error   { border-color:rgba(224,16,32,0.6); }
 </style>
 
 <div id="loans-root">
 
-  <!-- MODE TOGGLE -->
-  <div class="loans-mode-bar">
-    <button class="loans-mode-btn active" id="lnl-mode-borrow" onclick="loansSetMode('borrow')">💀 Borrow</button>
-    <button class="loans-mode-btn" id="lnl-mode-lend" onclick="loansSetMode('lend')">🤑 Lend</button>
+  <!-- GATE -->
+  <div class="loans-gate" id="loans-gate">
+    <div class="gi">🔒</div>
+    <div class="gt">Wallet Required</div>
+    <div class="gs">Connect your wallet from the Profile tab</div>
   </div>
 
-  <!-- WALLET NOT CONNECTED STATE -->
-  <div class="loans-connect-wall" id="loans-no-wallet">
-    <div class="cw-icon">🔒</div>
-    <div class="cw-title">Wallet Required</div>
-    <div class="cw-sub">Connect your wallet from the Profile tab to access loans</div>
-  </div>
-
-  <!-- MAIN CONTENT (shown when wallet connected) -->
+  <!-- MAIN -->
   <div id="loans-main" style="display:none">
 
-    <!-- STATS -->
-    <div class="loans-stats">
-      <div class="loan-stat-card">
-        <div class="stat-val" id="lstat-floor">—</div>
-        <div class="stat-lbl">Floor Price</div>
-      </div>
-      <div class="loan-stat-card">
-        <div class="stat-val" id="lstat-max">—</div>
-        <div class="stat-lbl">Max Borrow</div>
-      </div>
-      <div class="loan-stat-card">
-        <div class="stat-val" id="lstat-apy">—</div>
-        <div class="stat-lbl">Best APY</div>
-      </div>
-      <div class="loan-stat-card">
-        <div class="stat-val" id="lstat-active">—</div>
-        <div class="stat-lbl">Your Active Loans</div>
-      </div>
+    <!-- MODE BAR -->
+    <div class="loans-mode-bar">
+      <button class="loans-mode-btn active" id="lm-borrow"  onclick="lMode('borrow')">💀 Borrow</button>
+      <button class="loans-mode-btn"        id="lm-lend"    onclick="lMode('lend')">🤑 Lend</button>
+      <button class="loans-mode-btn"        id="lm-history" onclick="lMode('history')">📜 History</button>
     </div>
 
-    <!-- ── BORROW MODE ── -->
-    <div id="loans-borrow-panel">
+    <!-- ═══ BORROW ═══ -->
+    <div id="lp-borrow">
+      <div class="loans-stats">
+        <div class="loan-stat-card"><div class="sv" id="bs-lnl-fp">—</div><div class="sl">LNL Floor</div></div>
+        <div class="loan-stat-card"><div class="sv" id="bs-ga-fp">—</div><div class="sl">GA Floor</div></div>
+        <div class="loan-stat-card"><div class="sv" id="bs-best">—</div><div class="sl">Best Offer</div></div>
+      </div>
       <div class="loans-panels">
-
-        <!-- LEFT: Select Collateral + Terms -->
+        <!-- LEFT -->
         <div>
-          <!-- Your NFTs to collateralize -->
           <div class="loan-panel">
-            <div class="loan-panel-header">
-              <span class="loan-panel-title">Select Collateral</span>
-              <span style="font-size:0.68rem;color:#555" id="lnl-nft-count">0 NFTs</span>
+            <div class="lp-head">
+              <span class="lp-title">Select Collateral</span>
+              <span id="nft-total-count" style="font-size:0.65rem;color:#444">0 NFTs</span>
             </div>
-            <div class="loan-panel-body">
-              <div class="nft-collateral-grid" id="lnl-nft-grid">
-                <div class="nft-empty-state">
-                  <div class="empty-icon">🦒</div>
-                  <div>Loading your LNL NFTs...</div>
-                </div>
+            <div class="lp-body">
+              <div class="nft-type-tabs">
+                <button class="nft-type-tab active" id="ntt-lnl" onclick="lSwitchCol('lnl')">🦒 LNL</button>
+                <button class="nft-type-tab"        id="ntt-ga"  onclick="lSwitchCol('ga')">⛳ Golf Addicts</button>
+              </div>
+              <div class="nft-col-grid" id="l-nft-grid">
+                <div class="nft-empty">Loading NFTs...</div>
               </div>
             </div>
           </div>
-
-          <!-- Loan Terms -->
-          <div class="loan-panel" style="margin-top:16px">
-            <div class="loan-panel-header">
-              <span class="loan-panel-title">Loan Terms</span>
+          <div class="loan-panel">
+            <div class="lp-head">
+              <span class="lp-title">Available Loan Offers</span>
+              <span style="font-size:0.65rem;color:#555">7 Days · Fixed</span>
             </div>
-            <div class="loan-panel-body">
-              <div class="loan-field">
-                <label>Amount (SOL)</label>
-                <div class="loan-field-row">
-                  <input type="number" id="lnl-borrow-amount" placeholder="0.00" min="0.1" step="0.1" oninput="loansUpdateSummary()"/>
-                  <span class="loan-field-unit">◎ SOL</span>
-                </div>
-              </div>
-              <div class="loan-field">
-                <label>Duration</label>
-                <div class="duration-pills">
-                  <button class="dur-pill" onclick="loansSetDuration(7, this)">7 Days</button>
-                  <button class="dur-pill active" onclick="loansSetDuration(14, this)">14 Days</button>
-                  <button class="dur-pill" onclick="loansSetDuration(30, this)">30 Days</button>
-                </div>
-              </div>
-              <div class="loan-field">
-                <label>Interest Rate (APY %)</label>
-                <div class="loan-field-row">
-                  <input type="number" id="lnl-borrow-apy" placeholder="69" min="1" max="500" step="1" value="69" oninput="loansUpdateSummary()"/>
-                  <span class="loan-field-unit">% APY</span>
-                </div>
-              </div>
+            <div class="lp-body">
+              <div class="info-box">All loans are <strong>7 days fixed</strong>. Lenders earn <strong>0.01 SOL or 7%</strong> — whichever is greater. Pick an offer, then select your NFT collateral.</div>
+              <div class="offer-list" id="l-offer-list"><div class="no-offers">Loading offers...</div></div>
             </div>
           </div>
         </div>
-
-        <!-- RIGHT: Preview + Confirm -->
+        <!-- RIGHT -->
         <div>
           <div class="loan-panel">
-            <div class="loan-panel-header">
-              <span class="loan-panel-title">Loan Preview</span>
-            </div>
-            <div class="loan-panel-body">
-
-              <!-- Selected NFT preview (hidden until selection) -->
-              <div class="selected-nft-preview" id="lnl-selected-preview" style="display:none">
-                <img id="lnl-sel-img" src="" alt=""/>
-                <div class="nft-info">
-                  <div class="nft-name" id="lnl-sel-name">—</div>
-                  <div class="nft-tag">LNL Collateral</div>
+            <div class="lp-head"><span class="lp-title">Loan Preview</span></div>
+            <div class="lp-body">
+              <div class="sel-preview" id="l-sel-preview" style="display:none">
+                <img id="l-sel-img" src="" alt=""/>
+                <div style="flex:1">
+                  <div class="sp-name" id="l-sel-name">—</div>
+                  <div class="sp-tag" id="l-sel-tag">LNL · Collateral</div>
                 </div>
-                <button class="clear-btn" onclick="loansClearSelection()">✕</button>
+                <button class="sp-clear" onclick="lClearNFT()">✕</button>
               </div>
-
-              <!-- Summary -->
               <div class="loan-summary">
-                <div class="loan-summary-row">
-                  <span>Borrow Amount</span>
-                  <span class="val" id="lsum-amount">— SOL</span>
-                </div>
-                <div class="loan-summary-row">
-                  <span>Duration</span>
-                  <span class="val" id="lsum-duration">14 Days</span>
-                </div>
-                <div class="loan-summary-row">
-                  <span>Interest Rate</span>
-                  <span class="val" id="lsum-apy">69% APY</span>
-                </div>
-                <hr class="loan-summary-divider"/>
-                <div class="loan-summary-row">
-                  <span>Interest Owed</span>
-                  <span class="val" id="lsum-interest">—</span>
-                </div>
-                <div class="loan-summary-row highlight">
-                  <span>Total to Repay</span>
-                  <span class="val" id="lsum-repay">—</span>
-                </div>
-                <div class="loan-summary-row">
-                  <span>Due Date</span>
-                  <span class="val" id="lsum-due">—</span>
-                </div>
+                <div class="ls-row"><span>Borrow Amount</span><span class="lv" id="lp-amount">—</span></div>
+                <div class="ls-row"><span>Duration</span><span class="lv">7 Days (fixed)</span></div>
+                <div class="ls-row"><span>Collateral</span><span class="lv" id="lp-collateral">Not selected</span></div>
+                <hr class="ls-div"/>
+                <div class="ls-row red"><span>Interest Owed</span><span class="lv" id="lp-interest">—</span></div>
+                <div class="ls-row red"><span>Total to Repay</span><span class="lv" id="lp-repay">—</span></div>
+                <div class="ls-row"><span>Due Date</span><span class="lv" id="lp-due">—</span></div>
               </div>
-
-              <!-- Lender pool note -->
-              <div style="background:#0d0d0d;border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:12px;margin-bottom:14px;font-size:0.72rem;color:#555;line-height:1.5">
-                🔒 Your NFT stays in your wallet. It is <strong style="color:#888">frozen in-wallet</strong> for the loan duration — you keep all holder perks and SubDAO membership until/unless you default.
-              </div>
-
-              <button class="btn-borrow" id="lnl-borrow-btn" onclick="loansRequestBorrow()" disabled>
-                Select an NFT to Continue
-              </button>
+              <div class="info-box">🔒 NFT stays in your wallet, <strong>frozen in-wallet</strong>. You keep all holder perks. Defaulting transfers your NFT to the lender permanently.</div>
+              <button class="btn-red" id="l-borrow-btn" onclick="lOpenModal()" disabled>Select NFT + Offer to Continue</button>
             </div>
           </div>
-
-          <!-- Active Loans -->
-          <div class="loan-panel" style="margin-top:16px">
-            <div class="loan-panel-header">
-              <span class="loan-panel-title">Your Active Loans</span>
-              <span style="font-size:0.68rem;color:#555" id="lnl-active-count">0</span>
+          <div class="loan-panel">
+            <div class="lp-head">
+              <span class="lp-title">Your Active Loans</span>
+              <span id="l-active-count" style="font-size:0.65rem;color:#444">0</span>
             </div>
-            <div class="loan-panel-body">
-              <div class="active-loans-list" id="lnl-active-loans">
-                <div style="text-align:center;padding:24px;color:#333;font-size:0.75rem;letter-spacing:1px">
-                  No active loans — you're debt free! 🤘
-                </div>
-              </div>
+            <div class="lp-body" id="l-active-loans">
+              <div style="text-align:center;padding:22px;color:#282828;font-size:0.72rem;letter-spacing:1px">No active loans — debt free 🤘</div>
             </div>
           </div>
         </div>
-
       </div>
-    </div>
+    </div><!-- /borrow -->
 
-    <!-- ── LEND MODE ── -->
-    <div id="loans-lend-panel" style="display:none">
+    <!-- ═══ LEND ═══ -->
+    <div id="lp-lend" style="display:none">
+      <div class="loans-stats">
+        <div class="loan-stat-card green"><div class="sv" id="ls-lnl-fp">—</div><div class="sl">LNL Floor</div></div>
+        <div class="loan-stat-card green"><div class="sv" id="ls-ga-fp">—</div><div class="sl">GA Floor</div></div>
+        <div class="loan-stat-card green"><div class="sv" id="ls-my-active">0</div><div class="sl">My Active Offers</div></div>
+      </div>
       <div class="loans-panels">
-
-        <!-- LEFT: Place offer -->
         <div>
           <div class="loan-panel">
-            <div class="loan-panel-header">
-              <span class="loan-panel-title">Place a Loan Offer</span>
-            </div>
-            <div class="loan-panel-body">
-              <div style="background:#0d0d0d;border:1px dashed rgba(224,16,32,0.2);border-radius:8px;padding:14px;margin-bottom:16px;font-size:0.75rem;color:#555;line-height:1.6">
-                You're offering SOL to LNL holders. If a borrower accepts your offer, their NFT is frozen as collateral. You earn interest — or keep the NFT if they default.
-              </div>
-
-              <div class="loan-field">
+            <div class="lp-head"><span class="lp-title">Place Loan Offer</span></div>
+            <div class="lp-body">
+              <div class="info-box">You offer SOL. Borrower uses an LNL or GA NFT as collateral. You earn <strong>0.01 SOL or 7%</strong> — whichever is greater. If they default, you keep the NFT.</div>
+              <div class="lend-form-field">
                 <label>Offer Amount (SOL)</label>
-                <div class="loan-field-row">
-                  <input type="number" id="lnl-lend-amount" placeholder="1.0" min="0.1" step="0.1" oninput="loansLendUpdateSummary()"/>
-                  <span class="loan-field-unit">◎ SOL</span>
+                <div class="lf-input-row">
+                  <input type="number" id="l-lend-amount" placeholder="1.0" min="0.05" step="0.05" oninput="lLendCalc()"/>
+                  <span class="lf-unit">◎ SOL</span>
                 </div>
               </div>
-              <div class="loan-field">
-                <label>Duration</label>
-                <div class="duration-pills">
-                  <button class="dur-pill" onclick="loansLendSetDuration(7, this)">7 Days</button>
-                  <button class="dur-pill active" onclick="loansLendSetDuration(14, this)">14 Days</button>
-                  <button class="dur-pill" onclick="loansLendSetDuration(30, this)">30 Days</button>
-                </div>
+              <div class="info-box" style="margin-top:0">Duration: <strong>7 Days fixed</strong> · Rate: <strong>max(0.01 SOL, 7% APY)</strong></div>
+              <div class="loan-summary">
+                <div class="ls-row"><span>You Send</span><span class="lv" id="ll-send">— SOL</span></div>
+                <div class="ls-row"><span>Interest Earned</span><span class="lv" id="ll-int">—</span></div>
+                <div class="ls-row green"><span>You Receive Back</span><span class="lv" id="ll-total">—</span></div>
               </div>
-              <div class="loan-field">
-                <label>Your APY %</label>
-                <div class="loan-field-row">
-                  <input type="number" id="lnl-lend-apy" placeholder="100" min="1" max="500" value="100" oninput="loansLendUpdateSummary()"/>
-                  <span class="loan-field-unit">% APY</span>
-                </div>
-              </div>
-
-              <div class="loan-summary" style="margin-top:4px">
-                <div class="loan-summary-row">
-                  <span>You Send</span>
-                  <span class="val" id="lend-sum-amount">— SOL</span>
-                </div>
-                <div class="loan-summary-row">
-                  <span>Interest Earned</span>
-                  <span class="val" id="lend-sum-interest">—</span>
-                </div>
-                <div class="loan-summary-row highlight">
-                  <span>You Receive Back</span>
-                  <span class="val" id="lend-sum-total">—</span>
-                </div>
-              </div>
-
-              <button class="btn-borrow" style="margin-top:14px" onclick="loansPlaceOffer()">
-                Place Offer
-              </button>
+              <button class="btn-green" onclick="lPlaceOffer()">Place Offer</button>
             </div>
           </div>
         </div>
-
-        <!-- RIGHT: Active offers + open offers from community -->
         <div>
           <div class="loan-panel">
-            <div class="loan-panel-header">
-              <span class="loan-panel-title">Your Open Offers</span>
-              <span style="font-size:0.68rem;color:#555" id="lnl-offers-count">0</span>
+            <div class="lp-head">
+              <span class="lp-title">My Open Offers</span>
+              <span id="l-my-offers-count" style="font-size:0.65rem;color:#444">0</span>
             </div>
-            <div class="loan-panel-body">
-              <div id="lnl-my-offers">
-                <div style="text-align:center;padding:24px;color:#333;font-size:0.75rem;letter-spacing:1px">
-                  No open offers yet
-                </div>
-              </div>
+            <div class="lp-body" id="l-my-offers">
+              <div style="text-align:center;padding:22px;color:#282828;font-size:0.72rem;letter-spacing:1px">No open offers yet</div>
             </div>
           </div>
-
-          <div class="loan-panel" style="margin-top:16px">
-            <div class="loan-panel-header">
-              <span class="loan-panel-title">Open Loan Requests</span>
-              <span style="font-size:0.68rem;color:#e01020">LIVE</span>
+          <div class="loan-panel">
+            <div class="lp-head">
+              <span class="lp-title">Open Borrow Requests</span>
+              <span style="font-size:0.65rem;color:#22c55e">LIVE</span>
             </div>
-            <div class="loan-panel-body">
-              <div class="lend-offers-list" id="lnl-open-requests">
-                <div style="text-align:center;padding:24px;color:#333;font-size:0.75rem;letter-spacing:1px">
-                  Loading loan requests...
-                </div>
-              </div>
+            <div class="lp-body" id="l-open-requests">
+              <div style="text-align:center;padding:22px;color:#282828;font-size:0.72rem;letter-spacing:1px">Loading...</div>
             </div>
           </div>
         </div>
-
       </div>
-    </div>
+    </div><!-- /lend -->
 
-    <!-- HOW IT WORKS -->
-    <div class="how-it-works">
-      <div class="hiw-title">How LNL Loans Work</div>
-      <div class="hiw-steps">
-        <div class="hiw-step">
-          <div class="step-icon">🦒</div>
-          <div class="step-num">Step 1</div>
-          <div class="step-text">Pick an LNL NFT from your wallet as collateral</div>
-        </div>
-        <div class="hiw-step">
-          <div class="step-icon">📋</div>
-          <div class="step-num">Step 2</div>
-          <div class="step-text">Set your loan amount, duration & interest rate</div>
-        </div>
-        <div class="hiw-step">
-          <div class="step-icon">🔒</div>
-          <div class="step-num">Step 3</div>
-          <div class="step-text">NFT is frozen in-wallet — you keep holder perks</div>
-        </div>
-        <div class="hiw-step">
-          <div class="step-icon">💸</div>
-          <div class="step-num">Step 4</div>
-          <div class="step-text">Repay on time to unlock. Default = lender keeps NFT</div>
-        </div>
+    <!-- ═══ HISTORY ═══ -->
+    <div id="lp-history" style="display:none">
+      <div class="pnl-card">
+        <div class="pnl-item"><div class="pv" id="h-pnl" style="color:#22c55e">+0.0000 ◎</div><div class="pl">Total PNL</div></div>
+        <div class="pnl-item"><div class="pv" id="h-earned" style="color:#22c55e">0.0000 ◎</div><div class="pl">Interest Earned</div></div>
+        <div class="pnl-item"><div class="pv" id="h-lost" style="color:#e01020">0.0000 ◎</div><div class="pl">Total Lost</div></div>
       </div>
-    </div>
+      <div class="history-filters">
+        <button class="hf-pill active" onclick="lHistFilter('all',this)">All</button>
+        <button class="hf-pill" onclick="lHistFilter('borrowed',this)">Borrowed</button>
+        <button class="hf-pill" onclick="lHistFilter('lent',this)">Lent</button>
+        <button class="hf-pill" onclick="lHistFilter('repaid',this)">Repaid ✓</button>
+        <button class="hf-pill" onclick="lHistFilter('defaulted',this)">Defaulted 💀</button>
+      </div>
+      <div id="l-history-list">
+        <div style="text-align:center;padding:40px;color:#282828;font-size:0.75rem;letter-spacing:1px">No loan history yet</div>
+      </div>
+    </div><!-- /history -->
 
   </div><!-- /loans-main -->
+</div>
 
-</div><!-- /loans-root -->
-
-<!-- CONFIRM BORROW MODAL -->
-<div class="loan-modal-bg" id="lnl-confirm-modal">
+<!-- MODAL -->
+<div class="loan-modal-bg" id="l-modal">
   <div class="loan-modal">
-    <button class="loan-modal-close" onclick="loansCloseModal()">✕</button>
-    <div class="loan-modal-title">Confirm Loan Request</div>
-    <div class="modal-nft-row">
-      <img id="modal-nft-img" src="" alt=""/>
+    <button class="lm-close" onclick="lCloseModal()">✕</button>
+    <div class="lm-title">Confirm Loan Request</div>
+    <div class="lm-nft-row">
+      <img id="m-nft-img" src="" alt=""/>
       <div>
-        <div style="font-weight:700;font-size:0.9rem;margin-bottom:3px" id="modal-nft-name">—</div>
-        <div style="font-size:0.68rem;letter-spacing:1px;color:#e01020">COLLATERAL</div>
+        <div style="font-weight:700;font-size:0.88rem;margin-bottom:3px" id="m-nft-name">—</div>
+        <div style="font-size:0.62rem;letter-spacing:1px;color:#e01020" id="m-nft-tag">COLLATERAL</div>
       </div>
     </div>
     <div class="loan-summary">
-      <div class="loan-summary-row"><span>Borrowing</span><span class="val" id="modal-amount">—</span></div>
-      <div class="loan-summary-row"><span>Duration</span><span class="val" id="modal-duration">—</span></div>
-      <div class="loan-summary-row"><span>APY</span><span class="val" id="modal-apy">—</span></div>
-      <hr class="loan-summary-divider"/>
-      <div class="loan-summary-row highlight"><span>Total to Repay</span><span class="val" id="modal-repay">—</span></div>
-      <div class="loan-summary-row"><span>Due Date</span><span class="val" id="modal-due">—</span></div>
+      <div class="ls-row"><span>Borrowing</span><span class="lv" id="m-amount">—</span></div>
+      <div class="ls-row"><span>Duration</span><span class="lv">7 Days</span></div>
+      <div class="ls-row"><span>Interest</span><span class="lv" id="m-interest">—</span></div>
+      <hr class="ls-div"/>
+      <div class="ls-row red"><span>Total to Repay</span><span class="lv" id="m-repay">—</span></div>
+      <div class="ls-row"><span>Due Date</span><span class="lv" id="m-due">—</span></div>
     </div>
-    <div class="modal-warning">
-      ⚠️ <strong>Defaulting on this loan will permanently transfer your NFT to the lender.</strong> Only borrow what you can repay.
-    </div>
-    <button class="btn-borrow" onclick="loansConfirmBorrow()">Confirm & Submit Request</button>
+    <div class="lm-warn">⚠️ <strong>Defaulting permanently transfers your NFT to the lender.</strong> Only borrow what you can repay within 7 days.</div>
+    <button class="btn-red" onclick="lConfirmBorrow()">Confirm &amp; Submit Request</button>
   </div>
 </div>
 
-<!-- TOAST -->
-<div class="loan-toast" id="loan-toast"></div>
+<div class="loan-toast" id="l-toast"></div>
 
 <script>
-(function() {
+(function(){
+'use strict';
 
-  // ── STATE ──────────────────────────────────────────────────────────────────
-  var loansState = {
-    mode: 'borrow',
-    selectedNFT: null,
-    borrowDuration: 14,
-    lendDuration: 14,
-    activeLoans: [],
-    myOffers: [],
-    openRequests: [],
-    nfts: []
-  };
+var LOAN_DAYS    = 7;
+var MIN_INT      = 0.01;
+var APY          = 0.07;
+var LNL_SYM      = 'long_neck_legends';
+var GA_SYM       = 'golf_addicts';
 
-  // ── INIT ───────────────────────────────────────────────────────────────────
-  window.init_loans_tab = function() {
-    // Check wallet (dashboard exposes walletPublicKey)
-    var wallet = (typeof walletPublicKey !== 'undefined' && walletPublicKey)
-      ? (walletPublicKey.toBase58 ? walletPublicKey.toBase58() : walletPublicKey)
-      : null;
+var LS = {
+  mode:'borrow', col:'lnl',
+  selNFT:null, selOffer:null,
+  lnlNFTs:[], gaNFTs:[],
+  activeLoans:[], myOffers:[], openOffers:[], history:[],
+  histFilter:'all'
+};
 
-    if (!wallet) {
-      document.getElementById('loans-no-wallet').style.display = '';
-      document.getElementById('loans-main').style.display = 'none';
-      return;
-    }
+// ─── INIT ────────────────────────────────────────────────────────────────────
+window.init_loans_tab = function() {
+  var w = getW();
+  if (!w) { show('loans-gate'); hide('loans-main'); return; }
+  hide('loans-gate'); show('loans-main');
+  lLoadNFTs(); lLoadOffers(); lLoadActiveLoans(); lFetchFloors();
+};
 
-    document.getElementById('loans-no-wallet').style.display = 'none';
-    document.getElementById('loans-main').style.display = '';
+function getW() {
+  if (typeof walletPublicKey==='undefined'||!walletPublicKey) return null;
+  return walletPublicKey.toBase58 ? walletPublicKey.toBase58() : walletPublicKey;
+}
 
-    loansLoadNFTs();
-    loansLoadActiveLoans();
-    loansLoadOpenRequests();
-    loansUpdateStats();
-    loansUpdateSummary();
-    loansLendUpdateSummary();
-  };
+function calcInt(amt) { return Math.max(MIN_INT, parseFloat((amt*APY*(LOAN_DAYS/365)).toFixed(4))); }
 
-  // ── LOAD NFTs FROM SESSION ─────────────────────────────────────────────────
-  function loansLoadNFTs() {
-    var nfts = [];
-    if (typeof session !== 'undefined' && session.loadedNFTs && session.loadedNFTs.length > 0) {
-      nfts = session.loadedNFTs;
-    }
+// ─── FLOOR PRICE ──────────────────────────────────────────────────────────────
+async function lFetchFloors() {
+  try {
+    var [rL,rG] = await Promise.all([
+      fetch('https://api-mainnet.magiceden.dev/v2/collections/'+LNL_SYM+'/stats'),
+      fetch('https://api-mainnet.magiceden.dev/v2/collections/'+GA_SYM+'/stats')
+    ]);
+    var dL=await rL.json(), dG=await rG.json();
+    var lStr = dL.floorPrice ? (dL.floorPrice/1e9).toFixed(3)+' ◎' : '—';
+    var gStr = dG.floorPrice ? (dG.floorPrice/1e9).toFixed(3)+' ◎' : '—';
+    setEl('bs-lnl-fp',lStr); setEl('ls-lnl-fp',lStr);
+    setEl('bs-ga-fp', gStr); setEl('ls-ga-fp', gStr);
+  } catch(e) {}
+}
 
-    loansState.nfts = nfts;
-    var grid = document.getElementById('lnl-nft-grid');
-    var countEl = document.getElementById('lnl-nft-count');
-    if (countEl) countEl.textContent = nfts.length + ' NFTs';
+// ─── NFTs ─────────────────────────────────────────────────────────────────────
+function lLoadNFTs() {
+  LS.lnlNFTs = (typeof session!=='undefined'&&session.loadedNFTs)       ? session.loadedNFTs       : [];
+  LS.gaNFTs  = (typeof session!=='undefined'&&session.loadedGolfAddicts) ? session.loadedGolfAddicts: [];
+  setEl('nft-total-count',(LS.lnlNFTs.length+LS.gaNFTs.length)+' NFTs');
+  lRenderGrid();
+}
 
-    if (nfts.length === 0) {
-      grid.innerHTML = '<div class="nft-empty-state"><div class="empty-icon">🦒</div><div>No LNL NFTs found in your wallet</div></div>';
-      return;
-    }
+function lRenderGrid() {
+  var grid=document.getElementById('l-nft-grid'); if (!grid) return;
+  var arr = LS.col==='lnl' ? LS.lnlNFTs : LS.gaNFTs;
+  if (!arr.length) { grid.innerHTML='<div class="nft-empty">No '+(LS.col==='lnl'?'LNL':'Golf Addict')+' NFTs found</div>'; return; }
+  grid.innerHTML=arr.map(function(n,i){
+    var nm=n.name||(LS.col==='lnl'?'LNL #':'GA #')+(i+1);
+    var im=n.image||n.pfpImage||'';
+    var sel=LS.selNFT&&LS.selNFT.col===LS.col&&LS.selNFT.idx===i;
+    return '<div class="nft-col-card'+(sel?' selected':'')+'" onclick="lSelNFT('+i+')" id="nc-'+LS.col+'-'+i+'">'+
+      (im?'<img src="'+im+'" alt="" onerror="this.style.display=\'none\'">':'')+
+      '<div class="nft-col-label">'+nm+'</div></div>';
+  }).join('');
+}
 
-    grid.innerHTML = nfts.map(function(nft, i) {
-      var name = nft.name || ('LNL #' + (i+1));
-      var img = nft.image || nft.pfpImage || '';
-      return '<div class="nft-col-card" onclick="loansSelectNFT(' + i + ')" id="nft-col-' + i + '">' +
-        (img ? '<img src="' + img + '" alt="' + name + '" onerror="this.style.display=\'none\'">' : '') +
-        '<div class="nft-col-name">' + name + '</div>' +
-        '</div>';
-    }).join('');
-  }
+window.lSwitchCol=function(c){
+  LS.col=c;
+  document.getElementById('ntt-lnl').classList.toggle('active',c==='lnl');
+  document.getElementById('ntt-ga').classList.toggle('active',c==='ga');
+  lRenderGrid();
+};
 
-  // ── SELECT NFT ─────────────────────────────────────────────────────────────
-  window.loansSelectNFT = function(idx) {
-    // Deselect previous
-    if (loansState.selectedNFT !== null) {
-      var prev = document.getElementById('nft-col-' + loansState.selectedNFT);
-      if (prev) prev.classList.remove('selected');
-    }
-    loansState.selectedNFT = idx;
-    var card = document.getElementById('nft-col-' + idx);
-    if (card) card.classList.add('selected');
+window.lSelNFT=function(i){
+  if (LS.selNFT){ var p=document.getElementById('nc-'+LS.selNFT.col+'-'+LS.selNFT.idx); if(p)p.classList.remove('selected'); }
+  var arr=LS.col==='lnl'?LS.lnlNFTs:LS.gaNFTs;
+  LS.selNFT={idx:i,nft:arr[i],col:LS.col};
+  var c=document.getElementById('nc-'+LS.col+'-'+i); if(c)c.classList.add('selected');
+  var n=arr[i], nm=n.name||(LS.col==='lnl'?'LNL #':'GA #')+(i+1);
+  var prev=document.getElementById('l-sel-preview'); if(prev)prev.style.display='';
+  var si=document.getElementById('l-sel-img'); if(si)si.src=n.image||n.pfpImage||'';
+  setEl('l-sel-name',nm); setEl('l-sel-tag',(LS.col==='lnl'?'LNL':'Golf Addicts')+' · Collateral');
+  setEl('lp-collateral',nm); lUpdatePreview();
+};
 
-    var nft = loansState.nfts[idx];
-    // Update preview
-    var preview = document.getElementById('lnl-selected-preview');
-    var selImg = document.getElementById('lnl-sel-img');
-    var selName = document.getElementById('lnl-sel-name');
-    if (preview) preview.style.display = '';
-    if (selImg) selImg.src = nft.image || nft.pfpImage || '';
-    if (selName) selName.textContent = nft.name || ('LNL #' + (idx+1));
+window.lClearNFT=function(){
+  if(LS.selNFT){var p=document.getElementById('nc-'+LS.selNFT.col+'-'+LS.selNFT.idx);if(p)p.classList.remove('selected');}
+  LS.selNFT=null;
+  var prev=document.getElementById('l-sel-preview');if(prev)prev.style.display='none';
+  setEl('lp-collateral','Not selected'); lUpdatePreview();
+};
 
-    // Enable button
-    var btn = document.getElementById('lnl-borrow-btn');
-    if (btn) {
-      btn.disabled = false;
-      btn.textContent = 'Review Loan Request';
-    }
+// ─── OFFERS ───────────────────────────────────────────────────────────────────
+async function lLoadOffers() {
+  if (typeof getDb==='undefined') return;
+  try {
+    var r=await getDb().from('loan_offers').select('*').eq('status','open').order('amount',{ascending:false});
+    LS.openOffers=r.data||[];
+    lRenderOffers();
+    var best=LS.openOffers[0];
+    setEl('bs-best',best?parseFloat(best.amount).toFixed(2)+' ◎':'—');
+  } catch(e){ lRenderOffers(); }
+}
 
-    loansUpdateSummary();
-  };
+function lRenderOffers(){
+  var el=document.getElementById('l-offer-list'); if(!el)return;
+  if(!LS.openOffers.length){ el.innerHTML='<div class="no-offers">No loan offers yet — be the first to lend!</div>'; return; }
+  el.innerHTML=LS.openOffers.map(function(o,i){
+    var int=calcInt(o.amount), total=(o.amount+int).toFixed(4);
+    var sel=LS.selOffer&&LS.selOffer.id===o.id;
+    return '<div class="offer-card'+(sel?' selected-offer':'')+'" id="oc-'+i+'">' +
+      '<div><div class="oc-amount">◎ '+parseFloat(o.amount).toFixed(2)+' SOL</div><div class="oc-meta">7 days · Repay '+total+' SOL</div></div>' +
+      '<div style="text-align:right"><div class="oc-earn">+'+int.toFixed(4)+' ◎</div><div class="oc-earn-lbl">Lender earns</div>' +
+      '<button class="oc-sel-btn" onclick="lSelOffer('+i+')">'+(sel?'SELECTED ✓':'SELECT')+'</button></div>' +
+      '</div>';
+  }).join('');
+}
 
-  window.loansClearSelection = function() {
-    if (loansState.selectedNFT !== null) {
-      var prev = document.getElementById('nft-col-' + loansState.selectedNFT);
-      if (prev) prev.classList.remove('selected');
-    }
-    loansState.selectedNFT = null;
-    var preview = document.getElementById('lnl-selected-preview');
-    if (preview) preview.style.display = 'none';
-    var btn = document.getElementById('lnl-borrow-btn');
-    if (btn) {
-      btn.disabled = true;
-      btn.textContent = 'Select an NFT to Continue';
-    }
-  };
+window.lSelOffer=function(i){ LS.selOffer=LS.openOffers[i]; lRenderOffers(); lUpdatePreview(); };
 
-  // ── DURATION ──────────────────────────────────────────────────────────────
-  window.loansSetDuration = function(days, el) {
-    loansState.borrowDuration = days;
-    document.querySelectorAll('#loans-borrow-panel .dur-pill').forEach(function(p){ p.classList.remove('active'); });
-    if (el) el.classList.add('active');
-    loansUpdateSummary();
-  };
+function lUpdatePreview(){
+  var o=LS.selOffer;
+  if(!o){ setEl('lp-amount','—');setEl('lp-interest','—');setEl('lp-repay','—');setEl('lp-due','—'); lUpdBtn(); return; }
+  var int=calcInt(o.amount), total=o.amount+int;
+  var due=new Date(); due.setDate(due.getDate()+LOAN_DAYS);
+  setEl('lp-amount',parseFloat(o.amount).toFixed(2)+' SOL');
+  setEl('lp-interest',int.toFixed(4)+' SOL');
+  setEl('lp-repay',total.toFixed(4)+' SOL');
+  setEl('lp-due',due.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}));
+  lUpdBtn();
+}
 
-  window.loansLendSetDuration = function(days, el) {
-    loansState.lendDuration = days;
-    document.querySelectorAll('#loans-lend-panel .dur-pill').forEach(function(p){ p.classList.remove('active'); });
-    if (el) el.classList.add('active');
-    loansLendUpdateSummary();
-  };
+function lUpdBtn(){
+  var b=document.getElementById('l-borrow-btn'); if(!b)return;
+  var ok=LS.selNFT&&LS.selOffer;
+  b.disabled=!ok;
+  b.textContent=ok?'Review Loan Request':'Select NFT + Offer to Continue';
+}
 
-  // ── SUMMARY CALC ──────────────────────────────────────────────────────────
-  window.loansUpdateSummary = function() {
-    var amount = parseFloat(document.getElementById('lnl-borrow-amount').value) || 0;
-    var apy = parseFloat(document.getElementById('lnl-borrow-apy').value) || 69;
-    var days = loansState.borrowDuration;
+// ─── LEND CALC ────────────────────────────────────────────────────────────────
+window.lLendCalc=function(){
+  var a=parseFloat(document.getElementById('l-lend-amount').value)||0;
+  var i=calcInt(a);
+  setEl('ll-send',a>0?a.toFixed(2)+' SOL':'— SOL');
+  setEl('ll-int', a>0?'+'+i.toFixed(4)+' SOL':'—');
+  setEl('ll-total',a>0?(a+i).toFixed(4)+' SOL':'—');
+};
 
-    var interest = amount * (apy / 100) * (days / 365);
-    var total = amount + interest;
-    var due = new Date();
-    due.setDate(due.getDate() + days);
+// ─── MODAL ────────────────────────────────────────────────────────────────────
+window.lOpenModal=function(){
+  if(!LS.selNFT||!LS.selOffer)return;
+  var n=LS.selNFT.nft, o=LS.selOffer;
+  var int=calcInt(o.amount), total=o.amount+int;
+  var due=new Date(); due.setDate(due.getDate()+LOAN_DAYS);
+  var nm=n.name||(LS.selNFT.col==='lnl'?'LNL NFT':'Golf Addict');
+  var mi=document.getElementById('m-nft-img'); if(mi)mi.src=n.image||n.pfpImage||'';
+  setEl('m-nft-name',nm); setEl('m-nft-tag',(LS.selNFT.col==='lnl'?'LNL':'Golf Addicts')+' · Collateral');
+  setEl('m-amount',parseFloat(o.amount).toFixed(2)+' SOL');
+  setEl('m-interest',int.toFixed(4)+' SOL');
+  setEl('m-repay',total.toFixed(4)+' SOL');
+  setEl('m-due',due.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}));
+  document.getElementById('l-modal').classList.add('open');
+};
+window.lCloseModal=function(){ document.getElementById('l-modal').classList.remove('open'); };
 
-    set('lsum-amount', amount > 0 ? amount.toFixed(2) + ' SOL' : '— SOL');
-    set('lsum-duration', days + ' Days');
-    set('lsum-apy', apy + '% APY');
-    set('lsum-interest', amount > 0 ? interest.toFixed(4) + ' SOL' : '—');
-    set('lsum-repay', amount > 0 ? total.toFixed(4) + ' SOL' : '—');
-    set('lsum-due', amount > 0 ? due.toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'}) : '—');
-  };
-
-  window.loansLendUpdateSummary = function() {
-    var amount = parseFloat(document.getElementById('lnl-lend-amount').value) || 0;
-    var apy = parseFloat(document.getElementById('lnl-lend-apy').value) || 100;
-    var days = loansState.lendDuration;
-    var interest = amount * (apy / 100) * (days / 365);
-    var total = amount + interest;
-
-    set('lend-sum-amount', amount > 0 ? amount.toFixed(2) + ' SOL' : '— SOL');
-    set('lend-sum-interest', amount > 0 ? '+' + interest.toFixed(4) + ' SOL' : '—');
-    set('lend-sum-total', amount > 0 ? total.toFixed(4) + ' SOL' : '—');
-  };
-
-  // ── STATS ─────────────────────────────────────────────────────────────────
-  function loansUpdateStats() {
-    // Floor price placeholder — would come from Helius/ME API in prod
-    set('lstat-floor', '~1.8 ◎');
-    set('lstat-max', '~1.2 ◎'); // ~65% LTV
-    set('lstat-apy', '69%');
-    set('lstat-active', loansState.activeLoans.length.toString());
-  }
-
-  // ── LOAD ACTIVE LOANS (Supabase) ──────────────────────────────────────────
-  async function loansLoadActiveLoans() {
-    if (typeof getDb === 'undefined') return;
-    var wallet = (typeof walletPublicKey !== 'undefined' && walletPublicKey)
-      ? (walletPublicKey.toBase58 ? walletPublicKey.toBase58() : walletPublicKey) : null;
-    if (!wallet) return;
-
-    try {
-      var db = getDb();
-      var res = await db.from('loans')
-        .select('*')
-        .eq('borrower_wallet', wallet)
-        .eq('status', 'active')
-        .order('created_at', { ascending: false });
-
-      if (res.data && res.data.length > 0) {
-        loansState.activeLoans = res.data;
-        loansRenderActiveLoans();
-      }
-      set('lstat-active', (res.data || []).length.toString());
-      set('lnl-active-count', (res.data || []).length.toString());
-    } catch(e) {}
-  }
-
-  function loansRenderActiveLoans() {
-    var el = document.getElementById('lnl-active-loans');
-    if (!el) return;
-    if (loansState.activeLoans.length === 0) {
-      el.innerHTML = '<div style="text-align:center;padding:24px;color:#333;font-size:0.75rem;letter-spacing:1px">No active loans — you\'re debt free! 🤘</div>';
-      return;
-    }
-    el.innerHTML = loansState.activeLoans.map(function(loan) {
-      var due = new Date(loan.due_date);
-      var now = new Date();
-      var overdue = due < now;
-      var daysLeft = Math.ceil((due - now) / (1000*60*60*24));
-      var timeStr = overdue ? 'OVERDUE' : daysLeft + 'd left';
-      var total = (parseFloat(loan.amount) + parseFloat(loan.interest_owed || 0)).toFixed(4);
-      return '<div class="active-loan-card' + (overdue ? ' overdue' : '') + '">' +
-        '<img src="' + (loan.nft_image || '') + '" alt="" onerror="this.style.opacity=\'0\'">' +
-        '<div class="alc-info">' +
-          '<div class="alc-name">' + (loan.nft_name || 'LNL NFT') + '</div>' +
-          '<div class="alc-meta">' +
-            '<span class="alc-badge ' + (overdue ? 'overdue-b' : 'active-b') + '">' + (overdue ? 'OVERDUE' : 'ACTIVE') + '</span>' +
-            '<span class="alc-badge sol">◎ SOL</span>' +
-            '<span class="alc-time">' + timeStr + '</span>' +
-          '</div>' +
-        '</div>' +
-        '<div class="alc-right">' +
-          '<div class="alc-amount">' + parseFloat(loan.amount).toFixed(2) + ' ◎</div>' +
-          '<div class="alc-repay-total">Repay: ' + total + ' ◎</div>' +
-          '<button class="btn-repay" onclick="loansRepay(\'' + loan.id + '\')">REPAY</button>' +
-        '</div>' +
-        '</div>';
-    }).join('');
-  }
-
-  // ── LOAD OPEN REQUESTS ────────────────────────────────────────────────────
-  async function loansLoadOpenRequests() {
-    if (typeof getDb === 'undefined') return;
-    try {
-      var db = getDb();
-      var res = await db.from('loans')
-        .select('*')
-        .eq('status', 'open')
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      var el = document.getElementById('lnl-open-requests');
-      if (!el) return;
-
-      if (!res.data || res.data.length === 0) {
-        el.innerHTML = '<div style="text-align:center;padding:24px;color:#333;font-size:0.75rem;letter-spacing:1px">No open loan requests right now</div>';
-        return;
-      }
-
-      el.innerHTML = res.data.map(function(req) {
-        var days = req.duration_days || 14;
-        var apy = req.apy || 69;
-        return '<div class="lend-offer-card">' +
-          '<div class="lend-offer-left">' +
-            '<div class="lend-offer-icon">🦒</div>' +
-            '<div>' +
-              '<div class="lend-offer-name">' + (req.nft_name || 'LNL NFT') + '</div>' +
-              '<div class="lend-offer-meta">' + parseFloat(req.amount).toFixed(2) + ' SOL · ' + days + ' days</div>' +
-            '</div>' +
-          '</div>' +
-          '<div class="lend-offer-right">' +
-            '<div class="lend-apy">' + apy + '%</div>' +
-            '<div class="lend-apy-lbl">APY</div>' +
-            '<button class="btn-lend-offer" onclick="loansFulfill(\'' + req.id + '\')">FULFILL</button>' +
-          '</div>' +
-          '</div>';
-      }).join('');
-    } catch(e) {}
-  }
-
-  // ── MODE TOGGLE ───────────────────────────────────────────────────────────
-  window.loansSetMode = function(mode) {
-    loansState.mode = mode;
-    document.getElementById('lnl-mode-borrow').classList.toggle('active', mode === 'borrow');
-    document.getElementById('lnl-mode-lend').classList.toggle('active', mode === 'lend');
-    document.getElementById('loans-borrow-panel').style.display = mode === 'borrow' ? '' : 'none';
-    document.getElementById('loans-lend-panel').style.display = mode === 'lend' ? '' : 'none';
-  };
-
-  // ── REQUEST BORROW ────────────────────────────────────────────────────────
-  window.loansRequestBorrow = function() {
-    if (loansState.selectedNFT === null) return;
-    var amount = parseFloat(document.getElementById('lnl-borrow-amount').value) || 0;
-    if (amount <= 0) { loansToast('Enter a borrow amount', 'error'); return; }
-
-    var nft = loansState.nfts[loansState.selectedNFT];
-    var apy = parseFloat(document.getElementById('lnl-borrow-apy').value) || 69;
-    var days = loansState.borrowDuration;
-    var interest = amount * (apy / 100) * (days / 365);
-    var total = amount + interest;
-    var due = new Date(); due.setDate(due.getDate() + days);
-
-    // Populate modal
-    var img = document.getElementById('modal-nft-img');
-    if (img) img.src = nft.image || nft.pfpImage || '';
-    set('modal-nft-name', nft.name || 'LNL NFT');
-    set('modal-amount', amount.toFixed(2) + ' SOL');
-    set('modal-duration', days + ' days');
-    set('modal-apy', apy + '% APY');
-    set('modal-repay', total.toFixed(4) + ' SOL');
-    set('modal-due', due.toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'}));
-
-    document.getElementById('lnl-confirm-modal').classList.add('open');
-  };
-
-  window.loansCloseModal = function() {
-    document.getElementById('lnl-confirm-modal').classList.remove('open');
-  };
-
-  window.loansConfirmBorrow = async function() {
-    if (typeof getDb === 'undefined') {
-      loansToast('Database not connected', 'error'); return;
-    }
-    var nft = loansState.nfts[loansState.selectedNFT];
-    var wallet = walletPublicKey ? (walletPublicKey.toBase58 ? walletPublicKey.toBase58() : walletPublicKey) : null;
-    var amount = parseFloat(document.getElementById('lnl-borrow-amount').value);
-    var apy = parseFloat(document.getElementById('lnl-borrow-apy').value) || 69;
-    var days = loansState.borrowDuration;
-    var interest = amount * (apy / 100) * (days / 365);
-    var due = new Date(); due.setDate(due.getDate() + days);
-
-    try {
-      var db = getDb();
-      var res = await db.from('loans').insert({
-        borrower_wallet: wallet,
-        nft_mint: nft.mint || nft.id || '',
-        nft_name: nft.name || 'LNL NFT',
-        nft_image: nft.image || nft.pfpImage || '',
-        amount: amount,
-        apy: apy,
-        duration_days: days,
-        interest_owed: interest,
-        due_date: due.toISOString(),
-        status: 'open',
-        created_at: new Date().toISOString()
-      });
-
-      if (res.error) throw res.error;
-
-      loansCloseModal();
-      loansClearSelection();
-      loansToast('Loan request submitted! Waiting for a lender. 🤘', 'success');
-      loansLoadActiveLoans();
-    } catch(err) {
-      loansToast('Error: ' + (err.message || 'Could not submit loan'), 'error');
-    }
-  };
-
-  // ── REPAY ─────────────────────────────────────────────────────────────────
-  window.loansRepay = async function(loanId) {
-    if (typeof getDb === 'undefined') return;
-    try {
-      var db = getDb();
-      await db.from('loans').update({ status: 'repaid', repaid_at: new Date().toISOString() }).eq('id', loanId);
-      loansToast('Loan repaid! NFT unlocked. 🔓', 'success');
-      loansLoadActiveLoans();
-    } catch(e) {
-      loansToast('Repayment failed: ' + e.message, 'error');
-    }
-  };
-
-  // ── PLACE LEND OFFER ──────────────────────────────────────────────────────
-  window.loansPlaceOffer = function() {
-    loansToast('Lend functionality coming soon — watching the order book 👀', 'success');
-  };
-
-  window.loansFulfill = function(requestId) {
-    loansToast('Fulfilling loans coming soon — smart contract WIP 🔧', 'success');
-  };
-
-  // ── TOAST ─────────────────────────────────────────────────────────────────
-  function loansToast(msg, type) {
-    var t = document.getElementById('loan-toast');
-    if (!t) return;
-    t.textContent = msg;
-    t.className = 'loan-toast show' + (type ? ' ' + type : '');
-    clearTimeout(t._timer);
-    t._timer = setTimeout(function(){ t.classList.remove('show'); }, 3500);
-  }
-
-  // ── UTILS ─────────────────────────────────────────────────────────────────
-  function set(id, val) {
-    var el = document.getElementById(id);
-    if (el) el.textContent = val;
-  }
-
-  // ── CLOSE MODAL ON BG CLICK ────────────────────────────────────────────────
-  var modalBg = document.getElementById('lnl-confirm-modal');
-  if (modalBg) {
-    modalBg.addEventListener('click', function(e) {
-      if (e.target === modalBg) loansCloseModal();
+window.lConfirmBorrow=async function(){
+  if(!LS.selNFT||!LS.selOffer)return;
+  if(typeof getDb==='undefined'){lToast('DB not connected','error');return;}
+  var w=getW(), n=LS.selNFT.nft, o=LS.selOffer;
+  var int=calcInt(o.amount), due=new Date(); due.setDate(due.getDate()+LOAN_DAYS);
+  var nm=n.name||(LS.selNFT.col==='lnl'?'LNL NFT':'Golf Addict');
+  try {
+    var db=getDb();
+    var r=await db.from('loans').insert({
+      borrower_wallet:w, lender_wallet:o.lender_wallet||null, offer_id:o.id,
+      nft_mint:n.mint||n.id||'', nft_name:nm, nft_image:n.image||n.pfpImage||'',
+      nft_collection:LS.selNFT.col, amount:o.amount, interest:int,
+      due_date:due.toISOString(), status:'active', created_at:new Date().toISOString()
     });
-  }
+    if(r.error) throw r.error;
+    await db.from('loan_offers').update({status:'taken'}).eq('id',o.id);
+    lCloseModal(); lClearNFT(); LS.selOffer=null; lRenderOffers(); lUpdatePreview();
+    lToast('Loan submitted! 🤘','success');
+    lLoadActiveLoans(); lLoadOffers();
+  } catch(err){ lToast('Error: '+(err.message||'failed'),'error'); }
+};
 
-  // Auto-init if wallet already connected when tab loads
-  if (typeof walletPublicKey !== 'undefined' && walletPublicKey) {
-    window.init_loans_tab();
-  }
+// ─── ACTIVE LOANS ─────────────────────────────────────────────────────────────
+async function lLoadActiveLoans(){
+  if(typeof getDb==='undefined')return;
+  var w=getW(); if(!w)return;
+  try {
+    var r=await getDb().from('loans').select('*').eq('borrower_wallet',w).eq('status','active').order('due_date',{ascending:true});
+    LS.activeLoans=r.data||[];
+    setEl('l-active-count',LS.activeLoans.length.toString());
+    lRenderActive();
+  } catch(e){}
+}
 
+function lRenderActive(){
+  var el=document.getElementById('l-active-loans'); if(!el)return;
+  if(!LS.activeLoans.length){ el.innerHTML='<div style="text-align:center;padding:22px;color:#282828;font-size:0.72rem;letter-spacing:1px">No active loans — debt free 🤘</div>'; return; }
+  el.innerHTML=LS.activeLoans.map(function(loan){
+    var due=new Date(loan.due_date), now=new Date(), od=due<now;
+    var dl=Math.ceil((due-now)/864e5);
+    var total=(parseFloat(loan.amount)+parseFloat(loan.interest||0)).toFixed(4);
+    var cb=loan.nft_collection==='ga'?'<span class="badge ga">⛳ GA</span>':'<span class="badge lnl">🦒 LNL</span>';
+    return '<div class="active-loan-row'+(od?' overdue':'')+'">'+
+      '<img src="'+(loan.nft_image||'')+'" alt="" onerror="this.style.opacity=0">'+
+      '<div><div class="alr-name">'+(loan.nft_name||'NFT')+'</div>'+
+      '<div class="alr-meta">'+cb+'<span class="badge '+(od?'overdue':'active')+'">'+(od?'OVERDUE':'ACTIVE')+'</span>'+
+      '<span class="alr-time">'+(od?'PAST DUE':dl+'d left')+'</span></div></div>'+
+      '<div class="alr-right"><div class="alr-amount">'+parseFloat(loan.amount).toFixed(2)+' ◎</div>'+
+      '<div class="alr-repay">Repay: '+total+' ◎</div>'+
+      '<button class="btn-outline-red" style="margin-top:6px" onclick="lRepay(\''+loan.id+'\')">REPAY</button></div></div>';
+  }).join('');
+}
+
+window.lRepay=async function(id){
+  if(typeof getDb==='undefined')return;
+  try {
+    await getDb().from('loans').update({status:'repaid',repaid_at:new Date().toISOString()}).eq('id',id);
+    lToast('Loan repaid! NFT unlocked 🔓','success');
+    lLoadActiveLoans();
+    if(LS.mode==='history') lLoadHistory();
+  } catch(e){ lToast('Repayment error: '+e.message,'error'); }
+};
+
+// ─── PLACE OFFER ──────────────────────────────────────────────────────────────
+window.lPlaceOffer=async function(){
+  var a=parseFloat(document.getElementById('l-lend-amount').value)||0;
+  if(a<=0){lToast('Enter an offer amount','error');return;}
+  if(typeof getDb==='undefined'){lToast('DB not connected','error');return;}
+  var w=getW();
+  try {
+    var r=await getDb().from('loan_offers').insert({
+      lender_wallet:w, amount:a, duration_days:LOAN_DAYS,
+      min_interest:MIN_INT, apy:APY, status:'open', created_at:new Date().toISOString()
+    });
+    if(r.error) throw r.error;
+    lToast('Offer placed! Borrowers can see it 💚','success');
+    document.getElementById('l-lend-amount').value=''; lLendCalc();
+    lLoadMyOffers(); lLoadOffers();
+  } catch(err){ lToast('Error: '+err.message,'error'); }
+};
+
+async function lLoadMyOffers(){
+  if(typeof getDb==='undefined')return;
+  var w=getW(); if(!w)return;
+  try {
+    var r=await getDb().from('loan_offers').select('*').eq('lender_wallet',w).eq('status','open').order('created_at',{ascending:false});
+    LS.myOffers=r.data||[];
+    setEl('l-my-offers-count',LS.myOffers.length.toString());
+    setEl('ls-my-active',LS.myOffers.length.toString());
+    var el=document.getElementById('l-my-offers'); if(!el)return;
+    if(!LS.myOffers.length){ el.innerHTML='<div style="text-align:center;padding:22px;color:#282828;font-size:0.72rem;letter-spacing:1px">No open offers yet</div>'; return; }
+    el.innerHTML=LS.myOffers.map(function(o){
+      var i=calcInt(o.amount);
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 13px;background:#0d0d0d;border:1px solid rgba(255,255,255,0.05);border-radius:9px;margin-bottom:8px">'+
+        '<div><div style="font-weight:700;font-size:0.85rem;margin-bottom:2px">◎ '+parseFloat(o.amount).toFixed(2)+' SOL</div>'+
+        '<div style="font-size:0.65rem;color:#444">Earns +'+i.toFixed(4)+' SOL if taken</div></div>'+
+        '<button class="btn-outline-red" onclick="lCancelOffer(\''+o.id+'\')">CANCEL</button></div>';
+    }).join('');
+  } catch(e){}
+}
+
+window.lCancelOffer=async function(id){
+  if(typeof getDb==='undefined')return;
+  try {
+    await getDb().from('loan_offers').update({status:'cancelled'}).eq('id',id);
+    lToast('Offer cancelled','success'); lLoadMyOffers(); lLoadOffers();
+  } catch(e){ lToast('Error: '+e.message,'error'); }
+};
+
+async function lLoadOpenRequests(){
+  if(typeof getDb==='undefined')return;
+  try {
+    var r=await getDb().from('loans').select('*').eq('status','pending').order('created_at',{ascending:false}).limit(15);
+    var el=document.getElementById('l-open-requests'); if(!el)return;
+    var data=r.data||[];
+    if(!data.length){ el.innerHTML='<div style="text-align:center;padding:22px;color:#282828;font-size:0.72rem;letter-spacing:1px">No open borrow requests</div>'; return; }
+    el.innerHTML=data.map(function(req){
+      var i=calcInt(req.amount), col=req.nft_collection==='ga'?'⛳':'🦒';
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#0d0d0d;border:1px solid rgba(255,255,255,0.05);border-radius:9px;margin-bottom:8px">'+
+        '<div style="display:flex;gap:10px;align-items:center"><div style="font-size:1.4rem">'+col+'</div>'+
+        '<div><div style="font-weight:700;font-size:0.82rem;margin-bottom:2px">'+(req.nft_name||'NFT')+'</div>'+
+        '<div style="font-size:0.65rem;color:#444">Wants '+parseFloat(req.amount).toFixed(2)+' SOL · 7 days</div></div></div>'+
+        '<div style="text-align:right"><div style="font-size:0.9rem;font-weight:700;color:#22c55e">+'+i.toFixed(4)+' ◎</div>'+
+        '<div style="font-size:0.6rem;color:#444">You earn</div></div></div>';
+    }).join('');
+  } catch(e){}
+}
+
+// ─── HISTORY + PNL ────────────────────────────────────────────────────────────
+async function lLoadHistory(){
+  if(typeof getDb==='undefined')return;
+  var w=getW(); if(!w)return;
+  try {
+    var db=getDb();
+    var [rb,rl]=await Promise.all([
+      db.from('loans').select('*').eq('borrower_wallet',w).in('status',['repaid','defaulted']).order('created_at',{ascending:false}),
+      db.from('loans').select('*').eq('lender_wallet',w).in('status',['repaid','defaulted']).order('created_at',{ascending:false})
+    ]);
+    var borrows=(rb.data||[]).map(function(l){l._side='borrowed';return l;});
+    var lends  =(rl.data||[]).map(function(l){l._side='lent';    return l;});
+    LS.history=borrows.concat(lends).sort(function(a,b){return new Date(b.created_at)-new Date(a.created_at);});
+    lCalcPNL(); lRenderHistory();
+  } catch(e){}
+}
+
+function lCalcPNL(){
+  var earned=0, lost=0;
+  LS.history.forEach(function(h){
+    var i=parseFloat(h.interest||calcInt(parseFloat(h.amount)));
+    var a=parseFloat(h.amount);
+    if (h._side==='lent'     && h.status==='repaid')    earned+=i;
+    if (h._side==='borrowed' && h.status==='repaid')    lost+=i;
+    if (h._side==='borrowed' && h.status==='defaulted') lost+=a+i;
+  });
+  var pnl=earned-lost;
+  var pe=document.getElementById('h-pnl');
+  if(pe){ pe.textContent=(pnl>=0?'+':'')+pnl.toFixed(4)+' ◎'; pe.style.color=pnl>=0?'#22c55e':'#e01020'; }
+  setEl('h-earned','+'+earned.toFixed(4)+' ◎');
+  setEl('h-lost',  '-'+lost.toFixed(4)+' ◎');
+}
+
+function lRenderHistory(){
+  var el=document.getElementById('l-history-list'); if(!el)return;
+  var data=LS.history.filter(function(h){
+    if(LS.histFilter==='all')      return true;
+    if(LS.histFilter==='borrowed') return h._side==='borrowed';
+    if(LS.histFilter==='lent')     return h._side==='lent';
+    if(LS.histFilter==='repaid')   return h.status==='repaid';
+    if(LS.histFilter==='defaulted')return h.status==='defaulted';
+    return true;
+  });
+  if(!data.length){ el.innerHTML='<div style="text-align:center;padding:40px;color:#282828;font-size:0.75rem;letter-spacing:1px">No history matching this filter</div>'; return; }
+  el.innerHTML=data.map(function(h){
+    var i=parseFloat(h.interest||calcInt(parseFloat(h.amount))), a=parseFloat(h.amount);
+    var col=h.nft_collection==='ga'?'⛳':'🦒';
+    var side=h._side==='borrowed'?'BORROWED':'LENT';
+    var scol=h._side==='borrowed'?'#e01020':'#22c55e';
+    var icon=h.status==='repaid'?'✓':'💀';
+    var pnlV=0, pnlS='', pnlC='';
+    if(h._side==='lent'    &&h.status==='repaid')   {pnlV=i;   pnlS='+';pnlC='pos';}
+    if(h._side==='borrowed'&&h.status==='repaid')   {pnlV=i;   pnlS='-';pnlC='neg';}
+    if(h._side==='borrowed'&&h.status==='defaulted'){pnlV=a+i; pnlS='-';pnlC='neg';}
+    if(h._side==='lent'    &&h.status==='defaulted'){pnlV=0;pnlS='';pnlC='pos';}
+    var date=new Date(h.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    var pnlTxt=(pnlC==='pos'&&pnlV===0)?'NFT':pnlS+pnlV.toFixed(4)+' ◎';
+    return '<div class="hist-row">'+
+      '<img src="'+(h.nft_image||'')+'" alt="" onerror="this.textContent=\''+col+'\';this.style=\'font-size:1.4rem;text-align:center;line-height:40px\'">'+
+      '<div><div class="hr-name">'+(h.nft_name||'NFT')+' '+icon+'</div>'+
+      '<div class="hr-meta"><span style="color:'+scol+';font-size:0.6rem;font-weight:700;letter-spacing:1px">'+side+'</span> · '+a.toFixed(2)+' SOL · '+date+'</div></div>'+
+      '<div><div class="hr-pnl '+pnlC+'">'+pnlTxt+'</div><div class="hr-detail">'+(h.status==='repaid'?'Repaid':'Defaulted')+'</div></div>'+
+      '</div>';
+  }).join('');
+}
+
+window.lHistFilter=function(f,el){
+  LS.histFilter=f;
+  document.querySelectorAll('.hf-pill').forEach(function(p){p.classList.remove('active');});
+  if(el)el.classList.add('active');
+  lRenderHistory();
+};
+
+// ─── MODE ─────────────────────────────────────────────────────────────────────
+window.lMode=function(m){
+  LS.mode=m;
+  ['borrow','lend','history'].forEach(function(x){
+    document.getElementById('lm-'+x).classList.toggle('active',x===m);
+    document.getElementById('lp-'+x).style.display=x===m?'':'none';
+  });
+  if(m==='lend'){lLoadMyOffers();lLoadOpenRequests();}
+  if(m==='history'){lLoadHistory();}
+};
+
+// ─── UTILS ────────────────────────────────────────────────────────────────────
+function setEl(id,v){var e=document.getElementById(id);if(e)e.textContent=v;}
+function show(id){var e=document.getElementById(id);if(e)e.style.display='';}
+function hide(id){var e=document.getElementById(id);if(e)e.style.display='none';}
+function lToast(msg,type){
+  var t=document.getElementById('l-toast');if(!t)return;
+  t.textContent=msg; t.className='loan-toast show'+(type?' '+type:'');
+  clearTimeout(t._t); t._t=setTimeout(function(){t.classList.remove('show');},3500);
+}
+
+var mbg=document.getElementById('l-modal');
+if(mbg)mbg.addEventListener('click',function(e){if(e.target===mbg)lCloseModal();});
+
+if(typeof walletPublicKey!=='undefined'&&walletPublicKey) window.init_loans_tab();
 })();
 </script>
-
 </body>
 </html>
