@@ -8,7 +8,11 @@
     font-family: 'Space Grotesk', sans-serif;
     color: #f0e8e8;
     min-height: 80vh;
-    padding: 0 0 60px 0;
+    padding: 24px 24px 60px 24px;
+    max-width: 1100px;
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   /* ── MODE BAR ── */
@@ -415,17 +419,34 @@ function calcInt(amt) { return Math.max(MIN_INT, parseFloat((amt*APY*(LOAN_DAYS/
 
 // ─── FLOOR PRICE ──────────────────────────────────────────────────────────────
 async function lFetchFloors() {
+  // ME API blocks direct browser requests — use allorigins as a CORS proxy
+  async function meFetch(sym) {
+    var url = 'https://api-mainnet.magiceden.dev/v2/collections/'+sym+'/stats';
+    var proxy = 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
+    var r = await fetch(proxy);
+    var j = await r.json();
+    return JSON.parse(j.contents);
+  }
   try {
-    var [rL,rG] = await Promise.all([
-      fetch('https://api-mainnet.magiceden.dev/v2/collections/'+LNL_SYM+'/stats'),
-      fetch('https://api-mainnet.magiceden.dev/v2/collections/'+GA_SYM+'/stats')
-    ]);
-    var dL=await rL.json(), dG=await rG.json();
+    var [dL, dG] = await Promise.all([ meFetch(LNL_SYM), meFetch(GA_SYM) ]);
     var lStr = dL.floorPrice ? (dL.floorPrice/1e9).toFixed(3)+' ◎' : '—';
     var gStr = dG.floorPrice ? (dG.floorPrice/1e9).toFixed(3)+' ◎' : '—';
     setEl('bs-lnl-fp',lStr); setEl('ls-lnl-fp',lStr);
     setEl('bs-ga-fp', gStr); setEl('ls-ga-fp', gStr);
-  } catch(e) {}
+  } catch(e) {
+    // Fallback: try direct fetch (works if CORS opens up)
+    try {
+      var [rL,rG] = await Promise.all([
+        fetch('https://api-mainnet.magiceden.dev/v2/collections/'+LNL_SYM+'/stats'),
+        fetch('https://api-mainnet.magiceden.dev/v2/collections/'+GA_SYM+'/stats')
+      ]);
+      var dL2=await rL.json(), dG2=await rG.json();
+      var lStr2 = dL2.floorPrice ? (dL2.floorPrice/1e9).toFixed(3)+' ◎' : '—';
+      var gStr2 = dG2.floorPrice ? (dG2.floorPrice/1e9).toFixed(3)+' ◎' : '—';
+      setEl('bs-lnl-fp',lStr2); setEl('ls-lnl-fp',lStr2);
+      setEl('bs-ga-fp', gStr2); setEl('ls-ga-fp', gStr2);
+    } catch(e2) {}
+  }
 }
 
 // ─── NFTs ─────────────────────────────────────────────────────────────────────
