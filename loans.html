@@ -8,9 +8,7 @@
     font-family: 'Space Grotesk', sans-serif;
     color: #f0e8e8;
     min-height: 80vh;
-    padding: 24px 24px 60px 24px;
-    max-width: 1100px;
-    margin: 0 auto;
+    padding: 0 0 60px 0;
     width: 100%;
     box-sizing: border-box;
   }
@@ -302,6 +300,14 @@
                   <span class="lf-unit">◎ SOL</span>
                 </div>
               </div>
+              <div class="lend-form-field">
+                <label>Accept Collateral From</label>
+                <div class="nft-type-tabs" style="margin-bottom:0">
+                  <button class="nft-type-tab active" id="lend-col-both" onclick="lLendSetCol('both',this)">🦒⛳ Both</button>
+                  <button class="nft-type-tab" id="lend-col-lnl"  onclick="lLendSetCol('lnl',this)">🦒 LNL Only</button>
+                  <button class="nft-type-tab" id="lend-col-ga"   onclick="lLendSetCol('ga',this)">⛳ GA Only</button>
+                </div>
+              </div>
               <div class="info-box" style="margin-top:0">Duration: <strong>7 Days fixed</strong> · Rate: <strong>max(0.01 SOL, 7% APY)</strong></div>
               <div class="loan-summary">
                 <div class="ls-row"><span>You Send</span><span class="lv" id="ll-send">— SOL</span></div>
@@ -396,6 +402,7 @@ var GA_SYM       = 'golf_addicts';
 
 var LS = {
   mode:'borrow', col:'lnl',
+  lendCol:'both',
   selNFT:null, selOffer:null,
   lnlNFTs:[], gaNFTs:[],
   activeLoans:[], myOffers:[], openOffers:[], history:[],
@@ -515,15 +522,28 @@ function lRenderOffers(){
   el.innerHTML=LS.openOffers.map(function(o,i){
     var int=calcInt(o.amount), total=(o.amount+int).toFixed(4);
     var sel=LS.selOffer&&LS.selOffer.id===o.id;
+    var colBadge = o.accepted_collections==='lnl' ? '🦒 LNL Only'
+                 : o.accepted_collections==='ga'  ? '⛳ GA Only'
+                 : '🦒⛳ Both';
     return '<div class="offer-card'+(sel?' selected-offer':'')+'" id="oc-'+i+'">' +
-      '<div><div class="oc-amount">◎ '+parseFloat(o.amount).toFixed(2)+' SOL</div><div class="oc-meta">7 days · Repay '+total+' SOL</div></div>' +
+      '<div><div class="oc-amount">◎ '+parseFloat(o.amount).toFixed(2)+' SOL</div>' +
+      '<div class="oc-meta">7 days · Repay '+total+' SOL</div>' +
+      '<div style="font-size:0.6rem;color:#555;margin-top:3px;letter-spacing:1px">'+colBadge+'</div></div>' +
       '<div style="text-align:right"><div class="oc-earn">+'+int.toFixed(4)+' ◎</div><div class="oc-earn-lbl">Lender earns</div>' +
       '<button class="oc-sel-btn" onclick="lSelOffer('+i+')">'+(sel?'SELECTED ✓':'SELECT')+'</button></div>' +
       '</div>';
   }).join('');
 }
 
-window.lSelOffer=function(i){ LS.selOffer=LS.openOffers[i]; lRenderOffers(); lUpdatePreview(); };
+window.lSelOffer=function(i){
+  var o=LS.openOffers[i];
+  // Warn if selected NFT collection doesn't match this offer
+  if(LS.selNFT&&o.accepted_collections&&o.accepted_collections!=='both'&&o.accepted_collections!==LS.selNFT.col){
+    var needed=o.accepted_collections==='lnl'?'🦒 LNL':'⛳ GA';
+    lToast('Note: this offer only accepts '+needed+' NFTs','error');
+  }
+  LS.selOffer=o; lRenderOffers(); lUpdatePreview();
+};
 
 function lUpdatePreview(){
   var o=LS.selOffer;
@@ -573,6 +593,13 @@ window.lCloseModal=function(){ document.getElementById('l-modal').classList.remo
 window.lConfirmBorrow=async function(){
   if(!LS.selNFT||!LS.selOffer)return;
   if(typeof getDb==='undefined'){lToast('DB not connected','error');return;}
+  // Validate collection match
+  var ac=LS.selOffer.accepted_collections;
+  if(ac&&ac!=='both'&&ac!==LS.selNFT.col){
+    var needed=ac==='lnl'?'Long Neck Legends':'Golf Addicts';
+    lToast('This offer only accepts '+needed+' NFTs as collateral','error');
+    lCloseModal(); return;
+  }
   var w=getW(), n=LS.selNFT.nft, o=LS.selOffer;
   var int=calcInt(o.amount), due=new Date(); due.setDate(due.getDate()+LOAN_DAYS);
   var nm=n.name||(LS.selNFT.col==='lnl'?'LNL NFT':'Golf Addict');
@@ -633,6 +660,15 @@ window.lRepay=async function(id){
   } catch(e){ lToast('Repayment error: '+e.message,'error'); }
 };
 
+// ─── LEND COLLECTION PICKER ──────────────────────────────────────────────────
+window.lLendSetCol=function(c,el){
+  LS.lendCol=c;
+  ['lend-col-both','lend-col-lnl','lend-col-ga'].forEach(function(id){
+    var b=document.getElementById(id); if(b)b.classList.remove('active');
+  });
+  if(el)el.classList.add('active');
+};
+
 // ─── PLACE OFFER ──────────────────────────────────────────────────────────────
 window.lPlaceOffer=async function(){
   var a=parseFloat(document.getElementById('l-lend-amount').value)||0;
@@ -642,7 +678,9 @@ window.lPlaceOffer=async function(){
   try {
     var r=await getDb().from('loan_offers').insert({
       lender_wallet:w, amount:a, duration_days:LOAN_DAYS,
-      min_interest:MIN_INT, apy:APY, status:'open', created_at:new Date().toISOString()
+      min_interest:MIN_INT, apy:APY,
+      accepted_collections: LS.lendCol,
+      status:'open', created_at:new Date().toISOString()
     });
     if(r.error) throw r.error;
     lToast('Offer placed! Borrowers can see it 💚','success');
