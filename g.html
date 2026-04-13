@@ -412,6 +412,10 @@ a.plink:hover{
       display: block;
       grid-template-columns: unset;
     }
+    #view-loans.show {
+      display: block;
+      grid-template-columns: unset;
+    }
     @media (max-width: 800px) {
       .view.show { grid-template-columns: 1fr; }
       .dashboard{ padding: 1.4rem 1rem 3rem; }
@@ -1383,7 +1387,6 @@ a.plink:hover{
         <button class="dash-tab" id="tabLeaderboard" onclick="switchView('leaderboard')">🏆</button>
         <button class="dash-tab" id="tabVoice" onclick="switchView('voice')">🎙️ Voice</button>
         <button class="dash-tab" id="tabBot" onclick="window.open('https://longnecklegends.xyz/bot.html','_blank')">🤖 Bot</button>
-        <button class="dash-tab" id="tabLoans" onclick="switchView('loans')">💰 Loans</button>
       </div>
 
       <div class="dash-right">
@@ -1428,7 +1431,6 @@ a.plink:hover{
     <div class="view" id="view-leaderboard"></div>
     <div class="view" id="view-store"></div>
     <div class="view" id="view-voice"></div>
-    <div class="view" id="view-loans"></div>
   </div>
 
   <!-- PFP MODAL -->
@@ -2035,7 +2037,6 @@ a.plink:hover{
       var vl = document.getElementById("view-leaderboard");
       var vs = document.getElementById("view-store");
       var vv = document.getElementById("view-voice");
-      var vlo = document.getElementById("view-loans");
       if (vp) vp.classList.remove("show");
       if (vc) vc.classList.remove("show");
       if (vg) vg.classList.remove("show");
@@ -2043,7 +2044,6 @@ a.plink:hover{
       if (vl) vl.classList.remove("show");
       if (vs) vs.classList.remove("show");
       if (vv) vv.classList.remove("show");
-      if (vlo) vlo.classList.remove("show");
 
       // Deactivate all tabs
       var tabProfile = document.getElementById("tabProfile");
@@ -2060,8 +2060,6 @@ a.plink:hover{
       if (tabStore) tabStore.classList.remove("active");
       var tabVoice = document.getElementById("tabVoice");
       if (tabVoice) tabVoice.classList.remove("active");
-      var tabLoans = document.getElementById("tabLoans");
-      if (tabLoans) tabLoans.classList.remove("active");
 
       if (viewName === "profile") {
         stopChatPoll();
@@ -2110,67 +2108,8 @@ a.plink:hover{
         renderVoiceUI();
       }
 
-      if (viewName === "loans") {
-        stopChatPoll();
-        if (vlo) vlo.classList.add("show");
-        if (tabLoans) tabLoans.classList.add("active");
-        loadTab('loans', 'loans.html');
-      }
-
       // Update voice tab indicator — show live dot whenever in a room, regardless of active tab
       voice_updateTabIndicator();
-    }
-
-    // ── EXTERNAL TAB LOADER ──────────────────────────────────────────────────
-    // Fetches a standalone HTML file and injects it into the target view div.
-    // Scripts inside the fetched file are re-executed so their init functions run.
-    // The fetched page can access dashboard globals: session, db, walletPublicKey, etc.
-    var _loadedTabs = {}; // cache so repeat clicks don't re-fetch
-
-    async function loadTab(tabName, filePath) {
-      var container = document.getElementById('view-' + tabName);
-      if (!container) return;
-
-      // Already loaded — just let the show/hide handle it
-      if (_loadedTabs[tabName]) {
-        // Still call init in case wallet state changed since last load
-        var initFn = window['init_' + tabName + '_tab'];
-        if (typeof initFn === 'function') initFn();
-        return;
-      }
-
-      container.innerHTML = '<div style="text-align:center;padding:60px 20px;opacity:0.4;font-family:\'Space Grotesk\',sans-serif;letter-spacing:2px;font-size:0.85rem;">LOADING...</div>';
-
-      try {
-        var res = await fetch(filePath);
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        var html = await res.text();
-
-        var parser = new DOMParser();
-        var doc = parser.parseFromString(html, 'text/html');
-        container.innerHTML = doc.body.innerHTML;
-
-        // Re-execute any <script> tags (DOMParser doesn't run them)
-        container.querySelectorAll('script').forEach(function(oldScript) {
-          var newScript = document.createElement('script');
-          if (oldScript.src) {
-            newScript.src = oldScript.src;
-            newScript.async = false;
-          } else {
-            newScript.textContent = oldScript.textContent;
-          }
-          oldScript.replaceWith(newScript);
-        });
-
-        _loadedTabs[tabName] = true;
-
-        // Call the tab's init function if it registered one (e.g. window.init_loans_tab)
-        var initFn = window['init_' + tabName + '_tab'];
-        if (typeof initFn === 'function') initFn();
-
-      } catch (err) {
-        container.innerHTML = '<div style="color:#e01020;padding:40px;font-family:\'Space Grotesk\',sans-serif;">Failed to load ' + filePath + ': ' + err.message + '</div>';
-      }
     }
 
     // Bootstrap: one known GA mint → resolve collection group_value once, then use it for filtering
