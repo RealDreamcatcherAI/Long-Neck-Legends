@@ -2007,6 +2007,7 @@ a.plink:hover{
       var vl = document.getElementById("view-leaderboard"); if (vl) vl.classList.remove("show");
       var vs = document.getElementById("view-store"); if (vs) vs.classList.remove("show");
       var vv = document.getElementById("view-voice"); if (vv) vv.classList.remove("show");
+      var vlo = document.getElementById("view-loans"); if (vlo) vlo.classList.remove("show");
       voice_leave();
 
       session.profilePanelOpen = false;
@@ -2066,6 +2067,8 @@ a.plink:hover{
       if (tabStore) tabStore.classList.remove("active");
       var tabVoice = document.getElementById("tabVoice");
       if (tabVoice) tabVoice.classList.remove("active");
+      var tabLoans = document.getElementById("tabLoans");
+      if (tabLoans) tabLoans.classList.remove("active");
 
       if (viewName === "profile") {
         stopChatPoll();
@@ -2114,6 +2117,7 @@ a.plink:hover{
         renderVoiceUI();
       }
 
+
       if (viewName === "loans") {
         stopChatPoll();
         if (vlo) vlo.classList.add("show");
@@ -2125,48 +2129,36 @@ a.plink:hover{
       voice_updateTabIndicator();
     }
 
-    // ── EXTERNAL TAB LOADER ──────────────────────────────────────────────────
+    // ── EXTERNAL TAB LOADER ─────────────────────────────────────────────
     var _loadedTabs = {};
 
     async function loadTab(tabName, filePath) {
       var container = document.getElementById('view-' + tabName);
       if (!container) return;
-
       if (_loadedTabs[tabName]) {
         var initFn = window['init_' + tabName + '_tab'];
         if (typeof initFn === 'function') initFn();
         return;
       }
-
-      container.innerHTML = '<div style="text-align:center;padding:60px 20px;opacity:0.4;font-family:'Space Grotesk',sans-serif;letter-spacing:2px;font-size:0.85rem;">LOADING...</div>';
-
+      container.innerHTML = '<div style="text-align:center;padding:60px 20px;opacity:0.4;font-family:\'Space Grotesk\',sans-serif;letter-spacing:2px;font-size:0.85rem;">LOADING...</div>';
       try {
         var res = await fetch(filePath);
         if (!res.ok) throw new Error('HTTP ' + res.status);
         var html = await res.text();
-
         var parser = new DOMParser();
         var doc = parser.parseFromString(html, 'text/html');
         container.innerHTML = doc.body.innerHTML;
-
         container.querySelectorAll('script').forEach(function(oldScript) {
           var newScript = document.createElement('script');
-          if (oldScript.src) {
-            newScript.src = oldScript.src;
-            newScript.async = false;
-          } else {
-            newScript.textContent = oldScript.textContent;
-          }
+          if (oldScript.src) { newScript.src = oldScript.src; newScript.async = false; }
+          else { newScript.textContent = oldScript.textContent; }
           oldScript.replaceWith(newScript);
         });
-
         _loadedTabs[tabName] = true;
-
         var initFn = window['init_' + tabName + '_tab'];
         if (typeof initFn === 'function') initFn();
-
       } catch (err) {
-        container.innerHTML = '<div style="color:#e01020;padding:40px;font-family:'Space Grotesk',sans-serif;">Failed to load ' + filePath + ': ' + err.message + '</div>';
+        container.innerHTML = '<div style="color:#e01020;padding:40px;font-family:\'Space Grotesk\',sans-serif;">Failed to load ' + filePath + ': ' + err.message + '</div>';
       }
     }
 
