@@ -234,10 +234,10 @@
           <div class="loan-panel">
             <div class="lp-head">
               <span class="lp-title">Available Loan Offers</span>
-              <span style="font-size:0.65rem;color:#555">7 Days · Fixed</span>
+              <span style="font-size:0.65rem;color:#555">10 Min · Testing</span>
             </div>
             <div class="lp-body">
-              <div class="info-box">All loans are <strong>7 days fixed</strong>. Lenders earn <strong>0.01 SOL or 7%</strong> — whichever is greater. Pick an offer, then select your NFT collateral.</div>
+              <div class="info-box">All loans are <strong>10 min (testing)</strong>. Lenders earn <strong>0.01 SOL or 7%</strong> — whichever is greater. Pick an offer, then select your NFT collateral.</div>
               <div class="offer-list" id="l-offer-list"><div class="no-offers">Loading offers...</div></div>
             </div>
           </div>
@@ -257,7 +257,7 @@
               </div>
               <div class="loan-summary">
                 <div class="ls-row"><span>Borrow Amount</span><span class="lv" id="lp-amount">—</span></div>
-                <div class="ls-row"><span>Duration</span><span class="lv">7 Days (fixed)</span></div>
+                <div class="ls-row"><span>Duration</span><span class="lv">10 Min (testing)</span></div>
                 <div class="ls-row"><span>Collateral</span><span class="lv" id="lp-collateral">Not selected</span></div>
                 <hr class="ls-div"/>
                 <div class="ls-row red"><span>Interest Owed</span><span class="lv" id="lp-interest">—</span></div>
@@ -310,7 +310,7 @@
                   <button class="nft-type-tab" id="lend-col-ga"   onclick="lLendSetCol('ga',this)">⛳ GA Only</button>
                 </div>
               </div>
-              <div class="info-box" style="margin-top:0">Duration: <strong>7 Days fixed</strong> · Rate: <strong>max(0.01 SOL, 7% APY)</strong></div>
+              <div class="info-box" style="margin-top:0">Duration: <strong>10 Min (testing)</strong> · Rate: <strong>max(0.01 SOL, 7% APY)</strong></div>
               <div class="loan-summary">
                 <div class="ls-row"><span>You Send</span><span class="lv" id="ll-send">— SOL</span></div>
                 <div class="ls-row"><span>Interest Earned</span><span class="lv" id="ll-int">—</span></div>
@@ -379,13 +379,13 @@
     </div>
     <div class="loan-summary">
       <div class="ls-row"><span>Borrowing</span><span class="lv" id="m-amount">—</span></div>
-      <div class="ls-row"><span>Duration</span><span class="lv">7 Days</span></div>
+      <div class="ls-row"><span>Duration</span><span class="lv">10 Min</span></div>
       <div class="ls-row"><span>Interest</span><span class="lv" id="m-interest">—</span></div>
       <hr class="ls-div"/>
       <div class="ls-row red"><span>Total to Repay</span><span class="lv" id="m-repay">—</span></div>
       <div class="ls-row"><span>Due Date</span><span class="lv" id="m-due">—</span></div>
     </div>
-    <div class="lm-warn">⚠️ <strong>Defaulting permanently transfers your NFT to the lender.</strong> Only borrow what you can repay within 7 days.</div>
+    <div class="lm-warn">⚠️ <strong>Defaulting permanently transfers your NFT to the lender.</strong> Only borrow what you can repay within 10 minutes.</div>
     <button class="btn-red" onclick="lConfirmBorrow()">Confirm &amp; Submit Request</button>
   </div>
 </div>
@@ -396,7 +396,7 @@
 (function(){
 'use strict';
 
-var LOAN_DAYS    = 7;
+var LOAN_DAYS    = 10/1440; // 10 MINUTES — switch back to 7 for prod
 var MIN_INT      = 0.01;
 var APY          = 0.07;
 var LNL_SYM      = 'long_neck_legends';
@@ -547,7 +547,7 @@ function lRenderOffers(){
                  : '🦒⛳ Both';
     return '<div class="offer-card'+(sel?' selected-offer':'')+'" id="oc-'+i+'">' +
       '<div><div class="oc-amount">◎ '+parseFloat(o.amount).toFixed(2)+' SOL</div>' +
-      '<div class="oc-meta">7 days · Repay '+total+' SOL</div>' +
+      '<div class="oc-meta">10 min · Repay '+total+' SOL</div>' +
       '<div style="font-size:0.6rem;color:#555;margin-top:3px;letter-spacing:1px">'+colBadge+'</div></div>' +
       '<div style="text-align:right"><div class="oc-earn">+'+int.toFixed(4)+' ◎</div><div class="oc-earn-lbl">Lender earns</div>' +
       '<button class="oc-sel-btn" onclick="lSelOffer('+i+')">'+(sel?'SELECTED ✓':'SELECT')+'</button></div>' +
@@ -621,7 +621,7 @@ window.lConfirmBorrow=async function(){
     lCloseModal(); return;
   }
   var w=getW(), n=LS.selNFT.nft, o=LS.selOffer;
-  var int=calcInt(o.amount), due=new Date(); due.setDate(due.getDate()+LOAN_DAYS);
+  var int=calcInt(o.amount), due=new Date(); due.setTime(due.getTime()+LOAN_DAYS*24*60*60*1000);
   var nm=n.name||(LS.selNFT.col==='lnl'?'LNL NFT':'Golf Addict');
   try {
     var db=getDb();
@@ -749,7 +749,7 @@ async function lLoadOpenRequests(){
       return '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#0d0d0d;border:1px solid rgba(255,255,255,0.05);border-radius:9px;margin-bottom:8px">'+
         '<div style="display:flex;gap:10px;align-items:center"><div style="font-size:1.4rem">'+col+'</div>'+
         '<div><div style="font-weight:700;font-size:0.82rem;margin-bottom:2px">'+(req.nft_name||'NFT')+'</div>'+
-        '<div style="font-size:0.65rem;color:#444">Wants '+parseFloat(req.amount).toFixed(2)+' SOL · 7 days</div></div></div>'+
+        '<div style="font-size:0.65rem;color:#444">Wants '+parseFloat(req.amount).toFixed(2)+' SOL · 10 min</div></div></div>'+
         '<div style="text-align:right"><div style="font-size:0.9rem;font-weight:700;color:#22c55e">+'+i.toFixed(4)+' ◎</div>'+
         '<div style="font-size:0.6rem;color:#444">You earn</div></div></div>';
     }).join('');
