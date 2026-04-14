@@ -466,12 +466,14 @@ async function lFetchTotals(){
   if(typeof getDb==='undefined') return;
   try {
     var db=getDb();
-    // Sum all loans ever created (any status) for total borrowed
-    var rb = await db.from('loans').select('amount');
-    var totalBorrowed = (rb.data||[]).reduce(function(sum,r){ return sum+parseFloat(r.amount||0); },0);
-    // Sum all loan_offers ever placed (any status) for total loaned
-    var rl = await db.from('loan_offers').select('amount');
-    var totalLoaned = (rl.data||[]).reduce(function(sum,r){ return sum+parseFloat(r.amount||0); },0);
+    // Only count accepted loans (active, overdue, repaid, defaulted) — not open/pending
+    // Include interest so it reflects true volume
+    var rb = await db.from('loans').select('amount,interest').in('status',['active','overdue','repaid','defaulted']);
+    var totalBorrowed = (rb.data||[]).reduce(function(sum,r){
+      return sum + parseFloat(r.amount||0) + parseFloat(r.interest||0);
+    },0);
+    // Total loaned = same set of accepted loans from lender perspective
+    var totalLoaned = totalBorrowed; // same pool — what was lent = what was borrowed
     var bStr = totalBorrowed>0 ? totalBorrowed.toFixed(2)+' ◎' : '0 ◎';
     var lStr = totalLoaned>0  ? totalLoaned.toFixed(2)+' ◎'  : '0 ◎';
     setEl('bs-total-borrowed', bStr);
