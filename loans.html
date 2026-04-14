@@ -208,11 +208,12 @@
 
     <!-- ═══ BORROW ═══ -->
     <div id="lp-borrow">
-      <div class="loans-stats">
+      <div class="loans-stats" style="grid-template-columns:repeat(5,1fr)">
         <div class="loan-stat-card"><div class="sv" id="bs-total-borrowed">—</div><div class="sl">Total Borrowed</div></div>
+        <div class="loan-stat-card"><div class="sv" id="bs-my-borrowed">—</div><div class="sl">My Borrowed</div></div>
         <div class="loan-stat-card"><div class="sv" id="bs-lnl-fp">—</div><div class="sl">LNL Floor</div></div>
         <div class="loan-stat-card"><div class="sv" id="bs-ga-fp">—</div><div class="sl">GA Floor</div></div>
-        <div class="loan-stat-card"><div class="sv" id="bs-best">—</div><div class="sl">Best Offer</div></div>
+        <div class="loan-stat-card"><div class="sv" id="bs-best" style="color:#e01020">—</div><div class="sl" id="bs-best-label">Best Offer</div></div>
       </div>
       <div class="loans-panels">
         <!-- LEFT -->
@@ -284,8 +285,10 @@
 
     <!-- ═══ LEND ═══ -->
     <div id="lp-lend" style="display:none">
-      <div class="loans-stats">
+      <div class="loans-stats" style="grid-template-columns:repeat(6,1fr)">
         <div class="loan-stat-card green"><div class="sv" id="ls-total-loaned">—</div><div class="sl">Total Loaned</div></div>
+        <div class="loan-stat-card green"><div class="sv" id="ls-my-loaned">—</div><div class="sl">My Loaned</div></div>
+        <div class="loan-stat-card green"><div class="sv" id="ls-my-interest">—</div><div class="sl">My Interest</div></div>
         <div class="loan-stat-card green"><div class="sv" id="ls-lnl-fp">—</div><div class="sl">LNL Floor</div></div>
         <div class="loan-stat-card green"><div class="sv" id="ls-ga-fp">—</div><div class="sl">GA Floor</div></div>
         <div class="loan-stat-card green"><div class="sv" id="ls-my-active">0</div><div class="sl">My Active Offers</div></div>
@@ -464,20 +467,28 @@ async function lFetchFloors() {
 // ─── PLATFORM TOTALS ─────────────────────────────────────────────────────────
 async function lFetchTotals(){
   if(typeof getDb==='undefined') return;
+  var w=getW(); if(!w) return;
   try {
     var db=getDb();
-    // Only count accepted loans (active, overdue, repaid, defaulted) — not open/pending
-    // Include interest so it reflects true volume
-    var rb = await db.from('loans').select('amount,interest').in('status',['active','overdue','repaid','defaulted']);
-    var totalBorrowed = (rb.data||[]).reduce(function(sum,r){
-      return sum + parseFloat(r.amount||0) + parseFloat(r.interest||0);
-    },0);
-    // Total loaned = same set of accepted loans from lender perspective
-    var totalLoaned = totalBorrowed; // same pool — what was lent = what was borrowed
-    var bStr = totalBorrowed>0 ? totalBorrowed.toFixed(2)+' ◎' : '0 ◎';
-    var lStr = totalLoaned>0  ? totalLoaned.toFixed(2)+' ◎'  : '0 ◎';
-    setEl('bs-total-borrowed', bStr);
-    setEl('ls-total-loaned',   lStr);
+    var statuses=['active','overdue','repaid','defaulted'];
+    // All accepted loans platform-wide
+    var rb=await db.from('loans').select('amount,interest,borrower_wallet,lender_wallet').in('status',statuses);
+    var all=rb.data||[];
+    // Platform total (principal + interest)
+    var totalVol=all.reduce(function(s,r){return s+parseFloat(r.amount||0)+parseFloat(r.interest||0);},0);
+    setEl('bs-total-borrowed', totalVol>0?totalVol.toFixed(2)+' ◎':'0 ◎');
+    setEl('ls-total-loaned',   totalVol>0?totalVol.toFixed(2)+' ◎':'0 ◎');
+    // My borrowed (as borrower)
+    var myBorrow=all.filter(function(r){return r.borrower_wallet===w;});
+    var myBorrowTotal=myBorrow.reduce(function(s,r){return s+parseFloat(r.amount||0);},0);
+    setEl('bs-my-borrowed', myBorrowTotal>0?myBorrowTotal.toFixed(2)+' ◎':'0 ◎');
+    // My loaned + interest earned (as lender, repaid loans only)
+    var myLend=all.filter(function(r){return r.lender_wallet===w;});
+    var myLoanTotal=myLend.reduce(function(s,r){return s+parseFloat(r.amount||0);},0);
+    var myInterest=myLend.filter(function(r){return r.status==='repaid';})
+                        .reduce(function(s,r){return s+parseFloat(r.interest||0);},0);
+    setEl('ls-my-loaned',   myLoanTotal>0?myLoanTotal.toFixed(2)+' ◎':'0 ◎');
+    setEl('ls-my-interest', myInterest>0?'+'+myInterest.toFixed(4)+' ◎':'0 ◎');
   } catch(e){}
 }
 
@@ -542,7 +553,19 @@ async function lLoadOffers() {
     LS.openOffers=r.data||[];
     lRenderOffers();
     var best=LS.openOffers[0];
-    setEl('bs-best',best?parseFloat(best.amount).toFixed(2)+' ◎':'—');
+    if(best){
+      var bsEl=document.getElementById('bs-best');
+      var bsLbl=document.getElementById('bs-best-label');
+      if(bsEl){
+        var ac=best.accepted_collections;
+        bsEl.style.color=ac==='lnl'?'#e01020':ac==='ga'?'#f97316':'#22c55e';
+        bsEl.textContent=parseFloat(best.amount).toFixed(2)+' ◎';
+      }
+      if(bsLbl){
+        var acLbl=best.accepted_collections==='lnl'?'Best Offer (LNL)':best.accepted_collections==='ga'?'Best Offer (GA)':'Best Offer (Both)';
+        bsLbl.textContent=acLbl;
+      }
+    } else { setEl('bs-best','—'); }
   } catch(e){ lRenderOffers(); }
 }
 
