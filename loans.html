@@ -316,7 +316,7 @@
                 <div class="ls-row"><span>Interest Earned</span><span class="lv" id="ll-int">—</span></div>
                 <div class="ls-row green"><span>You Receive Back</span><span class="lv" id="ll-total">—</span></div>
               </div>
-              <button class="btn-green" onclick="lPlaceOffer()">Place Offer</button>
+              <button class="btn-green" id="l-place-offer-btn" onclick="lPlaceOffer()">Place Offer</button>
             </div>
           </div>
         </div>
@@ -397,6 +397,7 @@
 'use strict';
 
 var LOAN_MINUTES = 10;        // 10 MINUTES — switch back to 7*24*60 for prod
+var WORKER_URL   = 'https://lnl-loans.aglitcheddream.workers.dev'; // update after deploy
 var LOAN_DAYS    = LOAN_MINUTES / 1440; // fractional days used for math/interest calc
 var MIN_INT      = 0.01;
 var APY          = 0.07;
@@ -613,7 +614,6 @@ window.lCloseModal=function(){ document.getElementById('l-modal').classList.remo
 
 window.lConfirmBorrow=async function(){
   if(!LS.selNFT||!LS.selOffer)return;
-  if(typeof getDb==='undefined'){lToast('DB not connected','error');return;}
   // Validate collection match
   var ac=LS.selOffer.accepted_collections;
   if(ac&&ac!=='both'&&ac!==LS.selNFT.col){
@@ -622,22 +622,36 @@ window.lConfirmBorrow=async function(){
     lCloseModal(); return;
   }
   var w=getW(), n=LS.selNFT.nft, o=LS.selOffer;
-  var int=calcInt(o.amount), due=new Date(); due.setTime(due.getTime()+LOAN_MINUTES*60*1000);
   var nm=n.name||(LS.selNFT.col==='lnl'?'LNL NFT':'Golf Addict');
+
+  var btn=document.querySelector('#l-modal .btn-red');
+  if(btn){btn.disabled=true;btn.textContent='Processing...';}
+
   try {
-    var db=getDb();
-    var r=await db.from('loans').insert({
-      borrower_wallet:w, lender_wallet:o.lender_wallet||null, offer_id:o.id,
-      nft_mint:n.mint||n.id||'', nft_name:nm, nft_image:n.image||n.pfpImage||'',
-      nft_collection:LS.selNFT.col, amount:o.amount, interest:int,
-      due_date:due.toISOString(), status:'active', created_at:new Date().toISOString()
+    lToast('Accepting loan — worker sending SOL to you... ⏳','');
+
+    var r=await fetch(WORKER_URL+'/accept-loan',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        offer_id:o.id,
+        borrower_wallet:w,
+        nft_mint:n.mint||n.id||'',
+        nft_name:nm,
+        nft_image:n.image||n.pfpImage||'',
+        nft_collection:LS.selNFT.col
+      })
     });
-    if(r.error) throw r.error;
-    await db.from('loan_offers').update({status:'taken'}).eq('id',o.id);
+    var j=await r.json();
+    if(!r.ok||j.error) throw new Error(j.error||'Worker error');
+
     lCloseModal(); lClearNFT(); LS.selOffer=null; lRenderOffers(); lUpdatePreview();
-    lToast('Loan submitted! 🤘','success');
+    lToast('SOL sent to your wallet! 🎉 NFT is now collateral — repay before '+new Date(j.due_date).toLocaleString(),'success');
     lLoadActiveLoans(); lLoadOffers();
-  } catch(err){ lToast('Error: '+(err.message||'failed'),'error'); }
+  } catch(e){
+    lToast('Error: '+e.message,'error');
+  } finally {
+    if(btn){btn.disabled=false;btn.textContent='Confirm & Submit Request';}
+  }
 };
 
 // ─── ACTIVE LOANS ─────────────────────────────────────────────────────────────
@@ -672,10 +686,47 @@ function lRenderActive(){
 }
 
 window.lRepay=async function(id){
-  if(typeof getDb==='undefined')return;
+  var w=getW(); if(!w) return;
+  if(!window.solanaWeb3){lToast('Solana not loaded — refresh','error');return;}
+  var loan=LS.activeLoans.find(function(l){return l.id===id;});
+  if(!loan){lToast('Loan not found','error');return;}
+  var repayTotal=parseFloat(loan.amount)+parseFloat(loan.interest||0);
+  var lamports=Math.round(repayTotal*1e9);
   try {
-    await getDb().from('loans').update({status:'repaid',repaid_at:new Date().toISOString()}).eq('id',id);
-    lToast('Loan repaid! NFT unlocked 🔓','success');
+    // Get blockhash
+    var bhRes=await fetch(CONFIG.RPC_URL,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({jsonrpc:'2.0',id:1,method:'getLatestBlockhash',params:[{commitment:'finalized'}]})});
+    var bhJson=await bhRes.json();
+    var blockhash=bhJson.result.value.blockhash;
+    // Build repayment tx — borrower sends principal+interest to escrow
+    var escrowAddr=await getEscrowAddress();
+    var tx=new solanaWeb3.Transaction();
+    tx.recentBlockhash=blockhash;
+    tx.feePayer=walletPublicKey;
+    tx.add(solanaWeb3.SystemProgram.transfer({
+      fromPubkey:walletPublicKey,
+      toPubkey:new solanaWeb3.PublicKey(escrowAddr),
+      lamports:lamports
+    }));
+    lToast('Please approve repayment in your wallet 👛','');
+    var provider=walletProvider||window.solana;
+    var signed=await provider.signTransaction(tx);
+    var raw=signed.serialize();
+    var b64=btoa(Array.prototype.map.call(raw,function(b){return String.fromCharCode(b);}).join(''));
+    var sendRes=await fetch(CONFIG.RPC_URL,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({jsonrpc:'2.0',id:1,method:'sendTransaction',params:[b64,{encoding:'base64',maxRetries:5}]})});
+    var sendJson=await sendRes.json();
+    if(sendJson.error) throw new Error(sendJson.error.message||'TX failed');
+    var sig=sendJson.result;
+    lToast('Repayment sent! Confirming... ⏳','');
+    // Worker verifies + forwards SOL to lender
+    var r=await fetch(WORKER_URL+'/repay',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({loan_id:id,borrower_wallet:w,tx_signature:sig})
+    });
+    var j=await r.json();
+    if(!r.ok||j.error) throw new Error(j.error||'Worker error');
+    lToast('Loan repaid! NFT unlocked 🔓 Lender paid out automatically.','success');
     lLoadActiveLoans();
     if(LS.mode==='history') lLoadHistory();
   } catch(e){ lToast('Repayment error: '+e.message,'error'); }
@@ -690,25 +741,76 @@ window.lLendSetCol=function(c,el){
   if(el)el.classList.add('active');
 };
 
-// ─── PLACE OFFER ──────────────────────────────────────────────────────────────
+// ─── PLACE OFFER (on-chain) ───────────────────────────────────────────────────
 window.lPlaceOffer=async function(){
   var a=parseFloat(document.getElementById('l-lend-amount').value)||0;
   if(a<=0){lToast('Enter an offer amount','error');return;}
-  if(typeof getDb==='undefined'){lToast('DB not connected','error');return;}
-  var w=getW();
+  var w=getW(); if(!w){lToast('Wallet not connected','error');return;}
+  if(!window.solanaWeb3){lToast('Solana not loaded — refresh','error');return;}
+
+  var btn=document.getElementById('l-place-offer-btn');
+  if(btn){btn.disabled=true;btn.textContent='Sending...';}
+
   try {
-    var r=await getDb().from('loan_offers').insert({
-      lender_wallet:w, amount:a, duration_days:LOAN_MINUTES,
-      min_interest:MIN_INT, apy:APY,
-      accepted_collections: LS.lendCol,
-      status:'open', created_at:new Date().toISOString()
+    // Step 1: get blockhash
+    var bhRes=await fetch(CONFIG.RPC_URL,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({jsonrpc:'2.0',id:1,method:'getLatestBlockhash',params:[{commitment:'finalized'}]})});
+    var bhJson=await bhRes.json();
+    var blockhash=bhJson.result.value.blockhash;
+
+    // Step 2: build tx — user sends SOL to escrow
+    var escrowAddr=await getEscrowAddress();
+    var lamports=Math.round(a*1e9);
+    var tx=new solanaWeb3.Transaction();
+    tx.recentBlockhash=blockhash;
+    tx.feePayer=walletPublicKey;
+    tx.add(solanaWeb3.SystemProgram.transfer({
+      fromPubkey:walletPublicKey,
+      toPubkey:new solanaWeb3.PublicKey(escrowAddr),
+      lamports:lamports
+    }));
+
+    // Step 3: user signs and sends
+    lToast('Please approve the transaction in your wallet 👛','');
+    var provider=walletProvider||window.solana;
+    var signed=await provider.signTransaction(tx);
+    var raw=signed.serialize();
+    var b64=btoa(Array.prototype.map.call(raw,function(b){return String.fromCharCode(b);}).join(''));
+    var sendRes=await fetch(CONFIG.RPC_URL,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({jsonrpc:'2.0',id:1,method:'sendTransaction',params:[b64,{encoding:'base64',maxRetries:5}]})});
+    var sendJson=await sendRes.json();
+    if(sendJson.error) throw new Error(sendJson.error.message||'TX failed');
+    var sig=sendJson.result;
+
+    lToast('Transaction sent! Confirming... ⏳','');
+
+    // Step 4: tell worker to verify + create DB record
+    var wRes=await fetch(WORKER_URL+'/deposit-offer',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        lender_wallet:w, amount_sol:a,
+        tx_signature:sig,
+        accepted_collections:LS.lendCol
+      })
     });
-    if(r.error) throw r.error;
-    lToast('Offer placed! Borrowers can see it 💚','success');
+    var wJson=await wRes.json();
+    if(!wRes.ok||wJson.error) throw new Error(wJson.error||'Worker error');
+
+    lToast('Offer live! SOL locked in escrow 💚','success');
     document.getElementById('l-lend-amount').value=''; lLendCalc();
     lLoadMyOffers(); lLoadOffers();
-  } catch(err){ lToast('Error: '+err.message,'error'); }
+  } catch(e){
+    lToast('Error: '+e.message,'error');
+  } finally {
+    if(btn){btn.disabled=false;btn.textContent='Place Offer';}
+  }
 };
+
+async function getEscrowAddress(){
+  var r=await fetch(WORKER_URL+'/balance');
+  var j=await r.json();
+  return j.address;
+}
 
 async function lLoadMyOffers(){
   if(typeof getDb==='undefined')return;
@@ -731,10 +833,17 @@ async function lLoadMyOffers(){
 }
 
 window.lCancelOffer=async function(id){
-  if(typeof getDb==='undefined')return;
+  var w=getW(); if(!w) return;
+  lToast('Cancelling and refunding... ⏳','');
   try {
-    await getDb().from('loan_offers').update({status:'cancelled'}).eq('id',id);
-    lToast('Offer cancelled','success'); lLoadMyOffers(); lLoadOffers();
+    var r=await fetch(WORKER_URL+'/cancel-offer',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({offer_id:id,lender_wallet:w})
+    });
+    var j=await r.json();
+    if(!r.ok||j.error) throw new Error(j.error||'Failed');
+    lToast('Cancelled! SOL refunded to your wallet 💚','success');
+    lLoadMyOffers(); lLoadOffers();
   } catch(e){ lToast('Error: '+e.message,'error'); }
 };
 
