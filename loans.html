@@ -446,19 +446,58 @@ function getW() {
 
 function calcInt(amt) { return Math.max(MIN_INT, parseFloat((amt*APY*(LOAN_DAYS/365)).toFixed(4))); }
 
-// ─── FLOOR PRICE ─────────────────────────────────────────────────────────────
+// ─── FLOOR PRICE via Helius DAS ──────────────────────────────────────────────
 async function lFetchFloors() {
-  async function fetchFloor(sym) {
-    var url = 'https://api-mainnet.magiceden.dev/v2/collections/'+sym+'/stats';
-    var proxy = 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
-    var r = await fetch(proxy);
+  // LNL collection mint and GA collection mint from dashboard CONFIG
+  var LNL_MINT = '8Rt3Ayqth4DAiPnW9MDFi63TiQJHmohfTWLMQFHi4KZH';
+  var GA_MINT  = (typeof CONFIG !== 'undefined' && CONFIG.GA_COLLECTION_MINT) || null;
+
+  async function getFloorFromListings(collectionMint) {
+    var r = await fetch(CONFIG.RPC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0', id: 1,
+        method: 'getAssetsByGroup',
+        params: {
+          groupKey: 'collection',
+          groupValue: collectionMint,
+          page: 1, limit: 100,
+          sortBy: { sortBy: 'created', sortDirection: 'asc' }
+        }
+      })
+    });
     var j = await r.json();
-    var d = JSON.parse(j.contents);
-    return d.floorPrice ? d.floorPrice / 1e9 : null;
+    // Find cheapest listed price from results
+    var items = (j.result && j.result.items) || [];
+    var prices = items
+      .filter(function(a){ return a.listing && a.listing.price; })
+      .map(function(a){ return a.listing.price; });
+    if (!prices.length) return null;
+    return Math.min.apply(null, prices) / 1e9;
   }
+
+  // Try ME v2 API via multiple proxies, fall back to Helius
+  async function tryME(sym) {
+    var url = 'https://api-mainnet.magiceden.dev/v2/collections/'+sym+'/stats';
+    var proxies = [
+      'https://corsproxy.io/?'+encodeURIComponent(url),
+      'https://api.allorigins.win/get?url='+encodeURIComponent(url),
+    ];
+    for (var i = 0; i < proxies.length; i++) {
+      try {
+        var r = await fetch(proxies[i]);
+        var j = await r.json();
+        var d = j.contents ? JSON.parse(j.contents) : j;
+        if (d.floorPrice) return d.floorPrice / 1e9;
+      } catch(e) {}
+    }
+    return null;
+  }
+
   try {
-    var lnl = await fetchFloor('long_neck_legends');
-    var ga  = await fetchFloor('golf_addicts');
+    var lnl = await tryME('long_neck_legends');
+    var ga  = await tryME('golf_addicts');
     var lStr = lnl ? lnl.toFixed(3)+' ◎' : '—';
     var gStr = ga  ? ga.toFixed(3)+' ◎'  : '—';
     setEl('bs-lnl-fp',lStr); setEl('ls-lnl-fp',lStr);
