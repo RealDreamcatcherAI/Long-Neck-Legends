@@ -2163,19 +2163,10 @@ a.plink:hover{
         var doc = new DOMParser().parseFromString(html, 'text/html');
         container.innerHTML = doc.body.innerHTML;
         var scriptTags = Array.from(container.querySelectorAll('script'));
-        for (var si = 0; si < scriptTags.length; si++) {
-          var oldS = scriptTags[si];
-          var newS = document.createElement('script');
-          if (oldS.src) {
-            newS.src = oldS.src;
-            newS.async = false;
-          } else {
-            newS.textContent = oldS.textContent;
-          }
-          if (oldS.parentNode) {
-            oldS.parentNode.replaceChild(newS, oldS);
-          }
-        }
+        scriptTags.forEach(function(scr) { scr.parentNode.removeChild(scr); });
+        var scriptContent = '';
+        scriptTags.forEach(function(scr) { if (!scr.src) scriptContent += scr.textContent + '\n'; });
+        if (scriptContent) { try { eval(scriptContent); } catch(se) { console.error('loans script error:', se); } }
         _loadedTabs[tabName] = true;
         loansPinGlobals();
         var fn = window['init_' + tabName + '_tab'];
