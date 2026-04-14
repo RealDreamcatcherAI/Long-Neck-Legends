@@ -418,7 +418,7 @@ window.init_loans_tab = function() {
   var w = getW();
   if (!w) { show('loans-gate'); hide('loans-main'); return; }
   hide('loans-gate'); show('loans-main');
-  lLoadNFTs(); lLoadOffers(); lLoadActiveLoans(); lFetchFloors(); lFetchTotals();
+  lLoadNFTs(); lLoadOffers(); lLoadActiveLoans(); lFetchFloors(); lFetchTotals(); lMarkOverdue();
 };
 
 function getW() {
@@ -459,6 +459,11 @@ async function lFetchTotals(){
     setEl('bs-total-borrowed', bStr);
     setEl('ls-total-loaned',   lStr);
   } catch(e){}
+}
+
+// ─── MARK OVERDUE ────────────────────────────────────────────────────────────
+async function lMarkOverdue(){
+  try { await fetch(WORKER_URL+'/mark-overdue',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}); } catch(e){}
 }
 
 // ─── NFTs ─────────────────────────────────────────────────────────────────────
@@ -851,6 +856,35 @@ async function lLoadOpenRequests(){
     }).join('');
   } catch(e){}
 }
+
+// ─── CLAIM DEFAULT ────────────────────────────────────────────────────────────
+window.lClaimDefault=async function(id){
+  var w=getW(); if(!w)return;
+  if(!confirm('Claim this NFT as collateral? This marks the loan as defaulted.')) return;
+  lToast('Claiming default...','');
+  try{
+    var r=await fetch(WORKER_URL+'/claim-default',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({loan_id:id,lender_wallet:w})});
+    var j=await r.json();
+    if(!r.ok||j.error) throw new Error(j.error||'Failed');
+    lToast('Loan defaulted. NFT is yours — transfer it from the borrower's wallet. 🎉','success');
+    lLoadActiveLoans(); if(LS.mode==='history') lLoadHistory();
+  }catch(e){ lToast('Error: '+e.message,'error'); }
+};
+
+// ─── EXTEND LOAN ──────────────────────────────────────────────────────────────
+window.lExtendLoan=async function(id){
+  var w=getW(); if(!w)return;
+  var days=parseInt(prompt('How many extra days to give the borrower?','7'));
+  if(!days||days<1) return;
+  lToast('Extending loan...','');
+  try{
+    var r=await fetch(WORKER_URL+'/extend-loan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({loan_id:id,lender_wallet:w,extra_days:days})});
+    var j=await r.json();
+    if(!r.ok||j.error) throw new Error(j.error||'Failed');
+    lToast('Loan extended by '+days+' days 👍','success');
+    lLoadActiveLoans();
+  }catch(e){ lToast('Error: '+e.message,'error'); }
+};
 
 // ─── HISTORY + PNL ────────────────────────────────────────────────────────────
 async function lLoadHistory(){
