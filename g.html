@@ -1957,6 +1957,8 @@ a.plink:hover{
         // Pin to window so dynamically injected tab scripts can access it
         window.walletPublicKey = walletPublicKey;
         window.walletProvider  = walletProvider;
+        // Clear tab cache so loans re-injects with fresh wallet state
+        if (typeof _loadedTabs !== 'undefined') _loadedTabs['loans'] = false;
 
         var addr = walletPublicKey.toBase58();
         document.getElementById("walletDisplay").textContent = shortAddr(addr);
