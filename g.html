@@ -2132,21 +2132,27 @@ a.plink:hover{
 
     // ── EXTERNAL TAB LOADER ──────────────────────────────────────────────────
     var _loadedTabs = {};
+    function loansPinGlobals() {
+      window.walletPublicKey = walletPublicKey;
+      window.walletProvider  = walletProvider;
+      window.session         = session;
+      window.CONFIG          = CONFIG;
+      window.getDb           = getDb;
+    }
     async function loadTab(tabName, filePath) {
       var container = document.getElementById('view-' + tabName);
       if (!container) return;
+      loansPinGlobals();
       if (_loadedTabs[tabName]) {
-        // Always refresh wallet globals before re-calling init
-        window.walletPublicKey = walletPublicKey;
-        window.walletProvider  = walletProvider;
-        window.session         = session;
-        window.CONFIG          = CONFIG;
-        window.getDb           = getDb;
         var initFn = window['init_' + tabName + '_tab'];
         if (typeof initFn === 'function') initFn();
         return;
       }
-      container.innerHTML = '<div style="text-align:center;padding:60px;opacity:0.4;font-family:\'Space Grotesk\',sans-serif;letter-spacing:2px;font-size:0.85rem;">LOADING...</div>';
+      var loadingDiv = document.createElement('div');
+      loadingDiv.style.cssText = 'text-align:center;padding:60px;opacity:0.4;letter-spacing:2px;font-size:0.85rem;';
+      loadingDiv.textContent = 'LOADING...';
+      container.innerHTML = '';
+      container.appendChild(loadingDiv);
       try {
         var res = await fetch(filePath);
         if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -2154,23 +2160,27 @@ a.plink:hover{
         var parser = new DOMParser();
         var doc = parser.parseFromString(html, 'text/html');
         container.innerHTML = doc.body.innerHTML;
-        container.querySelectorAll('script').forEach(function(oldScript) {
+        var scripts = container.querySelectorAll('script');
+        scripts.forEach(function(oldScript) {
           var newScript = document.createElement('script');
-          if (oldScript.src) { newScript.src = oldScript.src; newScript.async = false; }
-          else { newScript.textContent = oldScript.textContent; }
-          oldScript.replaceWith(newScript);
+          if (oldScript.src) {
+            newScript.src = oldScript.src;
+            newScript.async = false;
+          } else {
+            newScript.textContent = oldScript.textContent;
+          }
+          oldScript.parentNode.replaceChild(newScript, oldScript);
         });
         _loadedTabs[tabName] = true;
-        // Expose fresh wallet state before init
-        window.walletPublicKey = walletPublicKey;
-        window.walletProvider  = walletProvider;
-        window.session         = session;
-        window.CONFIG          = CONFIG;
-        window.getDb           = getDb;
+        loansPinGlobals();
         var initFn = window['init_' + tabName + '_tab'];
         if (typeof initFn === 'function') initFn();
       } catch (err) {
-        container.innerHTML = '<div style="color:#e01020;padding:40px;font-family:\'Space Grotesk\',sans-serif;">Failed to load ' + filePath + ': ' + err.message + '</div>';
+        var errDiv = document.createElement('div');
+        errDiv.style.cssText = 'color:#e01020;padding:40px;';
+        errDiv.textContent = 'Failed to load ' + filePath + ': ' + err.message;
+        container.innerHTML = '';
+        container.appendChild(errDiv);
       }
     }
 
