@@ -10,7 +10,6 @@
 
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { max-width: 100vw; overflow-x: hidden; }
 
     /* Keep banner links (like X) white */
 a.plink,
@@ -198,9 +197,6 @@ a.plink:hover{
       border-bottom: 2px solid rgba(139,0,0,0.4);
       box-shadow: 0 2px 15px rgba(224,16,32,0.08);
       display: none;
-      width: 100%;
-      max-width: 100vw;
-      overflow: hidden;
     }
     .dash-nav-wrap.show { display: block; }
 
@@ -221,7 +217,6 @@ a.plink:hover{
       align-items: center;
       gap: 0.75rem;
       flex-wrap: wrap;
-      overflow: hidden;
     }
     .dash-right{ flex: 0 0 auto; }
 
@@ -1997,6 +1992,8 @@ a.plink:hover{
       walletProvider = null;
       walletPublicKey = null;
       pk_canonicalWallet = null;
+      window.walletPublicKey = null;
+      window.walletProvider  = null;
 
       document.getElementById("dashNavWrap").classList.remove("show");
       document.getElementById("walletChip").style.display = "none";
@@ -2012,7 +2009,6 @@ a.plink:hover{
       var vl = document.getElementById("view-leaderboard"); if (vl) vl.classList.remove("show");
       var vs = document.getElementById("view-store"); if (vs) vs.classList.remove("show");
       var vv = document.getElementById("view-voice"); if (vv) vv.classList.remove("show");
-      var vlo = document.getElementById("view-loans"); if (vlo) vlo.classList.remove("show");
       voice_leave();
 
       session.profilePanelOpen = false;
@@ -2030,8 +2026,6 @@ a.plink:hover{
       if (tabStore) tabStore.classList.remove("active");
       var tabVoice = document.getElementById("tabVoice");
       if (tabVoice) tabVoice.classList.remove("active");
-      var tabLoans = document.getElementById("tabLoans");
-      if (tabLoans) tabLoans.classList.remove("active");
 
       session.currentView = "profile";
     }
@@ -2047,7 +2041,6 @@ a.plink:hover{
       var vl = document.getElementById("view-leaderboard");
       var vs = document.getElementById("view-store");
       var vv = document.getElementById("view-voice");
-      var vlo = document.getElementById("view-loans");
       if (vp) vp.classList.remove("show");
       if (vc) vc.classList.remove("show");
       if (vg) vg.classList.remove("show");
@@ -2055,7 +2048,6 @@ a.plink:hover{
       if (vl) vl.classList.remove("show");
       if (vs) vs.classList.remove("show");
       if (vv) vv.classList.remove("show");
-      if (vlo) vlo.classList.remove("show");
 
       // Deactivate all tabs
       var tabProfile = document.getElementById("tabProfile");
@@ -2072,8 +2064,6 @@ a.plink:hover{
       if (tabStore) tabStore.classList.remove("active");
       var tabVoice = document.getElementById("tabVoice");
       if (tabVoice) tabVoice.classList.remove("active");
-      var tabLoans = document.getElementById("tabLoans");
-      if (tabLoans) tabLoans.classList.remove("active");
 
       if (viewName === "profile") {
         stopChatPoll();
@@ -2122,11 +2112,12 @@ a.plink:hover{
         renderVoiceUI();
       }
 
-
       if (viewName === "loans") {
         stopChatPoll();
-        if (vlo) vlo.classList.add("show");
-        if (tabLoans) tabLoans.classList.add("active");
+        var vlo2 = document.getElementById("view-loans");
+        var tabLoans2 = document.getElementById("tabLoans");
+        if (vlo2) vlo2.classList.add("show");
+        if (tabLoans2) tabLoans2.classList.add("active");
         loadTab('loans', 'loans.html');
       }
 
@@ -2134,18 +2125,23 @@ a.plink:hover{
       voice_updateTabIndicator();
     }
 
-    // ── EXTERNAL TAB LOADER ─────────────────────────────────────────────
+    // ── EXTERNAL TAB LOADER ──────────────────────────────────────────────────
     var _loadedTabs = {};
-
     async function loadTab(tabName, filePath) {
       var container = document.getElementById('view-' + tabName);
       if (!container) return;
       if (_loadedTabs[tabName]) {
+        // Always refresh wallet globals before re-calling init
+        window.walletPublicKey = walletPublicKey;
+        window.walletProvider  = walletProvider;
+        window.session         = session;
+        window.CONFIG          = CONFIG;
+        window.getDb           = getDb;
         var initFn = window['init_' + tabName + '_tab'];
         if (typeof initFn === 'function') initFn();
         return;
       }
-      container.innerHTML = '<div style="text-align:center;padding:60px 20px;opacity:0.4;font-family:\'Space Grotesk\',sans-serif;letter-spacing:2px;font-size:0.85rem;">LOADING...</div>';
+      container.innerHTML = '<div style="text-align:center;padding:60px;opacity:0.4;font-family:\'Space Grotesk\',sans-serif;letter-spacing:2px;font-size:0.85rem;">LOADING...</div>';
       try {
         var res = await fetch(filePath);
         if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -2160,6 +2156,12 @@ a.plink:hover{
           oldScript.replaceWith(newScript);
         });
         _loadedTabs[tabName] = true;
+        // Expose fresh wallet state before init
+        window.walletPublicKey = walletPublicKey;
+        window.walletProvider  = walletProvider;
+        window.session         = session;
+        window.CONFIG          = CONFIG;
+        window.getDb           = getDb;
         var initFn = window['init_' + tabName + '_tab'];
         if (typeof initFn === 'function') initFn();
       } catch (err) {
@@ -2334,6 +2336,12 @@ a.plink:hover{
 
         document.getElementById("dashboard").classList.add("show");
         switchView("profile");
+        // Expose key globals so injected tabs (loans, etc.) can access them
+        window.walletPublicKey = walletPublicKey;
+        window.walletProvider  = walletProvider;
+        window.session         = session;
+        window.CONFIG          = CONFIG;
+        window.getDb           = getDb;
 
       } catch (err) {
         console.error("Dashboard error:", err);
