@@ -447,15 +447,10 @@ function lTryInit(attempt) {
 
 function getW() {
   try {
+    // window.walletPublicKey is pinned by dashboard on connect
     if (window.walletPublicKey) {
       return window.walletPublicKey.toBase58 ? window.walletPublicKey.toBase58() : String(window.walletPublicKey);
     }
-    if (typeof session !== 'undefined' && session && session.profileId) {
-      if (window.walletPublicKey) return window.walletPublicKey.toBase58();
-    }
-    if (window.solflare && window.solflare.isConnected && window.solflare.publicKey) return window.solflare.publicKey.toBase58();
-    if (window.phantom && window.phantom.solana && window.phantom.solana.isConnected && window.phantom.solana.publicKey) return window.phantom.solana.publicKey.toBase58();
-    if (window.solana && window.solana.isConnected && window.solana.publicKey) return window.solana.publicKey.toBase58();
   } catch(e) {}
   return null;
 }
