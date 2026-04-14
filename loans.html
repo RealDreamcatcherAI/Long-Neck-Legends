@@ -550,13 +550,13 @@ function lRenderOffers(){
   el.innerHTML=LS.openOffers.map(function(o,i){
     var int=calcInt(o.amount), total=(o.amount+int).toFixed(4);
     var sel=LS.selOffer&&LS.selOffer.id===o.id;
-    var colBadge = o.accepted_collections==='lnl' ? '🦒 LNL Only'
-                 : o.accepted_collections==='ga'  ? '⛳ GA Only'
-                 : '🦒⛳ Both';
+    var ac=o.accepted_collections;
+    var colBadge = ac==='lnl' ? '🦒 LNL Only' : ac==='ga' ? '⛳ Golf Addicts Only' : '🦒⛳ LNL + Golf Addicts';
+    var colColor = ac==='lnl' ? '#e01020' : ac==='ga' ? '#f97316' : '#22c55e';
     return '<div class="offer-card'+(sel?' selected-offer':'')+'" id="oc-'+i+'">' +
       '<div><div class="oc-amount">◎ '+parseFloat(o.amount).toFixed(2)+' SOL</div>' +
       '<div class="oc-meta">10 min · Repay '+total+' SOL</div>' +
-      '<div style="font-size:0.6rem;color:#555;margin-top:3px;letter-spacing:1px">'+colBadge+'</div></div>' +
+      '<div style="font-size:0.62rem;font-weight:700;color:'+colColor+';margin-top:4px">'+colBadge+'</div></div>' +
       '<div style="text-align:right"><div class="oc-earn">+'+int.toFixed(4)+' ◎</div><div class="oc-earn-lbl">Lender earns</div>' +
       '<button class="oc-sel-btn" onclick="lSelOffer('+i+')">'+(sel?'SELECTED ✓':'SELECT')+'</button></div>' +
       '</div>';
