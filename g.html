@@ -10,6 +10,7 @@
 
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { max-width: 100vw; overflow-x: hidden; }
 
     /* Keep banner links (like X) white */
 a.plink,
@@ -197,6 +198,9 @@ a.plink:hover{
       border-bottom: 2px solid rgba(139,0,0,0.4);
       box-shadow: 0 2px 15px rgba(224,16,32,0.08);
       display: none;
+      width: 100%;
+      max-width: 100vw;
+      overflow: hidden;
     }
     .dash-nav-wrap.show { display: block; }
 
@@ -1954,11 +1958,10 @@ a.plink:hover{
         walletProvider = provider;
         walletPublicKey = resp.publicKey || provider.publicKey;
         if (!walletPublicKey) throw new Error("Wallet connected but no public key returned. Try unlocking your wallet first.");
-        // Pin to window so dynamically injected tab scripts can access it
+        // Pin to window + clear loans cache so it re-injects with wallet available
         window.walletPublicKey = walletPublicKey;
-        window.walletProvider  = walletProvider;
-        // Clear tab cache so loans re-injects with fresh wallet state
-        if (typeof _loadedTabs !== 'undefined') _loadedTabs['loans'] = false;
+        window.walletProvider = walletProvider;
+        if (typeof _loadedTabs !== "undefined") _loadedTabs["loans"] = false;
 
         var addr = walletPublicKey.toBase58();
         document.getElementById("walletDisplay").textContent = shortAddr(addr);
@@ -1997,8 +2000,6 @@ a.plink:hover{
       walletProvider = null;
       walletPublicKey = null;
       pk_canonicalWallet = null;
-      window.walletPublicKey = null;
-      window.walletProvider  = null;
 
       document.getElementById("dashNavWrap").classList.remove("show");
       document.getElementById("walletChip").style.display = "none";
@@ -2046,6 +2047,7 @@ a.plink:hover{
       var vl = document.getElementById("view-leaderboard");
       var vs = document.getElementById("view-store");
       var vv = document.getElementById("view-voice");
+      var vlo = document.getElementById("view-loans");
       if (vp) vp.classList.remove("show");
       if (vc) vc.classList.remove("show");
       if (vg) vg.classList.remove("show");
@@ -2053,6 +2055,7 @@ a.plink:hover{
       if (vl) vl.classList.remove("show");
       if (vs) vs.classList.remove("show");
       if (vv) vv.classList.remove("show");
+      if (vlo) vlo.classList.remove("show");
 
       // Deactivate all tabs
       var tabProfile = document.getElementById("tabProfile");
@@ -2069,6 +2072,8 @@ a.plink:hover{
       if (tabStore) tabStore.classList.remove("active");
       var tabVoice = document.getElementById("tabVoice");
       if (tabVoice) tabVoice.classList.remove("active");
+      var tabLoans = document.getElementById("tabLoans");
+      if (tabLoans) tabLoans.classList.remove("active");
 
       if (viewName === "profile") {
         stopChatPoll();
@@ -2119,10 +2124,8 @@ a.plink:hover{
 
       if (viewName === "loans") {
         stopChatPoll();
-        var vlo2 = document.getElementById("view-loans");
-        var tabLoans2 = document.getElementById("tabLoans");
-        if (vlo2) vlo2.classList.add("show");
-        if (tabLoans2) tabLoans2.classList.add("active");
+        if (vlo) vlo.classList.add("show");
+        if (tabLoans) tabLoans.classList.add("active");
         loadTab('loans', 'loans.html');
       }
 
@@ -2131,7 +2134,6 @@ a.plink:hover{
     }
 
     // ── EXTERNAL TAB LOADER ──────────────────────────────────────────────────
-    var _loadedTabs = {};
     function loansPinGlobals() {
       window.walletPublicKey = walletPublicKey;
       window.walletProvider  = walletProvider;
@@ -2139,13 +2141,14 @@ a.plink:hover{
       window.CONFIG          = CONFIG;
       window.getDb           = getDb;
     }
+    var _loadedTabs = {};
     async function loadTab(tabName, filePath) {
       var container = document.getElementById('view-' + tabName);
       if (!container) return;
       loansPinGlobals();
       if (_loadedTabs[tabName]) {
-        var initFn = window['init_' + tabName + '_tab'];
-        if (typeof initFn === 'function') initFn();
+        var fn = window['init_' + tabName + '_tab'];
+        if (typeof fn === 'function') fn();
         return;
       }
       var loadingDiv = document.createElement('div');
@@ -2157,30 +2160,24 @@ a.plink:hover{
         var res = await fetch(filePath);
         if (!res.ok) throw new Error('HTTP ' + res.status);
         var html = await res.text();
-        var parser = new DOMParser();
-        var doc = parser.parseFromString(html, 'text/html');
+        var doc = new DOMParser().parseFromString(html, 'text/html');
         container.innerHTML = doc.body.innerHTML;
-        var scripts = container.querySelectorAll('script');
-        scripts.forEach(function(oldScript) {
-          var newScript = document.createElement('script');
-          if (oldScript.src) {
-            newScript.src = oldScript.src;
-            newScript.async = false;
-          } else {
-            newScript.textContent = oldScript.textContent;
-          }
-          oldScript.parentNode.replaceChild(newScript, oldScript);
+        container.querySelectorAll('script').forEach(function(old) {
+          var s = document.createElement('script');
+          if (old.src) { s.src = old.src; s.async = false; }
+          else { s.textContent = old.textContent; }
+          old.parentNode.replaceChild(s, old);
         });
         _loadedTabs[tabName] = true;
         loansPinGlobals();
-        var initFn = window['init_' + tabName + '_tab'];
-        if (typeof initFn === 'function') initFn();
-      } catch (err) {
-        var errDiv = document.createElement('div');
-        errDiv.style.cssText = 'color:#e01020;padding:40px;';
-        errDiv.textContent = 'Failed to load ' + filePath + ': ' + err.message;
+        var fn = window['init_' + tabName + '_tab'];
+        if (typeof fn === 'function') fn();
+      } catch(e) {
+        var d = document.createElement('div');
+        d.style.cssText = 'color:#e01020;padding:40px;';
+        d.textContent = 'Failed to load ' + filePath + ': ' + e.message;
         container.innerHTML = '';
-        container.appendChild(errDiv);
+        container.appendChild(d);
       }
     }
 
@@ -2351,12 +2348,6 @@ a.plink:hover{
 
         document.getElementById("dashboard").classList.add("show");
         switchView("profile");
-        // Expose key globals so injected tabs (loans, etc.) can access them
-        window.walletPublicKey = walletPublicKey;
-        window.walletProvider  = walletProvider;
-        window.session         = session;
-        window.CONFIG          = CONFIG;
-        window.getDb           = getDb;
 
       } catch (err) {
         console.error("Dashboard error:", err);
