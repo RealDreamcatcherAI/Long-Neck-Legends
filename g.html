@@ -1954,6 +1954,9 @@ a.plink:hover{
         walletProvider = provider;
         walletPublicKey = resp.publicKey || provider.publicKey;
         if (!walletPublicKey) throw new Error("Wallet connected but no public key returned. Try unlocking your wallet first.");
+        // Pin to window so dynamically injected tab scripts can access it
+        window.walletPublicKey = walletPublicKey;
+        window.walletProvider  = walletProvider;
 
         var addr = walletPublicKey.toBase58();
         document.getElementById("walletDisplay").textContent = shortAddr(addr);
