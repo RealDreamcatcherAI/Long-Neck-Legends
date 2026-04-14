@@ -850,9 +850,13 @@ async function lLoadMyOffers(){
     if(!LS.myOffers.length){ el.innerHTML='<div style="text-align:center;padding:22px;color:#282828;font-size:0.72rem;letter-spacing:1px">No open offers yet</div>'; return; }
     el.innerHTML=LS.myOffers.map(function(o){
       var i=calcInt(o.amount);
+      var ac=o.accepted_collections;
+      var cl=ac==='lnl'?'🦒 LNL Only':ac==='ga'?'⛳ GA Only':'🦒⛳ Both';
+      var cc=ac==='lnl'?'#e01020':ac==='ga'?'#f97316':'#22c55e';
       return '<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 13px;background:#0d0d0d;border:1px solid rgba(255,255,255,0.05);border-radius:9px;margin-bottom:8px">'+
         '<div><div style="font-weight:700;font-size:0.85rem;margin-bottom:2px">◎ '+parseFloat(o.amount).toFixed(2)+' SOL</div>'+
-        '<div style="font-size:0.65rem;color:#444">Earns +'+i.toFixed(4)+' SOL if taken</div></div>'+
+        '<div style="font-size:0.65rem;color:#444;margin-bottom:3px">Earns +'+i.toFixed(4)+' SOL if taken</div>'+
+        '<div style="font-size:0.62rem;font-weight:700;color:'+cc+'">'+cl+'</div></div>'+
         '<button class="btn-outline-red" onclick="lCancelOffer(\''+o.id+'\')">CANCEL</button></div>';
     }).join('');
   } catch(e){}
