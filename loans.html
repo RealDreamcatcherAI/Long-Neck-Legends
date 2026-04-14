@@ -884,7 +884,7 @@ window.lClaimDefault=async function(id){
     var r=await fetch(WORKER_URL+'/claim-default',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({loan_id:id,lender_wallet:w})});
     var j=await r.json();
     if(!r.ok||j.error) throw new Error(j.error||'Failed');
-    lToast('Loan defaulted. NFT is yours — transfer it from the borrower's wallet. 🎉','success');
+    lToast('Loan defaulted. NFT is yours — the borrower must transfer the NFT to you. 🎉','success');
     lLoadActiveLoans(); if(LS.mode==='history') lLoadHistory();
   }catch(e){ lToast('Error: '+e.message,'error'); }
 };
