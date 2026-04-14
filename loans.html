@@ -446,13 +446,21 @@ function getW() {
 
 function calcInt(amt) { return Math.max(MIN_INT, parseFloat((amt*APY*(LOAN_DAYS/365)).toFixed(4))); }
 
-// ─── FLOOR PRICE (via worker — no CORS issues) ───────────────────────────────
+// ─── FLOOR PRICE ─────────────────────────────────────────────────────────────
 async function lFetchFloors() {
-  try {
-    var r = await fetch(WORKER_URL + '/floors');
+  async function fetchFloor(sym) {
+    var url = 'https://api-mainnet.magiceden.dev/v2/collections/'+sym+'/stats';
+    var proxy = 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
+    var r = await fetch(proxy);
     var j = await r.json();
-    var lStr = j.lnl ? parseFloat(j.lnl).toFixed(3)+' ◎' : '—';
-    var gStr = j.ga  ? parseFloat(j.ga).toFixed(3)+' ◎'  : '—';
+    var d = JSON.parse(j.contents);
+    return d.floorPrice ? d.floorPrice / 1e9 : null;
+  }
+  try {
+    var lnl = await fetchFloor('long_neck_legends');
+    var ga  = await fetchFloor('golf_addicts');
+    var lStr = lnl ? lnl.toFixed(3)+' ◎' : '—';
+    var gStr = ga  ? ga.toFixed(3)+' ◎'  : '—';
     setEl('bs-lnl-fp',lStr); setEl('ls-lnl-fp',lStr);
     setEl('bs-ga-fp', gStr); setEl('ls-ga-fp', gStr);
   } catch(e) {
