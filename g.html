@@ -2162,12 +2162,20 @@ a.plink:hover{
         var html = await res.text();
         var doc = new DOMParser().parseFromString(html, 'text/html');
         container.innerHTML = doc.body.innerHTML;
-        container.querySelectorAll('script').forEach(function(old) {
-          var s = document.createElement('script');
-          if (old.src) { s.src = old.src; s.async = false; }
-          else { s.textContent = old.textContent; }
-          old.parentNode.replaceChild(s, old);
-        });
+        var scriptTags = Array.from(container.querySelectorAll('script'));
+        for (var si = 0; si < scriptTags.length; si++) {
+          var oldS = scriptTags[si];
+          var newS = document.createElement('script');
+          if (oldS.src) {
+            newS.src = oldS.src;
+            newS.async = false;
+          } else {
+            newS.textContent = oldS.textContent;
+          }
+          if (oldS.parentNode) {
+            oldS.parentNode.replaceChild(newS, oldS);
+          }
+        }
         _loadedTabs[tabName] = true;
         loansPinGlobals();
         var fn = window['init_' + tabName + '_tab'];
