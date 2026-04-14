@@ -415,15 +415,36 @@ var LS = {
 
 // ─── INIT ────────────────────────────────────────────────────────────────────
 window.init_loans_tab = function() {
-  var w = getW();
-  if (!w) { show('loans-gate'); hide('loans-main'); return; }
-  hide('loans-gate'); show('loans-main');
-  lLoadNFTs(); lLoadOffers(); lLoadActiveLoans(); lFetchFloors(); lFetchTotals(); lMarkOverdue();
+  // Retry a few times in case wallet isn't ready yet when tab first loads
+  lTryInit(0);
 };
 
+function lTryInit(attempt) {
+  var w = getW();
+  if (!w) {
+    if (attempt < 5) {
+      setTimeout(function(){ lTryInit(attempt+1); }, 600);
+    } else {
+      show('loans-gate'); hide('loans-main');
+    }
+    return;
+  }
+  hide('loans-gate'); show('loans-main');
+  lLoadNFTs(); lLoadOffers(); lLoadActiveLoans(); lFetchFloors(); lFetchTotals(); lMarkOverdue();
+}
+
 function getW() {
-  if (typeof walletPublicKey==='undefined'||!walletPublicKey) return null;
-  return walletPublicKey.toBase58 ? walletPublicKey.toBase58() : walletPublicKey;
+  // Try all possible wallet sources the dashboard uses
+  try {
+    if (typeof walletPublicKey !== 'undefined' && walletPublicKey) {
+      return walletPublicKey.toBase58 ? walletPublicKey.toBase58() : String(walletPublicKey);
+    }
+    // Fallback: check wallet providers directly
+    if (window.solflare && window.solflare.publicKey) return window.solflare.publicKey.toBase58();
+    if (window.phantom && window.phantom.solana && window.phantom.solana.publicKey) return window.phantom.solana.publicKey.toBase58();
+    if (window.solana && window.solana.publicKey) return window.solana.publicKey.toBase58();
+  } catch(e) {}
+  return null;
 }
 
 function calcInt(amt) { return Math.max(MIN_INT, parseFloat((amt*APY*(LOAN_DAYS/365)).toFixed(4))); }
@@ -983,7 +1004,8 @@ function lToast(msg,type){
 var mbg=document.getElementById('l-modal');
 if(mbg)mbg.addEventListener('click',function(e){if(e.target===mbg)lCloseModal();});
 
-if(typeof walletPublicKey!=='undefined'&&walletPublicKey) window.init_loans_tab();
+// Auto-init with retry — handles case where wallet connects after tab loads
+setTimeout(function(){ window.init_loans_tab(); }, 300);
 })();
 </script>
 </body>
