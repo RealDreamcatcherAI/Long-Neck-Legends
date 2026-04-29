@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
-  <title>Stacy's Studio | LNL Music Admin</title>
+  <title>Stacey's Studio | LNL Music Admin</title>
   <link rel="icon" href="https://i.imgur.com/jpGdtHJ.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 
@@ -761,14 +761,15 @@
         </div>
 
         <div class="form-row">
-          <div class="field-label">Audio File URL *</div>
-          <input class="field-input" type="url" id="fSrc" placeholder="https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/song.mp3" />
-          <div class="url-hint">Upload to GitHub repo → paste CDN link. Format: <code>https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/filename.mp3</code></div>
+          <div class="field-label">🔗 Suno Page Link</div>
+          <input class="field-input" type="url" id="fSongLink" placeholder="https://suno.com/song/abc123..." />
+          <div class="url-hint" id="sunoHint">Paste your Suno link — audio URL fills in automatically</div>
         </div>
 
         <div class="form-row">
-          <div class="field-label">Song Link (Suno / SoundCloud etc)</div>
-          <input class="field-input" type="url" id="fSongLink" placeholder="https://suno.com/song/..." />
+          <div class="field-label">Audio File URL <span id="audioUrlStatus" style="font-size:0.6rem; margin-left:0.3rem; color:var(--text-muted); font-family:var(--font-mono); letter-spacing:1px; text-transform:uppercase;"></span></div>
+          <input class="field-input" type="url" id="fSrc" placeholder="Auto-fills from Suno — or paste a direct .mp3 URL" style="transition: border-color 0.3s;" />
+          <div class="url-hint" id="audioUrlHint" style="display:none"></div>
         </div>
 
         <div class="form-row">
@@ -886,7 +887,7 @@
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5cHFuZGFzb3Bka3JxdmtsbHZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5NTI1NjEsImV4cCI6MjA4NzUyODU2MX0.jXLaLfFudJf-xytfHAvMe5oV0DVeWi7xNB53Ib0GD_s';
     const TABLE = 'lnl_tracks';
     // Password for Stacy's dashboard
-    const ADMIN_PASS = 'LNLstacy2025';
+    const ADMIN_PASS = 'LNLstacey2025';
     // Default artist X link
     const DEFAULT_X = 'https://x.com/Real_CFUCK';
     // Default cover icon
@@ -945,8 +946,93 @@ CREATE POLICY "Anon all" ON lnl_tracks FOR ALL USING (true) WITH CHECK (true);`;
     }
 
     // =============================================
-    // SUPABASE HELPERS
+    // SUNO AUTO-EXTRACT
     // =============================================
+    // Suno song IDs look like: suno.com/song/UUID or suno.com/s/UUID
+    // Their CDN audio pattern: cdn1.suno.ai/UUID.mp3
+    // We extract the UUID from the URL and build the direct mp3 link.
+
+    let sunoExtractTimer;
+
+    function extractSunoId(url) {
+      // Handles: suno.com/song/UUID, suno.com/s/UUID, www.suno.com/song/UUID
+      const match = url.match(/suno\.com\/(?:song|s)\/([a-f0-9-]{36})/i);
+      return match ? match[1] : null;
+    }
+
+    function setSunoStatus(state, msg) {
+      const status = document.getElementById('audioUrlStatus');
+      const hint = document.getElementById('audioUrlHint');
+      const srcInput = document.getElementById('fSrc');
+
+      if (state === 'loading') {
+        status.textContent = '⏳ extracting...';
+        status.style.color = 'var(--text-muted)';
+        hint.style.display = 'none';
+      } else if (state === 'success') {
+        status.textContent = '✅ auto-filled';
+        status.style.color = 'var(--green)';
+        srcInput.style.borderColor = 'rgba(0,255,170,0.5)';
+        hint.style.display = 'block';
+        hint.style.color = 'var(--green)';
+        hint.textContent = msg;
+      } else if (state === 'manual') {
+        status.textContent = 'needs manual URL';
+        status.style.color = 'var(--gold)';
+        srcInput.style.borderColor = 'rgba(255,215,0,0.4)';
+        hint.style.display = 'block';
+        hint.style.color = 'var(--gold)';
+        hint.textContent = msg;
+      } else {
+        status.textContent = '';
+        srcInput.style.borderColor = '';
+        hint.style.display = 'none';
+      }
+    }
+
+    async function trySunoExtract(sunoUrl) {
+      const id = extractSunoId(sunoUrl);
+      if (!id) {
+        // Not a recognizable Suno song URL — clear any auto-fill
+        setSunoStatus('', '');
+        return;
+      }
+
+      setSunoStatus('loading');
+
+      // Build the CDN URL directly from the UUID — no API call needed
+      const cdnUrl = `https://cdn1.suno.ai/${id}.mp3`;
+
+      // Quick HEAD check to verify the URL resolves
+      // (Suno CDN supports CORS headers on audio requests)
+      try {
+        const check = await fetch(cdnUrl, { method: 'HEAD', mode: 'no-cors' });
+        // no-cors won't throw on a valid resource, it returns opaque response
+        // We'll trust it if we don't get a network error
+        document.getElementById('fSrc').value = cdnUrl;
+        setSunoStatus('success', `Audio URL extracted from Suno ✓  (${id.slice(0,8)}...)`);
+      } catch (e) {
+        // Network error — fallback: still fill it in but warn
+        document.getElementById('fSrc').value = cdnUrl;
+        setSunoStatus('manual', 'Could not verify — URL filled in, test it before saving.');
+      }
+    }
+
+    document.getElementById('fSongLink').addEventListener('input', function() {
+      clearTimeout(sunoExtractTimer);
+      const val = this.value.trim();
+      if (!val) { setSunoStatus('', ''); return; }
+      // Debounce so we don't fire on every keystroke
+      sunoExtractTimer = setTimeout(() => trySunoExtract(val), 600);
+    });
+
+    document.getElementById('fSongLink').addEventListener('paste', function() {
+      // On paste, fire faster
+      clearTimeout(sunoExtractTimer);
+      sunoExtractTimer = setTimeout(() => trySunoExtract(this.value.trim()), 100);
+    });
+
+
     async function sb(path, options = {}) {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
         ...options,
@@ -1061,8 +1147,16 @@ CREATE POLICY "Anon all" ON lnl_tracks FOR ALL USING (true) WITH CHECK (true);`;
     async function addTrack() {
       const title = document.getElementById('fTitle').value.trim();
       const src = document.getElementById('fSrc').value.trim();
+      const songLink = document.getElementById('fSongLink').value.trim();
       if (!title) { toast('Song title is required', 'error'); return; }
-      if (!src) { toast('Audio URL is required', 'error'); return; }
+      if (!src) {
+        if (songLink && songLink.includes('suno.com')) {
+          toast('Paste your Suno link first — wait a sec for the audio URL to fill in', 'error');
+        } else {
+          toast('Audio URL is required — paste your Suno link above', 'error');
+        }
+        return;
+      }
 
       const btn = document.getElementById('addBtn');
       const btnText = document.getElementById('addBtnText');
@@ -1103,6 +1197,7 @@ CREATE POLICY "Anon all" ON lnl_tracks FOR ALL USING (true) WITH CHECK (true);`;
         document.getElementById(id).value = '';
       });
       document.getElementById('fGenre').value = '';
+      setSunoStatus('', '');
     }
 
     // =============================================
