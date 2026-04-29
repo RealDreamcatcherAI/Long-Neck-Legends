@@ -496,109 +496,59 @@
       setTimeout(() => document.body.classList.add('loaded'), 250);
     });
 
-    // === PLAYLIST CONFIG (EDIT THESE 8 ITEMS) ===
-    // songLink = "main location site"
-    // artistX  = X link
-    const TRACKS = [
-      {
-        title: "Stick Your Neck Out",
-        artist: "Stacey",
-        src: "https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/stick-your-neck-out.mp3",
-        songLink: "https://suno.com/song/d23e4c0b-01c2-45ed-bbb0-2b4a243ffb9f",
-        artistX: "https://x.com/Real_CFUCK"
-      },
-      {
-        title: "Never Back Down",
-        artist: "Stacey",
-        src: "https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/never-back-down.mp3",
-        songLink: "https://suno.com/song/520fb7c0-c3be-4cc2-86c3-f216a1a95158",
-        artistX: "https://x.com/Real_CFUCK"
-      },
-      {
-        title: "Extra Mile",
-        artist: "Stacey",
-        src: "https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/extra-mile.mp3",
-        songLink: "https://suno.com/song/45459acb-f564-4602-8808-e0999e40155b",
-        artistX: "https://x.com/Real_CFUCK"
-      },
-      {
-        title: "I'm a Long Neck",
-        artist: "Stacey",
-        src: "https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/im-a-long-neck.mp3",
-        songLink: "https://suno.com/song/7a7e0350-7299-4d36-b5a4-67741ec68121",
-        artistX: "https://x.com/Real_CFUCK"
-      },
-      {
-        title: "See Further",
-        artist: "Stacey",
-        src: "https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/see-further.mp3",
-        songLink: "https://suno.com/song/315962d9-89de-4ba2-9a30-c533e09eeaff",
-        artistX: "https://x.com/Real_CFUCK"
-      },
-      {
-        title: "Living Right",
-        artist: "Stacey",
-        src: "https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/living-right.mp3",
-        songLink: "https://suno.com/song/dcd08d0c-d895-4d52-ab2f-cd9e607ce7dd",
-        artistX: "https://x.com/Real_CFUCK"
-      },
-      {
-        title: "Im Standing Tall",
-        artist: "Stacey",
-        src: "https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/im-standing-tall.mp3",
-        songLink: "https://longnecklegends.xyz/song6",
-        artistX: "https://x.com/Real_CFUCK"
-      },
-      {
-        title: "LNLs On The Rise",
-        artist: "Stacey",
-        src: "https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/lnls-on-the-rise.mp3",
-        songLink: "https://suno.com/song/deb26206-1336-4ce0-b9a3-0f3eeabdab72",
-        artistX: "https://x.com/Real_CFUCK"
-      },
-      {
-        title: "LONG THIS LONG THAT",
-        artist: "Stacey",
-        src: "https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/long-this-long-that.mp3",
-        songLink: "https://suno.com/@oldsoul_legend",
-        artistX: "https://x.com/Real_CFUCK"
-      },
-      {
-        title: "Cost of the View",
-        artist: "Stacey",
-        src: "https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/cost-of-the-view.mp3",
-        songLink: "https://suno.com/@oldsoul_legend",
-        artistX: "https://x.com/Real_CFUCK"
-      },
-      {
-        title: "Long Neck Legends",
-        artist: "Stacey",
-        src: "https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/long-neck-legends.mp3",
-        songLink: "https://suno.com/@oldsoul_legend",
-        artistX: "https://x.com/Real_CFUCK"
-      },
-      {
-        title: "Long Neck Livin",
-        artist: "Stacey",
-        src: "https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/long-neck-livin.mp3",
-        songLink: "https://suno.com/@oldsoul_legend",
-        artistX: "https://x.com/Real_CFUCK"
-      },
-      {
-        title: "Long Necks Rise",
-        artist: "Stacey",
-        src: "https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/long-necks-rise.mp3",
-        songLink: "https://suno.com/@oldsoul_legend",
-        artistX: "https://x.com/Real_CFUCK"
-      },
-      {
-        title: "Pass The Torch",
-        artist: "Stacey",
-        src: "https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/pass-the-torch.mp3",
-        songLink: "https://suno.com/@oldsoul_legend",
-        artistX: "https://x.com/Real_CFUCK"
-      }
+    // === PLAYLIST: Loaded from Supabase (managed by Stacy's admin dashboard) ===
+    const SUPABASE_URL = 'https://hypqndasopdkrqvkllvc.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5cHFuZGFzb3Bka3JxdmtsbHZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5NTI1NjEsImV4cCI6MjA4NzUyODU2MX0.jXLaLfFudJf-xytfHAvMe5oV0DVeWi7xNB53Ib0GD_s';
+
+    // Fallback tracks shown while loading or if Supabase is unavailable
+    const FALLBACK_TRACKS = [
+      { title: "Stick Your Neck Out", artist: "Stacey", src: "https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/stick-your-neck-out.mp3", songLink: "https://suno.com/song/d23e4c0b-01c2-45ed-bbb0-2b4a243ffb9f", artistX: "https://x.com/Real_CFUCK" },
+      { title: "Never Back Down", artist: "Stacey", src: "https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/never-back-down.mp3", songLink: "https://suno.com/song/520fb7c0-c3be-4cc2-86c3-f216a1a95158", artistX: "https://x.com/Real_CFUCK" },
+      { title: "Extra Mile", artist: "Stacey", src: "https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/extra-mile.mp3", songLink: "https://suno.com/song/45459acb-f564-4602-8808-e0999e40155b", artistX: "https://x.com/Real_CFUCK" },
+      { title: "I'm a Long Neck", artist: "Stacey", src: "https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/im-a-long-neck.mp3", songLink: "https://suno.com/song/7a7e0350-7299-4d36-b5a4-67741ec68121", artistX: "https://x.com/Real_CFUCK" },
+      { title: "See Further", artist: "Stacey", src: "https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/see-further.mp3", songLink: "https://suno.com/song/315962d9-89de-4ba2-9a30-c533e09eeaff", artistX: "https://x.com/Real_CFUCK" },
+      { title: "Living Right", artist: "Stacey", src: "https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/living-right.mp3", songLink: "https://suno.com/song/dcd08d0c-d895-4d52-ab2f-cd9e607ce7dd", artistX: "https://x.com/Real_CFUCK" },
+      { title: "Im Standing Tall", artist: "Stacey", src: "https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/im-standing-tall.mp3", songLink: "https://longnecklegends.xyz/song6", artistX: "https://x.com/Real_CFUCK" },
+      { title: "LNLs On The Rise", artist: "Stacey", src: "https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/lnls-on-the-rise.mp3", songLink: "https://suno.com/song/deb26206-1336-4ce0-b9a3-0f3eeabdab72", artistX: "https://x.com/Real_CFUCK" },
+      { title: "LONG THIS LONG THAT", artist: "Stacey", src: "https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/long-this-long-that.mp3", songLink: "https://suno.com/@oldsoul_legend", artistX: "https://x.com/Real_CFUCK" },
+      { title: "Cost of the View", artist: "Stacey", src: "https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/cost-of-the-view.mp3", songLink: "https://suno.com/@oldsoul_legend", artistX: "https://x.com/Real_CFUCK" },
+      { title: "Long Neck Legends", artist: "Stacey", src: "https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/long-neck-legends.mp3", songLink: "https://suno.com/@oldsoul_legend", artistX: "https://x.com/Real_CFUCK" },
+      { title: "Long Neck Livin", artist: "Stacey", src: "https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/long-neck-livin.mp3", songLink: "https://suno.com/@oldsoul_legend", artistX: "https://x.com/Real_CFUCK" },
+      { title: "Long Necks Rise", artist: "Stacey", src: "https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/long-necks-rise.mp3", songLink: "https://suno.com/@oldsoul_legend", artistX: "https://x.com/Real_CFUCK" },
+      { title: "Pass The Torch", artist: "Stacey", src: "https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/pass-the-torch.mp3", songLink: "https://suno.com/@oldsoul_legend", artistX: "https://x.com/Real_CFUCK" }
     ];
+
+    let TRACKS = [];
+
+    async function fetchTracks() {
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/lnl_tracks?order=sort_order.asc,created_at.asc`, {
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+          }
+        });
+        if (!res.ok) throw new Error('fetch failed');
+        const data = await res.json();
+        if (data && data.length > 0) {
+          // Map Supabase columns → player format
+          TRACKS = data.map(t => ({
+            title: t.title,
+            artist: t.artist || 'Stacey',
+            src: t.src,
+            songLink: t.song_link || '#',
+            artistX: t.artist_x || 'https://x.com/Real_CFUCK',
+            cover: t.cover || null
+          }));
+        } else {
+          // Table exists but empty — use fallback so page isn't blank
+          TRACKS = FALLBACK_TRACKS;
+        }
+      } catch (e) {
+        // Supabase not reachable or table not set up yet — use fallback
+        TRACKS = FALLBACK_TRACKS;
+      }
+    }
 
     // === ICON (tiny song image) ===
     // swap this to your own small icon (png/svg)
@@ -653,7 +603,7 @@
 
         row.innerHTML = `
           <div class="t-icon" aria-hidden="true">
-            <img src="${SONG_ICON_URL}" alt="">
+            <img src="${t.cover || SONG_ICON_URL}" alt="">
           </div>
           <div class="t-main">
             <div class="t-title">
@@ -790,22 +740,12 @@
 
     // === INIT ===
     setModePill();
-    renderList();
-    loadTrack(0, false);
+    (async () => {
+      await fetchTracks();
+      renderList();
+      loadTrack(0, false);
+    })();
   </script>
 </body>
 
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
