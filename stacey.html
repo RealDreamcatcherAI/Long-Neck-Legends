@@ -680,7 +680,7 @@
   <!-- LOGIN SCREEN -->
   <div id="loginScreen">
     <div>
-      <div class="login-logo">STACY'S<br>STUDIO</div>
+      <div class="login-logo">STACEY'S STUDIO</div><br>
       <div class="login-sub">Long Neck Legends · Music Admin</div>
     </div>
     <div class="login-card">
@@ -886,10 +886,10 @@
     const SUPABASE_URL = 'https://hypqndasopdkrqvkllvc.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5cHFuZGFzb3Bka3JxdmtsbHZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5NTI1NjEsImV4cCI6MjA4NzUyODU2MX0.jXLaLfFudJf-xytfHAvMe5oV0DVeWi7xNB53Ib0GD_s';
     const TABLE = 'lnl_tracks';
-    // Password for Stacy's dashboard
+    // Password for Stacey's dashboard
     const ADMIN_PASS = 'LNLstacey2025';
     // Default artist X link
-    const DEFAULT_X = 'https://x.com/Real_CFUCK';
+    const DEFAULT_X = 'https://x.com/AR_OldSoul';
     // Default cover icon
     const DEFAULT_COVER = 'https://i.imgur.com/hjOXHMC.jpeg';
 
@@ -918,7 +918,7 @@ CREATE POLICY "Anon all" ON lnl_tracks FOR ALL USING (true) WITH CHECK (true);`;
     function tryLogin() {
       const val = document.getElementById('passInput').value;
       if (val === ADMIN_PASS) {
-        sessionStorage.setItem('stacy_auth', '1');
+        sessionStorage.setItem('stacey_auth', '1');
         document.getElementById('loginScreen').classList.add('hidden');
         document.getElementById('app').classList.add('visible');
         setTimeout(loadTracks, 400);
@@ -930,7 +930,7 @@ CREATE POLICY "Anon all" ON lnl_tracks FOR ALL USING (true) WITH CHECK (true);`;
     }
 
     function logout() {
-      sessionStorage.removeItem('stacy_auth');
+      sessionStorage.removeItem('stacey_auth');
       location.reload();
     }
 
@@ -939,7 +939,7 @@ CREATE POLICY "Anon all" ON lnl_tracks FOR ALL USING (true) WITH CHECK (true);`;
     });
 
     // Auto-login if session active
-    if (sessionStorage.getItem('stacy_auth') === '1') {
+    if (sessionStorage.getItem('stacey_auth') === '1') {
       document.getElementById('loginScreen').classList.add('hidden');
       document.getElementById('app').classList.add('visible');
       setTimeout(loadTracks, 100);
