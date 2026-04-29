@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <title>Stacy's Studio | LNL Music Admin</title>
+  <link rel="icon" href="https://i.imgur.com/jpGdtHJ.jpeg">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #080810;
+      --surface: #0f0f1e;
+      --surface2: #161628;
+      --border: rgba(0, 212, 255, 0.15);
+      --border-strong: rgba(0, 212, 255, 0.4);
+      --cyan: #00d4ff;
+      --pink: #ff6bff;
+      --purple: #7b68ee;
+      --green: #00ffaa;
+      --red: #ff4466;
+      --gold: #ffd700;
+      --text: #e0e0ff;
+      --text-muted: rgba(224, 224, 255, 0.55);
+      --font-display: 'Bebas Neue', sans-serif;
+      --font-mono: 'Space Mono', monospace;
+      --font-body: 'DM Sans', sans-serif;
+      --radius: 14px;
+      --radius-sm: 8px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* NOISE TEXTURE OVERLAY */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.6;
+    }
+
+    /* === LOGIN SCREEN === */
+    #loginScreen {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      z-index: 100;
+      padding: 2rem;
+      gap: 2rem;
+      transition: opacity 0.5s ease;
+    }
+
+    #loginScreen.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .login-logo {
+      font-family: var(--font-display);
+      font-size: 4.5rem;
+      letter-spacing: 4px;
+      background: linear-gradient(135deg, var(--cyan), var(--pink));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      line-height: 1;
+      text-align: center;
+    }
+
+    .login-sub {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      text-align: center;
+      margin-top: -1rem;
+    }
+
+    .login-card {
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius);
+      padding: 2rem 1.5rem;
+      width: 100%;
+      max-width: 340px;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      box-shadow: 0 0 60px rgba(0,212,255,0.12), 0 0 120px rgba(255,107,255,0.06);
+    }
+
+    .login-label {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--cyan);
+      margin-bottom: 0.35rem;
+    }
+
+    .login-input {
+      width: 100%;
+      background: rgba(0,0,0,0.4);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.9rem 1rem;
+      font-family: var(--font-mono);
+      font-size: 1rem;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s;
+      -webkit-appearance: none;
+    }
+
+    .login-input:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 2px rgba(0,212,255,0.15);
+    }
+
+    .login-btn {
+      width: 100%;
+      padding: 1rem;
+      background: linear-gradient(135deg, var(--cyan), #0099cc);
+      border: none;
+      border-radius: var(--radius-sm);
+      color: #000;
+      font-family: var(--font-display);
+      font-size: 1.4rem;
+      letter-spacing: 3px;
+      cursor: pointer;
+      transition: all 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .login-btn:active { transform: scale(0.97); opacity: 0.85; }
+
+    .login-error {
+      color: var(--red);
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      text-align: center;
+      display: none;
+    }
+
+    /* === MAIN APP === */
+    #app {
+      display: none;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    #app.visible { display: flex; }
+
+    /* HEADER */
+    .app-header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(12px);
+    }
+
+    .app-title {
+      font-family: var(--font-display);
+      font-size: 1.8rem;
+      letter-spacing: 3px;
+      background: linear-gradient(90deg, var(--cyan), var(--pink));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      line-height: 1;
+    }
+
+    .app-badge {
+      font-family: var(--font-mono);
+      font-size: 0.6rem;
+      letter-spacing: 2px;
+      color: var(--gold);
+      text-transform: uppercase;
+    }
+
+    .logout-btn {
+      background: transparent;
+      border: 1px solid rgba(255,68,102,0.4);
+      color: var(--red);
+      padding: 0.45rem 0.85rem;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .logout-btn:active { background: rgba(255,68,102,0.15); }
+
+    /* MAIN CONTENT */
+    .app-body {
+      flex: 1;
+      padding: 1.25rem;
+      max-width: 720px;
+      width: 100%;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* STATS BAR */
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.85rem;
+      text-align: center;
+    }
+
+    .stat-num {
+      font-family: var(--font-display);
+      font-size: 2rem;
+      letter-spacing: 1px;
+      color: var(--cyan);
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-family: var(--font-mono);
+      font-size: 0.6rem;
+      letter-spacing: 2px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-top: 0.2rem;
+    }
+
+    /* ADD TRACK SECTION */
+    .section-title {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      letter-spacing: 3px;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .section-title .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 8px var(--cyan);
+    }
+
+    .add-card {
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      box-shadow: 0 4px 24px rgba(0,212,255,0.06);
+    }
+
+    .form-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .form-row.two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    .field-label {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--cyan);
+    }
+
+    .field-input {
+      background: rgba(0,0,0,0.35);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.75rem 0.9rem;
+      font-family: var(--font-body);
+      font-size: 0.95rem;
+      color: var(--text);
+      outline: none;
+      width: 100%;
+      -webkit-appearance: none;
+      transition: border-color 0.2s;
+    }
+
+    .field-input:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 2px rgba(0,212,255,0.12);
+    }
+
+    .field-input::placeholder { color: var(--text-muted); }
+
+    select.field-input {
+      cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2300d4ff' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.9rem center;
+      padding-right: 2.5rem;
+      appearance: none;
+    }
+
+    select.field-input option { background: #0f0f1e; }
+
+    .url-hint {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      margin-top: 0.15rem;
+    }
+
+    .url-hint a { color: var(--cyan); text-decoration: none; }
+
+    .add-btn {
+      width: 100%;
+      padding: 1rem;
+      background: linear-gradient(135deg, var(--cyan) 0%, #0099cc 100%);
+      border: none;
+      border-radius: var(--radius-sm);
+      color: #000;
+      font-family: var(--font-display);
+      font-size: 1.3rem;
+      letter-spacing: 3px;
+      cursor: pointer;
+      transition: all 0.2s;
+      -webkit-tap-highlight-color: transparent;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .add-btn:active { transform: scale(0.98); opacity: 0.85; }
+    .add-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .add-btn .spinner {
+      display: none;
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(0,0,0,0.3);
+      border-top-color: #000;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 0 auto;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* TOAST */
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: var(--surface2);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-sm);
+      padding: 0.85rem 1.5rem;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      letter-spacing: 1px;
+      color: var(--text);
+      z-index: 9998;
+      transition: transform 0.3s ease;
+      white-space: nowrap;
+      max-width: 90vw;
+      text-align: center;
+    }
+
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.success { border-color: rgba(0,255,170,0.5); color: var(--green); }
+    .toast.error { border-color: rgba(255,68,102,0.5); color: var(--red); }
+
+    /* TRACK LIST */
+    .tracks-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .tracks-count {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+    }
+
+    .track-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+
+    .track-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.9rem 1rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.85rem;
+      transition: border-color 0.2s;
+      position: relative;
+    }
+
+    .track-card:hover { border-color: rgba(0,212,255,0.3); }
+
+    .track-num {
+      font-family: var(--font-display);
+      font-size: 1.4rem;
+      color: var(--text-muted);
+      min-width: 28px;
+      text-align: center;
+      line-height: 1;
+      padding-top: 2px;
+    }
+
+    .track-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .track-title-text {
+      font-weight: 600;
+      font-size: 0.95rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .track-meta-row {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.2rem;
+    }
+
+    .track-pill {
+      font-family: var(--font-mono);
+      font-size: 0.6rem;
+      letter-spacing: 1px;
+      padding: 0.2rem 0.5rem;
+      border-radius: 99px;
+      background: rgba(0,212,255,0.1);
+      border: 1px solid rgba(0,212,255,0.2);
+      color: var(--cyan);
+      text-transform: uppercase;
+    }
+
+    .track-pill.genre {
+      background: rgba(123,104,238,0.12);
+      border-color: rgba(123,104,238,0.25);
+      color: var(--purple);
+    }
+
+    .track-actions {
+      display: flex;
+      gap: 0.45rem;
+      flex-shrink: 0;
+      align-items: flex-start;
+    }
+
+    .icon-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,0.3);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      transition: all 0.15s;
+      -webkit-tap-highlight-color: transparent;
+      color: var(--text);
+    }
+
+    .icon-btn:active { transform: scale(0.9); }
+
+    .icon-btn.edit { border-color: rgba(0,212,255,0.3); }
+    .icon-btn.edit:active, .icon-btn.edit:hover { background: rgba(0,212,255,0.15); }
+
+    .icon-btn.del { border-color: rgba(255,68,102,0.3); }
+    .icon-btn.del:active, .icon-btn.del:hover { background: rgba(255,68,102,0.15); color: var(--red); }
+
+    .icon-btn.move { border-color: rgba(123,104,238,0.3); }
+    .icon-btn.move:active { background: rgba(123,104,238,0.15); }
+
+    /* EDIT MODAL */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(6px);
+      z-index: 200;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 0;
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius) var(--radius) 0 0;
+      padding: 1.5rem 1.25rem 2rem;
+      width: 100%;
+      max-width: 520px;
+      max-height: 90vh;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      animation: slideUp 0.3s ease;
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(60px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .modal-handle {
+      width: 40px;
+      height: 4px;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.15);
+      margin: 0 auto -0.5rem;
+    }
+
+    .modal-title {
+      font-family: var(--font-display);
+      font-size: 1.6rem;
+      letter-spacing: 3px;
+      color: var(--cyan);
+    }
+
+    .modal-btns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    .modal-save {
+      padding: 0.9rem;
+      background: linear-gradient(135deg, var(--cyan), #0099cc);
+      border: none;
+      border-radius: var(--radius-sm);
+      color: #000;
+      font-family: var(--font-display);
+      font-size: 1.2rem;
+      letter-spacing: 2px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: all 0.2s;
+    }
+
+    .modal-cancel {
+      padding: 0.9rem;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      font-family: var(--font-display);
+      font-size: 1.2rem;
+      letter-spacing: 2px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .modal-save:active { transform: scale(0.97); }
+
+    /* LOADING STATE */
+    .loading-tracks {
+      text-align: center;
+      padding: 3rem 1rem;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      letter-spacing: 2px;
+    }
+
+    .loading-dot {
+      display: inline-block;
+      animation: pulse 1.2s infinite;
+    }
+    .loading-dot:nth-child(2) { animation-delay: 0.2s; }
+    .loading-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes pulse {
+      0%, 80%, 100% { opacity: 0.3; }
+      40% { opacity: 1; }
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .empty-icon {
+      font-size: 3rem;
+      opacity: 0.4;
+    }
+
+    .empty-text {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      letter-spacing: 2px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    /* SETUP NOTICE */
+    .setup-notice {
+      background: rgba(255,215,0,0.08);
+      border: 1px solid rgba(255,215,0,0.25);
+      border-radius: var(--radius-sm);
+      padding: 1rem;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--gold);
+      line-height: 1.6;
+    }
+
+    .setup-notice strong { color: var(--gold); }
+
+    @media (min-width: 520px) {
+      .modal-overlay { align-items: center; }
+      .modal { border-radius: var(--radius); max-height: 85vh; }
+      .modal-handle { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LOGIN SCREEN -->
+  <div id="loginScreen">
+    <div>
+      <div class="login-logo">STACY'S<br>STUDIO</div>
+      <div class="login-sub">Long Neck Legends · Music Admin</div>
+    </div>
+    <div class="login-card">
+      <div class="form-row">
+        <div class="login-label">Access Code</div>
+        <input class="login-input" type="password" id="passInput" placeholder="Enter password..." autocomplete="current-password" />
+      </div>
+      <button class="login-btn" onclick="tryLogin()">ENTER STUDIO</button>
+      <div class="login-error" id="loginError">Wrong password. Try again.</div>
+    </div>
+  </div>
+
+  <!-- MAIN APP -->
+  <div id="app">
+    <header class="app-header">
+      <div>
+        <div class="app-title">STUDIO</div>
+        <div class="app-badge">⚡ LNL MUSIC ADMIN</div>
+      </div>
+      <button class="logout-btn" onclick="logout()">LOGOUT</button>
+    </header>
+
+    <div class="app-body">
+
+      <!-- STATS -->
+      <div class="stats-bar">
+        <div class="stat-card">
+          <div class="stat-num" id="statTotal">—</div>
+          <div class="stat-label">Tracks</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" style="color:var(--pink)" id="statArtists">—</div>
+          <div class="stat-label">Artists</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" style="color:var(--gold)">✓</div>
+          <div class="stat-label">Live</div>
+        </div>
+      </div>
+
+      <!-- SETUP NOTICE (hidden once table exists) -->
+      <div class="setup-notice" id="setupNotice" style="display:none">
+        <strong>⚠ FIRST TIME SETUP</strong><br>
+        Run this SQL in your Supabase dashboard to create the tracks table:<br><br>
+        <code id="sqlCode" style="font-size:0.7rem; word-break:break-all; display:block; margin-top:0.5rem; cursor:pointer; color:var(--cyan);" onclick="copySql()">CLICK TO COPY SQL</code>
+      </div>
+
+      <!-- ADD TRACK -->
+      <div>
+        <div class="section-title"><span class="dot"></span> ADD NEW TRACK</div>
+      </div>
+
+      <div class="add-card">
+        <div class="form-row">
+          <div class="field-label">Song Title *</div>
+          <input class="field-input" type="text" id="fTitle" placeholder="Long Neck Legends" />
+        </div>
+
+        <div class="form-row two-col">
+          <div class="form-row" style="gap:0.35rem">
+            <div class="field-label">Artist Name</div>
+            <input class="field-input" type="text" id="fArtist" placeholder="Stacey" />
+          </div>
+          <div class="form-row" style="gap:0.35rem">
+            <div class="field-label">Genre</div>
+            <select class="field-input" id="fGenre">
+              <option value="">— Genre —</option>
+              <option>Hip-Hop</option>
+              <option>Trap</option>
+              <option>R&B</option>
+              <option>Pop</option>
+              <option>Electronic</option>
+              <option>Drill</option>
+              <option>Lo-Fi</option>
+              <option>Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="field-label">Audio File URL *</div>
+          <input class="field-input" type="url" id="fSrc" placeholder="https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/song.mp3" />
+          <div class="url-hint">Upload to GitHub repo → paste CDN link. Format: <code>https://cdn.jsdelivr.net/gh/GlitchedDream/lnl-music@main/filename.mp3</code></div>
+        </div>
+
+        <div class="form-row">
+          <div class="field-label">Song Link (Suno / SoundCloud etc)</div>
+          <input class="field-input" type="url" id="fSongLink" placeholder="https://suno.com/song/..." />
+        </div>
+
+        <div class="form-row">
+          <div class="field-label">Artist X (Twitter) Link</div>
+          <input class="field-input" type="url" id="fArtistX" placeholder="https://x.com/Real_CFUCK" />
+        </div>
+
+        <div class="form-row">
+          <div class="field-label">Cover Image URL (optional)</div>
+          <input class="field-input" type="url" id="fCover" placeholder="https://i.imgur.com/..." />
+        </div>
+
+        <div class="form-row">
+          <div class="field-label">Description (optional)</div>
+          <input class="field-input" type="text" id="fDesc" placeholder="Short description of the track..." />
+        </div>
+
+        <button class="add-btn" id="addBtn" onclick="addTrack()">
+          <span id="addBtnText">+ ADD TO PLAYLIST</span>
+          <div class="spinner" id="addSpinner"></div>
+        </button>
+      </div>
+
+      <!-- TRACK LIST -->
+      <div>
+        <div class="tracks-header">
+          <div class="section-title"><span class="dot" style="background:var(--pink); box-shadow: 0 0 8px var(--pink)"></span> PLAYLIST</div>
+          <div class="tracks-count" id="tracksCount">Loading...</div>
+        </div>
+      </div>
+
+      <div class="track-list" id="trackList">
+        <div class="loading-tracks">
+          LOADING<span class="loading-dot">.</span><span class="loading-dot">.</span><span class="loading-dot">.</span>
+        </div>
+      </div>
+
+    </div><!-- /.app-body -->
+  </div><!-- /#app -->
+
+  <!-- EDIT MODAL -->
+  <div class="modal-overlay" id="editModal">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="modal-title">EDIT TRACK</div>
+
+      <input type="hidden" id="editId" />
+
+      <div class="form-row">
+        <div class="field-label">Song Title *</div>
+        <input class="field-input" type="text" id="eFTitle" />
+      </div>
+
+      <div class="form-row two-col">
+        <div class="form-row" style="gap:0.35rem">
+          <div class="field-label">Artist</div>
+          <input class="field-input" type="text" id="eFArtist" />
+        </div>
+        <div class="form-row" style="gap:0.35rem">
+          <div class="field-label">Genre</div>
+          <select class="field-input" id="eFGenre">
+            <option value="">— Genre —</option>
+            <option>Hip-Hop</option>
+            <option>Trap</option>
+            <option>R&B</option>
+            <option>Pop</option>
+            <option>Electronic</option>
+            <option>Drill</option>
+            <option>Lo-Fi</option>
+            <option>Other</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="field-label">Audio File URL *</div>
+        <input class="field-input" type="url" id="eFSrc" />
+      </div>
+
+      <div class="form-row">
+        <div class="field-label">Song Link</div>
+        <input class="field-input" type="url" id="eFSongLink" />
+      </div>
+
+      <div class="form-row">
+        <div class="field-label">Artist X Link</div>
+        <input class="field-input" type="url" id="eFArtistX" />
+      </div>
+
+      <div class="form-row">
+        <div class="field-label">Cover Image URL</div>
+        <input class="field-input" type="url" id="eFCover" />
+      </div>
+
+      <div class="form-row">
+        <div class="field-label">Description</div>
+        <input class="field-input" type="text" id="eFDesc" />
+      </div>
+
+      <div class="modal-btns">
+        <button class="modal-save" onclick="saveEdit()">SAVE</button>
+        <button class="modal-cancel" onclick="closeModal()">CANCEL</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // =============================================
+    // CONFIG — CHANGE THESE ONCE AND FORGET
+    // =============================================
+    const SUPABASE_URL = 'https://hypqndasopdkrqvkllvc.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5cHFuZGFzb3Bka3JxdmtsbHZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5NTI1NjEsImV4cCI6MjA4NzUyODU2MX0.jXLaLfFudJf-xytfHAvMe5oV0DVeWi7xNB53Ib0GD_s';
+    const TABLE = 'lnl_tracks';
+    // Password for Stacy's dashboard
+    const ADMIN_PASS = 'LNLstacy2025';
+    // Default artist X link
+    const DEFAULT_X = 'https://x.com/Real_CFUCK';
+    // Default cover icon
+    const DEFAULT_COVER = 'https://i.imgur.com/hjOXHMC.jpeg';
+
+    // SQL to run in Supabase dashboard (shown if table doesn't exist)
+    const SETUP_SQL = `-- Run this in Supabase SQL Editor
+CREATE TABLE IF NOT EXISTS lnl_tracks (
+  id BIGSERIAL PRIMARY KEY,
+  title TEXT NOT NULL,
+  artist TEXT DEFAULT 'Stacey',
+  genre TEXT,
+  src TEXT NOT NULL,
+  song_link TEXT,
+  artist_x TEXT,
+  cover TEXT,
+  description TEXT,
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE lnl_tracks ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public read" ON lnl_tracks FOR SELECT USING (true);
+CREATE POLICY "Anon all" ON lnl_tracks FOR ALL USING (true) WITH CHECK (true);`;
+
+    // =============================================
+    // AUTH
+    // =============================================
+    function tryLogin() {
+      const val = document.getElementById('passInput').value;
+      if (val === ADMIN_PASS) {
+        sessionStorage.setItem('stacy_auth', '1');
+        document.getElementById('loginScreen').classList.add('hidden');
+        document.getElementById('app').classList.add('visible');
+        setTimeout(loadTracks, 400);
+      } else {
+        document.getElementById('loginError').style.display = 'block';
+        document.getElementById('passInput').value = '';
+        document.getElementById('passInput').focus();
+      }
+    }
+
+    function logout() {
+      sessionStorage.removeItem('stacy_auth');
+      location.reload();
+    }
+
+    document.getElementById('passInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') tryLogin();
+    });
+
+    // Auto-login if session active
+    if (sessionStorage.getItem('stacy_auth') === '1') {
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('app').classList.add('visible');
+      setTimeout(loadTracks, 100);
+    }
+
+    // =============================================
+    // SUPABASE HELPERS
+    // =============================================
+    async function sb(path, options = {}) {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+        ...options,
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation',
+          ...(options.headers || {})
+        }
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || err.hint || `HTTP ${res.status}`);
+      }
+      const text = await res.text();
+      return text ? JSON.parse(text) : null;
+    }
+
+    // =============================================
+    // TOAST
+    // =============================================
+    let toastTimer;
+    function toast(msg, type = '') {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.className = `toast show ${type}`;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove('show'), 3200);
+    }
+
+    // =============================================
+    // COPY SQL
+    // =============================================
+    function copySql() {
+      navigator.clipboard.writeText(SETUP_SQL).then(() => toast('SQL copied!', 'success'));
+    }
+
+    // =============================================
+    // LOAD TRACKS
+    // =============================================
+    let tracks = [];
+
+    async function loadTracks() {
+      try {
+        const data = await sb(`${TABLE}?order=sort_order.asc,created_at.asc`);
+        tracks = data || [];
+        renderTracks();
+        updateStats();
+        document.getElementById('setupNotice').style.display = 'none';
+      } catch (e) {
+        // Table probably doesn't exist yet
+        if (e.message.includes('relation') || e.message.includes('does not exist') || e.message.includes('42P01') || e.message.includes('undefined')) {
+          showSetupNotice();
+        } else {
+          console.error(e);
+          document.getElementById('trackList').innerHTML = `<div class="loading-tracks" style="color:var(--red)">Error: ${e.message}</div>`;
+        }
+        tracks = [];
+        updateStats();
+      }
+    }
+
+    function showSetupNotice() {
+      const notice = document.getElementById('setupNotice');
+      notice.style.display = 'block';
+      document.getElementById('sqlCode').textContent = 'CLICK TO COPY SETUP SQL';
+      document.getElementById('trackList').innerHTML = `<div class="empty-state"><div class="empty-icon">🛠</div><div class="empty-text">Table not set up yet<br>Copy the SQL above & run in Supabase</div></div>`;
+    }
+
+    function updateStats() {
+      document.getElementById('statTotal').textContent = tracks.length;
+      const artists = [...new Set(tracks.map(t => t.artist).filter(Boolean))];
+      document.getElementById('statArtists').textContent = artists.length || '—';
+      document.getElementById('tracksCount').textContent = `${tracks.length} track${tracks.length !== 1 ? 's' : ''}`;
+    }
+
+    function renderTracks() {
+      const list = document.getElementById('trackList');
+      if (!tracks.length) {
+        list.innerHTML = `<div class="empty-state"><div class="empty-icon">🎵</div><div class="empty-text">No tracks yet<br>Add your first one above!</div></div>`;
+        return;
+      }
+
+      list.innerHTML = tracks.map((t, i) => `
+        <div class="track-card" id="tc-${t.id}">
+          <div class="track-num">${String(i + 1).padStart(2, '0')}</div>
+          <div class="track-info">
+            <div class="track-title-text">${escHtml(t.title)}</div>
+            <div class="track-meta-row">
+              <span class="track-pill">${escHtml(t.artist || 'Stacey')}</span>
+              ${t.genre ? `<span class="track-pill genre">${escHtml(t.genre)}</span>` : ''}
+            </div>
+          </div>
+          <div class="track-actions">
+            <button class="icon-btn move" onclick="moveUp(${t.id})" title="Move Up">↑</button>
+            <button class="icon-btn move" onclick="moveDown(${t.id})" title="Move Down">↓</button>
+            <button class="icon-btn edit" onclick="openEdit(${t.id})" title="Edit">✏️</button>
+            <button class="icon-btn del" onclick="deleteTrack(${t.id}, '${escHtml(t.title)}')" title="Delete">🗑</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function escHtml(str) {
+      return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+
+    // =============================================
+    // ADD TRACK
+    // =============================================
+    async function addTrack() {
+      const title = document.getElementById('fTitle').value.trim();
+      const src = document.getElementById('fSrc').value.trim();
+      if (!title) { toast('Song title is required', 'error'); return; }
+      if (!src) { toast('Audio URL is required', 'error'); return; }
+
+      const btn = document.getElementById('addBtn');
+      const btnText = document.getElementById('addBtnText');
+      const spinner = document.getElementById('addSpinner');
+      btn.disabled = true;
+      btnText.style.display = 'none';
+      spinner.style.display = 'block';
+
+      const payload = {
+        title,
+        artist: document.getElementById('fArtist').value.trim() || 'Stacey',
+        genre: document.getElementById('fGenre').value || null,
+        src,
+        song_link: document.getElementById('fSongLink').value.trim() || null,
+        artist_x: document.getElementById('fArtistX').value.trim() || DEFAULT_X,
+        cover: document.getElementById('fCover').value.trim() || null,
+        description: document.getElementById('fDesc').value.trim() || null,
+        sort_order: tracks.length
+      };
+
+      try {
+        await sb(TABLE, { method: 'POST', body: JSON.stringify(payload) });
+        clearAddForm();
+        await loadTracks();
+        toast('✅ Track added!', 'success');
+      } catch (e) {
+        toast(`Error: ${e.message}`, 'error');
+        console.error(e);
+      } finally {
+        btn.disabled = false;
+        btnText.style.display = '';
+        spinner.style.display = 'none';
+      }
+    }
+
+    function clearAddForm() {
+      ['fTitle','fArtist','fSrc','fSongLink','fArtistX','fCover','fDesc'].forEach(id => {
+        document.getElementById(id).value = '';
+      });
+      document.getElementById('fGenre').value = '';
+    }
+
+    // =============================================
+    // DELETE
+    // =============================================
+    async function deleteTrack(id, title) {
+      if (!confirm(`Delete "${title}"?\n\nThis will remove it from the live playlist immediately.`)) return;
+      try {
+        await sb(`${TABLE}?id=eq.${id}`, { method: 'DELETE' });
+        await loadTracks();
+        toast('Track removed', '');
+      } catch (e) {
+        toast(`Error: ${e.message}`, 'error');
+      }
+    }
+
+    // =============================================
+    // REORDER
+    // =============================================
+    async function moveUp(id) {
+      const idx = tracks.findIndex(t => t.id === id);
+      if (idx <= 0) return;
+      await swapOrder(idx, idx - 1);
+    }
+
+    async function moveDown(id) {
+      const idx = tracks.findIndex(t => t.id === id);
+      if (idx < 0 || idx >= tracks.length - 1) return;
+      await swapOrder(idx, idx + 1);
+    }
+
+    async function swapOrder(i, j) {
+      const a = tracks[i];
+      const b = tracks[j];
+      try {
+        await sb(`${TABLE}?id=eq.${a.id}`, { method: 'PATCH', body: JSON.stringify({ sort_order: j }) });
+        await sb(`${TABLE}?id=eq.${b.id}`, { method: 'PATCH', body: JSON.stringify({ sort_order: i }) });
+        await loadTracks();
+      } catch (e) {
+        toast(`Error: ${e.message}`, 'error');
+      }
+    }
+
+    // =============================================
+    // EDIT MODAL
+    // =============================================
+    function openEdit(id) {
+      const t = tracks.find(t => t.id === id);
+      if (!t) return;
+      document.getElementById('editId').value = id;
+      document.getElementById('eFTitle').value = t.title || '';
+      document.getElementById('eFArtist').value = t.artist || '';
+      document.getElementById('eFGenre').value = t.genre || '';
+      document.getElementById('eFSrc').value = t.src || '';
+      document.getElementById('eFSongLink').value = t.song_link || '';
+      document.getElementById('eFArtistX').value = t.artist_x || '';
+      document.getElementById('eFCover').value = t.cover || '';
+      document.getElementById('eFDesc').value = t.description || '';
+      document.getElementById('editModal').classList.add('open');
+    }
+
+    function closeModal() {
+      document.getElementById('editModal').classList.remove('open');
+    }
+
+    async function saveEdit() {
+      const id = document.getElementById('editId').value;
+      const title = document.getElementById('eFTitle').value.trim();
+      const src = document.getElementById('eFSrc').value.trim();
+      if (!title || !src) { toast('Title and audio URL are required', 'error'); return; }
+
+      const payload = {
+        title,
+        artist: document.getElementById('eFArtist').value.trim() || 'Stacey',
+        genre: document.getElementById('eFGenre').value || null,
+        src,
+        song_link: document.getElementById('eFSongLink').value.trim() || null,
+        artist_x: document.getElementById('eFArtistX').value.trim() || DEFAULT_X,
+        cover: document.getElementById('eFCover').value.trim() || null,
+        description: document.getElementById('eFDesc').value.trim() || null
+      };
+
+      try {
+        await sb(`${TABLE}?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+        closeModal();
+        await loadTracks();
+        toast('✅ Saved!', 'success');
+      } catch (e) {
+        toast(`Error: ${e.message}`, 'error');
+      }
+    }
+
+    // Close modal on overlay click
+    document.getElementById('editModal').addEventListener('click', e => {
+      if (e.target === document.getElementById('editModal')) closeModal();
+    });
+  </script>
+</body>
+</html>
