@@ -10,7 +10,6 @@
 
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { max-width: 100vw; overflow-x: hidden; }
 
     /* Keep banner links (like X) white */
 a.plink,
@@ -198,9 +197,6 @@ a.plink:hover{
       border-bottom: 2px solid rgba(139,0,0,0.4);
       box-shadow: 0 2px 15px rgba(224,16,32,0.08);
       display: none;
-      width: 100%;
-      max-width: 100vw;
-      overflow: hidden;
     }
     .dash-nav-wrap.show { display: block; }
 
@@ -1391,7 +1387,6 @@ a.plink:hover{
         <button class="dash-tab" id="tabLeaderboard" onclick="switchView('leaderboard')">🏆</button>
         <button class="dash-tab" id="tabVoice" onclick="switchView('voice')">🎙️ Voice</button>
         <button class="dash-tab" id="tabBot" onclick="window.open('https://longnecklegends.xyz/bot.html','_blank')">🤖 Bot</button>
-        <button class="dash-tab" id="tabLoans" onclick="switchView('loans')">💰 Loans</button>
       </div>
 
       <div class="dash-right">
@@ -1436,7 +1431,6 @@ a.plink:hover{
     <div class="view" id="view-leaderboard"></div>
     <div class="view" id="view-store"></div>
     <div class="view" id="view-voice"></div>
-    <div class="view" id="view-loans"></div>
   </div>
 
   <!-- PFP MODAL -->
@@ -1958,10 +1952,6 @@ a.plink:hover{
         walletProvider = provider;
         walletPublicKey = resp.publicKey || provider.publicKey;
         if (!walletPublicKey) throw new Error("Wallet connected but no public key returned. Try unlocking your wallet first.");
-        // Pin to window + clear loans cache so it re-injects with wallet available
-        window.walletPublicKey = walletPublicKey;
-        window.walletProvider = walletProvider;
-        if (typeof _loadedTabs !== "undefined") _loadedTabs["loans"] = false;
 
         var addr = walletPublicKey.toBase58();
         document.getElementById("walletDisplay").textContent = shortAddr(addr);
@@ -1977,6 +1967,9 @@ a.plink:hover{
         loadSecondWalletFromStorage();
 
         await hydrateProfileAndWalletsFromSupabase(addr);
+
+        // Handle return from Discord OAuth redirect (mobile flow)
+        await handleDiscordRedirectReturn();
 
         session.profilePanelOpen = false;
         applyProfilePanelUI();
@@ -2047,7 +2040,6 @@ a.plink:hover{
       var vl = document.getElementById("view-leaderboard");
       var vs = document.getElementById("view-store");
       var vv = document.getElementById("view-voice");
-      var vlo = document.getElementById("view-loans");
       if (vp) vp.classList.remove("show");
       if (vc) vc.classList.remove("show");
       if (vg) vg.classList.remove("show");
@@ -2055,7 +2047,6 @@ a.plink:hover{
       if (vl) vl.classList.remove("show");
       if (vs) vs.classList.remove("show");
       if (vv) vv.classList.remove("show");
-      if (vlo) vlo.classList.remove("show");
 
       // Deactivate all tabs
       var tabProfile = document.getElementById("tabProfile");
@@ -2072,8 +2063,6 @@ a.plink:hover{
       if (tabStore) tabStore.classList.remove("active");
       var tabVoice = document.getElementById("tabVoice");
       if (tabVoice) tabVoice.classList.remove("active");
-      var tabLoans = document.getElementById("tabLoans");
-      if (tabLoans) tabLoans.classList.remove("active");
 
       if (viewName === "profile") {
         stopChatPoll();
@@ -2122,68 +2111,8 @@ a.plink:hover{
         renderVoiceUI();
       }
 
-      if (viewName === "loans") {
-        stopChatPoll();
-        if (vlo) vlo.classList.add("show");
-        if (tabLoans) tabLoans.classList.add("active");
-        loadTab('loans', 'loans.html');
-      }
-
       // Update voice tab indicator — show live dot whenever in a room, regardless of active tab
       voice_updateTabIndicator();
-    }
-
-    // ── EXTERNAL TAB LOADER ──────────────────────────────────────────────────
-    function loansPinGlobals() {
-      window.walletPublicKey = walletPublicKey;
-      window.walletProvider  = walletProvider;
-      window.session         = session;
-      window.CONFIG          = CONFIG;
-      window.getDb           = getDb;
-    }
-    var _loadedTabs = {};
-    async function loadTab(tabName, filePath) {
-      var container = document.getElementById('view-' + tabName);
-      if (!container) return;
-      loansPinGlobals();
-      if (_loadedTabs[tabName]) {
-        var fn = window['init_' + tabName + '_tab'];
-        if (typeof fn === 'function') fn();
-        return;
-      }
-      var loadingDiv = document.createElement('div');
-      loadingDiv.style.cssText = 'text-align:center;padding:60px;opacity:0.4;letter-spacing:2px;font-size:0.85rem;';
-      loadingDiv.textContent = 'LOADING...';
-      container.innerHTML = '';
-      container.appendChild(loadingDiv);
-      try {
-        var res = await fetch(filePath);
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        var html = await res.text();
-        var doc = new DOMParser().parseFromString(html, 'text/html');
-        container.innerHTML = doc.body.innerHTML;
-        var scriptTags = Array.from(container.querySelectorAll('script'));
-        scriptTags.forEach(function(scr) {
-          var newScr = document.createElement('script');
-          if (scr.src) {
-            newScr.src = scr.src;
-          } else {
-            newScr.textContent = scr.textContent;
-          }
-          document.head.appendChild(newScr);
-          scr.parentNode.removeChild(scr);
-        });
-        _loadedTabs[tabName] = true;
-        loansPinGlobals();
-        var fn = window['init_' + tabName + '_tab'];
-        if (typeof fn === 'function') fn();
-      } catch(e) {
-        var d = document.createElement('div');
-        d.style.cssText = 'color:#e01020;padding:40px;';
-        d.textContent = 'Failed to load ' + filePath + ': ' + e.message;
-        container.innerHTML = '';
-        container.appendChild(d);
-      }
     }
 
     // Bootstrap: one known GA mint → resolve collection group_value once, then use it for filtering
@@ -3105,8 +3034,68 @@ a.plink:hover{
 
     function connectDiscord(){
       if (!walletPublicKey) return alert("Connect wallet first.");
-      var url = "/api/auth/discord/start?wallet=" + encodeURIComponent(walletPublicKey.toBase58());
-      openAuthPopup(url, "Connect Discord");
+
+      // ── Mobile-safe Discord OAuth ──────────────────────────────────────────
+      // window.open() popup fails on mobile (blocked or can't postMessage back).
+      // Instead we redirect the current tab. The wallet address rides in the
+      // OAuth `state` param so the callback knows who to update in Supabase.
+      // On return, we detect the ?discord_connected=1 param and refresh profile.
+      var wallet = walletPublicKey.toBase58();
+
+      // Store wallet in sessionStorage so we can restore session after redirect
+      try { sessionStorage.setItem('discord_connect_wallet', wallet); } catch(e){}
+
+      // Redirect to the Discord OAuth start endpoint
+      var url = "/api/auth/discord/start?wallet=" + encodeURIComponent(wallet) + "&redirect=1";
+      window.location.href = url;
+    }
+
+    // ── Handle return from Discord OAuth redirect ──────────────────────────
+    // Called on page load if ?discord_connected=1 is in the URL
+    async function handleDiscordRedirectReturn() {
+      var params = new URLSearchParams(window.location.search);
+      if (!params.get('discord_connected')) return;
+
+      // Clean URL without reloading
+      var cleanUrl = window.location.pathname;
+      window.history.replaceState({}, '', cleanUrl);
+
+      var discordUser = params.get('discord_user') || '';
+      var discordId   = params.get('discord_id')   || '';
+
+      if (discordUser || discordId) {
+        // Update session with what the callback passed back in the URL
+        session.profile.discord    = discordUser;
+        session.profile.discord_id = discordId;
+        saveProfileToStorage();
+
+        // Save to Supabase if we have a profileId already loaded
+        if (session.profileId) {
+          try { await saveProfileToSupabase(); } catch(e){ console.warn('Discord redirect profile save:', e); }
+        }
+
+        refreshBanner && refreshBanner();
+        // Show a non-blocking notification instead of alert
+        showDiscordConnectedToast(discordUser);
+      }
+    }
+
+    function showDiscordConnectedToast(username) {
+      // Try to find or create a small toast notification
+      var existing = document.getElementById('discordToast');
+      if (existing) existing.remove();
+      var toast = document.createElement('div');
+      toast.id = 'discordToast';
+      toast.style.cssText = [
+        'position:fixed', 'bottom:1.5rem', 'left:50%', 'transform:translateX(-50%)',
+        'background:#0f0f1e', 'border:1px solid rgba(0,212,255,0.5)',
+        'color:#e0e0ff', 'padding:0.85rem 1.5rem', 'border-radius:10px',
+        'font-size:0.9rem', 'z-index:9999', 'box-shadow:0 4px 20px rgba(0,212,255,0.2)',
+        'white-space:nowrap'
+      ].join(';');
+      toast.textContent = '✅ Discord connected' + (username ? ': ' + username : '');
+      document.body.appendChild(toast);
+      setTimeout(function(){ toast.remove(); }, 4000);
     }
 
     window.addEventListener("message", function(ev){
@@ -3122,15 +3111,16 @@ a.plink:hover{
         alert("X connected: @" + (data.username || "unknown"));
       }
 
+      // discord_connected via postMessage still works for desktop popup flow
+      // (kept as fallback — the redirect flow handles mobile)
       if (data.type === "discord_connected") {
         session.profile.discord = data.username
           ? (data.username + (data.discriminator ? ("#" + data.discriminator) : ""))
           : "";
-        session.profile.discord_id = data.id || data.discord_id || ""; // capture the snowflake ID
+        session.profile.discord_id = data.id || data.discord_id || "";
         saveProfileToStorage();
         refreshBanner();
-
-        alert("Discord connected: " + (session.profile.discord || "connected") + (session.profile.discord_id ? " (ID: " + session.profile.discord_id + ")" : ""));
+        showDiscordConnectedToast(session.profile.discord);
       }
 
       if (data.type === "x_error" || data.type === "discord_error") {
