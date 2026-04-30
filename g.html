@@ -3044,7 +3044,10 @@ a.plink:hover{
       } catch(e) {}
 
       // Redirect current tab — works on mobile and desktop, cannot be blocked
-      window.location.href = "/api/auth/discord/start?wallet=" + encodeURIComponent(wallet) + "&redirect=1";
+      // Pass current page URL as return destination so callback comes back here
+      // regardless of whether we're on dashboard.html, g.html, or anything else
+      var returnUrl = window.location.origin + window.location.pathname;
+      window.location.href = "/api/auth/discord/start?wallet=" + encodeURIComponent(wallet) + "&return=" + encodeURIComponent(returnUrl);
     }
 
     // ── Handle return from Discord OAuth redirect ────────────────────────────
