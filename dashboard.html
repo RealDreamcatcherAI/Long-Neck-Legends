@@ -1506,7 +1506,6 @@ a.plink:hover{
   </footer>
 
   <script>
-    window.addEventListener('load', function() { document.body.classList.add('loaded'); });
 
     var CONFIG = {
       COLLECTION_MINT: "8Rt3Ayqth4DAiPnW9MDFi63TiQJHmohfTWLMQFHi4KZH",
@@ -3031,9 +3030,126 @@ a.plink:hover{
 
     function connectDiscord(){
       if (!walletPublicKey) return alert("Connect wallet first.");
-      var url = "/api/auth/discord/start?wallet=" + encodeURIComponent(walletPublicKey.toBase58());
-      openAuthPopup(url, "Connect Discord");
+
+      var wallet = walletPublicKey.toBase58();
+
+      // Save wallet + provider to sessionStorage so we can silently
+      // re-connect after Discord redirects back to this page
+      try {
+        var providerName = "unknown";
+        if (walletProvider && walletProvider.isPhantom)  providerName = "phantom";
+        if (walletProvider && walletProvider.isSolflare) providerName = "solflare";
+        sessionStorage.setItem("discord_return_wallet",   wallet);
+        sessionStorage.setItem("discord_return_provider", providerName);
+      } catch(e) {}
+
+      // Redirect current tab — works on mobile and desktop, cannot be blocked
+      // Pass current page URL as return destination so callback comes back here
+      // regardless of whether we're on dashboard.html, g.html, or anything else
+      var returnUrl = window.location.origin + window.location.pathname;
+      window.location.href = "/api/auth/discord/start?wallet=" + encodeURIComponent(wallet) + "&return=" + encodeURIComponent(returnUrl);
     }
+
+    // ── Handle return from Discord OAuth redirect ────────────────────────────
+    // Discord redirects back to dashboard.html?discord_connected=1 after auth.
+    // We silently re-connect the wallet (onlyIfTrusted — no prompt) then save
+    // the Discord ID to the session and Supabase.
+    async function handleDiscordReturn() {
+      var params = new URLSearchParams(window.location.search);
+      if (!params.get('discord_connected')) return false;
+
+      // Clean the URL immediately so refreshing doesn't re-trigger
+      window.history.replaceState({}, '', window.location.pathname);
+
+      var discordUser = params.get('discord_user') || '';
+      var discordId   = params.get('discord_id')   || '';
+      if (!discordUser && !discordId) return false;
+
+      // Try to silently re-connect the wallet that was active before redirect
+      var savedWallet   = '';
+      var savedProvider = '';
+      try {
+        savedWallet   = sessionStorage.getItem('discord_return_wallet')   || '';
+        savedProvider = sessionStorage.getItem('discord_return_provider') || '';
+        sessionStorage.removeItem('discord_return_wallet');
+        sessionStorage.removeItem('discord_return_provider');
+      } catch(e) {}
+
+      if (savedWallet) {
+        try {
+          var provider = savedProvider !== 'unknown' ? getWalletProvider(savedProvider) : detectWalletProvider();
+          if (provider && typeof provider.connect === 'function') {
+            // onlyIfTrusted = true means NO popup/prompt — silently reconnects
+            // if user already approved this site. Falls back gracefully if not.
+            var resp = await provider.connect({ onlyIfTrusted: true });
+            walletProvider  = provider;
+            walletPublicKey = resp.publicKey || provider.publicKey;
+
+            if (walletPublicKey) {
+              var addr = walletPublicKey.toBase58();
+              document.getElementById('walletDisplay').textContent = shortAddr(addr);
+              document.getElementById('dashNavWrap').classList.add('show');
+              document.getElementById('walletChip').style.display = 'flex';
+              document.getElementById('disconnectBtn').style.display = 'inline-block';
+              document.getElementById('connectSection').style.display = 'none';
+              document.getElementById('loadingSection').style.display = 'block';
+
+              loadProfileFromStorage();
+              loadSecondWalletFromStorage();
+              await hydrateProfileAndWalletsFromSupabase(addr);
+            }
+          }
+        } catch(e) {
+          // Silent fail — wallet wasn't trusted or not available
+          // User will just need to reconnect manually, Discord is still saved server-side
+          console.warn('[Discord return] Silent wallet reconnect failed:', e.message || e);
+        }
+      }
+
+      // Save Discord info to session regardless of wallet reconnect outcome
+      // (callback.js already wrote to Supabase server-side, this just updates local state)
+      session.profile.discord    = discordUser;
+      session.profile.discord_id = discordId;
+      saveProfileToStorage();
+
+      if (session.profileId) {
+        try { await saveProfileToSupabase(); } catch(e) {}
+      }
+
+      refreshBanner && refreshBanner();
+
+      // Show a toast instead of an alert
+      showDiscordToast(discordUser);
+
+      if (walletPublicKey) {
+        await loadDashboard();
+      }
+
+      return true;
+    }
+
+    function showDiscordToast(username) {
+      var old = document.getElementById('discordToast');
+      if (old) old.remove();
+      var t = document.createElement('div');
+      t.id = 'discordToast';
+      t.style.cssText = 'position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);' +
+        'background:#0f0f1e;border:1px solid rgba(0,212,255,0.5);color:#e0e0ff;' +
+        'padding:0.85rem 1.5rem;border-radius:10px;font-size:0.9rem;z-index:9999;' +
+        'box-shadow:0 4px 20px rgba(0,212,255,0.2);white-space:nowrap;';
+      t.textContent = '✅ Discord connected' + (username ? ': ' + username : '');
+      document.body.appendChild(t);
+      setTimeout(function(){ t.remove(); }, 4000);
+    }
+
+    // Check for Discord return as soon as DOM is ready
+    window.addEventListener('load', function() {
+      document.body.classList.add('loaded');
+      // Small delay to let wallet extensions inject themselves into window
+      setTimeout(function() {
+        handleDiscordReturn().catch(function(e){ console.warn('Discord return error:', e); });
+      }, 800);
+    });
 
     window.addEventListener("message", function(ev){
       if (ev.origin !== window.location.origin) return;
@@ -3048,15 +3164,15 @@ a.plink:hover{
         alert("X connected: @" + (data.username || "unknown"));
       }
 
+      // Desktop popup fallback — still works if popup wasn't blocked
       if (data.type === "discord_connected") {
         session.profile.discord = data.username
           ? (data.username + (data.discriminator ? ("#" + data.discriminator) : ""))
           : "";
-        session.profile.discord_id = data.id || data.discord_id || ""; // capture the snowflake ID
+        session.profile.discord_id = data.id || data.discord_id || "";
         saveProfileToStorage();
         refreshBanner();
-
-        alert("Discord connected: " + (session.profile.discord || "connected") + (session.profile.discord_id ? " (ID: " + session.profile.discord_id + ")" : ""));
+        showDiscordToast(session.profile.discord);
       }
 
       if (data.type === "x_error" || data.type === "discord_error") {
