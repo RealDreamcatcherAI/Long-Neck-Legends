@@ -1326,6 +1326,11 @@
 
     async function sbGet(path) {
       const r = await fetch(`${SB_URL}/rest/v1/${path}`, { headers: SB_HDR });
+      if (!r.ok) {
+        const txt = await r.text().catch(() => "");
+        console.warn("[sbGet] failed", path, r.status, txt.slice(0, 200));
+        return [];
+      }
       return r.json();
     }
     async function sbUpsert(table, body) {
@@ -1344,10 +1349,10 @@
     async function loadMarketData() {
       try {
         const [ls, os, sv, tr] = await Promise.all([
-          sbGet("marketplace_listings?select=*"),
-          sbGet("marketplace_offers?select=*"),
-          sbGet("marketplace_sales?select=price_sol,name,image,sold_at&order=sold_at.desc&limit=50"),
-          sbGet("marketplace_trades?select=*&order=created_at.desc&limit=200")
+          sbGet("marketplace_listings_public?select=*"),
+          Promise.resolve([]), // offers are private after SQL lockdown
+          sbGet("marketplace_sales_public?select=*&limit=50"),
+          Promise.resolve([]) // trades are private after SQL lockdown
         ]);
         listings = {};
         (Array.isArray(ls) ? ls : []).forEach(l => { listings[l.mint] = l; });
@@ -1372,8 +1377,8 @@
       try {
         // Read-only rewards data. Do not call privileged backend actions from page load.
         const [lb, act] = await Promise.all([
-          sbGet("marketplace_points?select=wallet,total_points,weekly_points,current_streak&order=weekly_points.desc&limit=25"),
-          sbGet("marketplace_activity?select=wallet,action_type,points,details,created_at&order=created_at.desc&limit=20"),
+          sbGet("marketplace_leaderboard_public?select=*"),
+          Promise.resolve([]), // activity is private after SQL lockdown
         ]);
         const feat = null;
         const resetResult = null;
