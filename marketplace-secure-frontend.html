@@ -1,0 +1,3710 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Marketplace | Long Neck Legends</title>
+  <meta name="description" content="Buy, sell, and trade Long Neck Legends NFTs peer-to-peer on Solana.">
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐦</text></svg>">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=Permanent+Marker&display=swap"
+    rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    :root {
+      --bg: #040404;
+      --card: #0b0b0b;
+      --bdr: #141414;
+      --r: #FF003C;
+      --ra: rgba(255, 0, 60, .18);
+      --rb: rgba(255, 0, 60, .06);
+      --grn: #00FF88;
+      --grna: rgba(0, 255, 136, .12);
+      --w: #eee;
+      --g1: #999;
+      --g2: #666;
+      --g3: #444;
+      --f: 'Space Mono', monospace;
+      --d: 'Bebas Neue', sans-serif;
+      --m: 'Permanent Marker', cursive
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--w);
+      font-family: var(--f);
+      overflow-x: hidden
+    }
+
+    a {
+      color: var(--r);
+      text-decoration: none
+    }
+
+    ::-webkit-scrollbar {
+      width: 5px
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #060606
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--r);
+      border-radius: 3px
+    }
+
+    @keyframes up {
+      from {
+        opacity: 0;
+        transform: translateY(20px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0)
+      }
+    }
+
+    @keyframes fade {
+      from {
+        opacity: 0
+      }
+
+      to {
+        opacity: 1
+      }
+    }
+
+    @keyframes glow {
+
+      0%,
+      100% {
+        text-shadow: 0 0 6px rgba(255, 0, 60, .4)
+      }
+
+      50% {
+        text-shadow: 0 0 18px rgba(255, 0, 60, .6)
+      }
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: .6
+      }
+
+      50% {
+        opacity: 1
+      }
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+
+    @keyframes shimmer {
+      0% {
+        background-position: -200% 0
+      }
+
+      100% {
+        background-position: 200% 0
+      }
+    }
+
+    @keyframes scroll {
+      from {
+        transform: translateX(0)
+      }
+
+      to {
+        transform: translateX(-50%)
+      }
+    }
+
+    .site-nav {
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      background: rgba(4, 4, 4, .96);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid #111
+    }
+
+    .site-nav-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--r);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 19px;
+      box-shadow: 0 0 10px var(--ra)
+    }
+
+    .logo span {
+      font-family: var(--d);
+      font-size: 17px;
+      letter-spacing: 4px;
+      color: #fff
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 3px;
+      flex-wrap: wrap
+    }
+
+    .nav-links a {
+      padding: 7px 12px;
+      border-radius: 6px;
+      font-family: var(--d);
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: var(--g1);
+      border: 1px solid transparent;
+      transition: all .2s
+    }
+
+    .nav-links a:hover {
+      color: var(--r);
+      background: var(--rb)
+    }
+
+    .nav-links a.active {
+      color: var(--r);
+      background: var(--rb);
+      border-color: rgba(255, 0, 60, .2)
+    }
+
+    .ticker {
+      background: var(--r);
+      padding: 3px 0;
+      overflow: hidden;
+      white-space: nowrap
+    }
+
+    .ticker-inner {
+      display: inline-block;
+      animation: scroll 30s linear infinite
+    }
+
+    .ticker span {
+      font-family: var(--f);
+      font-size: 10px;
+      color: #000;
+      font-weight: 700;
+      letter-spacing: 1px
+    }
+
+    .nft-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 14px;
+      padding: 0 16px 30px;
+      max-width: 1400px;
+      margin: 0 auto
+    }
+
+    .nft-card {
+      background: var(--card);
+      border: 1px solid var(--bdr);
+      border-radius: 12px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all .3s;
+      position: relative
+    }
+
+    .nft-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 0 28px var(--ra), 0 14px 36px rgba(0, 0, 0, .6);
+      border-color: rgba(255, 0, 60, .22)
+    }
+
+    .nft-card:hover .nft-img {
+      transform: scale(1.05)
+    }
+
+    .nft-img-wrap {
+      height: 220px;
+      background: #030303;
+      overflow: hidden;
+      position: relative
+    }
+
+    .nft-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform .4s ease
+    }
+
+    .nft-info {
+      padding: 10px 12px 12px
+    }
+
+    .nft-name {
+      font-family: var(--d);
+      font-size: 13px;
+      color: #fff;
+      letter-spacing: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap
+    }
+
+    .nft-owner {
+      font-size: 9px;
+      color: var(--g2);
+      margin-top: 3px
+    }
+
+    .yours-badge {
+      position: absolute;
+      top: 7px;
+      left: 7px;
+      background: var(--grna);
+      border: 1px solid rgba(0, 255, 136, .2);
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 8px;
+      color: var(--grn);
+      font-weight: 700
+    }
+
+    .listed-badge {
+      position: absolute;
+      top: 7px;
+      right: 7px;
+      background: rgba(0, 0, 0, .75);
+      border: 1px solid rgba(0, 255, 136, .3);
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 9px;
+      color: var(--grn);
+      font-weight: 700;
+      backdrop-filter: blur(4px)
+    }
+
+    .price-tag {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 5px;
+      font-family: var(--d);
+      font-size: 14px;
+      color: var(--grn);
+      letter-spacing: 1px
+    }
+
+    .sk {
+      background: linear-gradient(90deg, #111 25%, #1a1a1a 50%, #111 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 8px
+    }
+
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255, 255, 255, .2);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 6px
+    }
+
+    .btn-primary {
+      padding: 12px 24px;
+      background: var(--r);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-family: var(--d);
+      font-size: 15px;
+      letter-spacing: 3px;
+      cursor: pointer;
+      box-shadow: 0 0 12px var(--ra);
+      transition: all .2s;
+      text-align: center;
+      width: 100%
+    }
+
+    .btn-primary:hover {
+      box-shadow: 0 0 24px rgba(255, 0, 60, .4)
+    }
+
+    .btn-primary:disabled {
+      opacity: .4;
+      cursor: not-allowed;
+      box-shadow: none
+    }
+
+    .btn-green {
+      padding: 12px 24px;
+      background: #00c96a;
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      font-family: var(--d);
+      font-size: 15px;
+      letter-spacing: 3px;
+      cursor: pointer;
+      box-shadow: 0 0 12px var(--grna);
+      transition: all .2s;
+      text-align: center;
+      width: 100%;
+      font-weight: 700
+    }
+
+    .btn-green:hover {
+      box-shadow: 0 0 24px rgba(0, 255, 136, .4)
+    }
+
+    .btn-green:disabled {
+      opacity: .4;
+      cursor: not-allowed;
+      box-shadow: none
+    }
+
+    .btn-ghost {
+      padding: 10px 20px;
+      background: transparent;
+      border: 1px solid rgba(255, 0, 60, .2);
+      color: var(--r);
+      border-radius: 8px;
+      font-family: var(--d);
+      font-size: 13px;
+      letter-spacing: 3px;
+      cursor: pointer;
+      transition: all .2s;
+      text-align: center
+    }
+
+    .btn-ghost:hover {
+      background: var(--rb)
+    }
+
+    .btn-ghost:disabled {
+      opacity: .3;
+      cursor: not-allowed
+    }
+
+    .btn-danger {
+      padding: 10px 14px;
+      background: transparent;
+      border: 1px solid rgba(255, 0, 60, .35);
+      color: var(--r);
+      border-radius: 8px;
+      font-family: var(--d);
+      font-size: 12px;
+      letter-spacing: 2px;
+      cursor: pointer;
+      transition: all .2s
+    }
+
+    .btn-danger:hover {
+      background: rgba(255, 0, 60, .1)
+    }
+
+    .wallet-btn {
+      padding: 10px 16px;
+      background: linear-gradient(135deg, #AB47FF, #7C3AED);
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-family: var(--d);
+      font-size: 12px;
+      letter-spacing: 3px;
+      cursor: pointer;
+      box-shadow: 0 0 12px rgba(124, 58, 237, .2);
+      transition: all .2s;
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .wallet-btn:hover {
+      box-shadow: 0 0 22px rgba(124, 58, 237, .4)
+    }
+
+    .conn-btn {
+      padding: 7px 12px;
+      background: rgba(0, 255, 136, .06);
+      border: 1px solid rgba(0, 255, 136, .18);
+      border-radius: 10px;
+      color: var(--grn);
+      font-family: var(--f);
+      font-size: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px
+    }
+
+    .dot-sm {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--grn);
+      animation: pulse 2s infinite;
+      display: inline-block
+    }
+
+    .input {
+      padding: 10px 14px;
+      background: #080808;
+      border: 1px solid #1c1c1c;
+      border-radius: 8px;
+      color: var(--w);
+      font-family: var(--f);
+      font-size: 12px;
+      outline: none;
+      width: 100%
+    }
+
+    .input:focus {
+      border-color: var(--r)
+    }
+
+    .neon {
+      color: var(--r);
+      animation: glow 3s ease-in-out infinite
+    }
+
+    .stat-card {
+      text-align: center;
+      padding: 10px 14px;
+      background: var(--card);
+      border: 1px solid var(--bdr);
+      border-radius: 10px;
+      min-width: 85px
+    }
+
+    .tab-btn {
+      padding: 8px 18px;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      color: var(--g2);
+      font-family: var(--d);
+      font-size: 13px;
+      letter-spacing: 3px;
+      cursor: pointer;
+      transition: all .2s
+    }
+
+    .tab-btn.active {
+      color: var(--r);
+      background: var(--rb);
+      border-color: rgba(255, 0, 60, .2)
+    }
+
+    .tg {
+      font-size: 9px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      letter-spacing: 1px;
+      font-weight: 700
+    }
+
+    .trait {
+      background: var(--rb);
+      border: 1px solid rgba(255, 0, 60, .08);
+      border-radius: 6px;
+      padding: 5px 9px;
+      font-size: 10px;
+      display: inline-block;
+      margin: 2px
+    }
+
+    .modal-bg {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .92);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(14px);
+      animation: fade .15s;
+      padding: 14px
+    }
+
+    .modal {
+      background: linear-gradient(145deg, #0c0c0c, #080808);
+      border: 1px solid #1c1c1c;
+      border-radius: 16px;
+      width: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      overflow: hidden;
+      max-height: 92vh;
+      overflow-y: auto;
+      position: relative
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      z-index: 10;
+      background: var(--rb);
+      border: 1px solid var(--r);
+      color: var(--r);
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 14px;
+      display: grid;
+      place-items: center
+    }
+
+    .offer-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      background: #0a0a0a;
+      border: 1px solid #181818;
+      border-radius: 8px;
+      margin-bottom: 6px
+    }
+
+    .divider {
+      height: 1px;
+      background: #161616;
+      margin: 14px 0
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 2000;
+      background: var(--grn);
+      color: #000;
+      padding: 10px 24px;
+      border-radius: 8px;
+      font-family: var(--d);
+      font-size: 14px;
+      letter-spacing: 2px;
+      box-shadow: 0 4px 20px var(--grna);
+      animation: up .25s;
+      white-space: nowrap
+    }
+
+    .toast.err {
+      background: var(--r);
+      color: #fff;
+      box-shadow: 0 4px 20px var(--ra)
+    }
+
+    /* Activity Bar */
+    .activity-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 500;
+      background: rgba(6, 6, 6, .97);
+      border-top: 1px solid #1a1a1a;
+      backdrop-filter: blur(20px);
+      transform: translateY(100%);
+      transition: transform .3s cubic-bezier(.4, 0, .2, 1)
+    }
+
+    .activity-bar.open {
+      transform: translateY(0)
+    }
+
+    .activity-bar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px 6px;
+      border-bottom: 1px solid #111
+    }
+
+    .activity-scroll {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding: 10px 16px 14px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--r) transparent
+    }
+
+    .activity-scroll::-webkit-scrollbar {
+      height: 3px
+    }
+
+    .activity-scroll::-webkit-scrollbar-thumb {
+      background: var(--r);
+      border-radius: 2px
+    }
+
+    .activity-item {
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      transition: transform .15s
+    }
+
+    .activity-item:hover {
+      transform: translateY(-2px)
+    }
+
+    .activity-img {
+      width: 60px;
+      height: 60px;
+      border-radius: 8px;
+      object-fit: cover;
+      background: #111;
+      border: 1px solid #1c1c1c
+    }
+
+    .activity-price {
+      font-family: var(--d);
+      font-size: 12px;
+      color: var(--grn);
+      letter-spacing: 1px
+    }
+
+    .activity-time {
+      font-size: 9px;
+      color: var(--g2)
+    }
+
+    /* Filter Panel */
+    .filter-panel {
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      z-index: 600;
+      width: min(320px, 90vw);
+      background: #060606;
+      border-right: 1px solid #1a1a1a;
+      overflow-y: auto;
+      transform: translateX(-100%);
+      transition: transform .3s cubic-bezier(.4, 0, .2, 1)
+    }
+
+    .filter-panel.open {
+      transform: translateX(0)
+    }
+
+    .filter-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 599;
+      background: rgba(0, 0, 0, .6);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .3s
+    }
+
+    .filter-overlay.open {
+      opacity: 1;
+      pointer-events: all
+    }
+
+    .filter-trait-group {
+      margin-bottom: 14px
+    }
+
+    .filter-trait-group summary {
+      font-family: var(--d);
+      font-size: 12px;
+      letter-spacing: 2px;
+      color: var(--g1);
+      cursor: pointer;
+      padding: 8px 0;
+      list-style: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center
+    }
+
+    .filter-trait-group summary::-webkit-details-marker {
+      display: none
+    }
+
+    .filter-val {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 0;
+      cursor: pointer;
+      font-size: 10px;
+      color: var(--g2)
+    }
+
+    .filter-val:hover {
+      color: var(--w)
+    }
+
+    .filter-val input {
+      accent-color: var(--r);
+      width: 14px;
+      height: 14px;
+      cursor: pointer
+    }
+
+    .filter-val.active {
+      color: var(--w)
+    }
+
+    /* Tool buttons */
+    .tool-btn {
+      padding: 7px 12px;
+      background: #0a0a0a;
+      border: 1px solid #1c1c1c;
+      border-radius: 8px;
+      color: var(--g1);
+      font-family: var(--d);
+      font-size: 11px;
+      letter-spacing: 2px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: all .2s;
+      white-space: nowrap
+    }
+
+    .tool-btn:hover {
+      border-color: rgba(255, 0, 60, .3);
+      color: var(--w)
+    }
+
+    .tool-btn.active {
+      border-color: rgba(255, 0, 60, .4);
+      color: var(--r);
+      background: var(--rb)
+    }
+
+    /* Cabbage & Leaderboard */
+    .cabbage-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      background: rgba(0, 200, 0, .06);
+      border: 1px solid rgba(0, 200, 0, .15);
+      border-radius: 20px;
+      font-family: var(--d);
+      font-size: 12px;
+      color: #4ade80;
+      letter-spacing: 1px;
+      cursor: default
+    }
+
+    .lb-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      background: var(--card);
+      border: 1px solid var(--bdr);
+      border-radius: 10px;
+      margin-bottom: 6px;
+      transition: all .2s
+    }
+
+    .lb-row:hover {
+      border-color: rgba(255, 0, 60, .15)
+    }
+
+    .lb-row.you {
+      border-color: rgba(0, 255, 136, .25);
+      background: rgba(0, 255, 136, .03)
+    }
+
+    .lb-rank {
+      font-family: var(--d);
+      font-size: 20px;
+      color: var(--g2);
+      min-width: 30px;
+      text-align: center;
+      letter-spacing: 1px
+    }
+
+    .lb-rank.gold { color: #ffd700 }
+    .lb-rank.silver { color: #c0c0c0 }
+    .lb-rank.bronze { color: #cd7f32 }
+
+    .streak-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      background: rgba(255, 165, 0, .04);
+      border: 1px solid rgba(255, 165, 0, .12);
+      border-radius: 8px;
+      margin-bottom: 14px
+    }
+
+    .streak-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #222;
+      border: 1px solid #333;
+      transition: all .3s
+    }
+
+    .streak-dot.lit {
+      background: #ffa500;
+      border-color: #ffa500;
+      box-shadow: 0 0 6px rgba(255, 165, 0, .5)
+    }
+
+    .featured-banner {
+      margin: 0 16px 14px;
+      max-width: 1400px;
+      margin-left: auto;
+      margin-right: auto;
+      padding: 14px 18px;
+      background: linear-gradient(135deg, rgba(255, 215, 0, .04), rgba(255, 0, 60, .04));
+      border: 1px solid rgba(255, 215, 0, .15);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      cursor: pointer;
+      transition: all .3s
+    }
+
+    .featured-banner:hover {
+      border-color: rgba(255, 215, 0, .3);
+      box-shadow: 0 0 20px rgba(255, 215, 0, .06)
+    }
+
+    .winner-banner {
+      padding: 12px 18px;
+      background: linear-gradient(135deg, rgba(255, 215, 0, .06), transparent);
+      border: 1px solid rgba(255, 215, 0, .12);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px
+    }
+
+    /* Trade Tab */
+    .trade-card {
+      background: var(--card);
+      border: 1px solid var(--bdr);
+      border-radius: 14px;
+      padding: 18px;
+      margin-bottom: 12px;
+      transition: all .3s;
+      position: relative;
+      overflow: hidden
+    }
+
+    .trade-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--r), transparent);
+      opacity: .4
+    }
+
+    .trade-card:hover {
+      border-color: rgba(255, 0, 60, .18);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, .4)
+    }
+
+    .trade-card.incoming::before {
+      background: linear-gradient(90deg, transparent, var(--grn), transparent)
+    }
+
+    .trade-arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      color: var(--r);
+      padding: 6px 0;
+      opacity: .6;
+      font-family: var(--d);
+      letter-spacing: 6px
+    }
+
+    .trade-side {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap
+    }
+
+    .trade-nft-thumb {
+      width: 64px;
+      height: 64px;
+      border-radius: 8px;
+      object-fit: cover;
+      border: 1px solid #1c1c1c;
+      background: #111;
+      flex-shrink: 0
+    }
+
+    .trade-nft-info {
+      flex: 1;
+      min-width: 0
+    }
+
+    .trade-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 9px;
+      font-family: var(--d);
+      letter-spacing: 2px
+    }
+
+    .trade-status.pending {
+      background: rgba(255, 165, 0, .08);
+      border: 1px solid rgba(255, 165, 0, .2);
+      color: #ffa500
+    }
+
+    .trade-status.completed {
+      background: var(--grna);
+      border: 1px solid rgba(0, 255, 136, .2);
+      color: var(--grn)
+    }
+
+    .trade-status.cancelled {
+      background: var(--rb);
+      border: 1px solid rgba(255, 0, 60, .15);
+      color: var(--g2)
+    }
+
+    .trade-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      flex-wrap: wrap
+    }
+
+    .trade-empty {
+      text-align: center;
+      padding: 50px 20px
+    }
+
+    .trade-tab-inner {
+      display: flex;
+      gap: 3px;
+      justify-content: center;
+      margin-bottom: 14px
+    }
+
+    .trade-tab-inner button {
+      padding: 6px 14px;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      color: var(--g2);
+      font-family: var(--d);
+      font-size: 11px;
+      letter-spacing: 2px;
+      cursor: pointer;
+      transition: all .2s
+    }
+
+    .trade-tab-inner button.active {
+      color: var(--r);
+      background: var(--rb);
+      border-color: rgba(255, 0, 60, .2)
+    }
+
+    .step-dots {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 20px
+    }
+
+    .step-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #222;
+      transition: all .3s
+    }
+
+    .step-dot.active {
+      background: var(--r);
+      box-shadow: 0 0 8px var(--ra)
+    }
+
+    .step-dot.done {
+      background: var(--grn)
+    }
+
+    .nft-pick-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 8px;
+      max-height: 300px;
+      overflow-y: auto;
+      padding: 4px
+    }
+
+    .nft-pick-card {
+      background: #0a0a0a;
+      border: 2px solid #1c1c1c;
+      border-radius: 10px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all .2s;
+      text-align: center
+    }
+
+    .nft-pick-card:hover {
+      border-color: rgba(255, 0, 60, .3)
+    }
+
+    .nft-pick-card.selected {
+      border-color: var(--r);
+      box-shadow: 0 0 12px var(--ra)
+    }
+
+    .nft-pick-card img {
+      width: 100%;
+      height: 80px;
+      object-fit: cover
+    }
+
+    .nft-pick-card .pick-name {
+      font-size: 8px;
+      color: var(--g1);
+      padding: 4px;
+      font-family: var(--d);
+      letter-spacing: 1px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis
+    }
+
+    .sweetener-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      background: #060606;
+      border: 1px solid #1a1a1a;
+      border-radius: 8px;
+      margin-top: 10px
+    }
+
+    .site-footer {
+      border-top: 1px solid #0e0e0e;
+      padding: 20px;
+      text-align: center
+    }
+
+    .site-footer a {
+      color: var(--g2);
+      margin: 0 8px;
+      font-size: 10px;
+      letter-spacing: 2px;
+      font-family: var(--d)
+    }
+
+    .site-footer a:hover {
+      color: var(--r)
+    }
+
+    @media(max-width:600px) {
+      .nav-links {
+        gap: 2px
+      }
+
+      .nav-links a {
+        padding: 5px 8px;
+        font-size: 9px;
+        letter-spacing: 1px
+      }
+
+      .nft-grid {
+        grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+        gap: 10px;
+        padding: 0 10px 24px
+      }
+
+      .logo span {
+        font-size: 14px;
+        letter-spacing: 3px
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <nav class="site-nav">
+    <div class="site-nav-inner">
+      <a href="/" class="logo">
+        <div class="logo-icon">🐦</div>
+        <span>LONG NECK LEGENDS</span>
+      </a>
+      <div class="nav-links">
+        <a href="/starternecks.html">STARTER NECKS</a>
+        <a href="/music.html">MUSIC</a>
+        <a href="/hotsaucemint.html">HOT SAUCE</a>
+        <a href="/store.html">STORE</a>
+        <a href="/marketplace.html" class="active">MARKETPLACE</a>
+        <a href="/dashboard.html">DASHBOARD</a>
+      </div>
+      <div id="wallet-area"></div>
+    </div>
+  </nav>
+
+  <div
+    style="position:fixed;inset:0;pointer-events:none;z-index:999;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.025) 2px,rgba(0,0,0,.025) 4px)">
+  </div>
+  <div id="app"></div>
+
+  <!-- Filter overlay + panel -->
+  <div class="filter-overlay" id="filter-overlay" onclick="closeFilter()"></div>
+  <div class="filter-panel" id="filter-panel">
+    <div
+      style="padding:18px 16px;border-bottom:1px solid #111;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:#060606;z-index:2">
+      <div style="font-family:var(--d);font-size:18px;letter-spacing:3px;color:#fff">FILTER BY TRAIT</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button onclick="clearFilters()"
+          style="font-size:9px;color:var(--r);background:none;border:none;cursor:pointer;font-family:var(--d);letter-spacing:1px"
+          id="clear-filters-btn">CLEAR ALL</button>
+        <button onclick="closeFilter()"
+          style="background:var(--rb);border:1px solid rgba(255,0,60,.2);color:var(--r);width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:12px;display:grid;place-items:center">✕</button>
+      </div>
+    </div>
+    <div id="filter-traits-body" style="padding:12px 16px">
+      <div style="color:var(--g2);font-size:10px;text-align:center;padding:20px">Loading traits...</div>
+    </div>
+  </div>
+
+  <!-- Activity Bar -->
+  <div class="activity-bar" id="activity-bar">
+    <div class="activity-bar-header">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-family:var(--d);font-size:14px;letter-spacing:3px;color:#fff">ACTIVITY</span>
+        <span id="activity-count" style="font-size:9px;color:var(--g2)"></span>
+      </div>
+      <button onclick="closeActivity()"
+        style="background:var(--rb);border:1px solid rgba(255,0,60,.2);color:var(--r);width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:12px;display:grid;place-items:center">✕</button>
+    </div>
+    <div class="activity-scroll" id="activity-scroll"></div>
+  </div>
+
+  <script>
+    // ═══════════════════════════════════════════════════════════
+    // PUBLIC Helius key used only for read-only NFT proof/collection queries in the browser.
+    // This is NOT your escrow key, service role key, or backend secret.
+    // Use a low-limit/restricted public Helius key here; keep your real backend RPC in Supabase secrets.
+    const HELIUS_KEY = "33955d33-79ed-4817-8a40-1ce04a3cf241";
+    const COLLECTIONS = {
+      LNL: { key: "LNL", label: "LONG NECK LEGENDS", shortLabel: "LNL", mint: "2WvxCvgFUiqUSBx32c5Z5Zsbcu4ZJCE1GEaaWpbD685P" },
+      GA: { key: "GA", label: "GOLF ADDICT", shortLabel: "GA", mint: "AYQRWUDYa4T6RJN1pngFoKfAoX1Dew6kfB3AZXxjvdyi" }
+    };
+    const COLLECTION_KEYS = Object.keys(COLLECTIONS);
+    const TREASURY = "ChnzFpK4ty2vpzM48HUrtDVY7tWD8StmYaNxQcKSBuyc";
+    const FEE_PCT = 0.025;
+    const SUPPLY_BY_COLLECTION = { LNL: 3333, GA: 777 };
+    const SUPPLY = SUPPLY_BY_COLLECTION.LNL + SUPPLY_BY_COLLECTION.GA;
+    const PAGE_SIZE = 28;
+    const SB_URL = "https://hypqndasopdkrqvkllvc.supabase.co";
+    const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5cHFuZGFzb3Bka3JxdmtsbHZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5NTI1NjEsImV4cCI6MjA4NzUyODU2MX0.jXLaLfFudJf-xytfHAvMe5oV0DVeWi7xNB53Ib0GD_s";
+    const RPC = `https://mainnet.helius-rpc.com/?api-key=${HELIUS_KEY}`;
+
+    // ── Compressed NFT Marketplace (Bubblegum + Escrow Co-signer) ──
+    const ESCROW_ADDRESS = "BRveonSzDfxYzmmTxpEdHndajfBTBLjz3bwatJGLSxii"; // from generate-escrow.mjs
+    const COSIGN_URL = "https://hypqndasopdkrqvkllvc.supabase.co/functions/v1/marketplace-cosign";
+    const BUBBLEGUM_PROGRAM = "BGUMAp9Gq7iTEuizy4pqaxsTyUCBK68MDfK752saRPUY";
+    const COMPRESSION_PROGRAM = "cmtDvXumGCrqC1Age74AVPhSRVXJMd8PJS91L8KbNCK";
+    const NOOP_PROGRAM = "noopb9bkMVfRPU8AsbpTUg8AQkHtKwMYZiFUjNRtMmV";
+    const TOKEN_PROGRAM = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
+    const SYS_PROGRAM = "11111111111111111111111111111111";
+    let BG_IX = {}; // Bubblegum instruction discriminators
+    // ═══════════════════════════════════════════════════════════
+
+    // ── State ──
+    let nfts = [], myNfts = [], listings = {}, offers = {};
+    let total = 0, page = 1, loading = false, error = null;
+    let walletAddress = null, walletProvider = null;
+    let selectedNft = null, activeTab = "market", activeCollection = "all", searchQuery = "";
+    let totalVolume = 0;
+    let sortDir = "asc"; // "asc" | "desc"
+    let activeFilters = {}; // { "LNL::Background": ["Blue","Red"], "GA::Ball": ["White"] }
+    let allTraits = {}; // { LNL: { "Background": Set([...]) }, GA: { "Ball": Set([...]) } }
+    let traitsLoaded = false, traitsLoading = false;
+    let recentSales = []; // last 50 sales for activity bar
+    let traitIndex = {}; // mint -> { traitType: value } — built during loadTraits
+    let collectionByMint = {}; // mint -> "LNL" | "GA"
+    let supplyByCollection = { ...SUPPLY_BY_COLLECTION };
+
+    // ── Trade State ──
+    let trades = []; // all trades from Supabase
+    let tradeSubTab = "live"; // "live" | "incoming" | "outgoing" | "history"
+    let counterpartyNfts = []; // NFTs of the counterparty wallet for trade creation
+
+    // ── Cabbage Rewards State ──
+    let leaderboard = []; // top wallets by weekly points
+    let myPoints = null; // { total_points, weekly_points, current_streak, last_action_date }
+    let weeklyWinner = null; // last week's winner
+    let featuredListing = null; // today's featured { mint }
+    let recentActivity = []; // last 20 global actions
+
+    const short = (a, s = 4, e = 4) => a ? `${a.slice(0, s)}...${a.slice(-e)}` : "";
+    const getCollectionConfig = key => COLLECTIONS[key] || null;
+    const getCollectionLabel = key => key === "all" ? "ALL COLLECTIONS" : (getCollectionConfig(key)?.label || "UNKNOWN COLLECTION");
+    const getCollectionShortLabel = key => key === "all" ? "ALL" : (getCollectionConfig(key)?.shortLabel || key || "NFT");
+    const getCollectionMint = key => getCollectionConfig(key)?.mint || "";
+    const detectCollectionKey = item => {
+      const grouped = (item.grouping || []).find(g => g.group_key === "collection" && COLLECTION_KEYS.some(key => g.group_value === COLLECTIONS[key].mint));
+      if (grouped) return COLLECTION_KEYS.find(key => COLLECTIONS[key].mint === grouped.group_value) || null;
+      const name = (item.content?.metadata?.name || item.name || "").toLowerCase();
+      if (name.startsWith("long neck legend")) return "LNL";
+      if (name.includes("golf addict")) return "GA";
+      if ((item.creators || []).some(c => COLLECTION_KEYS.some(key => c.address === COLLECTIONS[key].mint))) {
+        return COLLECTION_KEYS.find(key => (item.creators || []).some(c => c.address === COLLECTIONS[key].mint)) || null;
+      }
+      return collectionByMint[item.id] || null;
+    };
+
+    // ─────────────────────────────────────────────
+    //  SUPABASE
+    // ─────────────────────────────────────────────
+    const SB_HDR = { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, "Content-Type": "application/json" };
+
+    async function sbGet(path) {
+      const r = await fetch(`${SB_URL}/rest/v1/${path}`, { headers: SB_HDR });
+      return r.json();
+    }
+    async function sbUpsert(table, body) {
+      const r = await fetch(`${SB_URL}/rest/v1/${table}`, {
+        method: "POST",
+        headers: { ...SB_HDR, Prefer: "resolution=merge-duplicates,return=representation" },
+        body: JSON.stringify(body)
+      });
+      return r.json();
+    }
+    async function sbDelete(table, match) {
+      const qs = Object.entries(match).map(([k, v]) => `${k}=eq.${encodeURIComponent(v)}`).join("&");
+      await fetch(`${SB_URL}/rest/v1/${table}?${qs}`, { method: "DELETE", headers: SB_HDR });
+    }
+
+    async function loadMarketData() {
+      try {
+        const [ls, os, sv, tr] = await Promise.all([
+          sbGet("marketplace_listings?select=*"),
+          sbGet("marketplace_offers?select=*"),
+          sbGet("marketplace_sales?select=price_sol,name,image,sold_at&order=sold_at.desc&limit=50"),
+          sbGet("marketplace_trades?select=*&order=created_at.desc&limit=200")
+        ]);
+        listings = {};
+        (Array.isArray(ls) ? ls : []).forEach(l => { listings[l.mint] = l; });
+        offers = {};
+        (Array.isArray(os) ? os : []).forEach(o => {
+          if (!offers[o.mint]) offers[o.mint] = [];
+          offers[o.mint].push(o);
+        });
+        const sales = Array.isArray(sv) ? sv : [];
+        totalVolume = sales.reduce((sum, s) => sum + parseFloat(s.price_sol || 0), 0);
+        recentSales = sales; // already limited to 50 by query
+        trades = Array.isArray(tr) ? tr : [];
+      } catch (e) { console.error("loadMarketData:", e); }
+      // Load cabbage data (non-blocking)
+      loadCabbageData();
+    }
+
+    // ─────────────────────────────────────────────
+    //  CABBAGE REWARDS
+    // ─────────────────────────────────────────────
+    async function loadCabbageData() {
+      try {
+        // Read-only rewards data. Do not call privileged backend actions from page load.
+        const [lb, act] = await Promise.all([
+          sbGet("marketplace_points?select=wallet,total_points,weekly_points,current_streak&order=weekly_points.desc&limit=25"),
+          sbGet("marketplace_activity?select=wallet,action_type,points,details,created_at&order=created_at.desc&limit=20"),
+        ]);
+        const feat = null;
+        const resetResult = null;
+        leaderboard = Array.isArray(lb) ? lb : [];
+        recentActivity = Array.isArray(act) ? act : [];
+        if (feat?.featured) featuredListing = feat.featured;
+
+        // Weekly winner — check reset result first, fall back to DB query
+        if (resetResult?.winner) {
+          weeklyWinner = resetResult.winner;
+        } else {
+          const winners = await sbGet("marketplace_weekly_winners?select=*&order=week_start.desc&limit=1");
+          weeklyWinner = Array.isArray(winners) && winners.length ? winners[0] : null;
+        }
+
+        // Load my points if connected
+        if (walletAddress) {
+          const mp = await sbGet(`marketplace_points?wallet=eq.${walletAddress}&select=*`);
+          myPoints = Array.isArray(mp) && mp.length ? mp[0] : null;
+        }
+        render();
+      } catch (e) { console.error("[cabbage] load failed:", e); }
+    }
+
+    async function awardListPoints(mint) {
+      // Disabled in secure frontend. Points are now awarded server-side only after verified actions.
+      return;
+    }
+
+    const ACTION_LABELS = {
+      list: "LISTED",
+      buy: "BOUGHT",
+      sell: "SOLD",
+      trade_propose: "TRADED",
+      trade_accept: "TRADED",
+      streak_bonus: "STREAK 🔥"
+    };
+
+    // ─────────────────────────────────────────────
+    //  ACTIVITY BAR
+    // ─────────────────────────────────────────────
+    function timeAgo(isoStr) {
+      const s = Math.floor((Date.now() - new Date(isoStr)) / 1000);
+      if (s < 60) return s + "s ago";
+      if (s < 3600) return Math.floor(s / 60) + "m ago";
+      if (s < 86400) return Math.floor(s / 3600) + "h ago";
+      return Math.floor(s / 86400) + "d ago";
+    }
+
+    function openActivity() {
+      const bar = document.getElementById("activity-bar");
+      if (!bar) return;
+      // Toggle — close if already open
+      if (bar.classList.contains("open")) { bar.classList.remove("open"); return; }
+      const scroll = document.getElementById("activity-scroll");
+      const count = document.getElementById("activity-count");
+      count.textContent = recentSales.length ? `${recentSales.length} sales` : "";
+      if (!recentSales.length) {
+        scroll.innerHTML = `<div style="color:var(--g2);font-size:10px;padding:10px 4px;white-space:nowrap">No sales yet — be the first!</div>`;
+      } else {
+        scroll.innerHTML = recentSales.map(s => `
+      <div class="activity-item">
+        ${s.image ? `<img class="activity-img" src="${s.image}" onerror="this.style.background='#1a1a1a'">` : `<div class="activity-img" style="display:flex;align-items:center;justify-content:center;font-size:22px">🐦</div>`}
+        <div class="activity-price">◎ ${parseFloat(s.price_sol).toFixed(2)}</div>
+        <div class="activity-time">${timeAgo(s.sold_at)}</div>
+      </div>`).join("");
+      }
+      bar.classList.add("open");
+    }
+    function closeActivity() { document.getElementById("activity-bar")?.classList.remove("open"); }
+
+    // ─────────────────────────────────────────────
+    //  TRAIT FILTER — lazy loads full collection with rate-limit safety
+    // ─────────────────────────────────────────────
+    async function loadTraits() {
+      if (traitsLoaded || traitsLoading) return;
+      traitsLoading = true;
+      const body = document.getElementById("filter-traits-body");
+      if (body) body.innerHTML = `<div style="color:var(--g2);font-size:10px;text-align:center;padding:20px"><span class="spinner"></span> Loading traits...</div>`;
+
+      try {
+        let all = [];
+        allTraits = {};
+        for (const key of COLLECTION_KEYS) {
+          if (!allTraits[key]) allTraits[key] = {};
+          let pg = 1;
+          let collectionItems = [];
+          while (true) {
+            const res = await fetch(RPC, {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                jsonrpc: "2.0", id: `traits-${key}-${pg}`, method: "getAssetsByGroup",
+                params: { groupKey: "collection", groupValue: COLLECTIONS[key].mint, page: pg, limit: 1000 }
+              })
+            });
+            const data = await res.json();
+            const items = data.result?.items || [];
+            items.forEach(item => {
+              collectionByMint[item.id] = key;
+              const attrs = item.content?.metadata?.attributes || [];
+              traitIndex[item.id] = {};
+              attrs.forEach(a => {
+                if (!a.trait_type || a.value == null || a.value === "") return;
+                const traitType = String(a.trait_type);
+                const traitValue = String(a.value);
+                if (!allTraits[key][traitType]) allTraits[key][traitType] = new Set();
+                allTraits[key][traitType].add(traitValue);
+                traitIndex[item.id][traitType] = traitValue;
+              });
+            });
+            collectionItems = collectionItems.concat(items);
+            all = all.concat(items);
+            if (body) body.innerHTML = `<div style="color:var(--g2);font-size:10px;text-align:center;padding:10px"><span class="spinner"></span> Loading... ${all.length} assets scanned</div>`;
+            if (items.length < 1000 || collectionItems.length >= (data.result?.total || 0)) {
+              supplyByCollection[key] = data.result?.total || collectionItems.length;
+              break;
+            }
+            pg++;
+            await new Promise(r => setTimeout(r, 400));
+          }
+        }
+        traitsLoaded = true;
+        renderFilterPanel();
+      } catch (e) {
+        console.error("loadTraits:", e);
+        if (body) body.innerHTML = `<div style="color:var(--r);font-size:10px;text-align:center;padding:20px">Failed to load traits</div>`;
+      }
+      traitsLoading = false;
+    }
+
+    function renderFilterPanel() {
+      const body = document.getElementById("filter-traits-body");
+      if (!body) return;
+      const activeCount = Object.values(activeFilters).reduce((n, v) => n + v.length, 0);
+      document.getElementById("clear-filters-btn").style.opacity = activeCount ? "1" : "0.3";
+
+      const sectionHtml = COLLECTION_KEYS.map(key => {
+        const traitsForCollection = allTraits[key] || {};
+        const traitKeys = Object.keys(traitsForCollection).sort();
+        const color = key === "LNL" ? "var(--r)" : "var(--grn)";
+        const glow = key === "LNL" ? "rgba(255,0,60,.08)" : "rgba(0,255,136,.08)";
+        const border = key === "LNL" ? "rgba(255,0,60,.22)" : "rgba(0,255,136,.22)";
+
+        return `<div style="margin-bottom:18px">
+          <div style="position:sticky;top:58px;z-index:1;background:#060606;padding:10px 0 8px">
+            <div style="font-family:var(--d);font-size:14px;letter-spacing:3px;color:${color};padding:8px 10px;border:1px solid ${border};border-radius:10px;background:${glow}">
+              ${COLLECTIONS[key].shortLabel} TRAITS
+            </div>
+          </div>
+          ${traitKeys.length ? traitKeys.map(trait => {
+            const vals = [...traitsForCollection[trait]].sort();
+            const filterKey = `${key}::${trait}`;
+            const selected = activeFilters[filterKey] || [];
+            return `<details class="filter-trait-group" ${selected.length ? "open" : ""}>
+              <summary>
+                <span style="color:${color}">${trait}</span>
+                <span style="font-size:9px;color:var(--g2)">${selected.length ? `<span style="color:${color}">${selected.length} selected</span>` : vals.length + " values"}</span>
+              </summary>
+              <div style="padding:4px 0 8px 4px">
+                ${vals.map(v => {
+                  const checked = selected.includes(v);
+                  return `<label class="filter-val ${checked ? "active" : ""}">
+                    <input type="checkbox" ${checked ? "checked" : ""} onchange="toggleFilter('${key}','${trait.replace(/'/g, "\\'")}','${v.replace(/'/g, "\\'")}',this.checked)">
+                    ${v}
+                  </label>`;
+                }).join("")}
+              </div>
+            </details>`;
+          }).join("") : `<div style="color:var(--g2);font-size:10px;padding:12px 4px">No traits found</div>`}
+        </div>`;
+      }).join("");
+
+      body.innerHTML = sectionHtml || `<div style="color:var(--g2);font-size:10px;text-align:center;padding:20px">No traits found</div>`;
+    }
+
+    function toggleFilter(collectionKey, trait, value, on) {
+      const namespacedKey = `${collectionKey}::${trait}`;
+      if (!activeFilters[namespacedKey]) activeFilters[namespacedKey] = [];
+      if (on) { if (!activeFilters[namespacedKey].includes(value)) activeFilters[namespacedKey].push(value); }
+      else { activeFilters[namespacedKey] = activeFilters[namespacedKey].filter(v => v !== value); }
+      if (!activeFilters[namespacedKey].length) delete activeFilters[namespacedKey];
+      renderFilterPanel();
+      render();
+    }
+
+    function clearFilters() { activeFilters = {}; renderFilterPanel(); render(); }
+
+    function openFilter() {
+      document.getElementById("filter-panel")?.classList.add("open");
+      document.getElementById("filter-overlay")?.classList.add("open");
+      loadTraits(); // lazy — no-ops if already loaded/loading
+    }
+    function closeFilter() {
+      document.getElementById("filter-panel")?.classList.remove("open");
+      document.getElementById("filter-overlay")?.classList.remove("open");
+    }
+
+
+    // ─────────────────────────────────────────────
+    //  SOLANA WEB3 (lazy loaded)
+    // ─────────────────────────────────────────────
+    // web3.js lazy loader — uses v1.73.3 which bundles its own Buffer polyfill
+    let _web3 = null;
+    async function getWeb3() {
+      if (_web3) return _web3;
+      if (window.solanaWeb3) { _web3 = window.solanaWeb3; return _web3; }
+      await new Promise((res, rej) => {
+        const s = document.createElement("script");
+        // v1.73.3 bundles Buffer internally — no external polyfill needed
+        s.src = "https://unpkg.com/@solana/web3.js@1.73.3/lib/index.iife.min.js";
+        s.onload = res; s.onerror = rej;
+        document.head.appendChild(s);
+      });
+      _web3 = window.solanaWeb3;
+      if (!_web3) throw new Error("@solana/web3.js failed to load");
+      return _web3;
+    }
+
+    // ─────────────────────────────────────────────
+    //  BUBBLEGUM cNFT HELPERS
+    // ─────────────────────────────────────────────
+
+    // Anchor discriminator: first 8 bytes of sha256("global:<name>")
+    async function anchorDisc(name) {
+      const data = new TextEncoder().encode("global:" + name);
+      const hash = await crypto.subtle.digest("SHA-256", data);
+      return new Uint8Array(hash).slice(0, 8);
+    }
+
+    async function computeDiscriminators() {
+      BG_IX.delegate = await anchorDisc("delegate");
+      BG_IX.transfer = await anchorDisc("transfer");
+    }
+
+    function toLEU64(n) {
+      const buf = new ArrayBuffer(8); new DataView(buf).setBigUint64(0, BigInt(Math.round(n)), true); return new Uint8Array(buf);
+    }
+    function toLEU32(n) {
+      const buf = new ArrayBuffer(4); new DataView(buf).setUint32(0, n, true); return new Uint8Array(buf);
+    }
+    function concatBytes(...arrays) {
+      const total = arrays.reduce((s, a) => s + a.length, 0);
+      const out = new Uint8Array(total); let off = 0;
+      for (const a of arrays) { out.set(a, off); off += a.length; }
+      return out;
+    }
+
+    // Fetch cNFT compression data + merkle proof from Helius
+    async function getAssetDetails(mintId) {
+      const [assetRes, proofRes] = await Promise.all([
+        fetch(RPC, { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jsonrpc: "2.0", id: "a", method: "getAsset", params: { id: mintId } }) }),
+        fetch(RPC, { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jsonrpc: "2.0", id: "p", method: "getAssetProof", params: { id: mintId } }) })
+      ]);
+      const asset = (await assetRes.json()).result;
+      const proof = (await proofRes.json()).result;
+      if (!asset || !proof) throw new Error("Could not fetch cNFT data from Helius");
+      const details = {
+        treeId: asset.compression?.tree,
+        leafId: Number(asset.compression?.leaf_id),
+        dataHash: asset.compression?.data_hash,
+        creatorHash: asset.compression?.creator_hash,
+        root: proof.root,
+        proofPath: proof.proof || [],
+        owner: asset.ownership?.owner,
+        delegate: asset.ownership?.delegate || asset.ownership?.owner,
+      };
+      console.log("[cNFT] details:", JSON.stringify(details, null, 2));
+      return details;
+    }
+
+    let BUY_IN_FLIGHT = false;
+
+    async function waitForOwner(mintId, expectedOwner, tries = 12, delayMs = 1500) {
+      for (let i = 0; i < tries; i++) {
+        const asset = await getAssetDetails(mintId);
+        if ((asset.owner || "").toLowerCase() === String(expectedOwner).toLowerCase()) return asset;
+        await new Promise(r => setTimeout(r, delayMs));
+      }
+      throw new Error("Settlement returned, but ownership did not update on-chain");
+    }
+
+    // Safe PublicKey construction with clear error messages
+    function safePK(PublicKey, value, label) {
+      if (!value) throw new Error("Null/undefined value for " + label + ": " + value);
+      try { return new PublicKey(value); }
+      catch (e) { throw new Error("Invalid PublicKey for " + label + " (" + value + "): " + e.message); }
+    }
+
+    // Convert base58 hash to 32-byte buffer (for instruction data like root/dataHash/creatorHash)
+    function hashToBytes(PublicKey, base58Str, label) {
+      return safePK(PublicKey, base58Str, label).toBytes();
+    }
+
+    // Derive Bubblegum tree authority PDA
+    function getTreeAuthority(PublicKey, treePK) {
+      const bgProg = new PublicKey(BUBBLEGUM_PROGRAM);
+      return PublicKey.findProgramAddressSync([treePK.toBytes()], bgProg);
+    }
+
+    // Build Bubblegum delegate instruction
+    function buildDelegateIx(PublicKey, { ownerPK, previousDelegatePK, newDelegatePK, treePK, treeAuthorityPK, root, dataHash, creatorHash, nonce, index, proofPath }) {
+      const bgProg = safePK(PublicKey, BUBBLEGUM_PROGRAM, "BUBBLEGUM_PROGRAM");
+      const compProg = safePK(PublicKey, COMPRESSION_PROGRAM, "COMPRESSION_PROGRAM");
+      const noopProg = safePK(PublicKey, NOOP_PROGRAM, "NOOP_PROGRAM");
+      const sysProg = safePK(PublicKey, SYS_PROGRAM, "SYS_PROGRAM");
+
+      const ixData = concatBytes(
+        BG_IX.delegate,
+        hashToBytes(PublicKey, root, "root"),
+        hashToBytes(PublicKey, dataHash, "dataHash"),
+        hashToBytes(PublicKey, creatorHash, "creatorHash"),
+        toLEU64(nonce),
+        toLEU32(index)
+      );
+
+      const keys = [
+        { pubkey: treeAuthorityPK, isSigner: false, isWritable: true },
+        { pubkey: ownerPK, isSigner: true, isWritable: false },
+        { pubkey: previousDelegatePK, isSigner: false, isWritable: false },
+        { pubkey: newDelegatePK, isSigner: false, isWritable: false },
+        { pubkey: treePK, isSigner: false, isWritable: true },
+        { pubkey: noopProg, isSigner: false, isWritable: false },
+        { pubkey: compProg, isSigner: false, isWritable: false },
+        { pubkey: sysProg, isSigner: false, isWritable: false },
+      ];
+      // Append proof path as remaining accounts
+      proofPath.forEach((hash, i) => {
+        keys.push({ pubkey: safePK(PublicKey, hash, "proof[" + i + "]"), isSigner: false, isWritable: false });
+      });
+
+      return { programId: bgProg, keys, data: ixData };
+    }
+
+    // Build Bubblegum transfer instruction (delegate transfers)
+    function buildTransferIx(PublicKey, { ownerPK, delegatePK, newOwnerPK, treePK, treeAuthorityPK, root, dataHash, creatorHash, nonce, index, proofPath, delegateIsSigner }) {
+      const bgProg = safePK(PublicKey, BUBBLEGUM_PROGRAM, "BUBBLEGUM_PROGRAM");
+      const compProg = safePK(PublicKey, COMPRESSION_PROGRAM, "COMPRESSION_PROGRAM");
+      const noopProg = safePK(PublicKey, NOOP_PROGRAM, "NOOP_PROGRAM");
+      const sysProg = safePK(PublicKey, SYS_PROGRAM, "SYS_PROGRAM");
+
+      const ixData = concatBytes(
+        BG_IX.transfer,
+        hashToBytes(PublicKey, root, "root"),
+        hashToBytes(PublicKey, dataHash, "dataHash"),
+        hashToBytes(PublicKey, creatorHash, "creatorHash"),
+        toLEU64(nonce),
+        toLEU32(index)
+      );
+
+      const keys = [
+        { pubkey: treeAuthorityPK, isSigner: false, isWritable: true },
+        { pubkey: ownerPK, isSigner: !delegateIsSigner, isWritable: false },
+        { pubkey: delegatePK, isSigner: delegateIsSigner, isWritable: false },
+        { pubkey: newOwnerPK, isSigner: false, isWritable: false },
+        { pubkey: treePK, isSigner: false, isWritable: true },
+        { pubkey: noopProg, isSigner: false, isWritable: false },
+        { pubkey: compProg, isSigner: false, isWritable: false },
+        { pubkey: sysProg, isSigner: false, isWritable: false },
+      ];
+      proofPath.forEach((hash, i) => {
+        keys.push({ pubkey: safePK(PublicKey, hash, "txProof[" + i + "]"), isSigner: false, isWritable: false });
+      });
+
+      return { programId: bgProg, keys, data: ixData };
+    }
+
+    // Call the Edge Function co-signer
+    async function cosign(body) {
+      console.log("[cosign] sending action:", body.action, "mint:", body.mint);
+      const res = await fetch(COSIGN_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${SB_KEY}` },
+        body: JSON.stringify(body)
+      });
+      console.log("[cosign] HTTP status:", res.status, res.statusText);
+      const raw = await res.text();
+      console.log("[cosign] raw response:", raw);
+      let data;
+      try { data = JSON.parse(raw); }
+      catch (e) { throw new Error("Co-signer returned non-JSON (status " + res.status + "): " + raw.slice(0, 200)); }
+      if (!res.ok || data.error) throw new Error("Co-signer error (status " + res.status + "): " + (data.error || data.message || raw.slice(0, 200)));
+      return data;
+    }
+
+    async function signWalletMessage(message) {
+      if (!walletProvider?.signMessage) throw new Error("Wallet does not support signMessage");
+      const bytes = new TextEncoder().encode(message);
+      const raw = await walletProvider.signMessage(bytes, "utf8");
+      let sigBytes;
+      if (raw instanceof Uint8Array) sigBytes = raw;
+      else if (raw?.signature instanceof Uint8Array) sigBytes = raw.signature;
+      else if (raw?.data instanceof Uint8Array) sigBytes = raw.data;
+      else sigBytes = new Uint8Array(Object.values(raw || {}));
+      if (!sigBytes || sigBytes.length !== 64) throw new Error("Invalid wallet signature");
+      return btoa(sigBytes.reduce((acc, b) => acc + String.fromCharCode(b), ""));
+    }
+
+    // ─────────────────────────────────────────────
+    //  RECORD SALE
+    // ─────────────────────────────────────────────
+    async function recordSale({ mint, seller, buyer, price_sol, name, image, tx_sig }) {
+      try {
+        await fetch(`${SB_URL}/rest/v1/marketplace_sales`, {
+          method: "POST",
+          headers: { ...SB_HDR, Prefer: "return=minimal" },
+          body: JSON.stringify({ mint, seller, buyer, price_sol, name, image, tx_sig })
+        });
+        totalVolume += parseFloat(price_sol);
+      } catch (e) { console.error("recordSale:", e); }
+    }
+
+    // ─────────────────────────────────────────────
+    //  LIST (Bubblegum Delegate to escrow)
+    //  Seller signs → cNFT delegated to escrow address
+    //  cNFT stays in wallet but escrow can transfer it
+    // ─────────────────────────────────────────────
+    async function listNft(nft, priceSol) {
+      // The listing modal is already removed before this is called for new listings.
+      // We use a toast-based progress flow instead of relying on a modal button.
+      try {
+        const web3 = await getWeb3();
+        const { Connection, PublicKey, Transaction } = web3;
+        const conn = new Connection(RPC, "confirmed");
+
+        showToast("Fetching proof...");
+        console.log("[listNft] fetching cNFT data for:", nft.mint);
+        const details = await getAssetDetails(nft.mint);
+
+        const ownerPK = safePK(PublicKey, walletAddress, "walletAddress");
+        const escrowPK = safePK(PublicKey, ESCROW_ADDRESS, "ESCROW_ADDRESS");
+        const treePK = safePK(PublicKey, details.treeId, "treeId");
+        const [treeAuthorityPK] = getTreeAuthority(PublicKey, treePK);
+        const prevDelegatePK = safePK(PublicKey, details.delegate, "delegate");
+
+        const delegateIx = buildDelegateIx(PublicKey, {
+          ownerPK, previousDelegatePK: prevDelegatePK, newDelegatePK: escrowPK,
+          treePK, treeAuthorityPK,
+          root: details.root, dataHash: details.dataHash, creatorHash: details.creatorHash,
+          nonce: details.leafId, index: details.leafId,
+          proofPath: details.proofPath
+        });
+
+        const tx = new Transaction().add(delegateIx);
+        const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
+        tx.recentBlockhash = blockhash; tx.lastValidBlockHeight = lastValidBlockHeight;
+        tx.feePayer = ownerPK;
+
+        showToast("Sign in wallet to list...");
+        const signed = await walletProvider.signTransaction(tx);
+        showToast("Confirming on-chain...");
+        const sig = await conn.sendRawTransaction(signed.serialize(), { skipPreflight: false });
+        await conn.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed");
+
+        // Save to Supabase
+        await sbUpsert("marketplace_listings", {
+          mint: nft.mint, seller: walletAddress,
+          price_sol: parseFloat(priceSol),
+          name: nft.name, image: nft.image
+        });
+        listings[nft.mint] = { mint: nft.mint, seller: walletAddress, price_sol: parseFloat(priceSol), name: nft.name, image: nft.image };
+        showToast("Listed for " + priceSol + " SOL ✓");
+        awardListPoints(nft.mint); // +5 cabbage
+        render();
+
+      } catch (e) {
+        console.error("[listNft]", e);
+        if (e.code === 4001 || e.message?.toLowerCase().includes("cancel") || e.message?.toLowerCase().includes("reject")) {
+          showToast("Listing cancelled", true);
+        } else {
+          showToast("Failed: " + (e.message || "unknown"), true);
+        }
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    //  DELIST (Delegate back to self)
+    // ─────────────────────────────────────────────
+    async function delistNft(mint) {
+      try {
+        const web3 = await getWeb3();
+        const { Connection, PublicKey, Transaction } = web3;
+        const conn = new Connection(RPC, "confirmed");
+
+        showToast("Fetching proof...");
+        const details = await getAssetDetails(mint);
+
+        // ── STALE LISTING DETECTION ──
+        // If you don't own this NFT anymore, just clean up the DB row
+        if (details.owner !== walletAddress) {
+          console.warn("[delistNft] STALE — owner is", details.owner, "not", walletAddress);
+          if (confirm("This NFT is no longer in your wallet (current owner: " + short(details.owner, 6, 4) + ").\n\nRemove the stale listing from the marketplace?")) {
+            await sbDelete("marketplace_listings", { mint });
+            delete listings[mint];
+            showToast("Stale listing removed ✓");
+            render();
+          }
+          return;
+        }
+
+        // If escrow isn't the delegate anymore, no on-chain tx needed — just clean DB
+        if (details.delegate !== ESCROW_ADDRESS) {
+          console.warn("[delistNft] escrow not delegate — current delegate:", details.delegate);
+          await sbDelete("marketplace_listings", { mint });
+          delete listings[mint];
+          showToast("Listing removed ✓");
+          render();
+          return;
+        }
+
+        const ownerPK = new PublicKey(walletAddress);
+        const treePK = new PublicKey(details.treeId);
+        const [treeAuthorityPK] = getTreeAuthority(PublicKey, treePK);
+
+        // Delegate back to owner (revoke escrow)
+        const delegateIx = buildDelegateIx(PublicKey, {
+          ownerPK, previousDelegatePK: new PublicKey(ESCROW_ADDRESS), newDelegatePK: ownerPK,
+          treePK, treeAuthorityPK,
+          root: details.root, dataHash: details.dataHash, creatorHash: details.creatorHash,
+          nonce: details.leafId, index: details.leafId,
+          proofPath: details.proofPath
+        });
+
+        const tx = new Transaction().add(delegateIx);
+        const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
+        tx.recentBlockhash = blockhash; tx.lastValidBlockHeight = lastValidBlockHeight;
+        tx.feePayer = ownerPK;
+
+        showToast("Sign in wallet to delist...");
+        const signed = await walletProvider.signTransaction(tx);
+        showToast("Confirming...");
+        const sig = await conn.sendRawTransaction(signed.serialize(), { skipPreflight: false });
+        await conn.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed");
+
+        await sbDelete("marketplace_listings", { mint });
+        delete listings[mint];
+        showToast("Listing removed ✓");
+        render();
+      } catch (e) {
+        console.error("[delistNft]", e);
+        if (e.code === 4001 || e.message?.toLowerCase().includes("cancel") || e.message?.toLowerCase().includes("reject")) {
+          showToast("Cancelled", true);
+          // Re-open listing modal so user can retry
+          const nft = myNfts.find(n => n.mint === mint) || { mint, name: listings[mint]?.name || mint, image: listings[mint]?.image || "" };
+          showListingModal(nft);
+          return;
+        }
+
+        // 0x1771 = Bubblegum InvalidLeafOwner / similar — owner mismatch
+        // Offer to force-remove from DB
+        if (e.message?.includes("0x1771") || e.message?.toLowerCase().includes("invalid")) {
+          if (confirm("On-chain delist failed (NFT may have moved or already been delisted).\n\nForce-remove the stale listing from the marketplace?")) {
+            try {
+              await sbDelete("marketplace_listings", { mint });
+              delete listings[mint];
+              showToast("Stale listing removed ✓");
+              render();
+              return;
+            } catch (err) {
+              showToast("DB cleanup failed: " + (err.message || "unknown"), true);
+            }
+          }
+        } else {
+          showToast("Failed: " + (e.message || "unknown"), true);
+        }
+        // Re-open listing modal so user can retry
+        const nft = myNfts.find(n => n.mint === mint) || { mint, name: listings[mint]?.name || mint, image: listings[mint]?.image || "" };
+        showListingModal(nft);
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    //  BUY NOW — 2-step atomic purchase
+    //  TX1 (buyer signs): SOL → seller + treasury fee
+    //  TX2 (edge fn): escrow delegate transfers cNFT → buyer
+    //  Splitting avoids the 1232-byte tx limit caused by 20 proof accounts
+    // ─────────────────────────────────────────────
+    async function buyNft(listing) {
+      console.log("[buyNft] SECURE escrow-deposit flow — wallet:", walletAddress, "mint:", listing?.mint);
+      if (!walletAddress || !walletProvider) { showToast("Connect wallet first", true); return; }
+
+      const btn = document.getElementById("buy-btn");
+      const setBtn = (html, dis) => { if (btn) { btn.innerHTML = html; btn.disabled = dis; } };
+      setBtn(`<span class="spinner"></span>LOADING...`, true);
+
+      try {
+        const web3 = await getWeb3();
+        const { Connection, PublicKey, Transaction, LAMPORTS_PER_SOL } = web3;
+        const conn = new Connection(RPC, "confirmed");
+
+        const buyerPK = new PublicKey(walletAddress);
+        const escrowPK = new PublicKey(ESCROW_ADDRESS);
+        const priceLamports = Math.round(Number(listing.price_sol) * LAMPORTS_PER_SOL);
+        if (!Number.isFinite(priceLamports) || priceLamports <= 0) throw new Error("Invalid listing price");
+
+        // SECURITY CHANGE:
+        // Buyer sends the FULL price to escrow first. The backend verifies the exact deposit
+        // before it transfers the NFT and releases seller/treasury payout.
+        setBtn(`<span class="spinner"></span>SIGN ESCROW PAYMENT...`, true);
+        const sysPK = new PublicKey("11111111111111111111111111111111");
+        const payTx = new Transaction().add({
+          programId: sysPK,
+          keys: [
+            { pubkey: buyerPK, isSigner: true, isWritable: true },
+            { pubkey: escrowPK, isSigner: false, isWritable: true }
+          ],
+          data: new Uint8Array([...toLEU32(2), ...toLEU64(priceLamports)])
+        });
+
+        const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
+        payTx.recentBlockhash = blockhash;
+        payTx.lastValidBlockHeight = lastValidBlockHeight;
+        payTx.feePayer = buyerPK;
+
+        const signedPayTx = await walletProvider.signTransaction(payTx);
+        setBtn(`<span class="spinner"></span>SENDING TO ESCROW...`, true);
+        const depositSig = await conn.sendRawTransaction(signedPayTx.serialize(), { skipPreflight: false });
+        const payResult = await conn.confirmTransaction({ signature: depositSig, blockhash, lastValidBlockHeight }, "confirmed");
+        if (payResult.value.err) throw new Error("Payment tx failed: " + JSON.stringify(payResult.value.err));
+
+        // Buyer signs exact auth message required by secure backend.
+        const authMsg = `settle-buy:${listing.mint}:${walletAddress}:${listing.seller}:${depositSig}`;
+        setBtn(`<span class="spinner"></span>SIGN SETTLEMENT...`, true);
+        const sigB64 = await signWalletMessage(authMsg);
+
+        setBtn(`<span class="spinner"></span>TRANSFERRING NFT...`, true);
+        const result = await cosign({
+          action: "settle-buy",
+          mint: listing.mint,
+          buyer: walletAddress,
+          seller: listing.seller,
+          depositSig,
+          authMessage: authMsg,
+          authSignature: sigB64
+        });
+        console.log("[buyNft] settle-buy result:", result);
+
+        // Edge function performs DB cleanup and sale recording. Only update local UI here.
+        delete listings[listing.mint];
+        delete offers[listing.mint];
+        selectedNft = null;
+        await loadMarketData();
+        await fetchMyNfts();
+        showToast("You own it! 🐦 " + listing.name);
+
+      } catch (e) {
+        console.error("[buyNft] CAUGHT ERROR:", e);
+        if (e.code === 4001 || e.message?.toLowerCase().includes("cancel") || e.message?.toLowerCase().includes("reject")) {
+          showToast("Cancelled", true);
+        } else {
+          showToast("Failed: " + (e.message || "unknown"), true);
+        }
+        setBtn(`BUY NOW — ◎ ${listing.price_sol} SOL`, false);
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    //  MAKE OFFER (Send SOL to escrow wallet — locked on-chain)
+    // ─────────────────────────────────────────────
+    async function makeOffer(nft, offerSol) {
+      // SECURITY: Offers are temporarily disabled in this frontend because offer settlement
+      // must verify escrowed offer funds before any NFT transfer. Buy-now and trades remain enabled.
+      showToast("Offers are temporarily disabled while security is hardened. Use Buy Now or Trades.", true);
+      return;
+    }
+
+    // ─────────────────────────────────────────────
+    //  CANCEL OFFER (Edge Function returns SOL from escrow)
+    // ─────────────────────────────────────────────
+    async function cancelOffer(mint) {
+      if (!walletAddress || !walletProvider) return;
+      try {
+        showToast("Signing refund request...");
+        const authMsg = `cancel-offer:${mint}:${walletAddress}`;
+        const sigB64 = await signWalletMessage(authMsg);
+        showToast("Returning SOL from escrow...");
+        await cosign({
+          action: "cancel-offer",
+          mint,
+          buyer: walletAddress,
+          authMessage: authMsg,
+          authSignature: sigB64
+        });
+        if (offers[mint]) offers[mint] = offers[mint].filter(o => o.buyer !== walletAddress);
+        showToast("Offer cancelled — SOL returned ✓");
+        await loadMarketData();
+        render();
+      } catch (e) {
+        console.error("[cancelOffer]", e);
+        showToast("Failed: " + (e.message || "unknown"), true);
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    //  ACCEPT OFFER
+    //  Seller signs an auth message proving identity.
+    //  Edge fn does the full settlement server-side:
+    //  cNFT transfer (escrow delegate) + SOL release to seller + fee.
+    //  No tx size issue since the edge fn builds it with full Buffer support.
+    // ─────────────────────────────────────────────
+    async function acceptOffer(offerData) {
+      // SECURITY: Disabled until offer deposits are fully verified by backend before NFT transfer.
+      showToast("Accepting offers is temporarily disabled. Use Buy Now or Trades.", true);
+      return;
+    }
+
+    // ─────────────────────────────────────────────
+    //  HELIUS
+    // ─────────────────────────────────────────────
+    function parseAsset(item) {
+      const meta = item.content?.metadata || {};
+      const files = item.content?.files || [];
+      const links = item.content?.links || {};
+      const img = links.image || files[0]?.cdn_uri || files[0]?.uri || "";
+      const compressed = !!item.compression?.compressed;
+      const collectionKey = detectCollectionKey(item);
+      return { mint: item.id, name: meta.name || "Long Neck Legend", image: img, attributes: meta.attributes || [], owner: item.ownership?.owner || "", compressed, collectionKey };
+    }
+
+    // Browse All is now listings-only — no Helius fetch needed.
+    // fetchPage kept as stub so existing retry/init calls don't break.
+    async function fetchPage(pg) {
+      // Nothing to fetch — listings loaded by loadMarketData() at init
+      // and refreshed whenever a listing is added/removed.
+      render();
+    }
+
+    async function fetchMyNfts() {
+      if (!walletAddress) return;
+      myNfts = []; render();
+      try {
+        let pg = 1, all = [];
+        while (true) {
+          const res = await fetch(RPC, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              jsonrpc: "2.0", id: "my", method: "getAssetsByOwner",
+              params: {
+                ownerAddress: walletAddress, page: pg, limit: 1000,
+                displayOptions: { showUnverifiedCollections: true }
+              }
+            })
+          });
+          const data = await res.json();
+          if (data.error) break;
+          const items = data.result?.items || [];
+          all = all.concat(items);
+          if (items.length < 1000) break;
+          pg++;
+        }
+        myNfts = all.filter(item => {
+          const collectionKey = detectCollectionKey(item);
+          if (!collectionKey) return false;
+          item.__collectionKey = collectionKey;
+          collectionByMint[item.id] = collectionKey;
+          return true;
+        }).map(parseAsset);
+      } catch (e) { console.error(e); }
+      render();
+    }
+
+    // ─────────────────────────────────────────────
+    //  WALLET
+    // ─────────────────────────────────────────────
+    function detectWallets() {
+      const phantom = window?.phantom?.solana?.isPhantom ? window.phantom.solana : (window?.solana?.isPhantom ? window.solana : null);
+      const solflare = window?.solflare?.isSolflare ? window.solflare : (window?.solana?.isSolflare ? window.solana : null);
+      return { phantom, solflare };
+    }
+    function isMobile() { return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent); }
+
+    function showWalletPicker() {
+      const ex = document.getElementById("wpm"); if (ex) ex.remove();
+      const { phantom, solflare } = detectWallets();
+      const mobile = isMobile();
+      const pageUrl = encodeURIComponent(window.location.href);
+      const wallets = [
+        { id: "phantom", label: "Phantom", icon: "👻", provider: phantom, installUrl: "https://phantom.app", deepLink: `https://phantom.app/ul/browse/${pageUrl}?ref=${pageUrl}` },
+        { id: "solflare", label: "Solflare", icon: "🌟", provider: solflare, installUrl: "https://solflare.com", deepLink: `https://solflare.com/ul/v1/browse/${pageUrl}?ref=${pageUrl}` },
+      ];
+      const ov = document.createElement("div");
+      ov.id = "wpm";
+      ov.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:3000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(14px);animation:fade .15s;padding:14px";
+      ov.onclick = e => { if (e.target === ov) ov.remove(); };
+      const rows = wallets.map(w => {
+        const det = !!w.provider;
+        const sub = det ? "DETECTED — TAP TO CONNECT" : mobile ? "OPEN IN WALLET APP" : "NOT INSTALLED";
+        const col = det ? "#fff" : mobile ? "#999" : "#444";
+        const dot = det ? "var(--grn)" : mobile ? "#666" : "#333";
+        return `<button class="wpb" data-w="${w.id}" style="display:flex;align-items:center;gap:14px;padding:16px 20px;background:${det ? "#0e0e0e" : "#080808"};border:1px solid ${det ? "#2a2a2a" : mobile ? "#1e1e1e" : "#141414"};border-radius:12px;cursor:pointer;width:100%;color:${col};font-family:'Space Mono',monospace;text-align:left;margin-bottom:8px;transition:all .2s">
+      <span style="font-size:28px">${w.icon}</span>
+      <div><div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:3px">${w.label}</div>
+      <div style="font-size:9px;color:${dot};letter-spacing:1px;margin-top:2px">${sub}</div></div>
+      <div style="margin-left:auto;font-size:14px;color:${dot}">${det ? "●" : mobile ? "↗" : "○"}</div>
+    </button>`;
+      }).join("");
+      ov.innerHTML = `<div style="background:linear-gradient(145deg,#0c0c0c,#080808);border:1px solid #1c1c1c;border-radius:16px;padding:28px;width:100%;max-width:380px;position:relative" onclick="event.stopPropagation()">
+    <button onclick="document.getElementById('wpm').remove()" style="position:absolute;top:12px;right:12px;background:rgba(255,0,60,.08);border:1px solid rgba(255,0,60,.2);color:var(--r);width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:13px;display:grid;place-items:center">✕</button>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:4px;color:#fff;margin-bottom:6px;text-align:center">CONNECT WALLET</div>
+    <div style="font-size:9px;color:#888;letter-spacing:2px;text-align:center;margin-bottom:22px">CHOOSE YOUR SOLANA WALLET</div>${rows}
+  </div>`;
+      document.body.appendChild(ov);
+      ov.querySelectorAll(".wpb").forEach(btn => {
+        btn.onmouseenter = () => { btn.style.borderColor = "rgba(255,0,60,.3)"; };
+        btn.onmouseleave = () => { const w = wallets.find(w => w.id === btn.dataset.w); btn.style.borderColor = w?.provider ? "#2a2a2a" : mobile ? "#1e1e1e" : "#141414"; };
+        btn.onclick = async () => {
+          const w = wallets.find(x => x.id === btn.dataset.w);
+          if (w.provider) { ov.remove(); await connectWalletProvider(w.provider, w.label); }
+          else if (mobile) { ov.remove(); window.location.href = w.deepLink; }
+          else window.open(w.installUrl, "_blank");
+        };
+      });
+    }
+
+    async function connectWalletProvider(provider, label) {
+      try {
+        const resp = await provider.connect();
+        const pk = resp?.publicKey || provider.publicKey;
+        if (!pk) throw new Error("No public key returned");
+        walletAddress = typeof pk === "string" ? pk : pk.toString();
+        walletProvider = provider;
+        showToast(label + " connected ✓");
+        loadCabbageData(); // load points for this wallet
+        render();
+        if (activeTab === "my-nfts") fetchMyNfts();
+      } catch (e) {
+        if (e.code !== 4001) console.error("Wallet connect error:", e);
+      }
+    }
+
+    function disconnectWallet() {
+      if (walletProvider?.disconnect) walletProvider.disconnect();
+      walletAddress = null; walletProvider = null; myNfts = [];
+      showToast("Disconnected"); render();
+    }
+
+    // ─────────────────────────────────────────────
+    //  TOAST
+    // ─────────────────────────────────────────────
+    let _toastTimer;
+    function showToast(msg, isErr = false) {
+      const ex = document.querySelector(".toast"); if (ex) ex.remove();
+      const t = document.createElement("div");
+      t.className = "toast" + (isErr ? " err" : "");
+      t.textContent = msg;
+      document.body.appendChild(t);
+      clearTimeout(_toastTimer);
+      _toastTimer = setTimeout(() => t.remove(), 3500);
+    }
+
+    // ─────────────────────────────────────────────
+    //  LIST MODAL
+    // ─────────────────────────────────────────────
+    function showListingModal(nft) {
+      const ex = document.getElementById("lm"); if (ex) ex.remove();
+      const listing = listings[nft.mint];
+      const ov = document.createElement("div");
+      ov.id = "lm"; ov.className = "modal-bg";
+      ov.onclick = e => { if (e.target === ov) ov.remove(); };
+
+      // If already listed, show a clear "UPDATE PRICE" note so user knows no new on-chain tx needed
+      const updateNote = listing
+        ? `<div style="padding:8px 12px;background:rgba(255,165,0,.06);border:1px solid rgba(255,165,0,.18);border-radius:8px;margin-bottom:12px;font-size:9px;color:#ffa500;letter-spacing:1px;line-height:1.7">
+            ✏ PRICE UPDATE ONLY — No wallet signature needed. The escrow delegation stays active.
+          </div>`
+        : "";
+
+      ov.innerHTML = `<div style="background:linear-gradient(145deg,#0c0c0c,#080808);border:1px solid #1c1c1c;border-radius:16px;padding:28px;width:100%;max-width:420px;position:relative;animation:up .2s" onclick="event.stopPropagation()">
+    <button onclick="document.getElementById('lm').remove()" style="position:absolute;top:12px;right:12px;background:rgba(255,0,60,.08);border:1px solid rgba(255,0,60,.2);color:var(--r);width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:13px;display:grid;place-items:center">✕</button>
+    <div style="display:flex;gap:14px;align-items:center;margin-bottom:20px">
+      ${nft.image ? `<img src="${nft.image}" style="width:70px;height:70px;border-radius:8px;object-fit:cover;border:1px solid #1c1c1c">` : ""}
+      <div>
+        <div style="font-family:var(--d);font-size:20px;color:#fff;letter-spacing:3px">${nft.name}</div>
+        <div style="font-size:9px;color:var(--g2);margin-top:3px">${short(nft.mint, 8, 6)}</div>
+      </div>
+    </div>
+    ${listing ? `<div style="padding:10px 14px;background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.14);border-radius:8px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:9px;color:var(--grn);letter-spacing:2px">CURRENTLY LISTED</span>
+      <span style="font-family:var(--d);font-size:18px;color:var(--grn)">${listing.price_sol} SOL</span>
+    </div>` : ""}
+    ${updateNote}
+    <div style="margin-bottom:8px">
+      <div style="font-size:9px;color:var(--g2);letter-spacing:2px;margin-bottom:6px">${listing ? "NEW PRICE" : "LIST PRICE"} (SOL)</div>
+      <input id="lp" class="input" type="number" min="0.01" step="0.01" placeholder="e.g. 2.5" value="${listing ? listing.price_sol : ""}">
+    </div>
+    <div style="font-size:9px;color:var(--g2);margin-bottom:16px;padding:10px 12px;background:#050505;border:1px solid #111;border-radius:8px;line-height:1.8">
+      NFT stays in your wallet until sold &nbsp;•&nbsp; 2.5% fee at sale &nbsp;•&nbsp; Escrow co-signed<br>
+      You receive: <span id="sg" style="color:var(--grn);font-family:var(--d)">${listing ? (listing.price_sol * (1 - FEE_PCT)).toFixed(4) + " SOL" : "—"}</span>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-primary" id="cl" style="flex:2">${listing ? "UPDATE PRICE" : "LIST FOR SALE"}</button>
+      ${listing ? `<button class="btn-danger" id="dl" style="min-width:80px">DELIST</button>` : ""}
+    </div>
+  </div>`;
+      document.body.appendChild(ov);
+      const lp = document.getElementById("lp");
+      const sg = document.getElementById("sg");
+      lp.oninput = () => { const v = parseFloat(lp.value); sg.textContent = isNaN(v) ? "—" : (v * (1 - FEE_PCT)).toFixed(4) + " SOL"; };
+
+      document.getElementById("cl").onclick = async () => {
+        const p = parseFloat(lp.value);
+        if (isNaN(p) || p < 0.01) { showToast("Enter a valid price", true); return; }
+        if (listing) {
+          // Already listed — price-only update, no new on-chain tx needed
+          await updateListingPrice(nft, p);
+        } else {
+          // New listing — full on-chain delegate + Supabase insert
+          ov.remove();
+          await listNft(nft, p);
+        }
+      };
+
+      document.getElementById("dl")?.addEventListener("click", async () => {
+        const dlBtn = document.getElementById("dl");
+        const clBtn = document.getElementById("cl");
+        if (dlBtn) { dlBtn.disabled = true; dlBtn.innerHTML = `<span class="spinner"></span>`; }
+        if (clBtn) clBtn.disabled = true;
+        await delistNft(nft.mint);
+        ov.remove();
+      });
+    }
+
+    // ─────────────────────────────────────────────
+    //  UPDATE LISTING PRICE (no on-chain tx — escrow already delegated)
+    // ─────────────────────────────────────────────
+    async function updateListingPrice(nft, newPriceSol) {
+      const clBtn = document.getElementById("cl");
+      const dlBtn = document.getElementById("dl");
+      if (clBtn) { clBtn.disabled = true; clBtn.innerHTML = `<span class="spinner"></span>UPDATING...`; }
+      if (dlBtn) dlBtn.disabled = true;
+
+      try {
+        // ── OWNERSHIP CHECK ──
+        // Make sure this NFT is still in your wallet AND still delegated to escrow
+        const details = await getAssetDetails(nft.mint);
+        if (details.owner !== walletAddress) {
+          if (confirm("This NFT is no longer in your wallet (current owner: " + short(details.owner, 6, 4) + ").\n\nRemove the stale listing from the marketplace?")) {
+            await sbDelete("marketplace_listings", { mint: nft.mint });
+            delete listings[nft.mint];
+            showToast("Stale listing removed ✓");
+            const lm = document.getElementById("lm"); if (lm) lm.remove();
+            render();
+          } else {
+            if (clBtn) { clBtn.disabled = false; clBtn.innerHTML = "UPDATE PRICE"; }
+            if (dlBtn) dlBtn.disabled = false;
+          }
+          return;
+        }
+
+        // Verify the existing listing's seller matches you
+        const existingListing = listings[nft.mint];
+        if (existingListing && existingListing.seller !== walletAddress) {
+          showToast("This listing belongs to another wallet", true);
+          if (clBtn) { clBtn.disabled = false; clBtn.innerHTML = "UPDATE PRICE"; }
+          if (dlBtn) dlBtn.disabled = false;
+          return;
+        }
+
+        // Patch price in Supabase (upsert with same mint keeps everything else intact)
+        const result = await sbUpsert("marketplace_listings", {
+          mint: nft.mint,
+          seller: walletAddress,
+          price_sol: parseFloat(newPriceSol),
+          name: nft.name,
+          image: nft.image
+        });
+
+        // Verify the upsert actually returned the updated row
+        if (!result || (Array.isArray(result) && !result.length)) {
+          throw new Error("Database did not confirm the update — try again");
+        }
+
+        // Update local state
+        listings[nft.mint] = { ...listings[nft.mint], price_sol: parseFloat(newPriceSol), seller: walletAddress };
+        showToast("Price updated to " + newPriceSol + " SOL ✓");
+        const lm = document.getElementById("lm"); if (lm) lm.remove();
+        render();
+      } catch (e) {
+        console.error("[updateListingPrice]", e);
+        showToast("Failed to update price: " + (e.message || "unknown"), true);
+        if (clBtn) { clBtn.disabled = false; clBtn.innerHTML = "UPDATE PRICE"; }
+        if (dlBtn) dlBtn.disabled = false;
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    //  OFFER MODAL
+    // ─────────────────────────────────────────────
+    function showOfferModal(nft) {
+      const ex = document.getElementById("om"); if (ex) ex.remove();
+      const myOffer = (offers[nft.mint] || []).find(o => o.buyer === walletAddress);
+      const ov = document.createElement("div");
+      ov.id = "om"; ov.className = "modal-bg";
+      ov.onclick = e => { if (e.target === ov) ov.remove(); };
+      ov.innerHTML = `<div style="background:linear-gradient(145deg,#0c0c0c,#080808);border:1px solid #1c1c1c;border-radius:16px;padding:28px;width:100%;max-width:420px;position:relative;animation:up .2s" onclick="event.stopPropagation()">
+    <button onclick="document.getElementById('om').remove()" style="position:absolute;top:12px;right:12px;background:rgba(255,0,60,.08);border:1px solid rgba(255,0,60,.2);color:var(--r);width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:13px;display:grid;place-items:center">✕</button>
+    <div style="display:flex;gap:14px;align-items:center;margin-bottom:20px">
+      ${nft.image ? `<img src="${nft.image}" style="width:70px;height:70px;border-radius:8px;object-fit:cover;border:1px solid #1c1c1c">` : ""}
+      <div>
+        <div style="font-family:var(--d);font-size:20px;color:#fff;letter-spacing:3px">${nft.name}</div>
+        <div style="font-size:9px;color:var(--g2);margin-top:3px">MAKE AN OFFER</div>
+      </div>
+    </div>
+    ${myOffer ? `<div style="padding:10px 14px;background:var(--rb);border:1px solid rgba(255,0,60,.15);border-radius:8px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:9px;color:var(--r);letter-spacing:2px">YOUR ACTIVE OFFER</span>
+      <span style="font-family:var(--d);font-size:18px;color:var(--r)">${myOffer.price_sol} SOL</span>
+    </div>`: ""}
+    <div style="margin-bottom:8px">
+      <div style="font-size:9px;color:var(--g2);letter-spacing:2px;margin-bottom:6px">YOUR OFFER (SOL)</div>
+      <input id="op" class="input" type="number" min="0.01" step="0.01" placeholder="e.g. 1.8" value="${myOffer ? myOffer.price_sol : ""}">
+    </div>
+    <div style="font-size:9px;color:var(--g2);margin-bottom:16px;padding:10px 12px;background:#050505;border:1px solid #111;border-radius:8px;line-height:1.8">
+      SOL locked in on-chain escrow until accepted or cancelled &nbsp;•&nbsp; Cancel anytime to get SOL back
+    </div>
+    <div style="display:flex;gap:8px">
+      ${myOffer
+        ? `<div style="flex:2;padding:12px;background:#050505;border:1px solid #161616;border-radius:8px;font-size:9px;color:var(--g2);display:flex;align-items:center;justify-content:center;letter-spacing:1px">CANCEL CURRENT OFFER TO PLACE A NEW ONE</div>`
+        : `<button class="btn-primary" id="co" style="flex:2">PLACE OFFER</button>`}
+      ${myOffer ? `<button class="btn-danger" id="cob">CANCEL</button>` : ""}
+    </div>
+  </div>`;
+      document.body.appendChild(ov);
+      const coBtn = document.getElementById("co");
+      if (coBtn) coBtn.onclick = async () => {
+        const p = parseFloat(document.getElementById("op").value);
+        if (isNaN(p) || p < 0.01) { showToast("Enter a valid offer", true); return; }
+        ov.remove(); await makeOffer(nft, p);
+      };
+      document.getElementById("cob")?.addEventListener("click", async () => { ov.remove(); await cancelOffer(nft.mint); });
+    }
+
+    // ─────────────────────────────────────────────
+    //  RENDER
+    // ─────────────────────────────────────────────
+    function render() {
+      const app = document.getElementById("app");
+      app.innerHTML = "";
+
+      const wa = document.getElementById("wallet-area");
+      if (walletAddress) {
+        const cabbageCount = myPoints ? myPoints.total_points : 0;
+        const streakCount = myPoints ? myPoints.current_streak : 0;
+        wa.innerHTML = `<div style="display:flex;align-items:center;gap:6px">
+          ${cabbageCount > 0 ? `<span class="cabbage-badge" title="Your cabbage">🥬 ${cabbageCount}</span>` : ""}
+          ${streakCount >= 2 ? `<span style="font-size:10px;color:#ffa500;font-family:var(--d);letter-spacing:1px" title="${streakCount}-day streak">🔥${streakCount}</span>` : ""}
+          <button class="conn-btn" id="disc-btn"><span class="dot-sm"></span>${short(walletAddress)} <span style="font-size:8px;opacity:.4">✕</span></button>
+        </div>`;
+        document.getElementById("disc-btn").onclick = disconnectWallet;
+      } else {
+        wa.innerHTML = `<button class="wallet-btn" id="conn-btn"><span>👛</span> CONNECT</button>`;
+        document.getElementById("conn-btn").onclick = showWalletPicker;
+      }
+
+      const allListedItems = Object.values(listings);
+      const listedCount = activeCollection === "all"
+        ? allListedItems.length
+        : allListedItems.filter(l => (collectionByMint[l.mint] || l.collectionKey) === activeCollection).length;
+      const activeSupply = activeCollection === "all"
+        ? Object.values(SUPPLY_BY_COLLECTION).reduce((sum, n) => sum + (n || 0), 0)
+        : (SUPPLY_BY_COLLECTION[activeCollection] || supplyByCollection[activeCollection] || 0);
+      const t = `  ★ LONG NECK LEGENDS  ★  ${SUPPLY} ON-CHAIN  ★  ${listedCount} LISTED  ★  ATOMIC SWAPS  ★  P2P TRADING  ★  2.5% FEE  ★  NO MIDDLEMEN  ★  `;
+      app.innerHTML += `<div class="ticker"><div class="ticker-inner"><span>${t}</span><span>${t}</span></div></div>`;
+
+      app.innerHTML += `<div style="padding:34px 16px 16px;text-align:center;background:radial-gradient(ellipse at center,var(--rb) 0%,transparent 65%)">
+    <h1 style="font-family:var(--m);font-size:clamp(22px,4.5vw,44px);color:#fff;line-height:1.1;margin-bottom:6px"><span class="neon">BUY, SELL & TRADE</span> LONG NECKS</h1>
+    <p style="font-size:10px;color:var(--g2);max-width:440px;margin:0 auto 10px;line-height:1.6">The official Long Neck Legends P2P marketplace. Buy, sell, and trade cards on Solana.</p>
+    <div style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:rgba(0,255,136,.04);border:1px solid rgba(0,255,136,.08);border-radius:6px;font-size:8px;color:var(--grn)"><span class="dot-sm"></span> ON-CHAIN • ${getCollectionLabel(activeCollection === "all" ? "all" : activeCollection)}</div>
+    <div style="display:flex;justify-content:center;gap:12px;margin-top:18px;flex-wrap:wrap">
+      <div class="stat-card"><div style="font-family:var(--d);font-size:20px;color:var(--r);letter-spacing:2px">${(() => {
+          if (activeCollection === "all") return SUPPLY;
+          return SUPPLY_BY_COLLECTION[activeCollection] || supplyByCollection[activeCollection] || "—";
+        })()}</div><div style="font-size:10px;color:var(--g2);text-transform:uppercase;letter-spacing:2px">SUPPLY</div></div>
+      <div class="stat-card"><div style="font-family:var(--d);font-size:20px;color:var(--grn);letter-spacing:2px">${listedCount}</div><div style="font-size:10px;color:var(--g2);text-transform:uppercase;letter-spacing:2px">LISTED</div></div>
+      <div class="stat-card"><div style="font-family:var(--d);font-size:20px;color:var(--grn);letter-spacing:2px">${(() => {
+          const supply = activeSupply;
+          return supply ? ((listedCount / supply) * 100).toFixed(1) + "%" : "—";
+        })()}</div><div style="font-size:10px;color:var(--g2);text-transform:uppercase;letter-spacing:2px">% LISTED</div></div>
+      <div class="stat-card"><div style="font-family:var(--d);font-size:20px;color:var(--r);letter-spacing:2px">◎ ${totalVolume.toFixed(2)}</div><div style="font-size:10px;color:var(--g2);text-transform:uppercase;letter-spacing:2px">VOLUME</div></div>
+    </div>
+  </div>`;
+
+      app.innerHTML += `<div style="display:flex;gap:4px;justify-content:center;padding:0 16px 10px" id="tabs">
+    <button class="tab-btn ${activeTab === 'market' ? 'active' : ''}" data-t="market">LISTINGS</button>
+    <button class="tab-btn ${activeTab === 'trades' ? 'active' : ''}" data-t="trades">TRADES</button>
+    <button class="tab-btn ${activeTab === 'leaderboard' ? 'active' : ''}" data-t="leaderboard">🥬 LEADERBOARD</button>
+    <button class="tab-btn ${activeTab === 'my-nfts' ? 'active' : ''}" data-t="my-nfts">MY NFTS</button>
+  </div>`;
+
+      if (activeTab !== "trades" && activeTab !== "leaderboard") {
+        app.innerHTML += `<div style="display:flex;gap:4px;justify-content:center;padding:0 16px 18px;flex-wrap:wrap" id="collection-tabs">
+    <button class="tab-btn ${activeCollection === 'all' ? 'active' : ''}" data-c="all">ALL</button>
+    <button class="tab-btn ${activeCollection === 'LNL' ? 'active' : ''}" data-c="LNL">LNL</button>
+    <button class="tab-btn ${activeCollection === 'GA' ? 'active' : ''}" data-c="GA">GA</button>
+  </div>`;
+      }
+
+      if (activeTab === "market") renderMarket(app);
+      else if (activeTab === "trades") renderTrades(app);
+      else if (activeTab === "leaderboard") renderLeaderboard(app);
+      else renderMyNfts(app);
+
+      app.innerHTML += `<footer class="site-footer">
+    <div style="font-family:var(--m);font-size:11px;color:var(--g2);letter-spacing:2px;margin-bottom:8px">LONG NECK LEGENDS © 2026</div>
+    <a href="https://x.com/longnecklegends" target="_blank">X / TWITTER</a>
+    <a href="https://discord.gg/ZPjf8n9unZ" target="_blank">DISCORD</a>
+    <a href="/">HOME</a>
+  </footer>`;
+
+      document.querySelectorAll("[data-t]").forEach(b => {
+        b.onclick = () => {
+          activeTab = b.dataset.t;
+          render();
+          if (activeTab === "my-nfts" && walletAddress && !myNfts.length) fetchMyNfts();
+          if (activeTab === "trades" && walletAddress && !myNfts.length) fetchMyNfts();
+        };
+      });
+      document.querySelectorAll("[data-c]").forEach(b => {
+        b.onclick = () => { activeCollection = b.dataset.c; render(); if (activeTab === "my-nfts" && walletAddress && !myNfts.length) fetchMyNfts(); };
+      });
+
+      if (selectedNft) renderModal();
+    }
+
+    function renderMarket(app) {
+      let listedItems = Object.values(listings);
+      if (activeCollection !== "all") {
+        listedItems = listedItems.filter(l => (collectionByMint[l.mint] || l.collectionKey) === activeCollection);
+      }
+      // Apply sort
+      listedItems = listedItems.sort((a, b) =>
+        sortDir === "asc" ? a.price_sol - b.price_sol : b.price_sol - a.price_sol
+      );
+      // Apply search
+      if (searchQuery) listedItems = listedItems.filter(l => l.name.toLowerCase().includes(searchQuery.toLowerCase()));
+      // Apply trait filters
+      const filterKeys = Object.keys(activeFilters);
+      if (filterKeys.length && traitsLoaded) {
+        listedItems = listedItems.filter(l => {
+          const traits = traitIndex[l.mint] || {};
+          const itemCollectionKey = collectionByMint[l.mint] || l.collectionKey || detectCollectionKey(l);
+          return filterKeys.every(k => {
+            const [filterCollectionKey, traitName] = k.split("::");
+            if (filterCollectionKey !== itemCollectionKey) return false;
+            return activeFilters[k].includes(traits[traitName]);
+          });
+        });
+      }
+      const activeFilterCount = Object.values(activeFilters).reduce((n, v) => n + v.length, 0);
+
+      // Featured listing banner
+      if (featuredListing && listings[featuredListing.mint]) {
+        const fl = listings[featuredListing.mint];
+        app.innerHTML += `<div class="featured-banner" data-mint="${fl.mint}" id="featured-click">
+      <div style="font-size:16px">⭐</div>
+      <div style="flex-shrink:0">
+        ${fl.image ? `<img src="${fl.image}" style="width:50px;height:50px;border-radius:8px;object-fit:cover;border:1px solid #1c1c1c" onerror="this.style.display='none'">` : ""}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:8px;color:#ffd700;font-family:var(--d);letter-spacing:2px;margin-bottom:2px">TODAY'S FEATURED</div>
+        <div style="font-family:var(--d);font-size:14px;color:#fff;letter-spacing:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${fl.name}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:var(--d);font-size:16px;color:var(--grn);letter-spacing:1px">◎ ${fl.price_sol}</div>
+        <div style="font-size:8px;color:var(--g2);margin-top:2px">+5 🥬 to list</div>
+      </div>
+    </div>`;
+      }
+
+      app.innerHTML += `<div style="padding:0 16px 10px;max-width:1400px;margin:0 auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <input class="input" id="search" placeholder="Search listings..." value="${searchQuery}" style="max-width:200px;flex:1 1 140px">
+    <button class="tool-btn ${activeFilterCount ? 'active' : ''}" onclick="openFilter()">
+      ⚙ FILTER${activeFilterCount ? ` <span style="background:var(--r);color:#fff;border-radius:10px;padding:1px 6px;font-size:9px">${activeFilterCount}</span>` : ""}
+    </button>
+    <button class="tool-btn" onclick="sortDir=sortDir==='asc'?'desc':'asc';render()">
+      ${sortDir === "asc" ? "↑ PRICE" : "↓ PRICE"}
+    </button>
+    <button class="tool-btn" onclick="openActivity()">⚡ ACTIVITY</button>
+    <div style="flex:1"></div>
+    <span style="font-size:10px;color:var(--g2)">${listedItems.length} listing${listedItems.length !== 1 ? "s" : ""}</span>
+  </div>`;
+
+      if (!listedItems.length) {
+        app.innerHTML += `<div style="text-align:center;padding:64px 20px">
+      <div style="font-size:48px;opacity:.08;margin-bottom:16px">🐦</div>
+      <div style="font-family:var(--d);font-size:18px;color:var(--g2);letter-spacing:3px;margin-bottom:8px">${searchQuery || activeFilterCount ? "NO MATCHES" : "NO ACTIVE LISTINGS"}</div>
+      <div style="font-size:10px;color:var(--g2)">${searchQuery || activeFilterCount ? "Try adjusting your search or filters" : `Be the first — connect your wallet and list a ${activeCollection === "GA" ? "Golf Addict" : activeCollection === "LNL" ? "Long Neck" : "collection NFT"}`}</div>
+      ${activeFilterCount ? `<button class="btn-ghost" style="margin:14px auto;display:block;font-size:11px" onclick="clearFilters()">CLEAR FILTERS</button>` : ""}
+    </div>`;
+        setTimeout(() => { document.getElementById("search")?.addEventListener("input", e => { searchQuery = e.target.value; render(); }); }, 0);
+        return;
+      }
+
+      let grid = `<div class="nft-grid">`;
+      listedItems.forEach((listing, i) => {
+        const yours = walletAddress && listing.seller === walletAddress;
+        grid += `<div class="nft-card" data-mint="${listing.mint}" style="animation:up .35s ease ${Math.min(i * .03, .5)}s both">
+      <div class="nft-img-wrap">
+        ${listing.image
+            ? `<img src="${listing.image}" alt="${listing.name}" loading="lazy" class="nft-img" onerror="this.style.display='none'">`
+            : `<div style="display:flex;align-items:center;justify-content:center;height:100%"><span style="font-size:44px;opacity:.07">🐦</span></div>`}
+        ${yours ? `<div class="yours-badge">YOURS</div>` : ""}
+      </div>
+      <div class="nft-info">
+        <div class="nft-name">${listing.name}</div>
+        <div style="font-size:8px;color:var(--g2);margin-top:4px;letter-spacing:1px">${getCollectionShortLabel(collectionByMint[listing.mint] || listing.collectionKey)}</div>
+        <div class="price-tag">◎ ${listing.price_sol} SOL</div>
+        <div style="font-size:9px;color:var(--g2);margin-top:3px">Seller: ${short(listing.seller, 4, 3)}</div>
+      </div>
+    </div>`;
+      });
+      app.innerHTML += grid + `</div>`;
+
+      setTimeout(() => {
+        document.getElementById("search")?.addEventListener("input", e => { searchQuery = e.target.value; render(); });
+        document.querySelectorAll("[data-mint]").forEach(card => {
+          card.onclick = () => {
+            const listing = listings[card.dataset.mint];
+            if (!listing) return;
+            selectedNft = { mint: listing.mint, name: listing.name, image: listing.image, owner: listing.seller, attributes: [], _loading: true };
+            render();
+            fetch(RPC, {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ jsonrpc: "2.0", id: "asset", method: "getAsset", params: { id: listing.mint } })
+            }).then(r => r.json()).then(d => {
+              if (d.result && selectedNft?.mint === listing.mint) {
+                const full = parseAsset(d.result);
+                if (!traitIndex[listing.mint]) {
+                  traitIndex[listing.mint] = {};
+                  (d.result.content?.metadata?.attributes || []).forEach(a => { if (a.trait_type) traitIndex[listing.mint][a.trait_type] = String(a.value); });
+                }
+                selectedNft = { ...selectedNft, ...full, _loading: false };
+                render();
+              }
+            }).catch(() => { if (selectedNft?.mint === listing.mint) { selectedNft._loading = false; render(); } });
+          };
+        });
+      }, 0);
+    }
+
+
+    // ─────────────────────────────────────────────
+    //  LEADERBOARD
+    // ─────────────────────────────────────────────
+    function renderLeaderboard(app) {
+      const weekLabel = (() => {
+        const d = new Date(); d.setDate(d.getDate() - d.getDay());
+        return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      })();
+
+      // My stats card
+      let myCard = "";
+      if (walletAddress && myPoints) {
+        const rank = leaderboard.findIndex(l => l.wallet === walletAddress) + 1;
+        const streakDots = [1, 2, 3].map(i =>
+          `<div class="streak-dot ${i <= (myPoints.current_streak % 3 || (myPoints.current_streak >= 3 ? 3 : 0)) ? 'lit' : ''}"></div>`
+        ).join("");
+        myCard = `<div style="padding:18px;background:linear-gradient(135deg,rgba(0,200,0,.04),transparent);border:1px solid rgba(0,200,0,.12);border-radius:12px;margin-bottom:18px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-family:var(--d);font-size:18px;color:#fff;letter-spacing:3px">YOUR CABBAGE</div>
+          <div style="font-size:9px;color:var(--g2);margin-top:2px">${short(walletAddress, 6, 4)}${rank ? ` • RANK #${rank}` : ""}</div>
+        </div>
+        <div style="font-family:var(--d);font-size:32px;color:#4ade80;letter-spacing:2px">🥬 ${myPoints.total_points}</div>
+      </div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap">
+        <div><div style="font-size:8px;color:var(--g2);letter-spacing:2px;margin-bottom:2px">THIS WEEK</div><div style="font-family:var(--d);font-size:16px;color:#fff">${myPoints.weekly_points}</div></div>
+        <div><div style="font-size:8px;color:var(--g2);letter-spacing:2px;margin-bottom:2px">STREAK</div><div style="font-family:var(--d);font-size:16px;color:#ffa500">${myPoints.current_streak} DAY${myPoints.current_streak !== 1 ? "S" : ""} 🔥</div></div>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:4px">
+          <div style="font-size:8px;color:var(--g2);margin-right:4px">NEXT BONUS</div>
+          ${streakDots}
+          <div style="font-size:8px;color:#ffa500;margin-left:4px">+25 🥬</div>
+        </div>
+      </div>
+    </div>`;
+      } else if (walletAddress) {
+        myCard = `<div style="padding:16px;background:#0a0a0a;border:1px solid var(--bdr);border-radius:12px;margin-bottom:18px;text-align:center">
+      <div style="font-size:10px;color:var(--g2);letter-spacing:2px;margin-bottom:6px">YOU HAVEN'T EARNED ANY CABBAGE YET</div>
+      <div style="font-size:9px;color:var(--g1);line-height:1.7">List an NFT (+5 🥬) • Buy (+20 🥬) • Sell (+15 🥬) • Trade (+10 🥬)</div>
+    </div>`;
+      }
+
+      // Weekly winner banner
+      let winnerHtml = "";
+      if (weeklyWinner) {
+        const winnerWeek = new Date(weeklyWinner.week_start).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+        winnerHtml = `<div class="winner-banner">
+      <div style="font-size:20px">👑</div>
+      <div style="flex:1">
+        <div style="font-size:8px;color:#ffd700;font-family:var(--d);letter-spacing:2px">WEEK OF ${winnerWeek.toUpperCase()} — CHAMPION</div>
+        <div style="font-family:var(--d);font-size:14px;color:#fff;letter-spacing:2px;margin-top:2px">${short(weeklyWinner.wallet, 6, 4)} — ${weeklyWinner.points} 🥬</div>
+      </div>
+      ${weeklyWinner.prize ? `<div style="padding:4px 10px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.15);border-radius:6px;font-size:9px;color:var(--grn);letter-spacing:1px">${weeklyWinner.prize}</div>` : `<div style="font-size:8px;color:var(--g3);letter-spacing:1px">PRIZE TBD</div>`}
+    </div>`;
+      }
+
+      // How it works
+      const howItWorks = `<div style="padding:14px;background:#0a0a0a;border:1px solid var(--bdr);border-radius:10px;margin-bottom:18px">
+    <div style="font-size:9px;color:var(--g2);letter-spacing:2px;margin-bottom:10px;font-family:var(--d)">HOW TO EARN 🥬</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px">
+      <div style="padding:8px 10px;background:#060606;border-radius:6px;border:1px solid #111"><span style="font-family:var(--d);font-size:14px;color:var(--r)">+5</span><span style="font-size:9px;color:var(--g2);margin-left:6px">LIST AN NFT</span></div>
+      <div style="padding:8px 10px;background:#060606;border-radius:6px;border:1px solid #111"><span style="font-family:var(--d);font-size:14px;color:var(--grn)">+20</span><span style="font-size:9px;color:var(--g2);margin-left:6px">BUY</span></div>
+      <div style="padding:8px 10px;background:#060606;border-radius:6px;border:1px solid #111"><span style="font-family:var(--d);font-size:14px;color:var(--grn)">+15</span><span style="font-size:9px;color:var(--g2);margin-left:6px">SELL</span></div>
+      <div style="padding:8px 10px;background:#060606;border-radius:6px;border:1px solid #111"><span style="font-family:var(--d);font-size:14px;color:#ffa500">+10</span><span style="font-size:9px;color:var(--g2);margin-left:6px">TRADE</span></div>
+      <div style="padding:8px 10px;background:#060606;border-radius:6px;border:1px solid #111"><span style="font-family:var(--d);font-size:14px;color:#ffa500">+25</span><span style="font-size:9px;color:var(--g2);margin-left:6px">3-DAY STREAK 🔥</span></div>
+    </div>
+    <div style="font-size:8px;color:var(--g3);margin-top:8px;line-height:1.6">Top earner each week wins a prize. Do one action 3 days in a row = streak bonus. Cabbage resets weekly for the race, but your all-time total keeps climbing.</div>
+  </div>`;
+
+      // Leaderboard rows
+      let lbHtml = "";
+      if (leaderboard.length) {
+        lbHtml = leaderboard.map((entry, i) => {
+          const isYou = walletAddress && entry.wallet === walletAddress;
+          const rankClass = i === 0 ? "gold" : i === 1 ? "silver" : i === 2 ? "bronze" : "";
+          const rankIcon = i === 0 ? "👑" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}`;
+          return `<div class="lb-row ${isYou ? 'you' : ''}" style="animation:up .3s ease ${Math.min(i * .04, .5)}s both">
+        <div class="lb-rank ${rankClass}">${rankIcon}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-family:var(--d);font-size:12px;color:#fff;letter-spacing:2px">${short(entry.wallet, 6, 4)}${isYou ? ` <span style="color:var(--grn);font-size:9px">YOU</span>` : ""}</div>
+          ${entry.current_streak >= 3 ? `<div style="font-size:8px;color:#ffa500;margin-top:2px">🔥 ${entry.current_streak}-day streak</div>` : ""}
+        </div>
+        <div style="text-align:right">
+          <div style="font-family:var(--d);font-size:16px;color:#4ade80;letter-spacing:1px">${entry.weekly_points} 🥬</div>
+          <div style="font-size:8px;color:var(--g2);margin-top:1px">${entry.total_points} all-time</div>
+        </div>
+      </div>`;
+        }).join("");
+      } else {
+        lbHtml = `<div style="text-align:center;padding:30px"><div style="font-size:36px;opacity:.08;margin-bottom:10px">🥬</div><div style="font-size:10px;color:var(--g2);letter-spacing:2px">NO ACTIVITY YET</div><div style="font-size:9px;color:var(--g3);margin-top:6px">List, buy, sell, or trade to start earning</div></div>`;
+      }
+
+      // Recent activity feed
+      let feedHtml = "";
+      if (recentActivity.length) {
+        feedHtml = `<div style="margin-top:18px"><div style="font-size:9px;color:var(--g2);letter-spacing:2px;margin-bottom:8px;font-family:var(--d)">RECENT ACTIVITY</div>`;
+        feedHtml += recentActivity.map(a => {
+          const label = ACTION_LABELS[a.action_type] || a.action_type.toUpperCase();
+          const isYou = walletAddress && a.wallet === walletAddress;
+          return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #0e0e0e;font-size:10px">
+        <span style="color:var(--g2);min-width:48px">${timeAgo(a.created_at)}</span>
+        <span style="color:${isYou ? 'var(--grn)' : 'var(--g1)'}">${isYou ? "YOU" : short(a.wallet, 4, 3)}</span>
+        <span style="color:var(--g2)">${label}</span>
+        <span style="margin-left:auto;color:#4ade80;font-family:var(--d)">+${a.points} 🥬</span>
+      </div>`;
+        }).join("");
+        feedHtml += `</div>`;
+      }
+
+      app.innerHTML += `<div style="max-width:700px;margin:0 auto;padding:0 16px 30px">
+    <div style="font-family:var(--d);font-size:22px;color:#fff;letter-spacing:3px;margin-bottom:4px;text-align:center">🥬 CABBAGE LEADERBOARD</div>
+    <div style="font-size:9px;color:var(--g2);text-align:center;letter-spacing:2px;margin-bottom:18px">WEEK OF ${weekLabel.toUpperCase()} — TOP EARNER WINS A PRIZE</div>
+    ${winnerHtml}
+    ${myCard}
+    ${howItWorks}
+    <div style="font-size:9px;color:var(--g2);letter-spacing:2px;margin-bottom:8px;font-family:var(--d)">WEEKLY RANKINGS</div>
+    ${lbHtml}
+    ${feedHtml}
+  </div>`;
+    }
+
+
+    function renderMyNfts(app) {
+      const visibleNfts = activeCollection === "all" ? myNfts : myNfts.filter(nft => nft.collectionKey === activeCollection);
+      if (!walletAddress) {
+        app.innerHTML += `<div style="text-align:center;padding:50px 20px">
+      <div style="font-size:44px;opacity:.12;margin-bottom:14px">🐦</div>
+      <div style="font-family:var(--d);font-size:18px;color:var(--g2);letter-spacing:3px;margin-bottom:14px">CONNECT YOUR WALLET</div>
+      <button class="wallet-btn" id="conn2" style="margin:0 auto"><span>👛</span> CONNECT</button>
+    </div>`;
+        setTimeout(() => document.getElementById("conn2")?.addEventListener("click", showWalletPicker), 0);
+        return;
+      }
+      if (!visibleNfts.length) {
+        app.innerHTML += `<div style="text-align:center;padding:40px;color:var(--g2)">
+      <div style="margin-bottom:10px">No ${activeCollection === "all" ? "supported NFTs" : getCollectionLabel(activeCollection)} in this wallet</div>
+      <div style="font-size:9px;color:var(--g2)">${short(walletAddress, 8, 6)}</div>
+    </div>`; return;
+      }
+      app.innerHTML += `<div style="padding:10px 16px;font-size:10px;color:var(--g2)">${visibleNfts.length} ${activeCollection === "all" ? "NFT" : getCollectionShortLabel(activeCollection)}${visibleNfts.length !== 1 ? "s" : ""} in ${short(walletAddress, 6, 4)}</div>`;
+      let grid = `<div class="nft-grid">`;
+      visibleNfts.forEach((nft, i) => {
+        const listing = listings[nft.mint];
+        grid += `<div class="nft-card" data-mint="${nft.mint}" style="animation:up .35s ease ${i * .05}s both">
+      <div class="nft-img-wrap" style="height:200px">
+        ${nft.image ? `<img src="${nft.image}" alt="${nft.name}" loading="lazy" class="nft-img" onerror="this.style.display='none'">` : ""}
+        ${listing ? `<div class="listed-badge">◎ ${listing.price_sol}</div>` : ""}
+        ${nft.compressed ? `<div style="position:absolute;bottom:7px;left:7px;background:rgba(255,165,0,.18);border:1px solid rgba(255,165,0,.25);padding:2px 6px;border-radius:4px;font-size:7px;color:#ffa500;font-weight:700;letter-spacing:1px">cNFT</div>` : ""}
+      </div>
+      <div class="nft-info">
+        <div class="nft-name">${nft.name}</div>
+        <div style="font-size:8px;color:var(--g2);margin-top:4px;letter-spacing:1px">${getCollectionShortLabel(nft.collectionKey)}</div>
+        ${listing ? `<div class="price-tag">◎ ${listing.price_sol} SOL</div>` : `<div style="font-size:9px;color:var(--g2);margin-top:3px">NOT LISTED</div>`}
+      </div>
+    </div>`;
+      });
+      app.innerHTML += grid + `</div>`;
+      setTimeout(() => {
+        document.querySelectorAll("[data-mint]").forEach(card => {
+          card.onclick = () => { selectedNft = visibleNfts.find(n => n.mint === card.dataset.mint); render(); };
+        });
+      }, 0);
+    }
+
+    // ─────────────────────────────────────────────
+    //  TRADES TAB
+    // ─────────────────────────────────────────────
+    function renderTrades(app) {
+      if (!walletAddress && tradeSubTab !== "live") {
+        // Force to live tab if not connected
+        tradeSubTab = "live";
+      }
+
+      const incoming = walletAddress ? trades.filter(t => t.to_wallet === walletAddress && t.status === "pending") : [];
+      const outgoing = walletAddress ? trades.filter(t => t.from_wallet === walletAddress && t.status === "pending") : [];
+      const allActive = trades.filter(t => t.status === "pending");
+      const recentCompleted = trades.filter(t => t.status === "completed").slice(0, 10);
+      const liveFeed = [...allActive, ...recentCompleted];
+      const history = walletAddress ? trades.filter(t => t.status !== "pending" && (t.from_wallet === walletAddress || t.to_wallet === walletAddress)) : [];
+
+      app.innerHTML += `<div style="max-width:800px;margin:0 auto;padding:0 16px 30px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-family:var(--d);font-size:20px;color:#fff;letter-spacing:3px">PEER-TO-PEER TRADES</div>
+        <div style="font-size:9px;color:var(--g2);margin-top:3px;letter-spacing:1px">SWAP CARDS DIRECTLY — BOTH SIDES GIVE & GET</div>
+      </div>
+      <button class="${walletAddress ? 'btn-primary' : 'wallet-btn'}" id="create-trade-btn" style="width:auto;padding:10px 22px;font-size:13px">${walletAddress ? '+ NEW TRADE' : '<span>👛</span> CONNECT TO TRADE'}</button>
+    </div>
+    <div class="trade-tab-inner" id="trade-sub-tabs">
+      <button class="${tradeSubTab === 'live' ? 'active' : ''}" data-st="live">LIVE${allActive.length ? ` <span style="background:var(--grn);color:#000;border-radius:10px;padding:1px 6px;font-size:8px;font-weight:700;animation:pulse 2s infinite">${allActive.length}</span>` : ""}</button>
+      <button class="${tradeSubTab === 'incoming' ? 'active' : ''}" data-st="incoming">INCOMING${incoming.length ? ` <span style="background:var(--grn);color:#000;border-radius:10px;padding:1px 6px;font-size:8px;font-weight:700">${incoming.length}</span>` : ""}</button>
+      <button class="${tradeSubTab === 'outgoing' ? 'active' : ''}" data-st="outgoing">OUTGOING${outgoing.length ? ` <span style="background:var(--r);color:#fff;border-radius:10px;padding:1px 6px;font-size:8px">${outgoing.length}</span>` : ""}</button>
+      <button class="${tradeSubTab === 'history' ? 'active' : ''}" data-st="history">HISTORY</button>
+    </div>
+    <div id="trade-list"></div>
+  </div>`;
+
+      const listEl = document.getElementById("trade-list");
+
+      if (tradeSubTab === "live") {
+        if (!liveFeed.length) {
+          listEl.innerHTML = `<div class="trade-empty" style="padding:30px"><div style="font-size:36px;opacity:.08;margin-bottom:10px">🔄</div><div style="font-size:10px;color:var(--g2);letter-spacing:2px">NO TRADES YET — BE THE FIRST</div><div style="font-size:9px;color:var(--g3);margin-top:8px">Propose a trade and it'll show up here for everyone</div></div>`;
+        } else {
+          let liveHtml = `<div style="display:flex;align-items:center;gap:6px;padding:8px 0;margin-bottom:8px"><span class="dot-sm"></span><span style="font-size:9px;color:var(--g2);letter-spacing:2px">${allActive.length} ACTIVE TRADE${allActive.length !== 1 ? "S" : ""} ON THE MARKET</span></div>`;
+          liveHtml += liveFeed.map(t => renderTradeCard(t, "live")).join("");
+          listEl.innerHTML = liveHtml;
+        }
+      } else if (tradeSubTab === "incoming") {
+        if (!incoming.length) {
+          listEl.innerHTML = `<div class="trade-empty" style="padding:30px"><div style="font-size:36px;opacity:.08;margin-bottom:10px">📥</div><div style="font-size:10px;color:var(--g2);letter-spacing:2px">NO INCOMING TRADE PROPOSALS</div></div>`;
+        } else {
+          listEl.innerHTML = incoming.map(t => renderTradeCard(t, "incoming")).join("");
+        }
+      } else if (tradeSubTab === "outgoing") {
+        if (!outgoing.length) {
+          listEl.innerHTML = `<div class="trade-empty" style="padding:30px"><div style="font-size:36px;opacity:.08;margin-bottom:10px">📤</div><div style="font-size:10px;color:var(--g2);letter-spacing:2px">NO OUTGOING TRADE PROPOSALS</div></div>`;
+        } else {
+          listEl.innerHTML = outgoing.map(t => renderTradeCard(t, "outgoing")).join("");
+        }
+      } else {
+        if (!history.length) {
+          listEl.innerHTML = `<div class="trade-empty" style="padding:30px"><div style="font-size:36px;opacity:.08;margin-bottom:10px">📜</div><div style="font-size:10px;color:var(--g2);letter-spacing:2px">NO TRADE HISTORY YET</div></div>`;
+        } else {
+          listEl.innerHTML = history.slice(0, 20).map(t => renderTradeCard(t, "history")).join("");
+        }
+      }
+
+      setTimeout(() => {
+        document.getElementById("create-trade-btn")?.addEventListener("click", () => {
+          if (!walletAddress) { showWalletPicker(); return; }
+          showCreateTradeModal();
+        });
+        document.querySelectorAll("[data-st]").forEach(b => {
+          b.onclick = () => {
+            if (b.dataset.st !== "live" && !walletAddress) { showWalletPicker(); return; }
+            tradeSubTab = b.dataset.st; render();
+          };
+        });
+        document.querySelectorAll("[data-trade-accept]").forEach(b => {
+          b.onclick = () => acceptTrade(b.dataset.tradeAccept);
+        });
+        document.querySelectorAll("[data-trade-cancel]").forEach(b => {
+          b.onclick = () => cancelTrade(b.dataset.tradeCancel);
+        });
+        document.querySelectorAll("[data-trade-decline]").forEach(b => {
+          b.onclick = () => declineTrade(b.dataset.tradeDecline);
+        });
+      }, 0);
+    }
+
+    function renderTradeCard(trade, context) {
+      const isIncoming = context === "incoming" || (context === "live" && trade.to_wallet === walletAddress && trade.status === "pending");
+      const isOutgoing = context === "outgoing" || (context === "live" && trade.from_wallet === walletAddress && trade.status === "pending");
+      const isLive = context === "live";
+      const cardClass = isIncoming ? "trade-card incoming" : "trade-card";
+
+      // Parse NFT arrays
+      const offerNfts = trade.offer_nfts || [];
+      const wantNfts = trade.want_nfts || [];
+      const sweetener = parseFloat(trade.sweetener_sol || 0);
+
+      const fromLabel = trade.from_wallet === walletAddress ? "YOU" : short(trade.from_wallet, 4, 4);
+      const toLabel = trade.to_wallet === walletAddress ? "YOU" : (trade.to_wallet ? short(trade.to_wallet, 4, 4) : "ANYONE");
+
+      let statusBadge = "";
+      if (trade.status === "pending" && isLive && !isIncoming && !isOutgoing) {
+        statusBadge = `<span class="trade-status pending" style="background:rgba(0,255,136,.06);border-color:rgba(0,255,136,.2);color:var(--grn)"><span class="dot-sm" style="width:4px;height:4px"></span> ACTIVE</span>`;
+      } else if (trade.status === "pending") {
+        statusBadge = `<span class="trade-status pending">⏳ PENDING</span>`;
+      } else if (trade.status === "completed" && isLive) {
+        statusBadge = `<span class="trade-status completed">🤝 SWAPPED</span>`;
+      } else if (trade.status === "completed") {
+        statusBadge = `<span class="trade-status completed">✓ COMPLETED</span>`;
+      } else if (trade.status === "cancelled") {
+        statusBadge = `<span class="trade-status cancelled">✕ CANCELLED</span>`;
+      } else if (trade.status === "declined") {
+        statusBadge = `<span class="trade-status cancelled">✕ DECLINED</span>`;
+      }
+
+      const offerThumbsHtml = offerNfts.map(n =>
+        `<div style="display:flex;gap:8px;align-items:center">
+          ${n.image ? `<img src="${n.image}" class="trade-nft-thumb" onerror="this.style.background='#1a1a1a'">` : `<div class="trade-nft-thumb" style="display:flex;align-items:center;justify-content:center;font-size:20px">🐦</div>`}
+          <div class="trade-nft-info"><div style="font-family:var(--d);font-size:12px;color:#fff;letter-spacing:1px">${n.name || "NFT"}</div><div style="font-size:8px;color:var(--g2);margin-top:2px">${short(n.mint, 6, 4)}</div></div>
+        </div>`
+      ).join("");
+
+      const wantThumbsHtml = wantNfts.map(n =>
+        `<div style="display:flex;gap:8px;align-items:center">
+          ${n.image ? `<img src="${n.image}" class="trade-nft-thumb" onerror="this.style.background='#1a1a1a'">` : `<div class="trade-nft-thumb" style="display:flex;align-items:center;justify-content:center;font-size:20px">🐦</div>`}
+          <div class="trade-nft-info"><div style="font-family:var(--d);font-size:12px;color:#fff;letter-spacing:1px">${n.name || "NFT"}</div><div style="font-size:8px;color:var(--g2);margin-top:2px">${short(n.mint, 6, 4)}</div></div>
+        </div>`
+      ).join("");
+
+      let actions = "";
+      if (trade.status === "pending") {
+        if (isIncoming) {
+          // Only allow accept if the trade has cards requested from you
+          const hasWantNfts = (trade.want_nfts || []).length > 0;
+          if (hasWantNfts) {
+            actions = `<div class="trade-actions">
+        <button class="btn-green" style="flex:2;padding:8px 16px;font-size:12px" data-trade-accept="${trade.id}">ACCEPT TRADE</button>
+        <button class="btn-danger" style="padding:8px 14px;font-size:11px" data-trade-decline="${trade.id}">DECLINE</button>
+      </div>`;
+          } else {
+            actions = `<div class="trade-actions">
+        <div style="flex:2;padding:8px 12px;background:#060606;border:1px solid rgba(255,0,60,.15);border-radius:8px;font-size:9px;color:var(--r);text-align:center">INVALID — No cards requested from you</div>
+        <button class="btn-danger" style="padding:8px 14px;font-size:11px" data-trade-decline="${trade.id}">DECLINE</button>
+      </div>`;
+          }
+        } else if (isOutgoing) {
+          actions = `<div class="trade-actions">
+        <button class="btn-danger" style="padding:8px 14px;font-size:11px" data-trade-cancel="${trade.id}">CANCEL TRADE</button>
+      </div>`;
+        }
+      }
+
+      const timeStr = trade.created_at ? timeAgo(trade.created_at) : "";
+
+      return `<div class="${cardClass}" style="animation:up .3s ease both">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:6px">
+      <div style="display:flex;align-items:center;gap:8px">
+        ${statusBadge}
+        <span style="font-size:9px;color:var(--g2)">${timeStr}</span>
+      </div>
+      <div style="font-size:9px;color:var(--g2);letter-spacing:1px">${fromLabel} → ${toLabel}</div>
+    </div>
+    <div style="padding:12px;background:#060606;border:1px solid #111;border-radius:10px;margin-bottom:4px">
+      <div style="font-size:8px;color:var(--r);letter-spacing:2px;margin-bottom:8px;font-family:var(--d)">OFFERING</div>
+      <div style="display:flex;flex-direction:column;gap:8px">${offerThumbsHtml || `<span style="font-size:10px;color:var(--g2)">No NFTs</span>`}</div>
+      ${sweetener > 0 ? `<div style="margin-top:8px;font-size:10px;color:var(--grn);font-family:var(--d);letter-spacing:1px">+ ◎ ${sweetener} SOL SWEETENER</div>` : ""}
+    </div>
+    <div class="trade-arrow">⇅</div>
+    <div style="padding:12px;background:#060606;border:1px solid #111;border-radius:10px">
+      <div style="font-size:8px;color:var(--grn);letter-spacing:2px;margin-bottom:8px;font-family:var(--d)">WANTS</div>
+      <div style="display:flex;flex-direction:column;gap:8px">${wantThumbsHtml || `<span style="font-size:10px;color:var(--g2)">No NFTs specified</span>`}</div>
+    </div>
+    ${trade.note ? `<div style="margin-top:10px;padding:8px 12px;background:var(--rb);border-radius:6px;font-size:10px;color:var(--g1);line-height:1.5;font-style:italic">"${trade.note}"</div>` : ""}
+    ${actions}
+  </div>`;
+    }
+
+    // ─────────────────────────────────────────────
+    //  CREATE TRADE MODAL (multi-step)
+    // ─────────────────────────────────────────────
+    let _tradeStep = 1;
+    let _tradeOffer = []; // NFTs user is offering
+    let _tradeWant = [];  // NFTs user wants
+    let _tradeCounterparty = ""; // target wallet
+    let _tradeSweetener = 0;
+    let _tradeNote = "";
+    let _tradeOpenToAll = false;
+
+    function showCreateTradeModal() {
+      if (!walletAddress || !walletProvider) { showWalletPicker(); return; }
+      if (!myNfts.length) { showToast("Loading your NFTs...", true); fetchMyNfts(); return; }
+
+      _tradeStep = 1;
+      _tradeOffer = [];
+      _tradeWant = [];
+      _tradeCounterparty = "";
+      _tradeSweetener = 0;
+      _tradeNote = "";
+      _tradeOpenToAll = false;
+      counterpartyNfts = [];
+      renderTradeModal();
+    }
+
+    function renderTradeModal() {
+      const ex = document.getElementById("tm"); if (ex) ex.remove();
+      const ov = document.createElement("div");
+      ov.id = "tm"; ov.className = "modal-bg";
+      ov.onclick = e => { if (e.target === ov) ov.remove(); };
+
+      const stepTitles = ["SELECT YOUR CARDS", "WHO TO TRADE WITH", "SELECT THEIR CARDS", "REVIEW & PROPOSE"];
+
+      let content = "";
+
+      if (_tradeStep === 1) {
+        // Step 1: Pick your NFTs to offer
+        const unlistedNfts = myNfts.filter(n => !listings[n.mint]);
+        const pickGrid = unlistedNfts.length ? unlistedNfts.map(n => {
+          const sel = _tradeOffer.some(o => o.mint === n.mint);
+          return `<div class="nft-pick-card ${sel ? "selected" : ""}" data-pick="${n.mint}">
+        ${n.image ? `<img src="${n.image}" onerror="this.style.background='#1a1a1a'">` : `<div style="height:80px;display:flex;align-items:center;justify-content:center;font-size:24px;background:#111">🐦</div>`}
+        <div class="pick-name">${n.name}</div>
+      </div>`;
+        }).join("") : `<div style="padding:20px;text-align:center;color:var(--g2);font-size:10px">No unlisted NFTs available to trade</div>`;
+
+        content = `<div style="margin-bottom:14px">
+      <div style="font-size:9px;color:var(--g2);letter-spacing:2px;margin-bottom:8px">YOUR COLLECTION — TAP TO SELECT</div>
+      <div class="nft-pick-grid" id="offer-pick-grid">${pickGrid}</div>
+    </div>
+    <div style="font-size:10px;color:var(--g1);margin-bottom:14px"><span style="color:var(--r);font-family:var(--d)">${_tradeOffer.length}</span> card${_tradeOffer.length !== 1 ? "s" : ""} selected</div>
+    <button class="btn-primary" id="trade-next" ${!_tradeOffer.length ? "disabled" : ""}>NEXT — CHOOSE RECIPIENT</button>`;
+
+      } else if (_tradeStep === 2) {
+        // Step 2: Enter counterparty wallet (required)
+        content = `<div style="margin-bottom:14px">
+      <div style="font-size:9px;color:var(--g2);letter-spacing:2px;margin-bottom:8px">ENTER THEIR SOLANA WALLET</div>
+      <input class="input" id="cp-wallet" placeholder="e.g. 7xKX...j3nP" value="${_tradeCounterparty}" style="margin-bottom:10px">
+      <div style="font-size:9px;color:var(--g2);line-height:1.7;padding:10px 12px;background:#050505;border:1px solid #111;border-radius:8px">
+        Enter the wallet address of who you want to trade with. You'll pick which of their cards you want next.
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-ghost" id="trade-back" style="flex:1">BACK</button>
+      <button class="btn-primary" id="trade-next2" style="flex:2">NEXT — SELECT THEIR CARDS</button>
+    </div>`;
+
+      } else if (_tradeStep === 3) {
+        // Step 3: Pick counterparty's NFTs
+        let pickContent = "";
+        if (counterpartyNfts.length) {
+          const pickGrid = counterpartyNfts.map(n => {
+            const sel = _tradeWant.some(w => w.mint === n.mint);
+            return `<div class="nft-pick-card ${sel ? "selected" : ""}" data-want="${n.mint}">
+          ${n.image ? `<img src="${n.image}" onerror="this.style.background='#1a1a1a'">` : `<div style="height:80px;display:flex;align-items:center;justify-content:center;font-size:24px;background:#111">🐦</div>`}
+          <div class="pick-name">${n.name}</div>
+        </div>`;
+          }).join("");
+          pickContent = `<div style="margin-bottom:14px">
+        <div style="font-size:9px;color:var(--g2);letter-spacing:2px;margin-bottom:8px">THEIR COLLECTION — TAP TO SELECT</div>
+        <div class="nft-pick-grid" id="want-pick-grid">${pickGrid}</div>
+      </div>
+      <div style="font-size:10px;color:var(--g1);margin-bottom:10px"><span style="color:var(--grn);font-family:var(--d)">${_tradeWant.length}</span> card${_tradeWant.length !== 1 ? "s" : ""} selected</div>`;
+        } else {
+          pickContent = `<div style="text-align:center;padding:30px">
+        <div class="spinner" style="margin:0 auto 12px"></div>
+        <div style="font-size:10px;color:var(--g2)">Loading their NFTs...</div>
+      </div>`;
+        }
+
+        // Sweetener option
+        const sweetenerHtml = `<div class="sweetener-row">
+      <div style="flex:1">
+        <div style="font-size:9px;color:var(--g2);letter-spacing:2px;margin-bottom:4px">SOL SWEETENER (OPTIONAL)</div>
+        <input class="input" id="trade-sweet" type="number" min="0" step="0.1" placeholder="0" value="${_tradeSweetener || ""}" style="max-width:140px">
+      </div>
+      <div style="font-size:9px;color:var(--g2);line-height:1.5;max-width:180px">Add SOL to sweeten the deal. Locked in escrow until accepted or cancelled.</div>
+    </div>`;
+
+        content = `${pickContent}${sweetenerHtml}
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn-ghost" id="trade-back3" style="flex:1">BACK</button>
+      <button class="btn-primary" id="trade-next3" style="flex:2" ${!_tradeWant.length ? "disabled" : ""}>REVIEW TRADE</button>
+    </div>`;
+
+      } else if (_tradeStep === 4) {
+        // Step 4: Review
+        const offerPreview = _tradeOffer.map(n =>
+          `<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+        ${n.image ? `<img src="${n.image}" style="width:40px;height:40px;border-radius:6px;object-fit:cover;border:1px solid #1c1c1c">` : ""}
+        <div><div style="font-family:var(--d);font-size:11px;color:#fff;letter-spacing:1px">${n.name}</div></div>
+      </div>`
+        ).join("");
+
+        let wantPreview = "";
+        wantPreview = _tradeWant.map(n =>
+            `<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+          ${n.image ? `<img src="${n.image}" style="width:40px;height:40px;border-radius:6px;object-fit:cover;border:1px solid #1c1c1c">` : ""}
+          <div><div style="font-family:var(--d);font-size:11px;color:#fff;letter-spacing:1px">${n.name}</div></div>
+        </div>`
+          ).join("");
+
+        content = `<div style="padding:14px;background:#060606;border:1px solid #111;border-radius:10px;margin-bottom:6px">
+      <div style="font-size:8px;color:var(--r);letter-spacing:2px;margin-bottom:8px;font-family:var(--d)">YOU GIVE</div>
+      ${offerPreview}
+    </div>
+    <div class="trade-arrow">⇅</div>
+    <div style="padding:14px;background:#060606;border:1px solid #111;border-radius:10px;margin-bottom:10px">
+      <div style="font-size:8px;color:var(--grn);letter-spacing:2px;margin-bottom:8px;font-family:var(--d)">YOU GET</div>
+      ${wantPreview}
+    </div>
+    ${_tradeSweetener > 0 ? `<div style="padding:8px 12px;background:rgba(0,255,136,.04);border:1px solid rgba(0,255,136,.1);border-radius:8px;margin-bottom:10px;font-size:10px;color:var(--grn);font-family:var(--d);letter-spacing:1px">+ ◎ ${_tradeSweetener} SOL SWEETENER</div>` : ""}
+    <div style="padding:8px 12px;background:#050505;border:1px solid #111;border-radius:8px;margin-bottom:14px;font-size:9px;color:var(--g2);line-height:1.7">
+      To: <span style="color:var(--g1)">${short(_tradeCounterparty, 8, 6)}</span>
+      &nbsp;•&nbsp; Both parties sign to swap
+      ${_tradeSweetener > 0 ? `&nbsp;•&nbsp; ${_tradeSweetener} SOL locked in escrow` : ""}
+    </div>
+    <div style="margin-bottom:14px">
+      <div style="font-size:9px;color:var(--g2);letter-spacing:2px;margin-bottom:6px">ADD A NOTE (OPTIONAL)</div>
+      <input class="input" id="trade-note" placeholder="e.g. Been looking for this one!" value="${_tradeNote}">
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-ghost" id="trade-back4" style="flex:1">BACK</button>
+      <button class="btn-green" id="trade-propose" style="flex:2">🤝 PROPOSE TRADE</button>
+    </div>`;
+      }
+
+      ov.innerHTML = `<div style="background:linear-gradient(145deg,#0c0c0c,#080808);border:1px solid #1c1c1c;border-radius:16px;padding:28px;width:100%;max-width:480px;position:relative;animation:up .2s;max-height:90vh;overflow-y:auto" onclick="event.stopPropagation()">
+    <button onclick="document.getElementById('tm').remove()" style="position:absolute;top:12px;right:12px;background:rgba(255,0,60,.08);border:1px solid rgba(255,0,60,.2);color:var(--r);width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:13px;display:grid;place-items:center;z-index:2">✕</button>
+    <div style="font-family:var(--d);font-size:20px;color:#fff;letter-spacing:3px;margin-bottom:4px;text-align:center">NEW TRADE</div>
+    <div style="font-size:10px;color:var(--g2);text-align:center;margin-bottom:16px;letter-spacing:1px">${stepTitles[_tradeStep - 1]}</div>
+    <div class="step-dots">
+      ${[1, 2, 3, 4].map(s => `<div class="step-dot ${s === _tradeStep ? 'active' : s < _tradeStep ? 'done' : ''}"></div>`).join("")}
+    </div>
+    ${content}
+  </div>`;
+
+      document.body.appendChild(ov);
+      bindTradeModalEvents();
+    }
+
+    function bindTradeModalEvents() {
+      // Step 1: pick offer NFTs
+      document.querySelectorAll("[data-pick]").forEach(card => {
+        card.onclick = () => {
+          const mint = card.dataset.pick;
+          const nft = myNfts.find(n => n.mint === mint);
+          if (!nft) return;
+          const idx = _tradeOffer.findIndex(o => o.mint === mint);
+          if (idx >= 0) _tradeOffer.splice(idx, 1);
+          else _tradeOffer.push({ mint: nft.mint, name: nft.name, image: nft.image });
+          renderTradeModal();
+        };
+      });
+
+      // Step 1 → 2
+      document.getElementById("trade-next")?.addEventListener("click", () => { _tradeStep = 2; renderTradeModal(); });
+
+      // Step 2: wallet input
+      document.getElementById("cp-wallet")?.addEventListener("input", e => { _tradeCounterparty = e.target.value.trim(); });
+
+      // Step 2 → 3
+      document.getElementById("trade-next2")?.addEventListener("click", async () => {
+        if (!_tradeCounterparty) { showToast("Enter a wallet address", true); return; }
+        if (_tradeCounterparty === walletAddress) { showToast("Can't trade with yourself", true); return; }
+        _tradeStep = 3;
+        renderTradeModal();
+        await loadCounterpartyNfts(_tradeCounterparty);
+        if (_tradeStep === 3) renderTradeModal();
+      });
+
+      // Step 3: pick want NFTs
+      document.querySelectorAll("[data-want]").forEach(card => {
+        card.onclick = () => {
+          const mint = card.dataset.want;
+          const nft = counterpartyNfts.find(n => n.mint === mint);
+          if (!nft) return;
+          const idx = _tradeWant.findIndex(w => w.mint === mint);
+          if (idx >= 0) _tradeWant.splice(idx, 1);
+          else _tradeWant.push({ mint: nft.mint, name: nft.name, image: nft.image });
+          renderTradeModal();
+        };
+      });
+
+      // Step 3: sweetener
+      document.getElementById("trade-sweet")?.addEventListener("input", e => { _tradeSweetener = parseFloat(e.target.value) || 0; });
+
+      // Step 3 → 4
+      document.getElementById("trade-next3")?.addEventListener("click", () => { _tradeStep = 4; renderTradeModal(); });
+
+      // Step 4: note
+      document.getElementById("trade-note")?.addEventListener("input", e => { _tradeNote = e.target.value; });
+
+      // Back buttons
+      document.getElementById("trade-back")?.addEventListener("click", () => { _tradeStep = 1; renderTradeModal(); });
+      document.getElementById("trade-back3")?.addEventListener("click", () => { _tradeStep = 2; renderTradeModal(); });
+      document.getElementById("trade-back4")?.addEventListener("click", () => { _tradeStep = 3; renderTradeModal(); });
+
+      // Propose
+      document.getElementById("trade-propose")?.addEventListener("click", () => proposeTrade());
+    }
+
+    async function loadCounterpartyNfts(wallet) {
+      counterpartyNfts = [];
+      try {
+        let pg = 1, all = [];
+        while (true) {
+          const res = await fetch(RPC, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              jsonrpc: "2.0", id: "cp", method: "getAssetsByOwner",
+              params: { ownerAddress: wallet, page: pg, limit: 1000, displayOptions: { showUnverifiedCollections: true } }
+            })
+          });
+          const data = await res.json();
+          if (data.error) break;
+          const items = data.result?.items || [];
+          all = all.concat(items);
+          if (items.length < 1000) break;
+          pg++;
+        }
+        counterpartyNfts = all.filter(item => {
+          const ck = detectCollectionKey(item);
+          if (!ck) return false;
+          collectionByMint[item.id] = ck;
+          return true;
+        }).map(parseAsset);
+      } catch (e) { console.error("[loadCounterpartyNfts]", e); }
+    }
+
+    // ─────────────────────────────────────────────
+    //  PROPOSE TRADE — Delegate offered NFTs to escrow + save to Supabase
+    // ─────────────────────────────────────────────
+    async function proposeTrade() {
+      if (!walletAddress || !walletProvider) return;
+      const proposeBtn = document.getElementById("trade-propose");
+      if (proposeBtn) { proposeBtn.disabled = true; proposeBtn.innerHTML = `<span class="spinner"></span>PROPOSING...`; }
+
+      try {
+        const web3 = await getWeb3();
+        const { Connection, PublicKey, Transaction } = web3;
+        const conn = new Connection(RPC, "confirmed");
+
+        // Delegate each offered NFT to escrow
+        showToast("Delegating your cards to escrow...");
+        for (const nft of _tradeOffer) {
+          const details = await getAssetDetails(nft.mint);
+          // Only delegate if not already delegated to escrow
+          if (details.delegate !== ESCROW_ADDRESS) {
+            const ownerPK = safePK(PublicKey, walletAddress, "walletAddress");
+            const escrowPK = safePK(PublicKey, ESCROW_ADDRESS, "ESCROW_ADDRESS");
+            const treePK = safePK(PublicKey, details.treeId, "treeId");
+            const [treeAuthorityPK] = getTreeAuthority(PublicKey, treePK);
+            const prevDelegatePK = safePK(PublicKey, details.delegate, "delegate");
+
+            const delegateIx = buildDelegateIx(PublicKey, {
+              ownerPK, previousDelegatePK: prevDelegatePK, newDelegatePK: escrowPK,
+              treePK, treeAuthorityPK,
+              root: details.root, dataHash: details.dataHash, creatorHash: details.creatorHash,
+              nonce: details.leafId, index: details.leafId,
+              proofPath: details.proofPath
+            });
+
+            const tx = new Transaction().add(delegateIx);
+            const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
+            tx.recentBlockhash = blockhash; tx.lastValidBlockHeight = lastValidBlockHeight;
+            tx.feePayer = ownerPK;
+
+            showToast(`Sign to delegate ${nft.name}...`);
+            const signed = await walletProvider.signTransaction(tx);
+            const sig = await conn.sendRawTransaction(signed.serialize(), { skipPreflight: false });
+            await conn.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed");
+          }
+        }
+
+        // SECURITY: SOL sweeteners disabled until cancel/refund flow is fully verified backend-side.
+        if (_tradeSweetener > 0) throw new Error("SOL sweeteners are temporarily disabled for secure trading");
+
+        // If there's a SOL sweetener, send it to escrow
+        if (_tradeSweetener > 0) {
+          showToast("Locking SOL sweetener in escrow...");
+          const { PublicKey: PK, Transaction: Tx, LAMPORTS_PER_SOL } = web3;
+          const buyerPK = new PK(walletAddress);
+          const escrowPK = new PK(ESCROW_ADDRESS);
+          const lamports = Math.round(_tradeSweetener * LAMPORTS_PER_SOL);
+          const sysPK = new PK("11111111111111111111111111111111");
+          const tx = new Tx().add({
+            programId: sysPK,
+            keys: [{ pubkey: buyerPK, isSigner: true, isWritable: true }, { pubkey: escrowPK, isSigner: false, isWritable: true }],
+            data: new Uint8Array([...toLEU32(2), ...toLEU64(lamports)])
+          });
+          const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
+          tx.recentBlockhash = blockhash; tx.lastValidBlockHeight = lastValidBlockHeight;
+          tx.feePayer = buyerPK;
+          const signed = await walletProvider.signTransaction(tx);
+          const sig = await conn.sendRawTransaction(signed.serialize(), { skipPreflight: false });
+          await conn.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed");
+        }
+
+        // Save to Supabase
+        const tradeObj = {
+          from_wallet: walletAddress,
+          to_wallet: _tradeCounterparty,
+          offer_nfts: _tradeOffer,
+          want_nfts: _tradeWant,
+          sweetener_sol: _tradeSweetener || 0,
+          note: _tradeNote || null,
+          status: "pending"
+        };
+        const saved = await sbUpsert("marketplace_trades", tradeObj);
+        if (Array.isArray(saved) && saved[0]) trades.unshift(saved[0]);
+
+        document.getElementById("tm")?.remove();
+        showToast("Trade proposed! 🤝");
+        render();
+
+      } catch (e) {
+        console.error("[proposeTrade]", e);
+        if (e.code === 4001 || e.message?.toLowerCase().includes("cancel") || e.message?.toLowerCase().includes("reject")) {
+          showToast("Cancelled", true);
+        } else {
+          showToast("Failed: " + (e.message || "unknown"), true);
+        }
+        if (proposeBtn) { proposeBtn.disabled = false; proposeBtn.innerHTML = "🤝 PROPOSE TRADE"; }
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    //  ACCEPT TRADE
+    //  Accepter delegates their NFTs to escrow + auth message
+    //  Then edge fn swaps both sides
+    // ─────────────────────────────────────────────
+    async function acceptTrade(tradeId) {
+      if (!walletAddress || !walletProvider) { showWalletPicker(); return; }
+      const trade = trades.find(t => String(t.id) === String(tradeId));
+      if (!trade) { showToast("Trade not found", true); return; }
+
+      const wantNfts = trade.want_nfts || [];
+      if (!wantNfts.length) {
+        showToast("Invalid trade — no cards requested from you", true);
+        return;
+      }
+
+      const btn = document.querySelector(`[data-trade-accept="${tradeId}"]`);
+      if (btn) { btn.disabled = true; btn.innerHTML = `<span class="spinner"></span>`; }
+
+      // Track which NFTs we delegated so we can revoke on failure
+      const delegatedMints = [];
+
+      try {
+        const web3 = await getWeb3();
+        const { Connection, PublicKey, Transaction } = web3;
+        const conn = new Connection(RPC, "confirmed");
+
+        // STEP 1: Verify you actually own all the wanted NFTs
+        showToast("Verifying ownership...");
+        for (const nft of wantNfts) {
+          const details = await getAssetDetails(nft.mint);
+          if (details.owner !== walletAddress) {
+            throw new Error(`You don't own ${nft.name || nft.mint} — can't complete this trade`);
+          }
+        }
+
+        // STEP 2: Delegate the wanted NFTs (your NFTs) to escrow
+        for (const nft of wantNfts) {
+          const details = await getAssetDetails(nft.mint);
+          if (details.delegate === ESCROW_ADDRESS) {
+            delegatedMints.push(nft.mint);
+            continue; // already delegated
+          }
+
+          showToast(`Delegating ${nft.name || "NFT"} to escrow...`);
+          const ownerPK = safePK(PublicKey, walletAddress, "walletAddress");
+          const escrowPK = safePK(PublicKey, ESCROW_ADDRESS, "ESCROW_ADDRESS");
+          const treePK = safePK(PublicKey, details.treeId, "treeId");
+          const [treeAuthorityPK] = getTreeAuthority(PublicKey, treePK);
+          const prevDelegatePK = safePK(PublicKey, details.delegate, "delegate");
+
+          const delegateIx = buildDelegateIx(PublicKey, {
+            ownerPK, previousDelegatePK: prevDelegatePK, newDelegatePK: escrowPK,
+            treePK, treeAuthorityPK,
+            root: details.root, dataHash: details.dataHash, creatorHash: details.creatorHash,
+            nonce: details.leafId, index: details.leafId,
+            proofPath: details.proofPath
+          });
+
+          const tx = new Transaction().add(delegateIx);
+          const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
+          tx.recentBlockhash = blockhash; tx.lastValidBlockHeight = lastValidBlockHeight;
+          tx.feePayer = ownerPK;
+
+          const signed = await walletProvider.signTransaction(tx);
+          const sig = await conn.sendRawTransaction(signed.serialize(), { skipPreflight: false });
+          await conn.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed");
+          delegatedMints.push(nft.mint);
+        }
+
+        // STEP 3: Sign auth message to prove identity
+        const authMsg = `accept-trade:${tradeId}:${walletAddress}`;
+        const authBytes = new TextEncoder().encode(authMsg);
+        if (!walletProvider.signMessage) throw new Error("Wallet does not support signMessage");
+        const authSigRaw = await walletProvider.signMessage(authBytes, "utf8");
+        let sigBytes;
+        if (authSigRaw instanceof Uint8Array) sigBytes = authSigRaw;
+        else if (authSigRaw?.signature instanceof Uint8Array) sigBytes = authSigRaw.signature;
+        else if (authSigRaw?.data instanceof Uint8Array) sigBytes = authSigRaw.data;
+        else sigBytes = new Uint8Array(Object.values(authSigRaw));
+        const sigB64 = btoa(sigBytes.reduce((s, b) => s + String.fromCharCode(b), ""));
+
+        // STEP 4: Call edge function to settle
+        showToast("Settling trade...");
+        const result = await cosign({
+          action: "settle-trade",
+          tradeId: tradeId,
+          accepter: walletAddress,
+          authMessage: authMsg,
+          authSignature: sigB64
+        });
+        console.log("[acceptTrade] result:", result);
+
+        // Success
+        trade.status = "completed";
+        showToast("Trade completed! 🎉");
+        loadCabbageData(); // refresh points
+        await fetchMyNfts();
+        render();
+
+      } catch (e) {
+        console.error("[acceptTrade]", e);
+        if (e.code === 4001 || e.message?.toLowerCase().includes("cancel") || e.message?.toLowerCase().includes("reject")) {
+          showToast("Cancelled", true);
+        } else {
+          showToast("Failed: " + (e.message || "unknown"), true);
+        }
+        if (btn) { btn.disabled = false; btn.innerHTML = "ACCEPT TRADE"; }
+
+        // RECOVERY: If we delegated NFTs but settle failed, offer to revoke
+        if (delegatedMints.length > 0) {
+          setTimeout(() => {
+            if (confirm(`Trade settlement failed but ${delegatedMints.length} NFT(s) were delegated to escrow.\n\nRevoke delegations to get them back?`)) {
+              revokeTradeDelegations(delegatedMints);
+            }
+          }, 500);
+        }
+      }
+    }
+
+    // Revoke escrow delegation on NFTs (recovery for failed trades)
+    async function revokeTradeDelegations(mints) {
+      if (!walletAddress || !walletProvider) return;
+      try {
+        const web3 = await getWeb3();
+        const { Connection, PublicKey, Transaction } = web3;
+        const conn = new Connection(RPC, "confirmed");
+
+        for (const mint of mints) {
+          try {
+            showToast(`Revoking delegation on ${short(mint, 6, 4)}...`);
+            const details = await getAssetDetails(mint);
+            if (details.delegate !== ESCROW_ADDRESS) continue; // already revoked
+            if (details.owner !== walletAddress) continue; // not ours
+
+            const ownerPK = new PublicKey(walletAddress);
+            const treePK = new PublicKey(details.treeId);
+            const [treeAuthorityPK] = getTreeAuthority(PublicKey, treePK);
+
+            const delegateIx = buildDelegateIx(PublicKey, {
+              ownerPK, previousDelegatePK: new PublicKey(ESCROW_ADDRESS), newDelegatePK: ownerPK,
+              treePK, treeAuthorityPK,
+              root: details.root, dataHash: details.dataHash, creatorHash: details.creatorHash,
+              nonce: details.leafId, index: details.leafId,
+              proofPath: details.proofPath
+            });
+
+            const tx = new Transaction().add(delegateIx);
+            const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
+            tx.recentBlockhash = blockhash; tx.lastValidBlockHeight = lastValidBlockHeight;
+            tx.feePayer = ownerPK;
+
+            const signed = await walletProvider.signTransaction(tx);
+            const sig = await conn.sendRawTransaction(signed.serialize(), { skipPreflight: false });
+            await conn.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed");
+          } catch (err) {
+            console.error("[revokeTradeDelegations] failed for", mint, err);
+          }
+        }
+        showToast("Delegations revoked — your NFTs are safe ✓");
+      } catch (e) {
+        console.error("[revokeTradeDelegations]", e);
+        showToast("Revoke failed: " + (e.message || "unknown"), true);
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    //  CANCEL TRADE (proposer cancels)
+    // ─────────────────────────────────────────────
+    async function cancelTrade(tradeId) {
+      if (!walletAddress) return;
+      const trade = trades.find(t => String(t.id) === String(tradeId));
+      if (!trade) { showToast("Trade not found", true); return; }
+      if (trade.from_wallet !== walletAddress) { showToast("Not your trade", true); return; }
+
+      const btn = document.querySelector(`[data-trade-cancel="${tradeId}"]`);
+      if (btn) { btn.disabled = true; btn.innerHTML = `<span class="spinner"></span>`; }
+
+      try {
+        // Revoke delegation on offered NFTs
+        const web3 = await getWeb3();
+        const { Connection, PublicKey, Transaction } = web3;
+        const conn = new Connection(RPC, "confirmed");
+
+        for (const nft of (trade.offer_nfts || [])) {
+          try {
+            const details = await getAssetDetails(nft.mint);
+            if (details.delegate === ESCROW_ADDRESS && details.owner === walletAddress) {
+              showToast(`Revoking delegation on ${nft.name || "NFT"}...`);
+              const ownerPK = new PublicKey(walletAddress);
+              const treePK = new PublicKey(details.treeId);
+              const [treeAuthorityPK] = getTreeAuthority(PublicKey, treePK);
+
+              const delegateIx = buildDelegateIx(PublicKey, {
+                ownerPK, previousDelegatePK: new PublicKey(ESCROW_ADDRESS), newDelegatePK: ownerPK,
+                treePK, treeAuthorityPK,
+                root: details.root, dataHash: details.dataHash, creatorHash: details.creatorHash,
+                nonce: details.leafId, index: details.leafId,
+                proofPath: details.proofPath
+              });
+
+              const tx = new Transaction().add(delegateIx);
+              const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
+              tx.recentBlockhash = blockhash; tx.lastValidBlockHeight = lastValidBlockHeight;
+              tx.feePayer = ownerPK;
+
+              const signed = await walletProvider.signTransaction(tx);
+              const sig = await conn.sendRawTransaction(signed.serialize(), { skipPreflight: false });
+              await conn.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed");
+            }
+          } catch (e) { console.error("[cancelTrade] revoke delegation error:", e); }
+        }
+
+        // SECURITY: Sweetener refunds are not handled by cancel-offer.
+        // New secure frontend blocks creating sweetener trades. If an old sweetener trade exists, pause here.
+        if (parseFloat(trade.sweetener_sol) > 0) {
+          throw new Error("This old trade has a SOL sweetener. Contact admin for manual refund before cancelling.");
+        }
+
+        // Update Supabase
+        await fetch(`${SB_URL}/rest/v1/marketplace_trades?id=eq.${tradeId}`, {
+          method: "PATCH",
+          headers: { ...SB_HDR, Prefer: "return=representation" },
+          body: JSON.stringify({ status: "cancelled" })
+        });
+
+        trade.status = "cancelled";
+        showToast("Trade cancelled ✓");
+        render();
+
+      } catch (e) {
+        console.error("[cancelTrade]", e);
+        if (e.code === 4001 || e.message?.toLowerCase().includes("cancel") || e.message?.toLowerCase().includes("reject")) {
+          showToast("Cancelled", true);
+        } else {
+          showToast("Failed: " + (e.message || "unknown"), true);
+        }
+        if (btn) { btn.disabled = false; btn.innerHTML = "CANCEL TRADE"; }
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    //  DECLINE TRADE (recipient declines)
+    // ─────────────────────────────────────────────
+    async function declineTrade(tradeId) {
+      if (!walletAddress) return;
+      const trade = trades.find(t => String(t.id) === String(tradeId));
+      if (!trade) return;
+
+      const btn = document.querySelector(`[data-trade-decline="${tradeId}"]`);
+      if (btn) { btn.disabled = true; btn.innerHTML = `<span class="spinner"></span>`; }
+
+      try {
+        await fetch(`${SB_URL}/rest/v1/marketplace_trades?id=eq.${tradeId}`, {
+          method: "PATCH",
+          headers: { ...SB_HDR, Prefer: "return=representation" },
+          body: JSON.stringify({ status: "declined" })
+        });
+
+        trade.status = "declined";
+        showToast("Trade declined");
+        render();
+      } catch (e) {
+        console.error("[declineTrade]", e);
+        showToast("Failed: " + (e.message || "unknown"), true);
+        if (btn) { btn.disabled = false; btn.innerHTML = "DECLINE"; }
+      }
+    }
+
+
+    // ─────────────────────────────────────────────
+    //  NFT DETAIL MODAL
+    // ─────────────────────────────────────────────
+    function renderModal() {
+      if (!selectedNft) return;
+      const nft = selectedNft;
+      const yours = walletAddress && nft.owner === walletAddress;
+      const listing = listings[nft.mint];
+      const nftOffers = (offers[nft.mint] || []).sort((a, b) => b.price_sol - a.price_sol);
+      const myOffer = nftOffers.find(o => o.buyer === walletAddress);
+
+      const ov = document.createElement("div");
+      ov.className = "modal-bg";
+      ov.onclick = e => { if (e.target === ov) { selectedNft = null; render(); } };
+
+      let traitsHtml = "";
+      if (nft._loading) {
+        traitsHtml = `<div style="margin-bottom:14px">
+      <div style="font-size:10px;color:var(--g2);letter-spacing:2px;margin-bottom:8px">TRAITS</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${[1, 2, 3, 4].map(() => `<div class="sk" style="height:24px;width:80px;border-radius:6px"></div>`).join("")}</div>
+    </div>`;
+      } else if (nft.attributes?.length) {
+        traitsHtml = `<div style="margin-bottom:14px">
+      <div style="font-size:10px;color:var(--g2);letter-spacing:2px;margin-bottom:6px">TRAITS</div>
+      <div>${nft.attributes.map(a => `<span class="trait"><span style="color:var(--g1)">${a.trait_type}: </span><span style="color:#ccc">${a.value}</span></span>`).join("")}</div>
+    </div>`;
+      }
+
+      // Offers panel for owner
+      let offersHtml = "";
+      if (yours && nftOffers.length) {
+        offersHtml = `<div class="divider"></div>
+      <div style="font-size:10px;color:var(--g2);letter-spacing:2px;margin-bottom:8px">OFFERS (${nftOffers.length})</div>`;
+        nftOffers.forEach(o => {
+          const safeOffer = JSON.stringify({ mint: o.mint, buyer: o.buyer, price_sol: o.price_sol, name: o.name || "", image: o.image || "" });
+          offersHtml += `<div class="offer-row">
+        <div>
+          <div style="font-size:13px;color:#fff;font-family:var(--d);letter-spacing:2px">◎ ${o.price_sol} SOL</div>
+          <div style="font-size:9px;color:var(--g2);margin-top:2px">${short(o.buyer, 6, 4)}</div>
+        </div>
+        <button class="btn-green" id="accept-${o.buyer.slice(0, 6)}" style="width:auto;padding:6px 14px;font-size:12px"
+          onclick='acceptOffer(${safeOffer.replace(/'/g, "&#39;")})'>ACCEPT</button>
+      </div>`;
+        });
+      }
+
+      // My offer status for buyer
+      let myOfferHtml = "";
+      if (!yours && myOffer) {
+        myOfferHtml = `<div style="padding:8px 12px;background:var(--rb);border:1px solid rgba(255,0,60,.15);border-radius:8px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:9px;color:var(--r);letter-spacing:2px">YOUR OFFER: ◎ ${myOffer.price_sol} SOL</span>
+      <button class="btn-danger" style="padding:4px 10px;font-size:10px" onclick="cancelOffer('${nft.mint}')">CANCEL</button>
+    </div>`;
+      }
+
+      // Action buttons
+      let actions = "";
+      if (!walletAddress) {
+        actions = `<button class="wallet-btn" style="width:100%;justify-content:center" onclick="showWalletPicker()"><span>👛</span> CONNECT TO TRADE</button>`;
+      } else if (yours) {
+          actions = `<button class="btn-primary" id="list-btn">${listing ? "MANAGE LISTING" : "LIST FOR SALE"}</button>`;
+      } else {
+        actions = `<div style="display:flex;gap:8px">
+      ${listing
+            ? `<button class="btn-green" style="flex:2" id="buy-btn">BUY NOW — ◎ ${listing.price_sol} SOL</button>`
+            : `<div style="flex:2;padding:12px;background:#060606;border:1px solid #161616;border-radius:8px;font-size:10px;color:var(--g2);display:flex;align-items:center;justify-content:center">NOT LISTED</div>`}
+      <button class="btn-ghost" style="flex:1;white-space:nowrap" id="offer-btn">MAKE OFFER</button>
+    </div>
+    <button class="btn-ghost" style="width:100%;margin-top:8px;border-color:rgba(255,165,0,.25);color:#ffa500" id="trade-from-modal-btn">🔄 PROPOSE TRADE</button>`;
+      }
+
+      ov.innerHTML = `<div class="modal" style="max-width:860px" onclick="event.stopPropagation()">
+    <button class="modal-close" id="close-modal">✕</button>
+    <div style="flex:1 1 340px;min-height:300px;background:#030303;display:flex;align-items:center;justify-content:center">
+      ${nft.image ? `<img src="${nft.image}" alt="${nft.name}" style="width:100%;height:100%;object-fit:contain;max-height:460px">` : `<span style="font-size:52px;opacity:.1">🐦</span>`}
+    </div>
+    <div style="flex:1 1 320px;padding:26px;min-width:260px;display:flex;flex-direction:column">
+      <h2 style="font-family:var(--d);font-size:28px;color:#fff;letter-spacing:3px;line-height:1;margin-bottom:8px">${nft.name}</h2>
+      <div style="font-size:10px;color:var(--g2);margin-bottom:${listing ? '6px' : '14px'}">
+        Owner: <span style="color:var(--g1)">${short(nft.owner, 8, 6)}</span>
+        ${yours ? `<span class="tg" style="margin-left:6px;background:var(--grna);color:var(--grn)">YOU</span>` : ""}
+      </div>
+      ${listing ? `<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:12px 14px;background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.12);border-radius:8px">
+        <span style="font-family:var(--d);font-size:24px;color:var(--grn);letter-spacing:2px">◎ ${listing.price_sol} SOL</span>
+        <span style="font-size:9px;color:var(--g2);margin-left:auto">Seller gets ${(listing.price_sol * (1 - FEE_PCT)).toFixed(4)} SOL</span>
+      </div>`: ""}
+      ${traitsHtml}
+      ${myOfferHtml}
+      ${actions}
+      ${offersHtml}
+      <div style="font-size:9px;color:var(--g2);margin-top:14px;word-break:break-all;line-height:1.6">Mint: ${nft.mint}</div>
+    </div>
+  </div>`;
+
+      document.getElementById("app").appendChild(ov);
+      document.getElementById("close-modal").onclick = () => { selectedNft = null; render(); };
+      document.getElementById("list-btn")?.addEventListener("click", () => { ov.remove(); showListingModal(nft); });
+      document.getElementById("buy-btn")?.addEventListener("click", () => {
+        console.log("[BUY] clicked — listing:", listing, "wallet:", walletAddress, "provider:", !!walletProvider);
+        if (!listing) { console.error("[BUY] no listing object"); return; }
+        if (!walletAddress) { showWalletPicker(); return; }
+        buyNft(listing);
+      });
+      document.getElementById("offer-btn")?.addEventListener("click", () => { ov.remove(); showOfferModal(nft); });
+      document.getElementById("trade-from-modal-btn")?.addEventListener("click", () => {
+        ov.remove();
+        selectedNft = null;
+        // Pre-fill trade with this NFT's owner as counterparty and this NFT as wanted
+        if (!walletAddress) { showWalletPicker(); return; }
+        if (!myNfts.length) { showToast("Loading your NFTs...", true); fetchMyNfts(); return; }
+        _tradeStep = 1;
+        _tradeOffer = [];
+        _tradeWant = [{ mint: nft.mint, name: nft.name, image: nft.image }];
+        _tradeCounterparty = nft.owner || "";
+        _tradeSweetener = 0;
+        _tradeNote = "";
+        _tradeOpenToAll = false;
+        counterpartyNfts = [];
+        renderTradeModal();
+      });
+    }
+
+    // ─────────────────────────────────────────────
+    //  INIT
+    // ─────────────────────────────────────────────
+    document.addEventListener("DOMContentLoaded", async () => {
+      await computeDiscriminators();
+      await loadMarketData();
+      loadTraits();
+      fetchPage(1);
+    });
+  </script>
+</body>
+
+</html>
