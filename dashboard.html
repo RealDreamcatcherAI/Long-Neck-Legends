@@ -3174,21 +3174,29 @@ a.plink:hover{
       return true;
     }
 
-    function showDiscordReconnectBanner(username) {
-      // Replace the connect section content with a clear success message
+    function showDiscordReconnectBanner(username, loginRequired) {
       var connectSection = document.getElementById('connectSection');
       if (connectSection) {
         connectSection.style.display = 'block';
-        // Find and replace the inner content — keep the section visible but swap message
         var inner = connectSection.querySelector('.connect-inner') || connectSection;
-        inner.innerHTML =
-          '<div style="text-align:center;padding:2rem 1rem;">' +
-            '<div style="font-size:2.5rem;margin-bottom:1rem;">✅</div>' +
-            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:2rem;color:#00ff88;letter-spacing:3px;margin-bottom:0.5rem;">DISCORD LINKED</div>' +
-            (username ? '<div style="color:#888;font-size:0.9rem;margin-bottom:1.5rem;">Connected as <strong style="color:#e0e0ff;">' + username + '</strong></div>' : '<div style="margin-bottom:1.5rem;"></div>') +
-            '<div style="color:#aaa;font-size:0.85rem;margin-bottom:1.5rem;line-height:1.6;">Your Discord is saved. Tap the button below<br>to reconnect your wallet and load your dashboard.</div>' +
-            '<button onclick="connectWallet()" style="background:#e01020;color:#fff;border:none;padding:14px 40px;font-family:\'Bebas Neue\',sans-serif;font-size:1.1rem;letter-spacing:3px;cursor:pointer;border-radius:2px;">CONNECT WALLET</button>' +
-          '</div>';
+        if (loginRequired) {
+          inner.innerHTML =
+            '<div style="text-align:center;padding:2rem 1rem;">' +
+              '<div style="font-size:2.5rem;margin-bottom:1rem;">🔒</div>' +
+              '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:2rem;color:#f97316;letter-spacing:3px;margin-bottom:0.5rem;">LOG INTO DISCORD FIRST</div>' +
+              '<div style="color:#aaa;font-size:0.85rem;margin-bottom:1.5rem;line-height:1.6;">Open Discord and sign in, then come back<br>and tap Connect Discord again.</div>' +
+              '<button onclick="connectWallet()" style="background:#e01020;color:#fff;border:none;padding:14px 40px;font-family:\'Bebas Neue\',sans-serif;font-size:1.1rem;letter-spacing:3px;cursor:pointer;border-radius:2px;">CONNECT WALLET</button>' +
+            '</div>';
+        } else {
+          inner.innerHTML =
+            '<div style="text-align:center;padding:2rem 1rem;">' +
+              '<div style="font-size:2.5rem;margin-bottom:1rem;">✅</div>' +
+              '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:2rem;color:#00ff88;letter-spacing:3px;margin-bottom:0.5rem;">DISCORD LINKED</div>' +
+              (username ? '<div style="color:#888;font-size:0.9rem;margin-bottom:1.5rem;">Connected as <strong style="color:#e0e0ff;">' + username + '</strong></div>' : '<div style="margin-bottom:1.5rem;"></div>') +
+              '<div style="color:#aaa;font-size:0.85rem;margin-bottom:1.5rem;line-height:1.6;">Your Discord is saved. Tap the button below<br>to reconnect your wallet and load your dashboard.</div>' +
+              '<button onclick="connectWallet()" style="background:#e01020;color:#fff;border:none;padding:14px 40px;font-family:\'Bebas Neue\',sans-serif;font-size:1.1rem;letter-spacing:3px;cursor:pointer;border-radius:2px;">CONNECT WALLET</button>' +
+            '</div>';
+        }
       }
     }
 
@@ -3218,6 +3226,17 @@ a.plink:hover{
     // Check for Discord return as soon as DOM is ready
     window.addEventListener('load', function() {
       document.body.classList.add('loaded');
+
+      // Handle discord_error=login_required from prompt=none failing
+      var urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('discord_error') === 'login_required') {
+        window.history.replaceState({}, '', window.location.pathname);
+        setTimeout(function() {
+          showDiscordReconnectBanner(null, true);
+        }, 800);
+        return;
+      }
+
       // Wait longer for wallet extensions to inject — mobile needs up to 2s
       setTimeout(function() {
         handleDiscordReturn().catch(function(e){ console.warn('Discord return error:', e); });
