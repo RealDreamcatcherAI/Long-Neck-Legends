@@ -419,6 +419,7 @@ a.plink:hover{
     @media (max-width: 800px) {
       .view.show { grid-template-columns: 1fr; }
       .dashboard{ padding: 1.4rem 1rem 3rem; }
+      .subgrid-2col { grid-template-columns: 1fr !important; }
     }
 
     /* ---- TIER CARD ---- */
@@ -2480,8 +2481,8 @@ a.plink:hover{
             '<button class="disconnect-btn" style="border-color:rgba(255,255,255,0.12);font-size:0.72rem;" onclick="refreshCabbageUI();refreshGaCabbageUI();">Refresh</button>' +
             '<button class="disconnect-btn" id="cabbageStartBtn" style="border-color:rgba(0,255,136,0.35);color:#00ff88;font-size:0.72rem;" onclick="startCabbage();startGaCabbage();">Restart</button>' +
             '<button class="disconnect-btn" id="gaCabbageStartBtn" style="display:none;" onclick="startGaCabbage()"></button>' +
-            '<button class="disconnect-btn" id="cabbageClaimBtn" style="border-color:rgba(224,16,32,0.35);color:#e01020;font-size:0.72rem;" onclick="claimCabbage()">Claim LNL</button>' +
-            '<button class="disconnect-btn" id="gaCabbageClaimBtn" style="border-color:rgba(74,222,128,0.35);color:#4ade80;font-size:0.72rem;" onclick="claimGaCabbage()">Claim GA</button>' +
+            '<button class="disconnect-btn" id="cabbageClaimBtn" style="border-color:rgba(224,16,32,0.35);color:#e01020;font-size:0.72rem;" onclick="claimCabbage();claimGaCabbage();">Claim</button>' +
+            '<button class="disconnect-btn" id="gaCabbageClaimBtn" style="display:none;" onclick="claimGaCabbage()"></button>' +
           '</div>' +
 
           '<div style="margin-top:10px;color:#444;font-size:0.68rem;letter-spacing:0.5px;line-height:1.55;">' +
@@ -2494,7 +2495,7 @@ a.plink:hover{
       // ── LEGENDARY BADGE SECTION ──
       var badgeWallet = walletPublicKey.toBase58();
       _badgeStatus = await fetchBadgeStatus(badgeWallet);
-      view.innerHTML += '<div id="badgeCardContainer">' + renderBadgeCardHTML() + '</div>';
+      view.innerHTML += '<div id="badgeCardContainer" style="grid-column:1/-1;">' + renderBadgeCardHTML() + '</div>';
 
       // Compute achievements FIRST (player card needs the count)
       var xp = pp_computeXP(pp_stats);
@@ -2514,19 +2515,20 @@ a.plink:hover{
         ? '<div class="stat-row"><span class="stat-label">Next GA Tier At</span><span class="stat-value" style="color:#4ade80;">' + nextGaTier.min + ' GA</span></div>'
         : '<div class="stat-row"><span class="stat-label">GA Status</span><span class="stat-value" style="color:#f97316;">MAXED 👑</span></div>';
 
-      view.innerHTML += pp_renderPlayerCard(count, 0);
-
-      // Holder Stats (full width row with level box already added above)
+      // Wrap both cards in a full-width 2-col subgrid row
       view.innerHTML +=
-        '<div class="stats-card">' +
-          '<div class="stats-title">HOLDER STATS</div>' +
-          '<div class="stat-row"><span class="stat-label">Total NFTs Held</span><span class="stat-value cyan">' + totalNFTs + ' <span style="font-size:0.65rem;color:#555;">(LNL: ' + count + ' + GA: ' + gaCount + ')</span></span></div>' +
-          '<div class="stat-row"><span class="stat-label">LNL Tier</span><span class="stat-value">' + tier.name + '</span></div>' +
-          '<div class="stat-row"><span class="stat-label">GA Tier</span><span class="stat-value" style="color:#4ade80;">⛳ ' + gaTier.name + '</span></div>' +
-          '<div class="stat-row"><span class="stat-label">Store Discount</span><span class="stat-value green">' + tier.discount + '%</span></div>' +
-          '<div class="stat-row"><span class="stat-label">Raffle Multiplier</span><span class="stat-value purple">' + tier.raffleMultiplier + 'x</span></div>' +
-          nextTierRow +
-          nextGaTierRow +
+        '<div class="subgrid-2col" style="grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">' +
+          pp_renderPlayerCard(count, 0) +
+          '<div class="stats-card">' +
+            '<div class="stats-title">HOLDER STATS</div>' +
+            '<div class="stat-row"><span class="stat-label">Total NFTs Held</span><span class="stat-value cyan">' + totalNFTs + ' <span style="font-size:0.65rem;color:#555;">(LNL: ' + count + ' + GA: ' + gaCount + ')</span></span></div>' +
+            '<div class="stat-row"><span class="stat-label">LNL Tier</span><span class="stat-value">' + tier.name + '</span></div>' +
+            '<div class="stat-row"><span class="stat-label">GA Tier</span><span class="stat-value" style="color:#4ade80;">⛳ ' + gaTier.name + '</span></div>' +
+            '<div class="stat-row"><span class="stat-label">Store Discount</span><span class="stat-value green">' + tier.discount + '%</span></div>' +
+            '<div class="stat-row"><span class="stat-label">Raffle Multiplier</span><span class="stat-value purple">' + tier.raffleMultiplier + 'x</span></div>' +
+            nextTierRow +
+            nextGaTierRow +
+          '</div>' +
         '</div>';
 
       // Achievement section
@@ -7588,7 +7590,7 @@ a.plink:hover{
       var joinStr = stats.joinDate ? new Date(stats.joinDate).toLocaleDateString() : 'N/A';
 
       var html =
-        '<div style="background:linear-gradient(135deg,#0a0a0a 0%,#111130 50%,#080808 100%);border:1px solid #2a1515;border-radius:0px;padding:1.5rem;margin-bottom:1rem;position:relative;overflow:hidden;">' +
+        '<div style="background:linear-gradient(135deg,#0a0a0a 0%,#111130 50%,#080808 100%);border:1px solid #2a1515;border-radius:0px;padding:1.5rem;position:relative;overflow:hidden;">' +
           // Subtle pattern overlay
           '<div style="position:absolute;top:0;right:0;width:200px;height:200px;background:radial-gradient(circle at top right,rgba(224,16,32,0.04),transparent 70%);pointer-events:none;"></div>' +
 
