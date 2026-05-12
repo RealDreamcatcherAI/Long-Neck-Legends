@@ -2697,19 +2697,10 @@ a.plink:hover{
         if (!res.ok) throw new Error(data && data.error ? data.error : ('HTTP ' + res.status));
 
         var balance = Number(data.balance || 0);
+        var pending = Number(data.pending || 0);
         var startedAt = data.started_at || null;
         var lastClaim = data.last_claim_at || null;
-        // Compute GA pending client-side: 5 cabbage/NFT/week, accrued since last claim (or started_at)
-        var gaCount = (session && session.loadedGolfAddicts) ? session.loadedGolfAddicts.length : 0;
-        var baseTime = (lastClaim && lastClaim.indexOf('1970') !== 0) ? lastClaim : startedAt;
-        var pending = 0;
-        if (startedAt && gaCount > 0 && baseTime) {
-          var msElapsed = Date.now() - new Date(baseTime).getTime();
-          var weeksElapsed = msElapsed / (7 * 24 * 60 * 60 * 1000);
-          pending = Math.max(0, gaCount * 5 * weeksElapsed);
-        } else {
-          pending = Number(data.pending || 0) * 5; // fallback: multiply server value
-        }
+
         _gaBalance = balance;
         updateTotalCabbageDisplay();
         if (balEl) balEl.textContent = (Math.floor(balance * 100) / 100).toLocaleString();
