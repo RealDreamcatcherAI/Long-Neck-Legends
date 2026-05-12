@@ -1921,24 +1921,17 @@ a.plink:hover{
     function applyProfilePanelUI(){
       var btn = document.getElementById("tabProfile");
       var panel = document.getElementById("profilePanel");
-
-      if (btn) btn.classList.toggle("active", !!session.profilePanelOpen);
-      if (panel) panel.classList.toggle("is-hidden", !session.profilePanelOpen);
+      if (btn) btn.classList.remove("active");
+      if (panel) panel.classList.remove("is-hidden");
     }
 
     function toggleProfilePanel(){
-      session.profilePanelOpen = !session.profilePanelOpen;
-      applyProfilePanelUI();
+      // Panel is always visible now — no-op kept for compatibility
     }
 
     function profileBtnClick(){
-      if (session.currentView !== 'profile') {
-        // Navigate home
-        switchView('profile');
-      } else {
-        // Already on profile — toggle edit panel
-        toggleProfilePanel();
-      }
+      // Always just navigate home
+      switchView('profile');
     }
 
     async function connectWallet() {
