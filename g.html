@@ -2410,91 +2410,90 @@ a.plink:hover{
           '</div>' +
         '</div>';
 
-      // ---- STAKING BOX (unified single card) ----
+      // ---- STAKING BOX (unified condensed card) ----
       view.innerHTML +=
         '<div class="stats-card" style="grid-column:1/-1;">' +
           '<div class="stats-title">🥬 CABBAGE STAKING</div>' +
 
-          // Combined balance display — two columns
-          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:10px 0 16px;">' +
-            '<div style="background:rgba(0,255,136,0.04);border:1px solid rgba(0,255,136,0.12);border-radius:0px;padding:14px 16px;text-align:center;">' +
-              '<div style="font-size:0.65rem;color:#555;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">🦒 LNL Balance</div>' +
-              '<div class="points-number" id="cabbageBalance" style="font-size:1.6rem;">—</div>' +
+          // Header row — labels
+          '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:0;margin:14px 0 0;border:1px solid rgba(255,255,255,0.05);border-radius:0px;overflow:hidden;">' +
+            '<div style="padding:8px 12px;background:rgba(255,255,255,0.02);font-size:0.6rem;letter-spacing:2px;color:#555;text-transform:uppercase;border-right:1px solid rgba(255,255,255,0.05);">Collection</div>' +
+            '<div style="padding:8px 12px;background:rgba(255,255,255,0.02);font-size:0.6rem;letter-spacing:2px;color:#555;text-transform:uppercase;border-right:1px solid rgba(255,255,255,0.05);text-align:right;">NFTs</div>' +
+            '<div style="padding:8px 12px;background:rgba(255,255,255,0.02);font-size:0.6rem;letter-spacing:2px;color:#555;text-transform:uppercase;border-right:1px solid rgba(255,255,255,0.05);text-align:right;">Rate</div>' +
+            '<div style="padding:8px 12px;background:rgba(255,255,255,0.02);font-size:0.6rem;letter-spacing:2px;color:#555;text-transform:uppercase;border-right:1px solid rgba(255,255,255,0.05);text-align:right;">Balance</div>' +
+            '<div style="padding:8px 12px;background:rgba(255,255,255,0.02);font-size:0.6rem;letter-spacing:2px;color:#555;text-transform:uppercase;text-align:right;">Pending</div>' +
+          '</div>' +
+
+          // LNL row
+          '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:0;border:1px solid rgba(255,255,255,0.05);border-top:none;overflow:hidden;">' +
+            '<div style="padding:14px 12px;background:rgba(0,255,136,0.03);border-right:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;gap:6px;">' +
+              '<span style="font-size:1rem;">🦒</span>' +
+              '<span style="font-size:0.78rem;font-weight:700;color:#f0e8e8;letter-spacing:0.5px;">LNL</span>' +
             '</div>' +
-            '<div style="background:rgba(74,222,128,0.04);border:1px solid rgba(74,222,128,0.12);border-radius:0px;padding:14px 16px;text-align:center;">' +
-              '<div style="font-size:0.65rem;color:#555;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">⛳ GA Balance</div>' +
-              '<div class="points-number" id="gaCabbageBalance" style="font-size:1.6rem;color:#4ade80;">—</div>' +
+            '<div style="padding:14px 12px;background:rgba(0,255,136,0.03);border-right:1px solid rgba(255,255,255,0.05);text-align:right;font-weight:700;color:#00ff88;font-size:1rem;" id="cabbageNftCount">…</div>' +
+            '<div style="padding:14px 12px;background:rgba(0,255,136,0.03);border-right:1px solid rgba(255,255,255,0.05);text-align:right;font-size:0.78rem;color:#888;">1 🥬/wk</div>' +
+            '<div style="padding:14px 12px;background:rgba(0,255,136,0.03);border-right:1px solid rgba(255,255,255,0.05);text-align:right;font-weight:700;color:#f0e8e8;font-size:1rem;" id="cabbageBalance">…</div>' +
+            '<div style="padding:14px 12px;background:rgba(0,255,136,0.03);text-align:right;font-weight:700;color:#00ff88;font-size:1rem;" id="cabbagePending">…</div>' +
+          '</div>' +
+
+          // GA row
+          '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:0;border:1px solid rgba(255,255,255,0.05);border-top:none;border-radius:0 0 0px 0px;overflow:hidden;">' +
+            '<div style="padding:14px 12px;background:rgba(74,222,128,0.03);border-right:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;gap:6px;">' +
+              '<span style="font-size:1rem;">⛳</span>' +
+              '<span style="font-size:0.78rem;font-weight:700;color:#f0e8e8;letter-spacing:0.5px;">Golf Addicts</span>' +
+            '</div>' +
+            '<div style="padding:14px 12px;background:rgba(74,222,128,0.03);border-right:1px solid rgba(255,255,255,0.05);text-align:right;font-weight:700;color:#4ade80;font-size:1rem;">' + gaCount + '</div>' +
+            '<div style="padding:14px 12px;background:rgba(74,222,128,0.03);border-right:1px solid rgba(255,255,255,0.05);text-align:right;font-size:0.78rem;color:#888;">5 🥬/wk</div>' +
+            '<div style="padding:14px 12px;background:rgba(74,222,128,0.03);border-right:1px solid rgba(255,255,255,0.05);text-align:right;font-weight:700;color:#f0e8e8;font-size:1rem;" id="gaCabbageBalance">…</div>' +
+            '<div style="padding:14px 12px;background:rgba(74,222,128,0.03);text-align:right;font-weight:700;color:#4ade80;font-size:1rem;" id="gaCabbagePending">…</div>' +
+          '</div>' +
+
+          // Combined weekly earn + timing strip
+          '<div style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;margin-top:14px;padding:12px 14px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:0px;">' +
+            '<div style="display:flex;gap:24px;flex-wrap:wrap;">' +
+              '<div>' +
+                '<div style="font-size:0.6rem;color:#555;letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;">Total Weekly</div>' +
+                '<div style="font-weight:900;font-size:1.1rem;color:#00ff88;" id="cabbageRate">…</div>' +
+              '</div>' +
+              '<div style="width:1px;background:rgba(255,255,255,0.06);"></div>' +
+              '<div>' +
+                '<div style="font-size:0.6rem;color:#555;letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;">LNL Started</div>' +
+                '<div style="font-size:0.75rem;color:#888;" id="cabbageStarted">…</div>' +
+              '</div>' +
+              '<div>' +
+                '<div style="font-size:0.6rem;color:#555;letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;">LNL Last Claim</div>' +
+                '<div style="font-size:0.75rem;color:#888;" id="cabbageLast">…</div>' +
+              '</div>' +
+              '<div>' +
+                '<div style="font-size:0.6rem;color:#555;letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;">GA Started</div>' +
+                '<div style="font-size:0.75rem;color:#888;" id="gaCabbageStarted">…</div>' +
+              '</div>' +
+              '<div>' +
+                '<div style="font-size:0.6rem;color:#555;letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;">GA Last Claim</div>' +
+                '<div style="font-size:0.75rem;color:#888;" id="gaCabbageLast">…</div>' +
+              '</div>' +
             '</div>' +
           '</div>' +
 
-          // Collection earning rates — two columns
-          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">' +
-            // LNL rates
-            '<div style="background:rgba(0,255,136,0.04);border:1px solid rgba(0,255,136,0.12);border-radius:0px;padding:14px 16px;">' +
-              '<div style="font-size:0.65rem;color:#555;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">🦒 Long Neck Legends</div>' +
-              '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;">' +
-                '<span style="color:#888;font-size:0.78rem;">NFTs Earning</span>' +
-                '<span style="font-weight:700;font-size:1rem;color:#00ff88;" id="cabbageNftCount">—</span>' +
-              '</div>' +
-              '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;">' +
-                '<span style="color:#888;font-size:0.78rem;">Rate Per NFT</span>' +
-                '<span style="font-weight:700;font-size:1rem;color:#f0e8e8;">1 \uD83E\uDD6C / week</span>' +
-              '</div>' +
-              '<div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid rgba(0,255,136,0.1);padding-top:8px;">' +
-                '<span style="color:#888;font-size:0.78rem;font-weight:600;">Weekly Earn</span>' +
-                '<span style="font-weight:900;font-size:1.05rem;color:#00ff88;" id="cabbageRate">—</span>' +
-              '</div>' +
-            '</div>' +
-            // GA rates
-            '<div style="background:rgba(74,222,128,0.04);border:1px solid rgba(74,222,128,0.12);border-radius:0px;padding:14px 16px;">' +
-              '<div style="font-size:0.65rem;color:#555;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">⛳ Golf Addicts</div>' +
-              '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;">' +
-                '<span style="color:#888;font-size:0.78rem;">NFTs Earning</span>' +
-                '<span style="font-weight:700;font-size:1rem;color:#4ade80;">' + gaCount + '</span>' +
-              '</div>' +
-              '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;">' +
-                '<span style="color:#888;font-size:0.78rem;">Rate Per NFT</span>' +
-                '<span style="font-weight:700;font-size:1rem;color:#f0e8e8;">5 \uD83E\uDD6C / week</span>' +
-              '</div>' +
-              '<div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid rgba(74,222,128,0.1);padding-top:8px;">' +
-                '<span style="color:#888;font-size:0.78rem;font-weight:600;">Weekly Earn</span>' +
-                '<span style="font-weight:900;font-size:1.05rem;color:#4ade80;">' + (gaCount * 5) + ' \uD83E\uDD6C / week</span>' +
-              '</div>' +
-            '</div>' +
-          '</div>' +
-
-          // Pending / timing rows — two columns
-          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">' +
-            '<div>' +
-              '<div class="stat-row"><span class="stat-label">LNL Pending</span><span class="stat-value cyan" id="cabbagePending">—</span></div>' +
-              '<div class="stat-row"><span class="stat-label">LNL Started</span><span class="stat-value" id="cabbageStarted">—</span></div>' +
-              '<div class="stat-row"><span class="stat-label">LNL Last Claim</span><span class="stat-value" id="cabbageLast">—</span></div>' +
-            '</div>' +
-            '<div>' +
-              '<div class="stat-row"><span class="stat-label">GA Pending</span><span class="stat-value" style="color:#4ade80;" id="gaCabbagePending">—</span></div>' +
-              '<div class="stat-row"><span class="stat-label">GA Started</span><span class="stat-value" id="gaCabbageStarted">—</span></div>' +
-              '<div class="stat-row"><span class="stat-label">GA Last Claim</span><span class="stat-value" id="gaCabbageLast">—</span></div>' +
-            '</div>' +
-          '</div>' +
-
-          // Action buttons — two rows, one per collection
-          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px;">' +
-            '<div style="display:flex;align-items:center;gap:8px;">' +
+          // Action buttons — unified row
+          '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;flex-wrap:wrap;">' +
+            '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
               '<span style="font-size:0.65rem;color:#555;letter-spacing:1px;white-space:nowrap;">🦒 LNL</span>' +
-              '<button class="disconnect-btn" style="flex:1;border-color:rgba(255,255,255,0.12);" onclick="refreshCabbageUI()">Refresh</button>' +
-              '<button class="disconnect-btn" id="cabbageStartBtn" style="flex:1;border-color:rgba(0,255,136,0.35);color:#00ff88;" onclick="startCabbage()">Restart</button>' +
-              '<button class="disconnect-btn" id="cabbageClaimBtn" style="flex:1;border-color:rgba(224,16,32,0.35);color:#e01020;" onclick="claimCabbage()">Claim</button>' +
+              '<button class="disconnect-btn" style="border-color:rgba(255,255,255,0.12);font-size:0.72rem;" onclick="refreshCabbageUI()">Refresh</button>' +
+              '<button class="disconnect-btn" id="cabbageStartBtn" style="border-color:rgba(0,255,136,0.35);color:#00ff88;font-size:0.72rem;" onclick="startCabbage()">Restart</button>' +
+              '<button class="disconnect-btn" id="cabbageClaimBtn" style="border-color:rgba(224,16,32,0.35);color:#e01020;font-size:0.72rem;" onclick="claimCabbage()">Claim</button>' +
             '</div>' +
-            '<div style="display:flex;align-items:center;gap:8px;">' +
+            '<div style="width:1px;height:28px;background:rgba(255,255,255,0.06);"></div>' +
+            '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
               '<span style="font-size:0.65rem;color:#555;letter-spacing:1px;white-space:nowrap;">⛳ GA</span>' +
-              '<button class="disconnect-btn" style="flex:1;border-color:rgba(255,255,255,0.12);" onclick="refreshGaCabbageUI()">Refresh</button>' +
-              '<button class="disconnect-btn" id="gaCabbageStartBtn" style="flex:1;border-color:rgba(74,222,128,0.35);color:#4ade80;" onclick="startGaCabbage()">Restart</button>' +
-              '<button class="disconnect-btn" id="gaCabbageClaimBtn" style="flex:1;border-color:rgba(74,222,128,0.35);color:#4ade80;" onclick="claimGaCabbage()">Claim</button>' +
+              '<button class="disconnect-btn" style="border-color:rgba(255,255,255,0.12);font-size:0.72rem;" onclick="refreshGaCabbageUI()">Refresh</button>' +
+              '<button class="disconnect-btn" id="gaCabbageStartBtn" style="border-color:rgba(74,222,128,0.35);color:#4ade80;font-size:0.72rem;" onclick="startGaCabbage()">Restart</button>' +
+              '<button class="disconnect-btn" id="gaCabbageClaimBtn" style="border-color:rgba(74,222,128,0.35);color:#4ade80;font-size:0.72rem;" onclick="claimGaCabbage()">Claim</button>' +
             '</div>' +
           '</div>' +
 
-          '<div style="margin-top:12px;color:#555;font-size:0.72rem;letter-spacing:1px;line-height:1.55;">' +
-            'Click <strong>Restart</strong> anytime to re-sync your NFT count. LNL earns <strong>1 \uD83E\uDD6C / week</strong> · GA earns <strong>5 \uD83E\uDD6C / week</strong>. Claim either collection independently.' +
+          '<div style="margin-top:10px;color:#444;font-size:0.68rem;letter-spacing:0.5px;line-height:1.55;">' +
+            'LNL earns <strong style="color:#555;">1 🥬 / week</strong> · GA earns <strong style="color:#555;">5 🥬 / week</strong>. Restart anytime to re-sync your count.' +
           '</div>' +
         '</div>' +
 '';
@@ -3865,8 +3864,10 @@ a.plink:hover{
         // Use live on-chain count if available, fallback to backend staked_count
         var liveCount = (session && session.loadedNFTs) ? session.loadedNFTs.length : stakedCount;
         if (nftCountEl) nftCountEl.textContent = liveCount.toLocaleString();
-        // Also update the rate display to match live count
-        if (rateEl) rateEl.textContent = (liveCount * 1).toLocaleString() + ' \uD83E\uDD6C / week';
+        // Combined weekly rate: LNL count × 1 + GA count × 5
+        var gaLiveCount = (session && session.loadedGolfAddicts) ? session.loadedGolfAddicts.length : 0;
+        var combinedRate = (liveCount * 1) + (gaLiveCount * 5);
+        if (rateEl) rateEl.textContent = combinedRate.toLocaleString() + ' \uD83E\uDD6C / week';
 
         // Button rules:
         // - If NOT started: enable Start, disable Claim
