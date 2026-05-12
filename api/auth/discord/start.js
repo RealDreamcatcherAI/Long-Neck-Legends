@@ -13,6 +13,7 @@ export default async function handler(req, res) {
     response_type: "code",
     scope:         "identify",
     state
+    prompt:        "none"
   });
 
   res.writeHead(302, { Location: "https://discord.com/oauth2/authorize?" + params.toString() });
