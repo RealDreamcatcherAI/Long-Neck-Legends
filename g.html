@@ -2475,21 +2475,13 @@ a.plink:hover{
             '</div>' +
           '</div>' +
 
-          // Action buttons — unified row
-          '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;flex-wrap:wrap;">' +
-            '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
-              '<span style="font-size:0.65rem;color:#555;letter-spacing:1px;white-space:nowrap;">🦒 LNL</span>' +
-              '<button class="disconnect-btn" style="border-color:rgba(255,255,255,0.12);font-size:0.72rem;" onclick="refreshCabbageUI()">Refresh</button>' +
-              '<button class="disconnect-btn" id="cabbageStartBtn" style="border-color:rgba(0,255,136,0.35);color:#00ff88;font-size:0.72rem;" onclick="startCabbage()">Restart</button>' +
-              '<button class="disconnect-btn" id="cabbageClaimBtn" style="border-color:rgba(224,16,32,0.35);color:#e01020;font-size:0.72rem;" onclick="claimCabbage()">Claim</button>' +
-            '</div>' +
-            '<div style="width:1px;height:28px;background:rgba(255,255,255,0.06);"></div>' +
-            '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
-              '<span style="font-size:0.65rem;color:#555;letter-spacing:1px;white-space:nowrap;">⛳ GA</span>' +
-              '<button class="disconnect-btn" style="border-color:rgba(255,255,255,0.12);font-size:0.72rem;" onclick="refreshGaCabbageUI()">Refresh</button>' +
-              '<button class="disconnect-btn" id="gaCabbageStartBtn" style="border-color:rgba(74,222,128,0.35);color:#4ade80;font-size:0.72rem;" onclick="startGaCabbage()">Restart</button>' +
-              '<button class="disconnect-btn" id="gaCabbageClaimBtn" style="border-color:rgba(74,222,128,0.35);color:#4ade80;font-size:0.72rem;" onclick="claimGaCabbage()">Claim</button>' +
-            '</div>' +
+          // Single unified action buttons row
+          '<div style="display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap;">' +
+            '<button class="disconnect-btn" style="border-color:rgba(255,255,255,0.12);font-size:0.72rem;" onclick="refreshCabbageUI();refreshGaCabbageUI();">Refresh</button>' +
+            '<button class="disconnect-btn" id="cabbageStartBtn" style="border-color:rgba(0,255,136,0.35);color:#00ff88;font-size:0.72rem;" onclick="startCabbage();startGaCabbage();">Restart</button>' +
+            '<button class="disconnect-btn" id="gaCabbageStartBtn" style="display:none;" onclick="startGaCabbage()"></button>' +
+            '<button class="disconnect-btn" id="cabbageClaimBtn" style="border-color:rgba(224,16,32,0.35);color:#e01020;font-size:0.72rem;" onclick="claimCabbage()">Claim LNL</button>' +
+            '<button class="disconnect-btn" id="gaCabbageClaimBtn" style="border-color:rgba(74,222,128,0.35);color:#4ade80;font-size:0.72rem;" onclick="claimGaCabbage()">Claim GA</button>' +
           '</div>' +
 
           '<div style="margin-top:10px;color:#444;font-size:0.68rem;letter-spacing:0.5px;line-height:1.55;">' +
@@ -2498,10 +2490,6 @@ a.plink:hover{
         '</div>' +
 '';
       view.innerHTML += ''
-
-      // Populate cabbage values after DOM updates
-      setTimeout(function(){ try { refreshCabbageUI(); } catch(e){} }, 50);
-      setTimeout(function(){ try { refreshGaCabbageUI(); } catch(e){} }, 80);
 
       // ── LEGENDARY BADGE SECTION ──
       var badgeWallet = walletPublicKey.toBase58();
@@ -2684,6 +2672,10 @@ a.plink:hover{
 
       // ✅ always re-apply toggle state after rendering the panel
       applyProfilePanelUI();
+
+      // ✅ Populate cabbage values AFTER full DOM render is complete
+      setTimeout(function(){ try { refreshCabbageUI(); } catch(e){} }, 50);
+      setTimeout(function(){ try { refreshGaCabbageUI(); } catch(e){} }, 80);
     }
 
     // ---- GOLF ADDICTS CABBAGE STAKING (uses same endpoint with ga_ prefix) ----
