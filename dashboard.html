@@ -3135,21 +3135,22 @@ a.plink:hover{
 
               loadProfileFromStorage();
               loadSecondWalletFromStorage();
-
-              // Hydrate from Supabase — this may overwrite discord fields if
-              // the callback already wrote them, but we re-apply below
               await hydrateProfileAndWalletsFromSupabase(addr);
 
-              // Re-apply discord info after hydrate in case Supabase didn't have it yet
               if (discordUser) session.profile.discord    = discordUser;
               if (discordId)   session.profile.discord_id = discordId;
               saveProfileToStorage();
             }
           } else {
-            console.warn('[Discord return] Provider not found after 10 attempts — user will need to reconnect manually');
+            // Wallet extension not available after redirect (common in mobile wallet browsers)
+            // Discord is already saved to Supabase server-side — just show a friendly reconnect prompt
+            showDiscordReconnectBanner(discordUser);
+            return true;
           }
         } catch(e) {
           console.warn('[Discord return] Silent wallet reconnect failed:', e.message || e);
+          showDiscordReconnectBanner(discordUser);
+          return true;
         }
       }
 
@@ -3171,6 +3172,24 @@ a.plink:hover{
       }
 
       return true;
+    }
+
+    function showDiscordReconnectBanner(username) {
+      // Replace the connect section content with a clear success message
+      var connectSection = document.getElementById('connectSection');
+      if (connectSection) {
+        connectSection.style.display = 'block';
+        // Find and replace the inner content — keep the section visible but swap message
+        var inner = connectSection.querySelector('.connect-inner') || connectSection;
+        inner.innerHTML =
+          '<div style="text-align:center;padding:2rem 1rem;">' +
+            '<div style="font-size:2.5rem;margin-bottom:1rem;">✅</div>' +
+            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:2rem;color:#00ff88;letter-spacing:3px;margin-bottom:0.5rem;">DISCORD LINKED</div>' +
+            (username ? '<div style="color:#888;font-size:0.9rem;margin-bottom:1.5rem;">Connected as <strong style="color:#e0e0ff;">' + username + '</strong></div>' : '<div style="margin-bottom:1.5rem;"></div>') +
+            '<div style="color:#aaa;font-size:0.85rem;margin-bottom:1.5rem;line-height:1.6;">Your Discord is saved. Tap the button below<br>to reconnect your wallet and load your dashboard.</div>' +
+            '<button onclick="connectWallet()" style="background:#e01020;color:#fff;border:none;padding:14px 40px;font-family:\'Bebas Neue\',sans-serif;font-size:1.1rem;letter-spacing:3px;cursor:pointer;border-radius:2px;">CONNECT WALLET</button>' +
+          '</div>';
+      }
     }
 
     function showDiscordToast(username, needsReconnect) {
