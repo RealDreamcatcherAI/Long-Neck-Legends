@@ -6,35 +6,37 @@ export default async function handler(req, res) {
   const appOrigin     = process.env.APP_ORIGIN || "https://longnecklegends.xyz";
   const defaultReturn = process.env.DASHBOARD_URL || (appOrigin + "/dashboard.html");
 
-  // ── User denied or Discord error ────────────────────────────────────────────
+  // ── Decode state FIRST so we can redirect back to the right page ─────────────
+  let wallet = "", returnUrl = "", dashboardBase = defaultReturn;
+  if (stateRaw) {
+    try {
+      const decoded = JSON.parse(Buffer.from(stateRaw, "base64url").toString("utf8"));
+      wallet    = String(decoded.wallet    || "");
+      returnUrl = String(decoded.returnUrl || "");
+      if (returnUrl && returnUrl.startsWith(appOrigin)) dashboardBase = returnUrl;
+    } catch (e) {
+      // State decode failed — we'll catch missing wallet below
+    }
+  }
+
+  // ── Handle errors AFTER decoding state so we go back to the right page ───────
   if (errorParam) {
-    return redirectOrClose(res, defaultReturn, appOrigin, { error: true });
+    if (errorParam === "access_denied") {
+      // prompt=none fired but user wasn't logged into Discord
+      // Send them back with a flag so the dashboard shows a helpful message
+      res.writeHead(302, { Location: dashboardBase + "?discord_error=login_required" });
+      return res.end();
+    }
+    // Any other Discord error
+    return redirectOrClose(res, dashboardBase, appOrigin, { error: true });
   }
 
   if (!code || !stateRaw) {
     return res.status(400).send("Missing code or state.");
   }
 
-  // ── Decode state — contains wallet, nonce, and returnUrl ────────────────────
-  let wallet    = "";
-  let returnUrl = "";
-  try {
-    const decoded = JSON.parse(Buffer.from(stateRaw, "base64url").toString("utf8"));
-    wallet    = String(decoded.wallet    || "");
-    returnUrl = String(decoded.returnUrl || "");
-  } catch (e) {
-    return res.status(400).send("Invalid state. Please try connecting again.");
-  }
-
   if (!wallet) {
     return res.status(400).send("Wallet missing from state. Please try connecting again.");
-  }
-
-  // Use returnUrl from state if valid, otherwise fall back to default
-  // Only allow returns to our own origin for security
-  let dashboardBase = defaultReturn;
-  if (returnUrl && returnUrl.startsWith(appOrigin)) {
-    dashboardBase = returnUrl;
   }
 
   // ── 1. Exchange code for access token ───────────────────────────────────────
@@ -78,8 +80,6 @@ export default async function handler(req, res) {
   const discordId = String(me.id);
 
   // ── 4. Save to Supabase server-side ─────────────────────────────────────────
-  // Writing here means the Discord ID is saved regardless of what happens
-  // to the browser tab after the redirect
   if (process.env.LNL_SUPA_URL && process.env.LNL_SUPA_KEY) {
     try {
       const supaUrl = process.env.LNL_SUPA_URL;
