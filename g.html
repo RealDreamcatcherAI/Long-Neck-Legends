@@ -2481,7 +2481,7 @@ a.plink:hover{
             '<button class="disconnect-btn" style="border-color:rgba(255,255,255,0.12);font-size:0.72rem;" onclick="refreshCabbageUI();refreshGaCabbageUI();">Refresh</button>' +
             '<button class="disconnect-btn" id="cabbageStartBtn" style="border-color:rgba(0,255,136,0.35);color:#00ff88;font-size:0.72rem;" onclick="startCabbage();startGaCabbage();">Restart</button>' +
             '<button class="disconnect-btn" id="gaCabbageStartBtn" style="display:none;" onclick="startGaCabbage()"></button>' +
-            '<button class="disconnect-btn" id="cabbageClaimBtn" style="border-color:rgba(224,16,32,0.35);color:#e01020;font-size:0.72rem;" onclick="claimCabbage();claimGaCabbage();">Claim</button>' +
+            '<button class="disconnect-btn" id="cabbageClaimBtn" style="border-color:rgba(224,16,32,0.35);color:#e01020;font-size:0.72rem;" onclick="claimBothCabbage()">Claim</button>' +
             '<button class="disconnect-btn" id="gaCabbageClaimBtn" style="display:none;" onclick="claimGaCabbage()"></button>' +
           '</div>' +
 
@@ -2771,6 +2771,41 @@ a.plink:hover{
       } catch(e) {
         alert('Claim failed: ' + (e.message || e));
         setBtnState('gaCabbageClaimBtn', false, 'Claim');
+      }
+    }
+
+    // Sign once, claim both LNL + GA sequentially
+    async function claimBothCabbage() {
+      try {
+        setBtnState('cabbageClaimBtn', true, 'Claiming…');
+        var payload = await signCabbageMessage('claim');
+        var canonWallet = getCanonicalWallet() || payload.wallet;
+
+        // Claim LNL
+        try {
+          var resLNL = await fetch(cabbageEndpoint(), {
+            method: 'POST', headers: cabbageAuthHeaders(),
+            body: JSON.stringify({ action: 'claim', wallet: canonWallet, signing_wallet: payload.wallet, message: payload.message, signature: payload.signature })
+          });
+          var dataLNL = await resLNL.json().catch(function(){ return {}; });
+          if (!resLNL.ok) console.warn('LNL claim error:', dataLNL.error || resLNL.status);
+        } catch(e) { console.warn('LNL claim failed:', e); }
+
+        // Claim GA
+        try {
+          var resGA = await fetch(cabbageEndpoint(), {
+            method: 'POST', headers: cabbageAuthHeaders(),
+            body: JSON.stringify({ action: 'claim', wallet: canonWallet, signing_wallet: payload.wallet, message: payload.message, signature: payload.signature, collection: 'golf_addicts' })
+          });
+          var dataGA = await resGA.json().catch(function(){ return {}; });
+          if (!resGA.ok) console.warn('GA claim error:', dataGA.error || resGA.status);
+        } catch(e) { console.warn('GA claim failed:', e); }
+
+        await refreshCabbageUI();
+        await refreshGaCabbageUI();
+      } catch(e) {
+        alert('Claim failed: ' + (e.message || e));
+        setBtnState('cabbageClaimBtn', false, 'Claim');
       }
     }
 
